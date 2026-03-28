@@ -1,4 +1,10 @@
 frappe.ui.form.on("Production Entry", {
+	workstation_type(frm, cdt, cdn) {
+		// Clear the workstation when type changes so user picks a valid one
+		frappe.model.set_value(cdt, cdn, "station", null);
+		frm.refresh_field("production_entries");
+	},
+
 	station(frm, cdt, cdn) {
 		const row = locals[cdt][cdn];
 		if (!row.station) return;

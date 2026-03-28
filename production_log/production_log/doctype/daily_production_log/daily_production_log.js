@@ -5,11 +5,18 @@ frappe.ui.form.on("Daily Production Log", {
 			frm.set_value("production_manager", frappe.session.user);
 		}
 
-		// Filter production_manager to Manufacturing Manager or System Manager users
+		// Filter production_manager to enabled users only
 		frm.set_query("production_manager", () => {
-			return {
-				filters: { enabled: 1 },
-			};
+			return { filters: { enabled: 1 } };
+		});
+
+		// Filter workstation by the selected workstation_type in each child row
+		frm.set_query("station", "production_entries", function (doc, cdt, cdn) {
+			const row = locals[cdt][cdn];
+			if (row.workstation_type) {
+				return { filters: { workstation_type: row.workstation_type, disabled: 0 } };
+			}
+			return { filters: { disabled: 0 } };
 		});
 	},
 

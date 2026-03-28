@@ -6,6 +6,7 @@
  "editable_grid": 0,
  "engine": "InnoDB",
  "field_order": [
+  "workstation_type",
   "station",
   "operator",
   "column_break_header",
@@ -72,6 +73,14 @@
   "notes"
  ],
  "fields": [
+  {
+   "fieldname": "workstation_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Workstation Type",
+   "options": "Workstation Type",
+   "reqd": 1
+  },
   {
    "fieldname": "station",
    "fieldtype": "Link",
