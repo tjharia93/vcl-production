@@ -1,28 +1,44 @@
 # Production Log — VCL (Vimit Converters Ltd)
 
 A custom Frappe/ERPNext v16 app for capturing daily production data from the
-shop floor at Vimit Converters Ltd, Nairobi. Tracks multiple production stations
-running 1–4 reels simultaneously.
+shop floor at Vimit Converters Ltd, Nairobi. Tracks multiple workstations
+running 1–4 paper reels simultaneously.
 
 ---
 
 ## Features
 
-- **Production Station** master with max-reel capacity (1–4).
+- Uses ERPNext's built-in **Workstation** DocType for station management.
+- **Workstation Type** selector on each entry row — the Workstation dropdown
+  filters automatically to show only matching stations.
 - **Daily Production Log** (submittable, amendable) capturing all entries for a
   date + shift combination.
 - **Production Entry** child table with full reel data (GSM, weight, cut size,
   reams) for up to 4 reels per station run.
-- Conditional field visibility — Reel 2/3/4 sections only appear when needed.
+- Conditional field visibility — Reel 2/3/4 sections only appear when the
+  selected reel count requires them.
 - Python validation: weight checks, time checks, station capacity checks,
   duplicate log prevention.
-- Auto-calculated summary fields (totals on save).
+- Auto-calculated summary fields (totals recalculated on every save).
 - 4 built-in reports: Production Summary by Station, Operator Performance,
   Incomplete Reels Tracker, Daily Production Summary.
 - A4 landscape print format.
 - Production Management workspace with shortcuts and reports.
 - Daily email summary (scheduled task).
-- Fixtures + patches for first-install data.
+
+---
+
+## Roles and Permissions
+
+This app uses ERPNext's built-in roles — no custom roles are created.
+
+| Role | Access |
+|---|---|
+| Manufacturing Manager | Full access — create, read, write, delete, submit, cancel, amend |
+| System Manager | Full access — create, read, write, delete, submit, cancel, amend |
+| Manufacturing User | Create and read only (no submit/cancel) |
+
+Assign these roles to users via **Setup > Users > [user] > Roles**.
 
 ---
 
@@ -39,21 +55,22 @@ bench --site [your-site] install-app production_log
 
 # 3. Run migrations (runs patches automatically)
 bench --site [your-site] migrate
-
-# 4. (Optional) Reload fixtures manually
-bench --site [your-site] reload-doctype "Production Station"
 ```
 
 ---
 
 ## Post-Installation Steps
 
-1. Verify the **Production Manager** role was created (`Setup > Roles`).
-2. Assign the **Production Manager** role to relevant users
-   (`Setup > Users > [user] > Roles`).
-3. Navigate to **Production Management** workspace in the sidebar.
-4. Review the 5 default production stations
-   (`Production Management > Production Station List`).
+1. Go to **Manufacturing > Workstation Type** and create types for your shop
+   floor (e.g. *Ruling*, *Sheeting*).
+2. Go to **Manufacturing > Workstation** and create a Workstation for each
+   physical machine.
+   - Set **Workstation Type** so the cascading filter works.
+   - Set **Job Capacity** to the maximum number of reels that station can run
+     simultaneously (1–4).
+3. Assign the **Manufacturing Manager** or **System Manager** role to
+   supervisors, and **Manufacturing User** to data-entry operators.
+4. Navigate to **Production Management** workspace in the sidebar.
 5. Create a test **Daily Production Log** to verify everything works.
 6. Review the print format by opening a submitted log and clicking **Print**.
 
@@ -63,21 +80,45 @@ bench --site [your-site] reload-doctype "Production Station"
 
 | DocType | Type | Purpose |
 |---|---|---|
-| Production Station | Master | Define stations and their max-reel capacity |
 | Daily Production Log | Transaction (submittable) | Header record for a date + shift |
-| Production Entry | Child Table | Per-station reel production data |
+| Production Entry | Child Table | Per-workstation reel production data |
+
+> **Note:** Production Station has been replaced by ERPNext's built-in
+> **Workstation** DocType. Configure workstations in
+> **Manufacturing > Workstation**.
 
 ---
 
-## Default Production Stations
+## Workstation Setup
 
-| Code | Name | Max Reels |
+Each Workstation record needs two fields populated for this app to work
+correctly:
+
+| Field | Location in ERPNext | Purpose |
 |---|---|---|
-| R.O.1 | Ruling Operator 1 | 4 |
-| R.O.2 | Ruling Operator 2 | 4 |
-| R.O.3 | Ruling Operator 3 | 4 |
-| R.D.3 | Ruling Duplex 3 | 2 |
-| R.S.3 | Ruling Simplex 3 | 1 |
+| Workstation Type | Workstation form > Details | Drives the cascading filter on Production Entry |
+| Job Capacity | Workstation form > Details | Max reels this station can run (1–4). Enforced on data entry and on save. |
+
+---
+
+## Material Types
+
+| Code | Full Name |
+|---|---|
+| NP | Newsprint |
+| BP | Bond Paper |
+| AP | Art Paper |
+| CP | Coated Paper |
+
+---
+
+## Output Types
+
+| Code | Description |
+|---|---|
+| A1 | Standard A1 output |
+| A2 | Standard A2 output |
+| BT | Business Tablet |
 
 ---
 
@@ -85,7 +126,7 @@ bench --site [your-site] reload-doctype "Production Station"
 
 | Report | Type | Description |
 |---|---|---|
-| Production Summary by Station | Script | Daily entries grouped by station |
+| Production Summary by Station | Script | Daily entries grouped by workstation |
 | Operator Performance | Script | Aggregated metrics per operator |
 | Incomplete Reels Tracker | Script | All carry-forward reels (last 7 days default) |
 | Daily Production Summary | Script | Yesterday's summary with bar chart |
@@ -95,12 +136,15 @@ bench --site [your-site] reload-doctype "Production Station"
 ## Development
 
 ```bash
-# Lint Python
-cd /path/to/frappe-bench
-bench --site [your-site] console
-
 # Run bench in dev mode
 bench start
+
+# Reload DocType after JSON changes
+bench --site [your-site] migrate
+
+# Reload a single DocType (no migration needed for cosmetic changes)
+bench --site [your-site] reload-doctype "Daily Production Log"
+bench --site [your-site] reload-doctype "Production Entry"
 ```
 
 ---
