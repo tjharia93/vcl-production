@@ -3,15 +3,15 @@ frappe.ui.form.on("Production Entry", {
 		const row = locals[cdt][cdn];
 		if (!row.station) return;
 
-		frappe.db.get_value("Production Station", row.station, "max_reels", (r) => {
-			if (!r || !r.max_reels) return;
-			const maxReels = r.max_reels;
+		frappe.db.get_value("Workstation", row.station, "production_capacity", (r) => {
+			if (!r || !r.production_capacity) return;
+			const maxReels = r.production_capacity;
 			const current = parseInt(row.number_of_reels) || 1;
 
 			if (current > maxReels) {
 				frappe.msgprint(
 					__(
-						"Station {0} supports a maximum of {1} reel(s). Resetting to {1}.",
+						"Workstation {0} supports a maximum of {1} reel(s). Resetting to {1}.",
 						[row.station, maxReels]
 					)
 				);

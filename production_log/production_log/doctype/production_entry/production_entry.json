@@ -76,8 +76,8 @@
    "fieldname": "station",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Production Station",
-   "options": "Production Station",
+   "label": "Workstation",
+   "options": "Workstation",
    "reqd": 1
   },
   {

@@ -12,8 +12,8 @@ def execute(filters=None):
 
 def get_columns():
     return [
-        {"label": _("Station"), "fieldname": "station", "fieldtype": "Link",
-         "options": "Production Station", "width": 120},
+        {"label": _("Workstation"), "fieldname": "station", "fieldtype": "Link",
+         "options": "Workstation", "width": 120},
         {"label": _("Date"), "fieldname": "production_date", "fieldtype": "Date", "width": 100},
         {"label": _("Shift"), "fieldname": "shift", "fieldtype": "Data", "width": 70},
         {"label": _("Operator"), "fieldname": "operator", "fieldtype": "Link",

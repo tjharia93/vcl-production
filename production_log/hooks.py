@@ -97,12 +97,8 @@ scheduler_events = {
 
 # Fixtures
 # --------
-fixtures = [
-    {
-        "doctype": "Production Station",
-        "filters": []
-    }
-]
+# No fixtures needed — Production Station replaced by ERPNext Workstation DocType.
+# fixtures = []
 
 # Boot Session
 # ------------

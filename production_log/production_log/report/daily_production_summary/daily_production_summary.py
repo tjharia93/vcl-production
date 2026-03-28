@@ -15,8 +15,8 @@ def execute(filters=None):
 
 def get_columns():
     return [
-        {"label": _("Station"), "fieldname": "station", "fieldtype": "Link",
-         "options": "Production Station", "width": 130},
+        {"label": _("Workstation"), "fieldname": "station", "fieldtype": "Link",
+         "options": "Workstation", "width": 130},
         {"label": _("Shift"), "fieldname": "shift", "fieldtype": "Data", "width": 80},
         {"label": _("Entries"), "fieldname": "entries", "fieldtype": "Int", "width": 80},
         {"label": _("Reels Run"), "fieldname": "reels_run", "fieldtype": "Int", "width": 90},

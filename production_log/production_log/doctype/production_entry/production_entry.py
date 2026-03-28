@@ -34,13 +34,13 @@ class ProductionEntry(Document):
         if not self.station or not self.number_of_reels:
             return
 
-        max_reels = frappe.db.get_value("Production Station", self.station, "max_reels")
-        if max_reels is None:
+        max_reels = frappe.db.get_value("Workstation", self.station, "production_capacity")
+        if not max_reels:
             return
 
         if int(self.number_of_reels) > int(max_reels):
             frappe.throw(
-                _("Station {0} can only run {1} reel(s) simultaneously. You selected {2}.").format(
+                _("Workstation {0} can only run {1} reel(s) simultaneously. You selected {2}.").format(
                     self.station, max_reels, self.number_of_reels
                 )
             )

@@ -9,7 +9,7 @@
    "label": "Production by Station (Current Month)"
   }
  ],
- "content": "[{\"id\":\"shortcuts\",\"type\":\"header\",\"data\":{\"text\":\"Shortcuts\",\"col\":12}},{\"id\":\"new-daily-production-log\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Daily Production Log\",\"col\":3}},{\"id\":\"production-log-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Production Log List\",\"col\":3}},{\"id\":\"production-station-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Production Station List\",\"col\":3}},{\"id\":\"incomplete-reels\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Incomplete Reels Tracker\",\"col\":3}},{\"id\":\"reports\",\"type\":\"header\",\"data\":{\"text\":\"Reports & Masters\",\"col\":12}},{\"id\":\"prod-summary-station\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Production Summary by Station\",\"col\":3}},{\"id\":\"operator-perf\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Operator Performance\",\"col\":3}},{\"id\":\"daily-summary\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Daily Production Summary\",\"col\":3}},{\"id\":\"prod-station-master\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Production Station\",\"col\":3}}]",
+ "content": "[{\"id\":\"shortcuts\",\"type\":\"header\",\"data\":{\"text\":\"Shortcuts\",\"col\":12}},{\"id\":\"new-daily-production-log\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Daily Production Log\",\"col\":3}},{\"id\":\"production-log-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Production Log List\",\"col\":3}},{\"id\":\"production-station-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Workstation List\",\"col\":3}},{\"id\":\"incomplete-reels\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Incomplete Reels Tracker\",\"col\":3}},{\"id\":\"reports\",\"type\":\"header\",\"data\":{\"text\":\"Reports & Masters\",\"col\":12}},{\"id\":\"prod-summary-station\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Production Summary by Station\",\"col\":3}},{\"id\":\"operator-perf\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Operator Performance\",\"col\":3}},{\"id\":\"daily-summary\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Daily Production Summary\",\"col\":3}},{\"id\":\"prod-station-master\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Workstation\",\"col\":3}}]",
  "creation": "2024-01-01 00:00:00.000000",
  "doctype": "Workspace",
  "icon": "manufacturing",
@@ -39,8 +39,8 @@
   },
   {
    "color": "Grey",
-   "label": "Production Station List",
-   "link_to": "Production Station",
+   "label": "Workstation List",
+   "link_to": "Workstation",
    "type": "DocType"
   },
   {
@@ -69,8 +69,8 @@
   },
   {
    "color": "Grey",
-   "label": "Production Station",
-   "link_to": "Production Station",
+   "label": "Workstation",
+   "link_to": "Workstation",
    "type": "DocType"
   }
  ],

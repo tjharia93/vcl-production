@@ -16,9 +16,9 @@ frappe.query_reports["Production Summary by Station"] = {
 		},
 		{
 			fieldname: "station",
-			label: __("Station"),
+			label: __("Workstation"),
 			fieldtype: "Link",
-			options: "Production Station",
+			options: "Workstation",
 		},
 		{
 			fieldname: "shift",
