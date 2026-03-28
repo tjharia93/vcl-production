@@ -29,7 +29,8 @@
    "fieldtype": "Select",
    "label": "Series",
    "options": "PROD-LOG-.YYYY.-.MM.-.DD.-.####",
-   "reqd": 1
+   "reqd": 1,
+   "description": "Auto-generated document number. Format: <b>PROD-LOG-YYYY-MM-DD-####</b>. Do not change the series unless instructed by the system administrator."
   },
   {
    "default": "Today",
@@ -37,7 +38,8 @@
    "fieldtype": "Date",
    "in_list_view": 1,
    "label": "Production Date",
-   "reqd": 1
+   "reqd": 1,
+   "description": "The calendar date this log covers. Defaults to today. One log is allowed per date + shift combination — a duplicate will be rejected on save."
   },
   {
    "fieldname": "shift",
@@ -45,7 +47,8 @@
    "in_list_view": 1,
    "label": "Shift",
    "options": "\nDay\nNight",
-   "reqd": 1
+   "reqd": 1,
+   "description": "<b>Day</b> = morning/afternoon shift &nbsp;|&nbsp; <b>Night</b> = overnight shift. Only one log per shift per date is allowed."
   },
   {
    "fieldname": "column_break_1",
@@ -56,13 +59,15 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Production Manager",
-   "options": "User"
+   "options": "User",
+   "description": "The supervisor or manager responsible for this shift. Select from the list of system users."
   },
   {
    "fieldname": "department",
    "fieldtype": "Link",
    "label": "Department",
-   "options": "Department"
+   "options": "Department",
+   "description": "The department this log belongs to (e.g. Production, Converting). Used for filtering and reporting."
   },
   {
    "default": "Draft",
@@ -71,18 +76,21 @@
    "in_list_view": 1,
    "label": "Status",
    "options": "Draft\nSubmitted\nCancelled",
-   "read_only": 1
+   "read_only": 1,
+   "description": "Automatically managed. <b>Draft</b> = editable &nbsp;|&nbsp; <b>Submitted</b> = locked and counted in reports &nbsp;|&nbsp; <b>Cancelled</b> = voided. Use Amend to correct a submitted log."
   },
   {
    "fieldname": "total_entries",
    "fieldtype": "Int",
    "label": "Total Entries",
-   "read_only": 1
+   "read_only": 1,
+   "description": "Auto-calculated. Total number of workstation entries in the table below."
   },
   {
    "fieldname": "section_entries",
    "fieldtype": "Section Break",
-   "label": "Production Entries"
+   "label": "Production Entries",
+   "description": "Add one row per workstation run. Each row captures a single operator on a single workstation for this shift. A workstation may appear more than once if operators changed mid-shift."
   },
   {
    "fieldname": "production_entries",
@@ -93,19 +101,22 @@
   {
    "fieldname": "section_summary",
    "fieldtype": "Section Break",
-   "label": "Summary"
+   "label": "Summary",
+   "description": "Totals are recalculated automatically every time the document is saved."
   },
   {
    "fieldname": "total_reels_processed",
    "fieldtype": "Int",
    "label": "Total Reels Processed",
-   "read_only": 1
+   "read_only": 1,
+   "description": "Sum of <i>Number of Reels</i> across all entries in this log."
   },
   {
    "fieldname": "total_full_reams",
    "fieldtype": "Int",
    "label": "Total Full Reams",
-   "read_only": 1
+   "read_only": 1,
+   "description": "Sum of all <i>Full Reams</i> values across every reel section in this log."
   },
   {
    "fieldname": "column_break_summary",
@@ -115,7 +126,8 @@
    "fieldname": "total_incomplete_reels",
    "fieldtype": "Int",
    "label": "Total Incomplete Reels",
-   "read_only": 1
+   "read_only": 1,
+   "description": "Count of reels flagged as <i>Incomplete Reel</i> in this log. These reels carry forward to the next shift and appear in the <b>Incomplete Reels Tracker</b> report."
   }
  ],
  "is_submittable": 1,
@@ -136,7 +148,22 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Production Manager",
+   "role": "Manufacturing Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
    "share": 1,
    "submit": 1,
    "write": 1
