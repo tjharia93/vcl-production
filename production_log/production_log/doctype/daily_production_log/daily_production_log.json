@@ -1,0 +1,158 @@
+{
+ "actions": [],
+ "allow_import": 0,
+ "autoname": "naming_series:",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "production_date",
+  "shift",
+  "column_break_1",
+  "production_manager",
+  "department",
+  "status",
+  "total_entries",
+  "section_entries",
+  "production_entries",
+  "section_summary",
+  "total_reels_processed",
+  "total_full_reams",
+  "column_break_summary",
+  "total_incomplete_reels"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "PROD-LOG-.YYYY.-.MM.-.DD.-.####",
+   "reqd": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "production_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Production Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "shift",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Shift",
+   "options": "\nDay\nNight",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "production_manager",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Production Manager",
+   "options": "User"
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Link",
+   "label": "Department",
+   "options": "Department"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Draft\nSubmitted\nCancelled",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_entries",
+   "fieldtype": "Int",
+   "label": "Total Entries",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_entries",
+   "fieldtype": "Section Break",
+   "label": "Production Entries"
+  },
+  {
+   "fieldname": "production_entries",
+   "fieldtype": "Table",
+   "label": "Production Entries",
+   "options": "Production Entry"
+  },
+  {
+   "fieldname": "section_summary",
+   "fieldtype": "Section Break",
+   "label": "Summary"
+  },
+  {
+   "fieldname": "total_reels_processed",
+   "fieldtype": "Int",
+   "label": "Total Reels Processed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_full_reams",
+   "fieldtype": "Int",
+   "label": "Total Full Reams",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_summary",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_incomplete_reels",
+   "fieldtype": "Int",
+   "label": "Total Incomplete Reels",
+   "read_only": 1
+  }
+ ],
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Production Log",
+ "name": "Daily Production Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing User"
+  }
+ ],
+ "sort_field": "production_date",
+ "sort_order": "DESC",
+ "title_field": "production_date",
+ "track_changes": 1,
+ "track_seen": 1
+}

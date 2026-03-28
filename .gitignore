@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.so
+.Python
+env/
+venv/
+.venv/
+pip-selfcheck.json
+
+# Frappe
+*.pyc
+node_modules/
+.DS_Store
+*.swp
+*.swo
+*.log
+.env
+
+# IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml

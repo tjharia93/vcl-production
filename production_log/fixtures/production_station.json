@@ -1,0 +1,42 @@
+[
+ {
+  "doctype": "Production Station",
+  "name": "R.O.1",
+  "station_code": "R.O.1",
+  "station_name": "Ruling Operator 1",
+  "max_reels": 4,
+  "is_active": 1
+ },
+ {
+  "doctype": "Production Station",
+  "name": "R.O.2",
+  "station_code": "R.O.2",
+  "station_name": "Ruling Operator 2",
+  "max_reels": 4,
+  "is_active": 1
+ },
+ {
+  "doctype": "Production Station",
+  "name": "R.O.3",
+  "station_code": "R.O.3",
+  "station_name": "Ruling Operator 3",
+  "max_reels": 4,
+  "is_active": 1
+ },
+ {
+  "doctype": "Production Station",
+  "name": "R.D.3",
+  "station_code": "R.D.3",
+  "station_name": "Ruling Duplex 3",
+  "max_reels": 2,
+  "is_active": 1
+ },
+ {
+  "doctype": "Production Station",
+  "name": "R.S.3",
+  "station_code": "R.S.3",
+  "station_name": "Ruling Simplex 3",
+  "max_reels": 1,
+  "is_active": 1
+ }
+]

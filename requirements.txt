@@ -1,0 +1,2 @@
+# Frappe is a required dependency
+frappe

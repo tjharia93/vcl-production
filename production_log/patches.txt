@@ -1,0 +1,2 @@
+production_log.patches.v1_0.setup_production_stations
+production_log.patches.v1_0.setup_roles_and_permissions
