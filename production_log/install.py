@@ -3,23 +3,8 @@ import frappe
 
 def after_install():
     """Run after app installation."""
-    create_production_manager_role()
     create_default_production_stations()
     frappe.db.commit()
-
-
-def create_production_manager_role():
-    """Create Production Manager role if it does not exist."""
-    if not frappe.db.exists("Role", "Production Manager"):
-        role = frappe.get_doc({
-            "doctype": "Role",
-            "role_name": "Production Manager",
-            "desk_access": 1,
-        })
-        role.insert(ignore_permissions=True)
-        frappe.msgprint("Created role: Production Manager")
-    else:
-        frappe.msgprint("Role 'Production Manager' already exists, skipping.")
 
 
 def create_default_production_stations():

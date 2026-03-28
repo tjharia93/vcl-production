@@ -5,11 +5,10 @@ frappe.ui.form.on("Daily Production Log", {
 			frm.set_value("production_manager", frappe.session.user);
 		}
 
-		// Filter production_manager to show only users with Production Manager role
+		// Filter production_manager to Manufacturing Manager or System Manager users
 		frm.set_query("production_manager", () => {
 			return {
-				query: "frappe.core.doctype.user.user.get_users_with_role",
-				filters: { role: "Production Manager" },
+				filters: { enabled: 1 },
 			};
 		});
 	},
