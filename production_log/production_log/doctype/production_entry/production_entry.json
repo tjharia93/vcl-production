@@ -6,6 +6,7 @@
  "editable_grid": 0,
  "engine": "InnoDB",
  "field_order": [
+  "workstation_type",
   "station",
   "operator",
   "column_break_header",
@@ -73,12 +74,22 @@
  ],
  "fields": [
   {
+   "fieldname": "workstation_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Workstation Type",
+   "options": "Workstation Type",
+   "reqd": 1,
+   "description": "Select the type of workstation first (e.g. Ruling, Sheeting). The Workstation list will filter accordingly."
+  },
+  {
    "fieldname": "station",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Production Station",
-   "options": "Production Station",
-   "reqd": 1
+   "label": "Workstation",
+   "options": "Workstation",
+   "reqd": 1,
+   "description": "Select the specific workstation. Only workstations matching the selected Workstation Type are shown. Job Capacity on the workstation controls the maximum reels allowed."
   },
   {
    "fieldname": "operator",
@@ -86,7 +97,8 @@
    "in_list_view": 1,
    "label": "Operator",
    "options": "Employee",
-   "reqd": 1
+   "reqd": 1,
+   "description": "The employee operating this workstation during this entry."
   },
   {
    "fieldname": "column_break_header",
@@ -97,21 +109,24 @@
    "fieldtype": "Time",
    "in_list_view": 1,
    "label": "Start Time",
-   "reqd": 1
+   "reqd": 1,
+   "description": "Time the operator started on this workstation. For overnight shifts enter the actual clock time — duration is calculated automatically."
   },
   {
    "fieldname": "end_time",
    "fieldtype": "Time",
    "in_list_view": 1,
    "label": "End Time",
-   "reqd": 1
+   "reqd": 1,
+   "description": "Time the operator finished on this workstation. If end time is earlier than start time an overnight shift is assumed."
   },
   {
    "fieldname": "duration_hours",
    "fieldtype": "Float",
    "label": "Duration (Hours)",
    "precision": "2",
-   "read_only": 1
+   "read_only": 1,
+   "description": "Auto-calculated from Start and End Time. Overnight shifts are handled correctly."
   },
   {
    "fieldname": "section_material",
@@ -124,13 +139,15 @@
    "in_list_view": 1,
    "label": "Material Type",
    "options": "\nNP\nBP\nAP\nCP",
-   "reqd": 1
+   "reqd": 1,
+   "description": "<b>NP</b> = Newsprint &nbsp;|&nbsp; <b>BP</b> = Bond Paper &nbsp;|&nbsp; <b>AP</b> = Art Paper &nbsp;|&nbsp; <b>CP</b> = Coated Paper"
   },
   {
    "fieldname": "output_type",
    "fieldtype": "Select",
    "label": "Output Type",
-   "options": "\nA1\nA2\nBT"
+   "options": "\nA1\nA2\nBT",
+   "description": "<b>A1</b> = Grade A1 output &nbsp;|&nbsp; <b>A2</b> = Grade A2 output &nbsp;|&nbsp; <b>BT</b> = Broke/Trim (waste/off-cuts)"
   },
   {
    "fieldname": "number_of_reels",
@@ -139,7 +156,8 @@
    "label": "Number of Reels",
    "options": "1\n2\n3\n4",
    "reqd": 1,
-   "default": "1"
+   "default": "1",
+   "description": "How many reels this workstation is running simultaneously in this entry. Cannot exceed the workstation's Job Capacity. Reel 2, 3 and 4 sections appear automatically when selected."
   },
   {
    "fieldname": "section_reel1",
@@ -150,37 +168,43 @@
    "fieldname": "r1_gsm",
    "fieldtype": "Float",
    "label": "GSM",
-   "precision": "1"
+   "precision": "1",
+   "description": "Grams per square metre — the grammage/weight of the paper on this reel."
   },
   {
    "fieldname": "r1_reel_width",
    "fieldtype": "Float",
    "label": "Reel Width (mm)",
-   "precision": "1"
+   "precision": "1",
+   "description": "The cut width of the reel in millimetres."
   },
   {
    "fieldname": "r1_start_diameter",
    "fieldtype": "Float",
    "label": "Start Diameter (mm)",
-   "precision": "1"
+   "precision": "1",
+   "description": "Outer diameter of the reel at the beginning of the run in millimetres."
   },
   {
    "fieldname": "r1_start_weight",
    "fieldtype": "Float",
    "label": "Start Weight (kg)",
-   "precision": "2"
+   "precision": "2",
+   "description": "Gross weight of the reel at the start of the run in kilograms."
   },
   {
    "fieldname": "r1_end_diameter",
    "fieldtype": "Float",
    "label": "End Diameter (mm)",
-   "precision": "1"
+   "precision": "1",
+   "description": "Outer diameter of the reel at the end of the run in millimetres."
   },
   {
    "fieldname": "r1_end_weight",
    "fieldtype": "Float",
    "label": "End Weight (kg)",
-   "precision": "2"
+   "precision": "2",
+   "description": "Gross weight of the reel at the end of the run. Must be less than Start Weight."
   },
   {
    "fieldname": "column_break_r1a",
@@ -189,75 +213,87 @@
   {
    "fieldname": "r1_cut_size",
    "fieldtype": "Data",
-   "label": "Cut Size"
+   "label": "Cut Size",
+   "description": "The sheet size being cut, e.g. <b>A4</b>, <b>F4</b>, <b>210x297</b>."
   },
   {
    "fieldname": "r1_sheets_per_ream",
    "fieldtype": "Int",
-   "label": "Sheets per Ream"
+   "label": "Sheets per Ream",
+   "description": "Number of sheets that make up one full ream for this cut size (typically 480 or 500)."
   },
   {
    "fieldname": "r1_full_reams",
    "fieldtype": "Int",
-   "label": "Full Reams"
+   "label": "Full Reams",
+   "description": "Total number of complete reams produced from this reel during this run."
   },
   {
    "fieldname": "r1_balance_sheets",
    "fieldtype": "Int",
-   "label": "Balance Sheets"
+   "label": "Balance Sheets",
+   "description": "Remaining sheets that did not make a full ream at the end of the run."
   },
   {
    "fieldname": "r1_incomplete_reel",
    "fieldtype": "Check",
-   "label": "Incomplete Reel (Carry Forward)"
+   "label": "Incomplete Reel (Carry Forward)",
+   "description": "Tick if paper remains on this reel and it will continue in the next shift or day. This reel will appear in the Incomplete Reels Tracker report."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 2",
    "fieldname": "section_reel2",
    "fieldtype": "Section Break",
-   "label": "Reel 2"
+   "label": "Reel 2",
+   "description": "Visible when Number of Reels is 2 or more."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 2",
    "fieldname": "r2_gsm",
    "fieldtype": "Float",
    "label": "GSM",
-   "precision": "1"
+   "precision": "1",
+   "description": "Grams per square metre for Reel 2."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 2",
    "fieldname": "r2_reel_width",
    "fieldtype": "Float",
    "label": "Reel Width (mm)",
-   "precision": "1"
+   "precision": "1",
+   "description": "Cut width of Reel 2 in millimetres."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 2",
    "fieldname": "r2_start_diameter",
    "fieldtype": "Float",
    "label": "Start Diameter (mm)",
-   "precision": "1"
+   "precision": "1",
+   "description": "Outer diameter of Reel 2 at the start of the run in millimetres."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 2",
    "fieldname": "r2_start_weight",
    "fieldtype": "Float",
    "label": "Start Weight (kg)",
-   "precision": "2"
+   "precision": "2",
+   "description": "Gross weight of Reel 2 at the start of the run in kilograms."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 2",
    "fieldname": "r2_end_diameter",
    "fieldtype": "Float",
    "label": "End Diameter (mm)",
-   "precision": "1"
+   "precision": "1",
+   "description": "Outer diameter of Reel 2 at the end of the run in millimetres."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 2",
    "fieldname": "r2_end_weight",
    "fieldtype": "Float",
    "label": "End Weight (kg)",
-   "precision": "2"
+   "precision": "2",
+   "description": "Gross weight of Reel 2 at the end of the run. Must be less than Start Weight."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 2",
@@ -268,79 +304,91 @@
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 2",
    "fieldname": "r2_cut_size",
    "fieldtype": "Data",
-   "label": "Cut Size"
+   "label": "Cut Size",
+   "description": "Sheet size being cut from Reel 2, e.g. <b>A4</b>, <b>F4</b>, <b>210x297</b>."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 2",
    "fieldname": "r2_sheets_per_ream",
    "fieldtype": "Int",
-   "label": "Sheets per Ream"
+   "label": "Sheets per Ream",
+   "description": "Number of sheets per full ream for Reel 2 (typically 480 or 500)."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 2",
    "fieldname": "r2_full_reams",
    "fieldtype": "Int",
-   "label": "Full Reams"
+   "label": "Full Reams",
+   "description": "Complete reams produced from Reel 2 during this run."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 2",
    "fieldname": "r2_balance_sheets",
    "fieldtype": "Int",
-   "label": "Balance Sheets"
+   "label": "Balance Sheets",
+   "description": "Remaining sheets from Reel 2 that did not make a full ream."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 2",
    "fieldname": "r2_incomplete_reel",
    "fieldtype": "Check",
-   "label": "Incomplete Reel (Carry Forward)"
+   "label": "Incomplete Reel (Carry Forward)",
+   "description": "Tick if Reel 2 has paper remaining and will carry forward to the next shift or day."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 3",
    "fieldname": "section_reel3",
    "fieldtype": "Section Break",
-   "label": "Reel 3"
+   "label": "Reel 3",
+   "description": "Visible when Number of Reels is 3 or more."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 3",
    "fieldname": "r3_gsm",
    "fieldtype": "Float",
    "label": "GSM",
-   "precision": "1"
+   "precision": "1",
+   "description": "Grams per square metre for Reel 3."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 3",
    "fieldname": "r3_reel_width",
    "fieldtype": "Float",
    "label": "Reel Width (mm)",
-   "precision": "1"
+   "precision": "1",
+   "description": "Cut width of Reel 3 in millimetres."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 3",
    "fieldname": "r3_start_diameter",
    "fieldtype": "Float",
    "label": "Start Diameter (mm)",
-   "precision": "1"
+   "precision": "1",
+   "description": "Outer diameter of Reel 3 at the start of the run in millimetres."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 3",
    "fieldname": "r3_start_weight",
    "fieldtype": "Float",
    "label": "Start Weight (kg)",
-   "precision": "2"
+   "precision": "2",
+   "description": "Gross weight of Reel 3 at the start of the run in kilograms."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 3",
    "fieldname": "r3_end_diameter",
    "fieldtype": "Float",
    "label": "End Diameter (mm)",
-   "precision": "1"
+   "precision": "1",
+   "description": "Outer diameter of Reel 3 at the end of the run in millimetres."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 3",
    "fieldname": "r3_end_weight",
    "fieldtype": "Float",
    "label": "End Weight (kg)",
-   "precision": "2"
+   "precision": "2",
+   "description": "Gross weight of Reel 3 at the end of the run. Must be less than Start Weight."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 3",
@@ -351,79 +399,91 @@
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 3",
    "fieldname": "r3_cut_size",
    "fieldtype": "Data",
-   "label": "Cut Size"
+   "label": "Cut Size",
+   "description": "Sheet size being cut from Reel 3, e.g. <b>A4</b>, <b>F4</b>, <b>210x297</b>."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 3",
    "fieldname": "r3_sheets_per_ream",
    "fieldtype": "Int",
-   "label": "Sheets per Ream"
+   "label": "Sheets per Ream",
+   "description": "Number of sheets per full ream for Reel 3 (typically 480 or 500)."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 3",
    "fieldname": "r3_full_reams",
    "fieldtype": "Int",
-   "label": "Full Reams"
+   "label": "Full Reams",
+   "description": "Complete reams produced from Reel 3 during this run."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 3",
    "fieldname": "r3_balance_sheets",
    "fieldtype": "Int",
-   "label": "Balance Sheets"
+   "label": "Balance Sheets",
+   "description": "Remaining sheets from Reel 3 that did not make a full ream."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 3",
    "fieldname": "r3_incomplete_reel",
    "fieldtype": "Check",
-   "label": "Incomplete Reel (Carry Forward)"
+   "label": "Incomplete Reel (Carry Forward)",
+   "description": "Tick if Reel 3 has paper remaining and will carry forward to the next shift or day."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 4",
    "fieldname": "section_reel4",
    "fieldtype": "Section Break",
-   "label": "Reel 4"
+   "label": "Reel 4",
+   "description": "Visible when Number of Reels is 4."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 4",
    "fieldname": "r4_gsm",
    "fieldtype": "Float",
    "label": "GSM",
-   "precision": "1"
+   "precision": "1",
+   "description": "Grams per square metre for Reel 4."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 4",
    "fieldname": "r4_reel_width",
    "fieldtype": "Float",
    "label": "Reel Width (mm)",
-   "precision": "1"
+   "precision": "1",
+   "description": "Cut width of Reel 4 in millimetres."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 4",
    "fieldname": "r4_start_diameter",
    "fieldtype": "Float",
    "label": "Start Diameter (mm)",
-   "precision": "1"
+   "precision": "1",
+   "description": "Outer diameter of Reel 4 at the start of the run in millimetres."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 4",
    "fieldname": "r4_start_weight",
    "fieldtype": "Float",
    "label": "Start Weight (kg)",
-   "precision": "2"
+   "precision": "2",
+   "description": "Gross weight of Reel 4 at the start of the run in kilograms."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 4",
    "fieldname": "r4_end_diameter",
    "fieldtype": "Float",
    "label": "End Diameter (mm)",
-   "precision": "1"
+   "precision": "1",
+   "description": "Outer diameter of Reel 4 at the end of the run in millimetres."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 4",
    "fieldname": "r4_end_weight",
    "fieldtype": "Float",
    "label": "End Weight (kg)",
-   "precision": "2"
+   "precision": "2",
+   "description": "Gross weight of Reel 4 at the end of the run. Must be less than Start Weight."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 4",
@@ -434,31 +494,36 @@
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 4",
    "fieldname": "r4_cut_size",
    "fieldtype": "Data",
-   "label": "Cut Size"
+   "label": "Cut Size",
+   "description": "Sheet size being cut from Reel 4, e.g. <b>A4</b>, <b>F4</b>, <b>210x297</b>."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 4",
    "fieldname": "r4_sheets_per_ream",
    "fieldtype": "Int",
-   "label": "Sheets per Ream"
+   "label": "Sheets per Ream",
+   "description": "Number of sheets per full ream for Reel 4 (typically 480 or 500)."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 4",
    "fieldname": "r4_full_reams",
    "fieldtype": "Int",
-   "label": "Full Reams"
+   "label": "Full Reams",
+   "description": "Complete reams produced from Reel 4 during this run."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 4",
    "fieldname": "r4_balance_sheets",
    "fieldtype": "Int",
-   "label": "Balance Sheets"
+   "label": "Balance Sheets",
+   "description": "Remaining sheets from Reel 4 that did not make a full ream."
   },
   {
    "depends_on": "eval:parseInt(doc.number_of_reels) >= 4",
    "fieldname": "r4_incomplete_reel",
    "fieldtype": "Check",
-   "label": "Incomplete Reel (Carry Forward)"
+   "label": "Incomplete Reel (Carry Forward)",
+   "description": "Tick if Reel 4 has paper remaining and will carry forward to the next shift or day."
   },
   {
    "fieldname": "section_notes",
@@ -468,7 +533,8 @@
   {
    "fieldname": "notes",
    "fieldtype": "Text Editor",
-   "label": "Comments / Observations"
+   "label": "Comments / Observations",
+   "description": "Any additional observations for this entry — e.g. machine downtime, quality issues, reel splices, or handover notes."
   }
  ],
  "istable": 1,
