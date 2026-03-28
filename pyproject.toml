@@ -1,0 +1,19 @@
+[build-system]
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "production_log"
+authors = [
+    {name = "VCL", email = "admin@vcl.co.ke"}
+]
+description = "Production Log App for Vimit Converters Ltd"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+dependencies = []
+
+dynamic = ["version"]
+
+[project.urls]
+Repository = "https://github.com/tjharia93/vcl-production"
