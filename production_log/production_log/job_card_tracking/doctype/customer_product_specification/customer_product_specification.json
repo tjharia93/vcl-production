@@ -1,0 +1,384 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-03-22 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "product_type",
+  "naming_series",
+  "status",
+  "specification_name",
+  "customer",
+  "job_size",
+  "number_of_colours",
+  "computer_paper_section",
+  "pay_slip_size",
+  "number_of_parts",
+  "colour_of_parts",
+  "carton_section",
+  "board_type",
+  "flute_type",
+  "ply",
+  "carton_dimensions",
+  "label_section",
+  "dies",
+  "label_length",
+  "label_width",
+  "label_number_of_colours",
+  "cylinder_teeth",
+  "plate_up",
+  "plate_round",
+  "packing_up",
+  "material_type",
+  "packing_pieces",
+  "gap_between",
+  "side_trim",
+  "exercise_books_section",
+  "number_of_pages",
+  "ruling_type",
+  "binding_type",
+  "cover_type",
+  "packing_section",
+  "numbering_required",
+  "standard_packing",
+  "standard_weight_per_carton",
+  "notes_section",
+  "internal_notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "product_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Product Type",
+   "options": "\nComputer Paper\nCarton\nLabel\nExercise Books",
+   "reqd": 1
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Naming Series",
+   "options": "CPT-SPEC-.#####\nCTN-SPEC-.#####\nLBL-SPEC-.#####\nEXB-SPEC-.#####",
+   "reqd": 1
+  },
+  {
+   "default": "Active",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Active\nInactive\nDiscontinued",
+   "reqd": 1
+  },
+  {
+   "fieldname": "specification_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Specification Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Customer",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "job_size",
+   "fieldtype": "Data",
+   "label": "Job Size",
+   "reqd": 1
+  },
+  {
+   "fieldname": "number_of_colours",
+   "fieldtype": "Int",
+   "label": "Number of Colours",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Computer Paper'",
+   "fieldname": "computer_paper_section",
+   "fieldtype": "Section Break",
+   "label": "Computer Paper"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Computer Paper'",
+   "fieldname": "pay_slip_size",
+   "fieldtype": "Data",
+   "label": "Pay Slip Size"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Computer Paper'",
+   "fieldname": "number_of_parts",
+   "fieldtype": "Int",
+   "label": "Number of Parts",
+   "mandatory_depends_on": "eval:doc.product_type=='Computer Paper'"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Computer Paper'",
+   "fieldname": "colour_of_parts",
+   "fieldtype": "Table",
+   "label": "Colour of Parts",
+   "options": "Colour of Parts"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "carton_section",
+   "fieldtype": "Section Break",
+   "label": "Carton"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "board_type",
+   "fieldtype": "Select",
+   "label": "Board Type",
+   "mandatory_depends_on": "eval:doc.product_type=='Carton'",
+   "options": "\nKLB\nMF\nTest Liner"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "flute_type",
+   "fieldtype": "Select",
+   "label": "Flute Type",
+   "mandatory_depends_on": "eval:doc.product_type=='Carton'",
+   "options": "\nA-Flute\nB-Flute\nC-Flute\nE-Flute"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "ply",
+   "fieldtype": "Select",
+   "label": "Ply",
+   "options": "3-Ply\n5-Ply\n7-Ply"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "carton_dimensions",
+   "fieldtype": "Data",
+   "label": "Carton Dimensions"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Label'",
+   "fieldname": "label_section",
+   "fieldtype": "Section Break",
+   "label": "Label"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Label'",
+   "fieldname": "dies",
+   "fieldtype": "Link",
+   "label": "Dies",
+   "options": "Dies"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Label'",
+   "fieldname": "label_length",
+   "fieldtype": "Float",
+   "label": "Label Length (mm)",
+   "mandatory_depends_on": "eval:doc.product_type=='Label'",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Label'",
+   "fieldname": "label_width",
+   "fieldtype": "Float",
+   "label": "Label Width (mm)",
+   "mandatory_depends_on": "eval:doc.product_type=='Label'",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Label'",
+   "fieldname": "label_number_of_colours",
+   "fieldtype": "Int",
+   "label": "Number of Colours",
+   "mandatory_depends_on": "eval:doc.product_type=='Label'"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Label'",
+   "fieldname": "cylinder_teeth",
+   "fieldtype": "Data",
+   "label": "Cylinder Teeth",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Label'",
+   "fieldname": "plate_up",
+   "fieldtype": "Data",
+   "label": "Plate Up",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Label'",
+   "fieldname": "plate_round",
+   "fieldtype": "Data",
+   "label": "Plate Round",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Label'",
+   "fieldname": "packing_up",
+   "fieldtype": "Data",
+   "label": "Packing Up"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Label'",
+   "fieldname": "material_type",
+   "fieldtype": "Select",
+   "label": "Material Type",
+   "mandatory_depends_on": "eval:doc.product_type=='Label'",
+   "options": "\nPP White\nPP Clear\nPP Silver\nThermal\nSemi-Gloss"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Label'",
+   "fieldname": "packing_pieces",
+   "fieldtype": "Int",
+   "label": "Packing Pieces"
+  
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Label'",
+   "fieldname": "gap_between",
+   "fieldtype": "Float",
+   "label": "Gap (between)",
+   "precision": "2"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Label'",
+   "fieldname": "side_trim",
+   "fieldtype": "Float",
+   "label": "Side Trim (mm)",
+   "precision": "2"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Exercise Books'",
+   "fieldname": "exercise_books_section",
+   "fieldtype": "Section Break",
+   "label": "Exercise Books"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Exercise Books'",
+   "fieldname": "number_of_pages",
+   "fieldtype": "Int",
+   "label": "Number of Pages",
+   "mandatory_depends_on": "eval:doc.product_type=='Exercise Books'"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Exercise Books'",
+   "fieldname": "ruling_type",
+   "fieldtype": "Select",
+   "label": "Ruling Type",
+   "mandatory_depends_on": "eval:doc.product_type=='Exercise Books'",
+   "options": "\nSingle Line\nDouble Line\nSquare/Graph\nBlank"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Exercise Books'",
+   "fieldname": "binding_type",
+   "fieldtype": "Select",
+   "label": "Binding Type",
+   "options": "Saddle Stitch\nPerfect Binding\nWire-O"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Exercise Books'",
+   "fieldname": "cover_type",
+   "fieldtype": "Select",
+   "label": "Cover Type",
+   "options": "Same as Inner\nCard Stock\nGlossy Cover"
+  },
+  {
+   "fieldname": "packing_section",
+   "fieldtype": "Section Break",
+   "label": "Packing"
+  },
+  {
+   "default": "0",
+   "fieldname": "numbering_required",
+   "fieldtype": "Check",
+   "label": "Numbering Required"
+  },
+  {
+   "fieldname": "standard_packing",
+   "fieldtype": "Data",
+   "label": "Standard Packing"
+  },
+  {
+   "fieldname": "standard_weight_per_carton",
+   "fieldtype": "Float",
+   "label": "Standard Weight Per Carton",
+   "precision": "2"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "notes_section",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "internal_notes",
+   "fieldtype": "Small Text",
+   "label": "Internal Notes"
+  }
+ ],
+ "links": [],
+ "modified": "2026-03-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Job Card Tracking",
+ "name": "Customer Product Specification",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Manager",
+   "share": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales User",
+   "share": 1,
+   "write": 0
+  }
+ ],
+ "is_submittable": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}

@@ -1,0 +1,191 @@
+{
+ "actions": [],
+ "allow_copy": 1,
+ "allow_import": 1,
+ "autoname": "naming_series:",
+ "creation": "2026-03-31 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "die_number",
+  "die_size",
+  "basic_details_section",
+  "length",
+  "width",
+  "shape",
+  "printing_section",
+  "across_ups",
+  "round_ups",
+  "teeth",
+  "material_section",
+  "material",
+  "orders_section",
+  "orders",
+  "notes_section",
+  "remark"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Naming Series",
+   "options": "DIE-.#####",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "die_number",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Die Number",
+   "read_only": 1
+  },
+  {
+   "fieldname": "die_size",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Die Size",
+   "reqd": 1
+  },
+  {
+   "fieldname": "basic_details_section",
+   "fieldtype": "Section Break",
+   "label": "Basic Details"
+  },
+  {
+   "fieldname": "length",
+   "fieldtype": "Float",
+   "label": "Length (mm)",
+   "mandatory_depends_on": "eval:true",
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "fieldname": "width",
+   "fieldtype": "Float",
+   "label": "Width (mm)",
+   "mandatory_depends_on": "eval:true",
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "fieldname": "shape",
+   "fieldtype": "Select",
+   "label": "Shape",
+   "options": "\nSQUARE\nRECTANGLE\nCIRCLE\nSEMI CIRCLE\nIRREGULAR\nOVAL\nROUND"
+  },
+  {
+   "fieldname": "printing_section",
+   "fieldtype": "Section Break",
+   "label": "Printing Specifications"
+  },
+  {
+   "fieldname": "across_ups",
+   "fieldtype": "Int",
+   "label": "Across Ups (Plate Up)",
+   "precision": "0"
+  },
+  {
+   "fieldname": "round_ups",
+   "fieldtype": "Int",
+   "label": "Round Ups (Plate Round)",
+   "precision": "0"
+  },
+  {
+   "fieldname": "teeth",
+   "fieldtype": "Float",
+   "label": "Teeth",
+   "precision": "2"
+  },
+  {
+   "fieldname": "material_section",
+   "fieldtype": "Section Break",
+   "label": "Material & Quantity"
+  },
+  {
+   "fieldname": "material",
+   "fieldtype": "Select",
+   "label": "Material",
+   "options": "\nPP White\nPP Clear\nPP Silver\nThermal\nSemi-Gloss"
+  },
+  {
+   "fieldname": "orders_section",
+   "fieldtype": "Section Break",
+   "label": "Orders"
+  },
+  {
+   "fieldname": "orders",
+   "fieldtype": "Table",
+   "label": "Orders",
+   "options": "Dies Order"
+  },
+  {
+   "fieldname": "notes_section",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "remark",
+   "fieldtype": "Small Text",
+   "label": "Remark"
+  }
+ ],
+ "links": [],
+ "modified": "2026-03-31 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Job Card Tracking",
+ "name": "Dies",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Manager",
+   "share": 0,
+   "submit": 0,
+   "cancel": 0,
+   "amend": 0,
+   "write": 0
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "All",
+   "share": 0,
+   "write": 0
+  }
+ ],
+ "sort_field": "die_number",
+ "sort_order": "ASC",
+ "track_changes": 1,
+ "naming_rule": "By \"Naming Series\" field"
+}
