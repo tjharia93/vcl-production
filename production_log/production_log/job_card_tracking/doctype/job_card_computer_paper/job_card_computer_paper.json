@@ -1,0 +1,395 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-03-23 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "amended_from",
+  "naming_series",
+  "order_date",
+  "due_date",
+  "customer",
+  "lpo_number",
+  "section_product_specification",
+  "customer_product_spec",
+  "specification_name",
+  "job_size",
+  "pay_slip_size",
+  "number_of_colours",
+  "number_of_parts",
+  "colour_of_parts",
+  "section_job_details",
+  "quantity_ordered",
+  "packing",
+  "weight_per_carton",
+  "order_comments",
+  "section_numbering",
+  "numbering_required",
+  "numbering_prefix",
+  "numbering_start",
+  "numbering_end",
+  "numbering_format",
+  "section_plate_information",
+  "plate_status",
+  "plate_code",
+  "plate_notes",
+  "section_approvals",
+  "sales_rep",
+  "sales_rep_approval_date",
+  "sales_rep_comments",
+  "management_approver",
+  "management_approval_date",
+  "management_comments",
+  "section_production_tracking",
+  "html_production_tracking_header",
+  "total_actual_good_qty",
+  "total_waste_qty",
+  "balance_qty",
+  "production_status"
+ ],
+ "fields": [
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Job Card Computer Paper",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "no_copy": 1,
+   "options": "JC-CPT-.YYYY.-.#####",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "order_date",
+   "fieldtype": "Date",
+   "label": "Order Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "label": "Due Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Customer",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "lpo_number",
+   "fieldtype": "Data",
+   "label": "LPO Number"
+  },
+  {
+   "fieldname": "section_product_specification",
+   "fieldtype": "Section Break",
+   "label": "Product Specification"
+  },
+  {
+   "depends_on": "eval:doc.customer",
+   "description": "Select specification for this customer. If none available, create Customer Product Specification first.",
+   "fieldname": "customer_product_spec",
+   "fieldtype": "Link",
+   "get_query": "production_log.job_card_tracking.doctype.job_card_computer_paper.job_card_computer_paper.get_customer_product_spec_query",
+   "in_list_view": 1,
+   "label": "Customer Product Specification",
+   "options": "Customer Product Specification",
+   "reqd": 1
+  },
+  {
+   "fieldname": "specification_name",
+   "fieldtype": "Data",
+   "label": "Specification Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "job_size",
+   "fieldtype": "Data",
+   "label": "Job Size",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pay_slip_size",
+   "fieldtype": "Data",
+   "label": "Pay Slip Size",
+   "read_only": 1
+  },
+  {
+   "fieldname": "number_of_colours",
+   "fieldtype": "Int",
+   "label": "Number of Colours",
+   "read_only": 1
+  },
+  {
+   "fieldname": "number_of_parts",
+   "fieldtype": "Int",
+   "label": "Number of Parts",
+   "read_only": 1
+  },
+  {
+   "fieldname": "colour_of_parts",
+   "fieldtype": "Table",
+   "label": "Colour of Parts",
+   "options": "Colour of Parts",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_job_details",
+   "fieldtype": "Section Break",
+   "label": "Job-Specific Details"
+  },
+  {
+   "fieldname": "quantity_ordered",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Quantity Ordered",
+   "reqd": 1
+  },
+  {
+   "fieldname": "packing",
+   "fieldtype": "Data",
+   "label": "Packing"
+  },
+  {
+   "fieldname": "weight_per_carton",
+   "fieldtype": "Float",
+   "label": "Weight Per Carton",
+   "precision": "2"
+  },
+  {
+   "fieldname": "order_comments",
+   "fieldtype": "Small Text",
+   "label": "Order Comments"
+  },
+  {
+   "fieldname": "section_numbering",
+   "fieldtype": "Section Break",
+   "label": "Numbering"
+  },
+  {
+   "fieldname": "numbering_required",
+   "fieldtype": "Check",
+   "label": "Numbering Required",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.numbering_required==1",
+   "fieldname": "numbering_prefix",
+   "fieldtype": "Data",
+   "label": "Numbering Prefix"
+  },
+  {
+   "depends_on": "eval:doc.numbering_required==1",
+   "fieldname": "numbering_start",
+   "fieldtype": "Data",
+   "label": "Numbering Start"
+  },
+  {
+   "depends_on": "eval:doc.numbering_required==1",
+   "fieldname": "numbering_end",
+   "fieldtype": "Data",
+   "label": "Numbering End"
+  },
+  {
+   "depends_on": "eval:doc.numbering_required==1",
+   "fieldname": "numbering_format",
+   "fieldtype": "Data",
+   "label": "Numbering Format"
+  },
+  {
+   "fieldname": "section_plate_information",
+   "fieldtype": "Section Break",
+   "label": "Plate Information"
+  },
+  {
+   "fieldname": "plate_status",
+   "fieldtype": "Select",
+   "label": "Plate Status",
+   "options": "New\nOld",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.plate_status=='Old'",
+   "fieldname": "plate_code",
+   "fieldtype": "Data",
+   "label": "Plate Code",
+   "mandatory_depends_on": "eval:doc.plate_status=='Old'"
+  },
+  {
+   "fieldname": "plate_notes",
+   "fieldtype": "Small Text",
+   "label": "Plate Notes"
+  },
+  {
+   "fieldname": "section_approvals",
+   "fieldtype": "Section Break",
+   "label": "Approvals"
+  },
+  {
+   "fieldname": "sales_rep",
+   "fieldtype": "Link",
+   "label": "Sales Rep",
+   "options": "User"
+  },
+  {
+   "fieldname": "sales_rep_approval_date",
+   "fieldtype": "Date",
+   "label": "Sales Rep Approval Date"
+  },
+  {
+   "fieldname": "sales_rep_comments",
+   "fieldtype": "Small Text",
+   "label": "Sales Rep Comments"
+  },
+  {
+   "fieldname": "management_approver",
+   "fieldtype": "Link",
+   "label": "Management Approver",
+   "options": "User"
+  },
+  {
+   "fieldname": "management_approval_date",
+   "fieldtype": "Date",
+   "label": "Management Approval Date"
+  },
+  {
+   "fieldname": "management_comments",
+   "fieldtype": "Small Text",
+   "label": "Management Comments"
+  },
+  {
+   "fieldname": "section_production_tracking",
+   "fieldtype": "Section Break",
+   "label": "Production Tracking"
+  },
+  {
+   "fieldname": "html_production_tracking_header",
+   "fieldtype": "HTML",
+   "options": "<div style=\"padding: 10px 14px; margin-bottom: 8px; background-color: #f0f4f7; border-left: 4px solid #28a745; border-radius: 4px;\">\n<strong style=\"font-size: 14px;\">Production Tracking</strong>\n<p style=\"margin: 4px 0 0 0; font-size: 12px; color: #6c757d;\">These fields are updated automatically whenever a Job Card Production Entry is submitted or cancelled. They show the cumulative totals across all submitted entries for this Job Card. Do not edit manually.</p>\n</div>"
+  },
+  {
+   "default": "0",
+   "fieldname": "total_actual_good_qty",
+   "fieldtype": "Int",
+   "label": "Total Actual Good Qty",
+   "read_only": 1,
+   "description": "Total usable output produced so far across all submitted Job Card Production Entries for this Job Card."
+  },
+  {
+   "default": "0",
+   "fieldname": "total_waste_qty",
+   "fieldtype": "Int",
+   "label": "Total Waste Qty",
+   "read_only": 1,
+   "description": "Total waste/rejected quantity across all submitted Job Card Production Entries. Does not reduce the order balance."
+  },
+  {
+   "default": "0",
+   "fieldname": "balance_qty",
+   "fieldtype": "Int",
+   "label": "Balance Qty",
+   "read_only": 1,
+   "description": "Remaining quantity to produce. Calculated as: Quantity Ordered \u2212 Total Actual Good Qty (minimum 0)."
+  },
+  {
+   "default": "Not Started",
+   "fieldname": "production_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Production Status",
+   "options": "Not Started\nIn Production\nCompleted",
+   "read_only": 1,
+   "description": "Auto-set based on production: 'Not Started' if no production yet, 'In Production' if partially fulfilled, 'Completed' when produced qty meets or exceeds order qty."
+  }
+ ],
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-03-23 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Job Card Tracking",
+ "name": "Job Card Computer Paper",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Manager",
+   "share": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales User",
+   "share": 1,
+   "write": 0
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing Manager",
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing User"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
