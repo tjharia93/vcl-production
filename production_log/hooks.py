@@ -3,14 +3,14 @@ from . import __version__ as app_version
 app_name = "production_log"
 app_title = "Production Log"
 app_publisher = "VCL"
-app_description = "Production Log App for Vimit Converters Ltd"
+app_description = "Production and Job Card Management App for Vimit Converters Ltd"
 app_email = "admin@vcl.co.ke"
 app_license = "MIT"
 app_version = app_version
 
 # Required Apps
 # -------------
-# required_apps = []
+required_apps = ["erpnext"]
 
 # Includes in <head>
 # ------------------
@@ -62,8 +62,11 @@ after_install = "production_log.install.after_install"
 # ---------------
 # Override standard doctype classes
 override_doctype_class = {
+    # Production Log module
     "Daily Production Log": "production_log.production_log.doctype.daily_production_log.daily_production_log.DailyProductionLog",
     "Production Entry": "production_log.production_log.doctype.production_entry.production_entry.ProductionEntry",
+    # Job Card Tracking module
+    "Job Card Production Entry": "production_log.job_card_tracking.doctype.job_card_production_entry.job_card_production_entry.JobCardProductionEntry",
 }
 
 # Document Events
