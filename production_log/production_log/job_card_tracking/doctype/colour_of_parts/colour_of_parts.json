@@ -1,0 +1,60 @@
+{
+ "actions": [],
+ "creation": "2026-03-22 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "part_number",
+  "paper_type",
+  "gsm",
+  "colour",
+  "purpose"
+ ],
+ "fields": [
+  {
+   "fieldname": "part_number",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Part Number",
+   "reqd": 1
+  },
+  {
+   "fieldname": "paper_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Paper Type",
+   "options": "CB\nCFB\nCF\n60 GSM Bond\n70 GSM Bond"
+  },
+  {
+   "fieldname": "gsm",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "GSM"
+  },
+  {
+   "fieldname": "colour",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Colour",
+   "reqd": 1
+  },
+  {
+   "fieldname": "purpose",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Purpose"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-03-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Job Card Tracking",
+ "name": "Colour of Parts",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}
