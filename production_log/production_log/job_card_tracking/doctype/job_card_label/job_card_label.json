@@ -1,0 +1,425 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-04-01 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "amended_from",
+  "naming_series",
+  "section_break_order",
+  "order_date",
+  "due_date",
+  "column_break_order_1",
+  "customer",
+  "lpo_number",
+  "section_break_spec",
+  "customer_product_spec",
+  "specification_name",
+  "job_size",
+  "plate_status",
+  "plate_code",
+  "column_break_spec_1",
+  "quantity_ordered",
+  "label_number_of_colours",
+  "job_colours",
+  "section_break_label_snapshot",
+  "dies",
+  "label_length",
+  "label_width",
+  "material_type",
+  "column_break_label_snapshot_1",
+  "cylinder_teeth",
+  "plate_up",
+  "plate_round",
+  "packing_up",
+  "packing_pieces",
+  "gap_between",
+  "side_trim",
+  "section_break_packing",
+  "numbering_required",
+  "numbering_prefix",
+  "numbering_start",
+  "numbering_end",
+  "numbering_format",
+  "column_break_packing_1",
+  "standard_packing",
+  "weight_per_carton",
+  "section_break_commercial",
+  "sales_rep",
+  "management_approver",
+  "column_break_commercial_1",
+  "status",
+  "section_break_notes",
+  "production_remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Job Card Label",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "default": "JC-LBL-.YYYY.-.#####",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "no_copy": 1,
+   "options": "JC-LBL-.YYYY.-.#####",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "section_break_order",
+   "fieldtype": "Section Break",
+   "label": "Order Information"
+  },
+  {
+   "default": "Today",
+   "fieldname": "order_date",
+   "fieldtype": "Date",
+   "label": "Order Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "label": "Due Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_order_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Customer",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "lpo_number",
+   "fieldtype": "Data",
+   "label": "LPO Number"
+  },
+  {
+   "fieldname": "section_break_spec",
+   "fieldtype": "Section Break",
+   "label": "Specification Link"
+  },
+  {
+   "depends_on": "eval:doc.customer",
+   "description": "Select a Label specification for this customer.",
+   "fieldname": "customer_product_spec",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Customer Product Specification",
+   "options": "Customer Product Specification",
+   "reqd": 1
+  },
+  {
+   "fieldname": "specification_name",
+   "fieldtype": "Data",
+   "label": "Specification Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "job_size",
+   "fieldtype": "Data",
+   "label": "Job Size",
+   "read_only": 1
+  },
+  {
+   "fieldname": "plate_status",
+   "fieldtype": "Select",
+   "label": "Plate Status",
+   "options": "\nNew\nOld",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.plate_status=='Old'",
+   "fieldname": "plate_code",
+   "fieldtype": "Data",
+   "label": "Plate Code",
+   "mandatory_depends_on": "eval:doc.plate_status=='Old'"
+  },
+  {
+   "fieldname": "column_break_spec_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "quantity_ordered",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Quantity Ordered",
+   "reqd": 1
+  },
+  {
+   "fieldname": "label_number_of_colours",
+   "fieldtype": "Int",
+   "label": "Number of Colours",
+   "read_only": 1
+  },
+  {
+   "description": "e.g. CMYK, Spot Green, Spot Red",
+   "fieldname": "job_colours",
+   "fieldtype": "Data",
+   "label": "Job Colours"
+  },
+  {
+   "fieldname": "section_break_label_snapshot",
+   "fieldtype": "Section Break",
+   "label": "Label Specification Snapshot"
+  },
+  {
+   "fieldname": "dies",
+   "fieldtype": "Link",
+   "label": "Dies",
+   "options": "Dies",
+   "read_only": 1
+  },
+  {
+   "fieldname": "label_length",
+   "fieldtype": "Float",
+   "label": "Label Length (mm)",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "label_width",
+   "fieldtype": "Float",
+   "label": "Label Width (mm)",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "material_type",
+   "fieldtype": "Data",
+   "label": "Material Type",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_label_snapshot_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "cylinder_teeth",
+   "fieldtype": "Float",
+   "label": "Cylinder Teeth",
+   "read_only": 1
+  },
+  {
+   "fieldname": "plate_up",
+   "fieldtype": "Int",
+   "label": "Plate Up",
+   "read_only": 1
+  },
+  {
+   "fieldname": "plate_round",
+   "fieldtype": "Int",
+   "label": "Plate Round",
+   "read_only": 1
+  },
+  {
+   "fieldname": "packing_up",
+   "fieldtype": "Int",
+   "label": "Packing Up",
+   "read_only": 1
+  },
+  {
+   "fieldname": "packing_pieces",
+   "fieldtype": "Int",
+   "label": "Packing Pieces",
+   "read_only": 1
+  },
+  {
+   "fieldname": "gap_between",
+   "fieldtype": "Float",
+   "label": "Gap (between)",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "side_trim",
+   "fieldtype": "Float",
+   "label": "Side Trim (mm)",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_packing",
+   "fieldtype": "Section Break",
+   "label": "Packing / Numbering"
+  },
+  {
+   "fieldname": "numbering_required",
+   "fieldtype": "Check",
+   "label": "Numbering Required",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.numbering_required==1",
+   "fieldname": "numbering_prefix",
+   "fieldtype": "Data",
+   "label": "Numbering Prefix"
+  },
+  {
+   "depends_on": "eval:doc.numbering_required==1",
+   "fieldname": "numbering_start",
+   "fieldtype": "Data",
+   "label": "Numbering Start"
+  },
+  {
+   "depends_on": "eval:doc.numbering_required==1",
+   "fieldname": "numbering_end",
+   "fieldtype": "Data",
+   "label": "Numbering End"
+  },
+  {
+   "depends_on": "eval:doc.numbering_required==1",
+   "fieldname": "numbering_format",
+   "fieldtype": "Data",
+   "label": "Numbering Format"
+  },
+  {
+   "fieldname": "column_break_packing_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "standard_packing",
+   "fieldtype": "Data",
+   "label": "Standard Packing",
+   "read_only": 1
+  },
+  {
+   "fieldname": "weight_per_carton",
+   "fieldtype": "Float",
+   "label": "Weight Per Carton",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_commercial",
+   "fieldtype": "Section Break",
+   "label": "Commercial / Responsibility"
+  },
+  {
+   "fieldname": "sales_rep",
+   "fieldtype": "Link",
+   "label": "Sales Rep",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "management_approver",
+   "fieldtype": "Link",
+   "label": "Management Approver",
+   "options": "User"
+  },
+  {
+   "fieldname": "column_break_commercial_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "no_copy": 1,
+   "options": "Draft\nSubmitted\nCancelled",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_notes",
+   "fieldtype": "Section Break",
+   "label": "Internal Remarks"
+  },
+  {
+   "fieldname": "production_remarks",
+   "fieldtype": "Small Text",
+   "label": "Production Remarks"
+  }
+ ],
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-04-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Job Card Tracking",
+ "name": "Job Card Label",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Manager",
+   "share": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales User",
+   "share": 1,
+   "write": 0
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing Manager",
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing User"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
