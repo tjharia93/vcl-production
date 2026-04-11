@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"shortcuts\",\"type\":\"header\",\"data\":{\"text\":\"Job Card Tracking\",\"col\":12}},{\"id\":\"new-job-card\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Job Card\",\"col\":3}},{\"id\":\"job-card-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Job Card List\",\"col\":3}},{\"id\":\"new-label-job-card\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Label Job Card\",\"col\":3}},{\"id\":\"label-job-card-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Label Job Card List\",\"col\":3}},{\"id\":\"dies-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Dies List\",\"col\":3}},{\"id\":\"spec-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Product Specifications\",\"col\":3}}]",
+ "content": "[{\"id\":\"shortcuts\",\"type\":\"header\",\"data\":{\"text\":\"Job Card Tracking\",\"col\":12}},{\"id\":\"new-job-card\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Job Card\",\"col\":3}},{\"id\":\"job-card-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Job Card List\",\"col\":3}},{\"id\":\"new-label-job-card\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Label Job Card\",\"col\":3}},{\"id\":\"label-job-card-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Label Job Card List\",\"col\":3}},{\"id\":\"dies-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Dies List\",\"col\":3}},{\"id\":\"spec-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Product Specifications\",\"col\":3}},{\"id\":\"planning\",\"type\":\"header\",\"data\":{\"text\":\"Daily Planning\",\"col\":12}},{\"id\":\"new-daily-plan\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Daily Plan\",\"col\":3}},{\"id\":\"daily-plan-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Daily Plan List\",\"col\":3}}]",
  "creation": "2026-04-05 00:00:00.000000",
  "doctype": "Workspace",
  "icon": "file",
@@ -51,6 +51,19 @@
    "color": "Grey",
    "label": "Product Specifications",
    "link_to": "Customer Product Specification",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "new",
+   "label": "New Daily Plan",
+   "link_to": "Department Daily Plan",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "label": "Daily Plan List",
+   "link_to": "Department Daily Plan",
    "type": "DocType"
   }
  ],

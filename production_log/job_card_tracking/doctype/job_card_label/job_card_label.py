@@ -1,5 +1,7 @@
 import frappe
+from frappe import _
 from frappe.model.document import Document
+from frappe.utils import now_datetime
 
 
 class JobCardLabel(Document):
@@ -12,6 +14,12 @@ class JobCardLabel(Document):
 		self.validate_numbering()
 		self.set_sales_rep_info()
 		self.set_status()
+		self.calculate_qty_pending()
+		self.update_production_timestamps()
+		self.warn_completed_under_qty()
+
+	def before_save(self):
+		self.enforce_completed_lock()
 
 	def validate_customer_product_spec(self):
 		if not self.customer_product_spec:
@@ -113,6 +121,71 @@ class JobCardLabel(Document):
 			self.status = "Submitted"
 		elif self.docstatus == 2:
 			self.status = "Cancelled"
+
+	def calculate_qty_pending(self):
+		ordered = self.quantity_ordered or 0
+		completed = self.qty_completed or 0
+		self.qty_pending = ordered - completed
+
+		if self.qty_pending < 0:
+			frappe.msgprint(
+				_("Completed quantity ({0}) exceeds ordered quantity ({1}). "
+				  "Qty Pending is negative, indicating overproduction.").format(
+					completed, ordered
+				),
+				indicator="orange",
+				alert=True,
+			)
+
+	def update_production_timestamps(self):
+		pc_fields = (
+			"production_status", "production_stage", "planned_for_date",
+			"priority", "qty_completed", "production_comments",
+		)
+
+		if not self.is_new():
+			for f in pc_fields:
+				if self.has_value_changed(f):
+					self.last_production_update = now_datetime()
+					break
+
+		if self.production_status == "Completed" and not self.completed_on:
+			self.completed_on = now_datetime()
+		elif self.production_status != "Completed":
+			self.completed_on = None
+
+	def warn_completed_under_qty(self):
+		if self.production_status != "Completed":
+			return
+
+		ordered = self.quantity_ordered or 0
+		completed = self.qty_completed or 0
+
+		if completed < ordered:
+			frappe.msgprint(
+				_("Production status is Completed but completed quantity ({0}) is still "
+				  "less than ordered quantity ({1}). Please confirm this is intentional.").format(
+					completed, ordered
+				),
+				indicator="orange",
+				alert=True,
+			)
+
+	def enforce_completed_lock(self):
+		if self.is_new() or self.docstatus != 1:
+			return
+
+		db_status = frappe.db.get_value(self.doctype, self.name, "production_status")
+
+		if db_status in ("Completed", "Cancelled"):
+			privileged = {"System Manager", "Production Manager"}
+			user_roles = set(frappe.get_roles(frappe.session.user))
+
+			if not user_roles.intersection(privileged):
+				frappe.throw(
+					_("This Job Card is {0}. Only System Manager or Production Manager "
+					  "can reopen it.").format(db_status)
+				)
 
 
 @frappe.whitelist()
