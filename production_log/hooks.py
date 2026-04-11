@@ -61,32 +61,16 @@ after_install = "production_log.install.after_install"
 # DocType Class
 # ---------------
 # Override standard doctype classes
-override_doctype_class = {
-    # Production Log module
-    "Daily Production Log": "production_log.production_log.doctype.daily_production_log.daily_production_log.DailyProductionLog",
-    "Production Entry": "production_log.production_log.doctype.production_entry.production_entry.ProductionEntry",
-    # Job Card Tracking module
-    "Job Card Production Entry": "production_log.job_card_tracking.doctype.job_card_production_entry.job_card_production_entry.JobCardProductionEntry",
-}
+# override_doctype_class = {}
 
 # Document Events
 # ---------------
 # Hook on document methods and events
-doc_events = {
-    "Daily Production Log": {
-        "validate": "production_log.production_log.doctype.daily_production_log.daily_production_log.validate",
-        "on_submit": "production_log.production_log.doctype.daily_production_log.daily_production_log.on_submit",
-        "on_cancel": "production_log.production_log.doctype.daily_production_log.daily_production_log.on_cancel",
-    }
-}
+# doc_events = {}
 
 # Scheduled Tasks
 # ---------------
-scheduler_events = {
-    "daily": [
-        "production_log.tasks.send_daily_production_summary"
-    ],
-}
+# scheduler_events = {}
 
 # Testing
 # -------
@@ -100,7 +84,6 @@ scheduler_events = {
 
 # Fixtures
 # --------
-# No fixtures needed — Production Station replaced by ERPNext Workstation DocType.
 # fixtures = []
 
 # Boot Session

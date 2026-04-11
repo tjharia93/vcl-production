@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"shortcuts\",\"type\":\"header\",\"data\":{\"text\":\"Job Card Tracking\",\"col\":12}},{\"id\":\"new-job-card\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Job Card\",\"col\":3}},{\"id\":\"job-card-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Job Card List\",\"col\":3}},{\"id\":\"new-label-job-card\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Label Job Card\",\"col\":3}},{\"id\":\"label-job-card-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Label Job Card List\",\"col\":3}},{\"id\":\"dies-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Dies List\",\"col\":3}},{\"id\":\"spec-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Product Specifications\",\"col\":3}},{\"id\":\"production\",\"type\":\"header\",\"data\":{\"text\":\"Production Planning\",\"col\":12}},{\"id\":\"new-production-entry\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Production Entry\",\"col\":3}},{\"id\":\"production-entry-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Production Entry List\",\"col\":3}}]",
+ "content": "[{\"id\":\"shortcuts\",\"type\":\"header\",\"data\":{\"text\":\"Job Card Tracking\",\"col\":12}},{\"id\":\"new-job-card\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Job Card\",\"col\":3}},{\"id\":\"job-card-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Job Card List\",\"col\":3}},{\"id\":\"new-label-job-card\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Label Job Card\",\"col\":3}},{\"id\":\"label-job-card-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Label Job Card List\",\"col\":3}},{\"id\":\"dies-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Dies List\",\"col\":3}},{\"id\":\"spec-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Product Specifications\",\"col\":3}}]",
  "creation": "2026-04-05 00:00:00.000000",
  "doctype": "Workspace",
  "icon": "file",
@@ -51,19 +51,6 @@
    "color": "Grey",
    "label": "Product Specifications",
    "link_to": "Customer Product Specification",
-   "type": "DocType"
-  },
-  {
-   "color": "Blue",
-   "doc_view": "new",
-   "label": "New Production Entry",
-   "link_to": "Job Card Production Entry",
-   "type": "DocType"
-  },
-  {
-   "color": "Green",
-   "label": "Production Entry List",
-   "link_to": "Job Card Production Entry",
    "type": "DocType"
   }
  ],
