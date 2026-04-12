@@ -151,9 +151,6 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
-   "submit": 1,
-   "cancel": 1,
-   "amend": 1,
    "write": 1
   },
   {
@@ -166,9 +163,6 @@
    "report": 1,
    "role": "Sales Manager",
    "share": 0,
-   "submit": 0,
-   "cancel": 0,
-   "amend": 0,
    "write": 0
   },
   {
