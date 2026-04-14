@@ -22,7 +22,29 @@
   "board_type",
   "flute_type",
   "ply",
-  "carton_dimensions",
+  "ctn_length_mm",
+  "ctn_width_mm",
+  "ctn_height_mm",
+  "column_break_carton_1",
+  "printing_or_plain",
+  "no_of_colours_carton",
+  "colours_details",
+  "joint_type",
+  "product_type_carton",
+  "idod",
+  "special_instructions_carton",
+  "gsm_section_carton",
+  "1_ply_top_layer_gsm",
+  "1_ply_top_layer_material",
+  "2_ply_fluting_gsm",
+  "2_ply_top_layer_material",
+  "column_break_carton_2",
+  "3_ply_bottom_gsm",
+  "3_ply_top_layer_material",
+  "4_ply_fluting_gsm",
+  "4_ply_top_layer_material",
+  "5_ply_fluting_gsm",
+  "5_ply_top_layer_material",
   "label_section",
   "dies",
   "label_length",
@@ -159,20 +181,162 @@
    "fieldtype": "Select",
    "label": "Flute Type",
    "mandatory_depends_on": "eval:doc.product_type=='Carton'",
-   "options": "\nA-Flute\nB-Flute\nC-Flute\nE-Flute"
+   "options": "\nB\nC\nE"
   },
   {
    "depends_on": "eval:doc.product_type=='Carton'",
    "fieldname": "ply",
    "fieldtype": "Select",
    "label": "Ply",
-   "options": "3-Ply\n5-Ply\n7-Ply"
+   "options": "\nSFK\n3\n5"
   },
   {
    "depends_on": "eval:doc.product_type=='Carton'",
-   "fieldname": "carton_dimensions",
+   "fieldname": "ctn_length_mm",
+   "fieldtype": "Int",
+   "label": "Carton Length (mm)",
+   "mandatory_depends_on": "eval:doc.product_type=='Carton'"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "ctn_width_mm",
+   "fieldtype": "Int",
+   "label": "Carton Width (mm)",
+   "mandatory_depends_on": "eval:doc.product_type=='Carton'"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "ctn_height_mm",
+   "fieldtype": "Int",
+   "label": "Carton Height (mm)"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "column_break_carton_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "printing_or_plain",
+   "fieldtype": "Select",
+   "label": "Printing Or Plain",
+   "options": "\nPlain\nPrinted"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "no_of_colours_carton",
+   "fieldtype": "Select",
+   "label": "No. Of Colours",
+   "options": "0\n1\n2\n3\n4"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "colours_details",
    "fieldtype": "Data",
-   "label": "Carton Dimensions"
+   "label": "Colours (details)"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "joint_type",
+   "fieldtype": "Select",
+   "label": "Joint Type",
+   "options": "\nGluing - Manual\nGluing - Machine\nStitched"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "product_type_carton",
+   "fieldtype": "Select",
+   "label": "Carton Product Type",
+   "options": "\nTray\nDie Cut\n2 Flap RSC\n3 Flap RSC"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "idod",
+   "fieldtype": "Select",
+   "label": "ID/OD",
+   "options": "\nID\nOD"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "special_instructions_carton",
+   "fieldtype": "Small Text",
+   "label": "Special Instructions"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "gsm_section_carton",
+   "fieldtype": "Section Break",
+   "label": "GSM Layers"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "1_ply_top_layer_gsm",
+   "fieldtype": "Int",
+   "label": "1 Ply Top Layer GSM"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "1_ply_top_layer_material",
+   "fieldtype": "Select",
+   "label": "1 Ply Top Layer Material",
+   "options": "\nTest Liner\nKraft\nWhite Test Liner"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "2_ply_fluting_gsm",
+   "fieldtype": "Int",
+   "label": "2 Ply Fluting GSM"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "2_ply_top_layer_material",
+   "fieldtype": "Select",
+   "label": "2 Ply Material",
+   "options": "\nTest Liner\nKraft\nWhite Test Liner"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "column_break_carton_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "3_ply_bottom_gsm",
+   "fieldtype": "Int",
+   "label": "3 Ply Bottom GSM"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "3_ply_top_layer_material",
+   "fieldtype": "Select",
+   "label": "3 Ply Material",
+   "options": "\nTest Liner\nKraft\nWhite Test Liner"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "4_ply_fluting_gsm",
+   "fieldtype": "Int",
+   "label": "4 Ply Fluting GSM"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "4_ply_top_layer_material",
+   "fieldtype": "Select",
+   "label": "4 Ply Material",
+   "options": "\nTest Liner\nKraft\nWhite Test Liner"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "5_ply_fluting_gsm",
+   "fieldtype": "Int",
+   "label": "5 Ply Fluting GSM"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "fieldname": "5_ply_top_layer_material",
+   "fieldtype": "Select",
+   "label": "5 Ply Material",
+   "options": "\nTest Liner\nKraft\nWhite Test Liner"
   },
   {
    "depends_on": "eval:doc.product_type=='Label'",

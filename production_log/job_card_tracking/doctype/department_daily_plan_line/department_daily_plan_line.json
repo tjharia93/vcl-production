@@ -13,6 +13,7 @@
   "column_break_jc_1",
   "computer_paper_job_card",
   "label_job_card",
+  "carton_job_card",
   "customer_name",
   "job_name",
   "ordered_qty",
@@ -44,7 +45,7 @@
    "in_list_view": 1,
    "label": "Job Card Type",
    "mandatory_depends_on": "eval:doc.entry_type=='Job Card'",
-   "options": "\nComputer Paper\nLabel"
+   "options": "\nComputer Paper\nLabel\nCarton"
   },
   {
    "fieldname": "planned_stage",
@@ -88,6 +89,14 @@
    "label": "Label Job Card",
    "mandatory_depends_on": "eval:doc.entry_type=='Job Card' && doc.job_card_type=='Label'",
    "options": "Job Card Label"
+  },
+  {
+   "depends_on": "eval:doc.entry_type=='Job Card' && doc.job_card_type=='Carton'",
+   "fieldname": "carton_job_card",
+   "fieldtype": "Link",
+   "label": "Carton Job Card",
+   "mandatory_depends_on": "eval:doc.entry_type=='Job Card' && doc.job_card_type=='Carton'",
+   "options": "Job Card Carton"
   },
   {
    "depends_on": "eval:doc.entry_type=='Job Card'",

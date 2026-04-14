@@ -84,7 +84,9 @@ after_install = "production_log.install.after_install"
 
 # Fixtures
 # --------
-# fixtures = []
+fixtures = [
+	{"dt": "Print Format", "filters": [["name", "in", ["Carton Job Card"]]]}
+]
 
 # Boot Session
 # ------------

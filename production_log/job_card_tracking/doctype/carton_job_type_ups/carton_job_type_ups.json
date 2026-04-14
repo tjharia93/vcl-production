@@ -1,0 +1,60 @@
+{
+ "actions": [],
+ "creation": "2026-04-14 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "ups_across",
+  "ups_along",
+  "rotation",
+  "planned_board_width_mm",
+  "planned_board_length_mm"
+ ],
+ "fields": [
+  {
+   "fieldname": "ups_across",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "UPS Across (Length)"
+  },
+  {
+   "fieldname": "ups_along",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "UPS Along (Width)"
+  },
+  {
+   "fieldname": "rotation",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Rotation (Reel Width = Board Width or Reel Width = Board Length)",
+   "options": "Board Width\nBoard Length"
+  },
+  {
+   "fieldname": "planned_board_width_mm",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Planned Board Width (mm)"
+  },
+  {
+   "fieldname": "planned_board_length_mm",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Planned Board Length (mm)"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-04-14 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Job Card Tracking",
+ "name": "Carton Job Type UPS",
+ "naming_rule": "Random",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

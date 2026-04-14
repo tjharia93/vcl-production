@@ -29,6 +29,9 @@ frappe.ui.form.on("Department Daily Plan", {
 		frm.fields_dict["plan_lines"].grid.get_field("label_job_card").get_query = function () {
 			return { filters: { docstatus: 1 } };
 		};
+		frm.fields_dict["plan_lines"].grid.get_field("carton_job_card").get_query = function () {
+			return { filters: { docstatus: 1 } };
+		};
 	},
 
 	onload(frm) {
@@ -53,12 +56,20 @@ frappe.ui.form.on("Department Daily Plan Line", {
 		}
 	},
 
+	carton_job_card(frm, cdt, cdn) {
+		var row = locals[cdt][cdn];
+		if (row.carton_job_card) {
+			_fetch_jc(frm, cdt, cdn, "Carton", row.carton_job_card);
+		}
+	},
+
 	entry_type(frm, cdt, cdn) {
 		var row = locals[cdt][cdn];
 		if (row.entry_type === "Manual") {
 			frappe.model.set_value(cdt, cdn, "job_card_type", "");
 			frappe.model.set_value(cdt, cdn, "computer_paper_job_card", "");
 			frappe.model.set_value(cdt, cdn, "label_job_card", "");
+			frappe.model.set_value(cdt, cdn, "carton_job_card", "");
 			frappe.model.set_value(cdt, cdn, "customer_name", "");
 			frappe.model.set_value(cdt, cdn, "job_name", "");
 			frappe.model.set_value(cdt, cdn, "ordered_qty", 0);
@@ -78,8 +89,13 @@ frappe.ui.form.on("Department Daily Plan Line", {
 		var row = locals[cdt][cdn];
 		if (row.job_card_type === "Computer Paper") {
 			frappe.model.set_value(cdt, cdn, "label_job_card", "");
+			frappe.model.set_value(cdt, cdn, "carton_job_card", "");
 		} else if (row.job_card_type === "Label") {
 			frappe.model.set_value(cdt, cdn, "computer_paper_job_card", "");
+			frappe.model.set_value(cdt, cdn, "carton_job_card", "");
+		} else if (row.job_card_type === "Carton") {
+			frappe.model.set_value(cdt, cdn, "computer_paper_job_card", "");
+			frappe.model.set_value(cdt, cdn, "label_job_card", "");
 		}
 		frappe.model.set_value(cdt, cdn, "customer_name", "");
 		frappe.model.set_value(cdt, cdn, "job_name", "");

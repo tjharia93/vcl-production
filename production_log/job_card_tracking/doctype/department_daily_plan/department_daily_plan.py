@@ -49,6 +49,10 @@ class DepartmentDailyPlan(Document):
 					frappe.throw(
 						_("Row {0}: Label Job Card is required.").format(row.idx)
 					)
+				if row.job_card_type == "Carton" and not row.carton_job_card:
+					frappe.throw(
+						_("Row {0}: Carton Job Card is required.").format(row.idx)
+					)
 
 			elif row.entry_type == "Manual":
 				if not row.manual_job_type:
@@ -85,8 +89,24 @@ def fetch_job_card_details(job_card_type, job_card_name):
 		doctype = "Job Card Computer Paper"
 	elif job_card_type == "Label":
 		doctype = "Job Card Label"
+	elif job_card_type == "Carton":
+		doctype = "Job Card Carton"
 	else:
 		return {}
+
+	if job_card_type == "Carton":
+		fields = ["name", "customer_name", "job_description", "quantity_ordered"]
+		doc = frappe.db.get_value(doctype, job_card_name, fields, as_dict=True)
+		if not doc:
+			return {}
+
+		return {
+			"customer_name": doc.customer_name,
+			"job_name": doc.job_description or doc.name,
+			"ordered_qty": doc.quantity_ordered or 0,
+			"completed_qty_snapshot": 0,
+			"pending_qty_snapshot": 0,
+		}
 
 	fields = ["name", "customer", "specification_name", "quantity_ordered",
 			  "qty_completed", "qty_pending"]
