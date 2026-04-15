@@ -86,8 +86,13 @@ def _delete_doctype(name):
         # (the module no longer ships with the app).
         frappe.db.delete("DocType", {"name": name})
 
+    # DROP TABLE is a DDL statement that causes an implicit commit on MySQL
+    # / MariaDB. Frappe refuses to run it inside an open transaction, so we
+    # flush any buffered writes first and then use sql_ddl() which bypasses
+    # the implicit-commit guard.
     table_name = "tab" + name
-    frappe.db.sql(f"DROP TABLE IF EXISTS `{table_name}`")
+    frappe.db.commit()
+    frappe.db.sql_ddl(f"DROP TABLE IF EXISTS `{table_name}`")
 
 
 def _purge_workspace_links(target_name):
@@ -115,7 +120,12 @@ def _drop_job_card_columns():
         for col in JOB_CARD_DROP_COLUMNS:
             if col in existing_cols:
                 try:
-                    frappe.db.sql(f"ALTER TABLE `{table}` DROP COLUMN `{col}`")
+                    # ALTER TABLE is DDL; flush first and use sql_ddl() to
+                    # bypass Frappe's implicit-commit guard.
+                    frappe.db.commit()
+                    frappe.db.sql_ddl(
+                        f"ALTER TABLE `{table}` DROP COLUMN `{col}`"
+                    )
                 except Exception:
                     # Tolerate column-not-found races on re-runs.
                     pass
