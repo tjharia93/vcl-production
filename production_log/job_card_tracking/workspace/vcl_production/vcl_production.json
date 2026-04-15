@@ -1,0 +1,71 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"specs-header\",\"type\":\"header\",\"data\":{\"text\":\"Customer Specifications\",\"col\":12}},{\"id\":\"customer-product-spec\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer Product Specifications\",\"col\":3}},{\"id\":\"dies-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Dies List\",\"col\":3}},{\"id\":\"job-cards-header\",\"type\":\"header\",\"data\":{\"text\":\"Job Card Tracking\",\"col\":12}},{\"id\":\"new-computer-paper\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Computer Paper Job Card\",\"col\":3}},{\"id\":\"computer-paper-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Computer Paper Job Cards\",\"col\":3}},{\"id\":\"new-label\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Label Job Card\",\"col\":3}},{\"id\":\"label-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Label Job Cards\",\"col\":3}},{\"id\":\"planning-header\",\"type\":\"header\",\"data\":{\"text\":\"Daily Planning\",\"col\":12}},{\"id\":\"new-daily-plan\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Daily Plan\",\"col\":3}},{\"id\":\"daily-plan-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Daily Plan List\",\"col\":3}}]",
+ "creation": "2026-04-15 00:00:00.000000",
+ "doctype": "Workspace",
+ "icon": "file",
+ "is_hidden": 0,
+ "label": "VCL Production",
+ "modified": "2026-04-15 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Job Card Tracking",
+ "name": "VCL Production",
+ "owner": "Administrator",
+ "public": 1,
+ "roles": [],
+ "sequence_id": 2.0,
+ "shortcuts": [
+  {
+   "color": "Grey",
+   "label": "Customer Product Specifications",
+   "link_to": "Customer Product Specification",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "label": "Dies List",
+   "link_to": "Dies",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "new",
+   "label": "New Computer Paper Job Card",
+   "link_to": "Job Card Computer Paper",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "label": "Computer Paper Job Cards",
+   "link_to": "Job Card Computer Paper",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "new",
+   "label": "New Label Job Card",
+   "link_to": "Job Card Label",
+   "type": "DocType"
+  },
+  {
+   "color": "Yellow",
+   "label": "Label Job Cards",
+   "link_to": "Job Card Label",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "new",
+   "label": "New Daily Plan",
+   "link_to": "Department Daily Plan",
+   "type": "DocType"
+  },
+  {
+   "color": "Green",
+   "label": "Daily Plan List",
+   "link_to": "Department Daily Plan",
+   "type": "DocType"
+  }
+ ],
+ "title": "VCL Production"
+}
