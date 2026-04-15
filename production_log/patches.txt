@@ -1,1 +1,2 @@
 production_log.patches.v1_0.setup_roles_and_permissions
+production_log.patches.v1_0.remove_job_card_production_entry
