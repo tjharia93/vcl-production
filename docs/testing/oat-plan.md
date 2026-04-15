@@ -14,7 +14,7 @@ Run OAT **first**, UAT **second**. If OAT fails, UAT cannot begin.
 > **Update this section in every PR.** Note anything the deployer needs to
 > watch for: new patches, new fixtures, new hooks, role changes, etc.
 
-### 2026-04-15 — Job Card Carton + VCL Production workspace rename
+### 2026-04-15 — Hard reset of production execution layer
 
 **Patches that will run on `bench migrate`:**
 
@@ -25,6 +25,13 @@ Run OAT **first**, UAT **second**. If OAT fails, UAT cannot begin.
 * `production_log.patches.v1_0.rename_workspace_to_vcl_production`
   — drops the old `Job Card Tracking` Workspace record so the new
     `VCL Production` workspace gets installed cleanly from JSON.
+* `production_log.patches.v1_0.remove_production_execution_layer`
+  — **new this release.** Drops `Department Daily Plan` and
+    `Department Daily Plan Line` doctypes / tables, removes the
+    Production Control columns from `Job Card Computer Paper` and
+    `Job Card Label`, and clears any execution-layer workspace links,
+    custom fields, reports, and print formats from previous attempts.
+    Idempotent and safe to re-run.
 
 **Fixtures synced:**
 
@@ -32,25 +39,27 @@ Run OAT **first**, UAT **second**. If OAT fails, UAT cannot begin.
 
 **Hook changes:**
 
-* `hooks.py` now declares a `fixtures` list for the Carton Job Card print
-  format. On first deploy this will emit one `Print Format` record.
+* No new hooks. `hooks.py` has no scheduler entries, no doc events, and
+  no override classes — it ships only the Carton Job Card print-format
+  fixture and the install message.
 
-**New doctypes:**
+**Removed doctypes:**
 
-* `Job Card Carton`
-* `Carton Job Type UPS` (child table)
+* `Department Daily Plan`
+* `Department Daily Plan Line`
 
-**Expanded doctypes:**
+**Stripped fields (Job Card Computer Paper + Job Card Label):**
 
-* `Customer Product Specification` — 23 new carton fields.
-* `Department Daily Plan` — now supports `Carton` as a Job Card Type.
-* `Department Daily Plan Line` — gained a carton-facing link.
+* `production_status`, `production_stage`, `planned_for_date`, `priority`,
+  `qty_completed`, `qty_pending`, `last_production_update`, `completed_on`,
+  `hold_reason`, `production_comments`, and the `Production Control`
+  section break that contained them.
 
-**Workspace URL change:**
+**Workspace changes:**
 
-* `/app/job-card-tracking` → `/app/vcl-production`. Any bookmarks / shortcut
-  buttons / external links pointing to the old URL will 404. Notify the
-  factory team before deploy.
+* The `Daily Planning` header and its `New Daily Plan` / `Daily Plan List`
+  tiles have been removed from the VCL Production workspace.
+* `/app/department-daily-plan` will 404 after migrate.
 
 ---
 
@@ -104,8 +113,8 @@ tester.
 ### 2. Workspace loads
 
 - [ ] `/app/vcl-production` loads without a 404 or traceback.
-- [ ] All three sections render (Customer Specifications / Job Card
-      Tracking / Daily Planning).
+- [ ] Both sections render (Customer Specifications / Job Card Tracking).
+- [ ] There is **no** "Daily Planning" header.
 - [ ] Every shortcut tile is visible — count them and compare against
       Scenario H in `uat-plan.md` (8 tiles expected for this release).
 - [ ] `/app/job-card-tracking` no longer resolves to the old workspace.
@@ -116,10 +125,11 @@ Open each of these list views and confirm no 500 / traceback:
 
 - [ ] `/app/customer-product-specification`
 - [ ] `/app/dies`
+- [ ] `/app/dies-order`
 - [ ] `/app/job-card-computer-paper`
 - [ ] `/app/job-card-label`
-- [ ] `/app/job-card-carton`  ← **new this release**
-- [ ] `/app/department-daily-plan`
+- [ ] `/app/job-card-carton`
+- [ ] `/app/department-daily-plan` should **404** (doctype removed).
 
 ### 4. Patch application
 
@@ -128,8 +138,12 @@ Open each of these list views and confirm no 500 / traceback:
       deploy is not complete.
 - [ ] Same check for
       `production_log.patches.v1_0.remove_job_card_production_entry`.
+- [ ] Same check for
+      `production_log.patches.v1_0.remove_production_execution_layer`.
 - [ ] `frappe.db.exists('Workspace', 'Job Card Tracking')` returns **None**.
 - [ ] `frappe.db.exists('Workspace', 'VCL Production')` returns a string.
+- [ ] `frappe.db.exists('DocType', 'Department Daily Plan')` returns **None**.
+- [ ] `frappe.db.exists('DocType', 'Department Daily Plan Line')` returns **None**.
 
 ### 5. Roles and permissions
 

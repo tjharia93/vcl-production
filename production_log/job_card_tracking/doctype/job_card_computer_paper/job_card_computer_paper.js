@@ -6,7 +6,6 @@ frappe.ui.form.on("Job Card Computer Paper", {
 				filters: { customer: frm.doc.customer },
 			};
 		});
-		_apply_production_lock(frm);
 	},
 
 	onload(frm) {
@@ -81,10 +80,6 @@ frappe.ui.form.on("Job Card Computer Paper", {
 			},
 		});
 	},
-
-	qty_completed(frm) { _recalc_pending(frm); },
-	quantity_ordered(frm) { _recalc_pending(frm); },
-	production_status(frm) { _apply_production_lock(frm); },
 });
 
 function _clear_spec_fields(frm) {
@@ -94,18 +89,4 @@ function _clear_spec_fields(frm) {
 	frm.set_value("weight_per_carton", 0);
 	frm.clear_table("colour_of_parts");
 	frm.refresh_field("colour_of_parts");
-}
-
-function _recalc_pending(frm) {
-	frm.set_value("qty_pending", (frm.doc.quantity_ordered || 0) - (frm.doc.qty_completed || 0));
-}
-
-function _apply_production_lock(frm) {
-	if (frm.doc.docstatus !== 1) return;
-	var locked = (frm.doc.production_status === "Completed" || frm.doc.production_status === "Cancelled");
-	var privileged = frappe.user_roles.includes("System Manager") || frappe.user_roles.includes("Production Manager");
-	var pc_fields = ["production_status", "production_stage", "planned_for_date", "priority", "qty_completed", "production_comments", "hold_reason"];
-	pc_fields.forEach(function (f) {
-		frm.set_df_property(f, "read_only", locked && !privileged ? 1 : 0);
-	});
 }

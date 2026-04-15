@@ -81,14 +81,16 @@ Tester: ________________  Manager: ________________
 ### Cherry-picked 5
 
 - [ ] Scenario A — Customer Product Spec for all 5 cherry-picked rows
-- [ ] Scenario B — Computer Paper smoke test
-- [ ] Scenario C — Label smoke test
+- [ ] Scenario B — Computer Paper smoke test (confirms Production Control
+      section removed)
+- [ ] Scenario C — Label smoke test (confirms Production Control section
+      removed)
 - [ ] Scenario D — Carton auto-populate (5 rows)
 - [ ] Scenario E — SFK layer visibility
 - [ ] Scenario F — 3-ply calculation path
 - [ ] Scenario G — 3-ply → 5-ply conversion (row __)
-- [ ] Scenario H — Workspace & sidebar layout
-- [ ] Scenario I — Department Daily Plan with Carton
+- [ ] Scenario H — Workspace & sidebar layout (confirms Daily Planning
+      group and Department Daily Plan tiles removed)
 
 ### Full regression (rows 6 – 10)
 
