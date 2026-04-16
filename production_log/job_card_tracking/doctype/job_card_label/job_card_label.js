@@ -6,7 +6,6 @@ frappe.ui.form.on("Job Card Label", {
 				filters: { customer: frm.doc.customer },
 			};
 		});
-		_apply_production_lock(frm);
 	},
 
 	onload(frm) {
@@ -73,10 +72,6 @@ frappe.ui.form.on("Job Card Label", {
 			},
 		});
 	},
-
-	qty_completed(frm) { _recalc_pending(frm); },
-	quantity_ordered(frm) { _recalc_pending(frm); },
-	production_status(frm) { _apply_production_lock(frm); },
 });
 
 function _clear_label_spec_fields(frm) {
@@ -84,18 +79,4 @@ function _clear_label_spec_fields(frm) {
 	["label_length", "label_width", "label_number_of_colours", "cylinder_teeth", "plate_up",
 	 "plate_round", "packing_up", "packing_pieces", "gap_between", "side_trim",
 	 "numbering_required", "weight_per_carton"].forEach(f => frm.set_value(f, null));
-}
-
-function _recalc_pending(frm) {
-	frm.set_value("qty_pending", (frm.doc.quantity_ordered || 0) - (frm.doc.qty_completed || 0));
-}
-
-function _apply_production_lock(frm) {
-	if (frm.doc.docstatus !== 1) return;
-	var locked = (frm.doc.production_status === "Completed" || frm.doc.production_status === "Cancelled");
-	var privileged = frappe.user_roles.includes("System Manager") || frappe.user_roles.includes("Production Manager");
-	var pc_fields = ["production_status", "production_stage", "planned_for_date", "priority", "qty_completed", "production_comments", "hold_reason"];
-	pc_fields.forEach(function (f) {
-		frm.set_df_property(f, "read_only", locked && !privileged ? 1 : 0);
-	});
 }

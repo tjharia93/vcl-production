@@ -22,31 +22,39 @@ deployed. It is the last check before we merge to `main`.
 > entry at the top. Older entries stay so we can see the trail of what was
 > tested when.
 
-### 2026-04-15 — Job Card Carton + VCL Production workspace rename
+### 2026-04-15 — Hard reset of production execution layer
 
 **What changed since the previous deploy:**
 
-* Workspace renamed from `Job Card Tracking` to `VCL Production`
-  (URL now `/app/vcl-production`).
-* Sidebar restructured into Customer Specifications / Job Card Tracking /
-  Daily Planning sections.
-* Stale `Job Card Production Entry` references purged.
-* **Job Card Carton** doctype added, with the 5-step calculation pipeline
-  (ply rules → SFK UI rules → flap auto-calc → board sizes → weight calc).
-* Customer Product Specification expanded with 23 new carton fields
-  (dimensions, layer GSMs, layer materials, joint type, box layout).
-* Department Daily Plan now supports `Carton` as a job card type.
-* New `Print Format` fixture placeholder for "Carton Job Card".
+* The full production execution / planning layer has been removed for a
+  clean restart. Specifically:
+  * `Department Daily Plan` and `Department Daily Plan Line` doctypes
+    deleted.
+  * Production Control section (production_status, production_stage,
+    planned_for_date, priority, qty_completed, qty_pending,
+    last_production_update, completed_on, hold_reason, production_comments)
+    stripped from `Job Card Computer Paper` and `Job Card Label`.
+  * `Daily Planning` sidebar group removed from the VCL Production
+    workspace.
+  * New patch `remove_production_execution_layer` drops the deleted
+    doctypes, their tables, and the orphan job-card columns from sites
+    that previously had them.
+* Carton Job Card creation flow and the existing Customer Product
+  Specification / Computer Paper / Label / Dies / Dies Order / Colour of
+  Parts setup all stay intact.
 
 **Scenarios below that specifically cover this deployment:**
 
 * Scenario A — Customer Product Specification carton section
+* Scenario B — Computer Paper Job Card regression (now confirms the
+  Production Control section is gone)
+* Scenario C — Label Job Card regression (same)
 * Scenario D — Carton Job Card create + auto-populate
 * Scenario E — SFK layer visibility
 * Scenario F — 3-ply path
 * Scenario G — 3-ply → 5-ply conversion
-* Scenario H — Workspace & sidebar layout
-* Scenario I — Department Daily Plan carton linkage
+* Scenario H — Workspace & sidebar layout (now expects no Daily Planning
+  group and no Department Daily Plan tiles)
 
 ---
 
@@ -95,10 +103,17 @@ Repeat the above for CSV rows 2, 3, 4 and the chosen conversion row.
 ## Scenario B — Computer Paper Job Card (regression only)
 
 Goal: confirm the existing computer paper flow has not broken after the
-workspace rename and patch run.
+production-layer removal, and that the Production Control section is no
+longer present.
 
 - [ ] From the VCL Production workspace, click **New Computer Paper Job Card**.
 - [ ] The form should open in create mode (not list view, not a 404).
+- [ ] Confirm the form has these sections only: Product Specification,
+      Job-Specific Details, Numbering, Plate Information, Approvals.
+- [ ] Confirm there is **no** Production Control section and **no**
+      production_status / production_stage / qty_completed / qty_pending /
+      planned_for_date / hold_reason / production_comments fields anywhere
+      on the form.
 - [ ] Fill a smoke-test record with any one existing customer spec.
 - [ ] **Stop. Call manager. Do not Save.**
 - [ ] Manager confirms layout, closes the form via Discard / browser close.
@@ -113,6 +128,7 @@ workspace rename and patch run.
 Same as Scenario B but for Label:
 
 - [ ] Workspace → **New Label Job Card** opens a create form.
+- [ ] Confirm there is **no** Production Control section on the form.
 - [ ] Fill smoke-test values, call manager, discard.
 - [ ] Workspace → **Label Job Cards** list loads.
 
@@ -227,10 +243,11 @@ This scenario uses the conversion row the manager picked in Pre-flight.
 ## Scenario H — Workspace & sidebar layout
 
 - [ ] Browse to `/app/vcl-production`. The workspace loads.
-- [ ] Sidebar/content shows three headers in this order:
+- [ ] Sidebar/content shows two headers in this order:
   - [ ] **Customer Specifications**
   - [ ] **Job Card Tracking**
-  - [ ] **Daily Planning**
+- [ ] There is **no** "Daily Planning" header and **no** "New Daily Plan"
+      / "Daily Plan List" tiles anywhere on the workspace.
 - [ ] Under **Customer Specifications**: Customer Product Specifications, Dies List.
 - [ ] Under **Job Card Tracking**:
   - [ ] New Computer Paper Job Card
@@ -239,21 +256,11 @@ This scenario uses the conversion row the manager picked in Pre-flight.
   - [ ] Label Job Cards
   - [ ] New Carton Job Card
   - [ ] Carton Job Cards
-- [ ] Under **Daily Planning**: New Daily Plan, Daily Plan List.
 - [ ] `/app/job-card-tracking` should no longer resolve (404 or redirect is
       both acceptable — it must not show the *old* workspace).
-
----
-
-## Scenario I — Department Daily Plan with Carton
-
-- [ ] Workspace → **New Daily Plan**.
-- [ ] Add a line where **Job Card Type** = `Carton`.
-- [ ] The **Job Card** lookup on that line should filter to Job Card Carton
-      records only.
-- [ ] Pick one of the cards Scenario D saved.
-- [ ] **Stop. Call manager. Do not Save** unless the manager wants to keep
-      the planning entry for the next test cycle.
+- [ ] Search the desk for `Department Daily Plan`. **No result** should
+      appear in the search dropdown.
+- [ ] `/app/department-daily-plan` should 404.
 
 ---
 
