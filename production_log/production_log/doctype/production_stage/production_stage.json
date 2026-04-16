@@ -1,0 +1,106 @@
+{
+ "actions": [],
+ "autoname": "field:stage_name",
+ "creation": "2026-04-16 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "stage_name",
+  "product_line",
+  "sequence",
+  "description",
+  "is_qc_point",
+  "workstation_stages_section",
+  "workstation_stages"
+ ],
+ "fields": [
+  {
+   "fieldname": "stage_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Stage Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "product_line",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Product Line",
+   "options": "All\nComputer Paper\nLabel\nCarton",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sequence",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Sequence",
+   "reqd": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_qc_point",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is QC Point"
+  },
+  {
+   "fieldname": "workstation_stages_section",
+   "fieldtype": "Section Break",
+   "label": "Capable Workstations"
+  },
+  {
+   "fieldname": "workstation_stages",
+   "fieldtype": "Table",
+   "label": "Workstation Stages",
+   "options": "Workstation Stage"
+  }
+ ],
+ "links": [],
+ "modified": "2026-04-16 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Production Log",
+ "name": "Production Stage",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing User"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production Log User"
+  }
+ ],
+ "sort_field": "sequence",
+ "sort_order": "ASC",
+ "track_changes": 1
+}

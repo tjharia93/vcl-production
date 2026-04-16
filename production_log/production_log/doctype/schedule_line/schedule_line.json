@@ -1,0 +1,95 @@
+{
+ "actions": [],
+ "creation": "2026-04-16 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "sequence_order",
+  "job_card_type",
+  "job_card_id",
+  "production_stage",
+  "customer",
+  "planned_qty",
+  "estimated_hours",
+  "status",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "sequence_order",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Sequence",
+   "reqd": 1
+  },
+  {
+   "fieldname": "job_card_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Job Card Type",
+   "options": "DocType",
+   "reqd": 1
+  },
+  {
+   "fieldname": "job_card_id",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "label": "Job Card",
+   "options": "job_card_type",
+   "reqd": 1
+  },
+  {
+   "fieldname": "production_stage",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Production Stage",
+   "options": "Production Stage",
+   "reqd": 1
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Customer",
+   "read_only": 1
+  },
+  {
+   "fieldname": "planned_qty",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Planned Qty",
+   "reqd": 1
+  },
+  {
+   "fieldname": "estimated_hours",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Estimated Hours",
+   "precision": "2"
+  },
+  {
+   "default": "Pending",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Pending\nIn Progress\nDone\nSkipped",
+   "reqd": 1
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-04-16 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Production Log",
+ "name": "Schedule Line",
+ "owner": "Administrator",
+ "permissions": [],
+ "track_changes": 1
+}

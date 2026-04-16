@@ -1,0 +1,177 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-04-16 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "is_submittable": 1,
+ "field_order": [
+  "naming_series",
+  "workstation",
+  "schedule_date",
+  "column_break_info",
+  "workstation_type",
+  "product_line",
+  "schedule_lines_section",
+  "schedule_lines",
+  "totals_section",
+  "total_planned_qty",
+  "total_planned_hours",
+  "column_break_totals",
+  "available_hours",
+  "utilization_pct",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Naming Series",
+   "options": "DPS-.YYYY.-.#####",
+   "reqd": 1,
+   "set_only_once": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "workstation",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Workstation",
+   "options": "Workstation",
+   "reqd": 1
+  },
+  {
+   "fieldname": "schedule_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Schedule Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_info",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fetch_from": "workstation.workstation_type",
+   "fieldname": "workstation_type",
+   "fieldtype": "Link",
+   "label": "Workstation Type",
+   "options": "Workstation Type",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "workstation.custom_product_line",
+   "fieldname": "product_line",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Product Line",
+   "read_only": 1
+  },
+  {
+   "fieldname": "schedule_lines_section",
+   "fieldtype": "Section Break",
+   "label": "Schedule Lines"
+  },
+  {
+   "fieldname": "schedule_lines",
+   "fieldtype": "Table",
+   "label": "Schedule Lines",
+   "options": "Schedule Line",
+   "reqd": 1
+  },
+  {
+   "fieldname": "totals_section",
+   "fieldtype": "Section Break",
+   "label": "Totals"
+  },
+  {
+   "fieldname": "total_planned_qty",
+   "fieldtype": "Int",
+   "label": "Total Planned Qty",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_planned_hours",
+   "fieldtype": "Float",
+   "label": "Total Planned Hours",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_totals",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "8",
+   "fieldname": "available_hours",
+   "fieldtype": "Float",
+   "label": "Available Hours",
+   "precision": "2"
+  },
+  {
+   "fieldname": "utilization_pct",
+   "fieldtype": "Percent",
+   "label": "Utilization %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Daily Production Schedule",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-04-16 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Production Log",
+ "name": "Daily Production Schedule",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing User",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production Log User"
+  }
+ ],
+ "sort_field": "schedule_date",
+ "sort_order": "DESC",
+ "track_changes": 1
+}
