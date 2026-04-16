@@ -494,3 +494,263 @@ Track Changes:  Yes
 │  └──────────────────────────────────────────────────────┘          │
 └─────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Section 3: Daily Production Schedule + Dispatching
+
+The Daily Production Schedule (DPS) is the priority deliverable of the PPC
+layer. It answers the single most important shop-floor question every morning:
+**"What runs on which machine today, and in what order?"**
+
+The design follows a document-per-machine-per-day pattern. Each DPS document
+is a sequenced list of jobs assigned to one workstation for one calendar day.
+This keeps the data model flat, auditable, and easy to query — no complex
+calendar engine required.
+
+### 3.1 Daily Production Schedule Doctype
+
+```
+Doctype:        Daily Production Schedule
+Module:         Production Log
+Naming Rule:    Expression: DPS-.YYYY.-.#####
+Is Submittable: Yes
+Track Changes:  Yes
+```
+
+A submitted DPS represents the locked plan for that machine-day. Draft DPS
+documents can be freely edited by planners. Amending a submitted DPS creates
+a new version while preserving the audit trail of what was originally planned.
+
+#### Fields
+
+```
+┌───────────────────────┬───────────┬────────┬─────────────────────────────┐
+│ Field Name            │ Type      │ Reqd   │ Purpose                     │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ workstation           │ Link      │ Yes    │ Link to Workstation.        │
+│                       │           │        │ The physical machine this   │
+│                       │           │        │ schedule is for.            │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ schedule_date         │ Date      │ Yes    │ The calendar day this       │
+│                       │           │        │ schedule covers.            │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ workstation_type      │ Link      │ No     │ Link to Workstation Type.   │
+│                       │           │        │ Auto-fetched from           │
+│                       │           │        │ workstation. Read-only.     │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ product_line          │ Select    │ No     │ Auto-fetched from           │
+│                       │           │        │ workstation. Read-only.     │
+│                       │           │        │ Options: Computer Paper,    │
+│                       │           │        │ Label, Carton, All          │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ schedule_lines        │ Table     │ Yes    │ Child table: Schedule Line. │
+│                       │           │        │ The ordered list of jobs    │
+│                       │           │        │ for this machine-day.       │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ section_totals        │ Section   │ —      │ — Section Break —           │
+│                       │ Break     │        │                             │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ total_planned_qty     │ Int       │ No     │ Sum of planned_qty across   │
+│                       │           │        │ all schedule lines.         │
+│                       │           │        │ Read-only, calculated.      │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ total_planned_hours   │ Float     │ No     │ Sum of estimated_hours      │
+│                       │           │        │ across all schedule lines.  │
+│                       │           │        │ Read-only, calculated.      │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ available_hours       │ Float     │ No     │ Working hours for this      │
+│                       │           │        │ workstation on this day     │
+│                       │           │        │ (fetched from Workstation   │
+│                       │           │        │ working hours / holiday     │
+│                       │           │        │ list). Read-only.           │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ utilization_pct       │ Percent   │ No     │ total_planned_hours /       │
+│                       │           │        │ available_hours × 100.      │
+│                       │           │        │ Read-only, calculated.      │
+│                       │           │        │ Turns red when > 100%.      │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ amended_from          │ Link      │ No     │ Standard amended_from field │
+│                       │           │        │ for submittable doctypes.   │
+│                       │           │        │ Read-only.                  │
+└───────────────────────┴───────────┴────────┴─────────────────────────────┘
+```
+
+#### Unique Constraint
+
+A composite unique key on (`workstation`, `schedule_date`) ensures only one
+schedule document exists per machine per day. Enforced via controller
+`validate()` — Frappe does not support multi-column unique constraints
+natively, so this is a Python-level check with a clear error message.
+
+#### Permissions
+
+| Role                 | Read | Write | Create | Delete | Submit | Amend |
+|----------------------|------|-------|--------|--------|--------|-------|
+| Manufacturing Manager| ✓    | ✓     | ✓      | ✓      | ✓      | ✓     |
+| Manufacturing User   | ✓    | ✓     | ✓      | —      | ✓      | —     |
+| Production Log User  | ✓    | —     | —      | —      | —      | —     |
+
+### 3.2 Schedule Line (Child Table)
+
+Each row in the Schedule Line table represents one job assigned to the
+parent DPS's machine for that day. The `sequence_order` field controls
+the run order. Dynamic Link fields allow referencing any of the three
+job card types without separate columns.
+
+```
+Doctype:        Schedule Line
+Module:         Production Log
+Is Child Table: Yes
+Parent Doctype: Daily Production Schedule (field: schedule_lines)
+```
+
+#### Fields
+
+```
+┌───────────────────────┬───────────┬────────┬─────────────────────────────┐
+│ Field Name            │ Type      │ Reqd   │ Purpose                     │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ sequence_order        │ Int       │ Yes    │ Run order on the machine.   │
+│                       │           │        │ 10, 20, 30… with gaps for   │
+│                       │           │        │ reordering. The Schedule    │
+│                       │           │        │ Board UI sets this via      │
+│                       │           │        │ drag-and-drop.              │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ job_card_type         │ Link      │ Yes    │ Link to DocType. Options:   │
+│                       │           │        │ Job Card Computer Paper,    │
+│                       │           │        │ Job Card Label,             │
+│                       │           │        │ Job Card Carton.            │
+│                       │           │        │ First half of Dynamic Link. │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ job_card_id           │ Dynamic   │ Yes    │ The specific job card       │
+│                       │ Link      │        │ document. References the    │
+│                       │           │        │ doctype set in              │
+│                       │           │        │ job_card_type.              │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ production_stage      │ Link      │ Yes    │ Link to Production Stage.   │
+│                       │           │        │ Which manufacturing step    │
+│                       │           │        │ this line represents        │
+│                       │           │        │ (e.g., Printing, Die        │
+│                       │           │        │ Cutting).                   │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ customer              │ Data      │ No     │ Fetched from job card.      │
+│                       │           │        │ Read-only display field     │
+│                       │           │        │ so planner sees the         │
+│                       │           │        │ customer without opening    │
+│                       │           │        │ the job card.               │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ planned_qty           │ Int       │ Yes    │ Quantity planned for this   │
+│                       │           │        │ machine-day. May be less    │
+│                       │           │        │ than total job qty if the   │
+│                       │           │        │ job spans multiple days.    │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ estimated_hours       │ Float     │ No     │ Estimated run time in       │
+│                       │           │        │ hours. Auto-calculated:     │
+│                       │           │        │ planned_qty /               │
+│                       │           │        │ workstation.max_speed_per   │
+│                       │           │        │ _hour + setup_time. Can be  │
+│                       │           │        │ manually overridden.        │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ status               │ Select    │ Yes    │ Options: Pending,           │
+│                       │           │        │ In Progress, Done, Skipped. │
+│                       │           │        │ Default: Pending.           │
+│                       │           │        │ Updated by shop floor       │
+│                       │           │        │ entries or manually.        │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ notes                 │ Small Text│ No     │ Planner notes for the       │
+│                       │           │        │ operator (e.g., "Use cyan   │
+│                       │           │        │ ink from batch #42",        │
+│                       │           │        │ "Customer priority rush").  │
+└───────────────────────┴───────────┴────────┴─────────────────────────────┘
+```
+
+#### Permissions
+
+Inherits from parent doctype (Daily Production Schedule).
+
+### 3.3 Production Operation Doctype (Phase 2)
+
+> **Phase 2 — Optional.** The Daily Production Schedule (Section 3.1) is the
+> Phase 1 scheduling unit. Production Operation is a finer-grained doctype
+> planned for Phase 2, when VCL needs individual operation-level tracking
+> with precise time windows and cross-day visibility.
+
+Production Operation represents a single manufacturing step for a single job
+card, independent of which day it runs. While the DPS groups jobs by
+machine-day, a Production Operation tracks one operation across its full
+lifecycle — from planned through completed — even if it spans multiple days
+or moves between machines.
+
+```
+Doctype:        Production Operation
+Module:         Production Log
+Naming Rule:    Expression: PO-.YYYY.-.#####
+Is Submittable: Yes
+Track Changes:  Yes
+```
+
+#### Fields
+
+```
+┌───────────────────────┬───────────┬────────┬─────────────────────────────┐
+│ Field Name            │ Type      │ Reqd   │ Purpose                     │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ job_card_type         │ Link      │ Yes    │ Link to DocType. First half │
+│                       │           │        │ of Dynamic Link.            │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ job_card_id           │ Dynamic   │ Yes    │ The specific job card this  │
+│                       │ Link      │        │ operation belongs to.       │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ production_stage      │ Link      │ Yes    │ Link to Production Stage.   │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ workstation           │ Link      │ No     │ Link to Workstation.        │
+│                       │           │        │ Assigned machine. May be    │
+│                       │           │        │ blank if unscheduled.       │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ priority              │ Select    │ Yes    │ Options: Low, Normal, High, │
+│                       │           │        │ Urgent. Default: Normal.    │
+│                       │           │        │ Affects sort order on the   │
+│                       │           │        │ Schedule Board.             │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ planned_start         │ Datetime  │ No     │ Planned start time. Set by  │
+│                       │           │        │ scheduler or manually.      │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ planned_end           │ Datetime  │ No     │ Planned end time.           │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ planned_qty           │ Int       │ Yes    │ Total quantity to produce.  │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ actual_start          │ Datetime  │ No     │ Set when operator begins.   │
+│                       │           │        │ Read-only on form.          │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ actual_end            │ Datetime  │ No     │ Set when operator completes.│
+│                       │           │        │ Read-only on form.          │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ actual_qty            │ Int       │ No     │ Rolled up from Production   │
+│                       │           │        │ Entry documents. Read-only. │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ status                │ Select    │ Yes    │ Options: Not Started,       │
+│                       │           │        │ In Progress, Completed,     │
+│                       │           │        │ QC Passed, On Hold,         │
+│                       │           │        │ Cancelled.                  │
+│                       │           │        │ Default: Not Started.       │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ amended_from          │ Link      │ No     │ Standard amended_from.      │
+│                       │           │        │ Read-only.                  │
+└───────────────────────┴───────────┴────────┴─────────────────────────────┘
+```
+
+#### Relationships
+
+- **Links TO:** Job Card (Dynamic Link via job_card_type + job_card_id)
+- **Links TO:** Production Stage, Workstation
+- **Linked FROM:** Production Entry (Section 4), Downtime Entry (Section 4)
+- **Linked FROM:** Schedule Line (optional Phase 2 cross-reference)
+
+#### Permissions
+
+| Role                 | Read | Write | Create | Delete | Submit | Amend |
+|----------------------|------|-------|--------|--------|--------|-------|
+| Manufacturing Manager| ✓    | ✓     | ✓      | ✓      | ✓      | ✓     |
+| Manufacturing User   | ✓    | ✓     | ✓      | —      | ✓      | —     |
+| Production Log User  | ✓    | —     | —      | —      | —      | —     |
