@@ -754,3 +754,168 @@ Track Changes:  Yes
 | Manufacturing Manager| ✓    | ✓     | ✓      | ✓      | ✓      | ✓     |
 | Manufacturing User   | ✓    | ✓     | ✓      | —      | ✓      | —     |
 | Production Log User  | ✓    | —     | —      | —      | —      | —     |
+
+### 3.4 Daily Schedule Board (Custom Frappe Page)
+
+The Daily Schedule Board is the primary planner interface — a custom Frappe
+Page (not a doctype view) that renders a Kanban-by-machine-by-day layout.
+It provides drag-and-drop dispatching without requiring planners to open
+individual DPS documents.
+
+#### Page Details
+
+```
+Page Name:      daily-schedule-board
+Module:         Production Log
+Route:          /app/daily-schedule-board
+Type:           Custom Frappe Page (Python + JS)
+```
+
+#### Layout
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  Daily Schedule Board              [◀ 2026-04-16 ▶]  [+ Add Job]  │
+├─────────────────┬─────────────────┬─────────────────┬───────────────┤
+│ Flexo Press #1  │ Flexo Press #2  │ Die Cutter #1   │ Collator #1  │
+│ (Label)         │ (Carton)        │ (Label)         │ (Comp Paper) │
+│ 6.5h / 8h = 81% │ 7.2h / 8h = 90%│ 4.0h / 8h = 50%│ 3.5h / 8h   │
+├─────────────────┼─────────────────┼─────────────────┼───────────────┤
+│ ┌─────────────┐ │ ┌─────────────┐ │ ┌─────────────┐ │ ┌───────────┐│
+│ │ JC-L-00042  │ │ │ JC-C-00018  │ │ │ JC-L-00042  │ │ │ JC-CP-031 ││
+│ │ Acme Ltd    │ │ │ Bidco       │ │ │ Acme Ltd    │ │ │ KCB Bank  ││
+│ │ Printing    │ │ │ Printing    │ │ │ Die Cutting │ │ │ Collating ││
+│ │ 5,000 pcs   │ │ │ 2,000 pcs   │ │ │ 5,000 pcs   │ │ │ 10,000   ││
+│ │ ~2.5h       │ │ │ ~3.0h       │ │ │ ~2.0h       │ │ │ ~2.0h    ││
+│ │ ● Pending   │ │ │ ● Pending   │ │ │ ● Pending   │ │ │ ● Pending││
+│ └─────────────┘ │ └─────────────┘ │ └─────────────┘ │ └───────────┘│
+│ ┌─────────────┐ │ ┌─────────────┐ │ ┌─────────────┐ │              │
+│ │ JC-L-00039  │ │ │ JC-C-00015  │ │ │ JC-L-00039  │ │              │
+│ │ Unilever    │ │ │ EABL        │ │ │ Unilever    │ │              │
+│ │ Printing    │ │ │ Printing    │ │ │ Die Cutting │ │              │
+│ │ 8,000 pcs   │ │ │ 4,200 pcs   │ │ │ 8,000 pcs   │ │              │
+│ │ ~4.0h       │ │ │ ~4.2h       │ │ │ ~2.0h       │ │              │
+│ │ ● Pending   │ │ │ ● Pending   │ │ │ ● Pending   │ │              │
+│ └─────────────┘ │ └─────────────┘ │ └─────────────┘ │              │
+│   [+ Add Line]  │   [+ Add Line]  │   [+ Add Line]  │  [+ Add Line]│
+└─────────────────┴─────────────────┴─────────────────┴───────────────┘
+```
+
+#### Key Interactions
+
+| Action                  | Behaviour                                       |
+|-------------------------|-------------------------------------------------|
+| **Date navigation**     | ◀ / ▶ arrows or date picker. Loads/creates DPS  |
+|                         | documents for each visible workstation on that   |
+|                         | date. Missing DPS docs are created as Draft.     |
+| **Drag card vertically**| Reorders within the same machine column.         |
+|                         | Updates `sequence_order` on Schedule Line rows.  |
+| **Drag card across**    | Moves job to a different machine. Removes the    |
+|                         | Schedule Line from source DPS and adds to target |
+|                         | DPS. Validates machine capability (product_line, |
+|                         | max_width_mm, max_colors) before allowing drop.  |
+| **Click card**          | Opens a side panel with Schedule Line details,   |
+|                         | job card summary, and quick-edit for planned_qty,|
+|                         | notes, and status.                               |
+| **+ Add Job**           | Opens a dialog to search submitted Job Cards     |
+|                         | (filtered by product line matching the machine). |
+|                         | Selecting a job adds a Schedule Line to the      |
+|                         | machine's DPS with the next sequence_order.      |
+| **+ Add Line**          | Same as + Add Job but scoped to that column's    |
+|                         | machine.                                         |
+| **Status change**       | Click status badge to cycle: Pending → In        |
+|                         | Progress → Done. Skipped available via dropdown. |
+| **Utilization bar**     | Each column header shows a progress bar:         |
+|                         | total_planned_hours / available_hours. Turns     |
+|                         | amber > 85%, red > 100%.                         |
+
+#### Filters & Controls
+
+- **Product line filter:** Show only machines for a specific product line
+  (Computer Paper, Label, Carton, or All).
+- **Workstation type filter:** Show only specific machine types (e.g., only
+  Flexo Presses).
+- **Status filter:** Hide completed/skipped lines to focus on pending work.
+- **Search:** Filter cards by job card ID or customer name.
+
+#### Technical Implementation Notes
+
+- Built as a Frappe Page (`production_log/production_log/page/daily_schedule_board/`).
+- Uses `frappe.call` to load DPS documents for the selected date.
+- Drag-and-drop via SortableJS (already bundled with Frappe).
+- Each card mutation fires a debounced API call to update the underlying
+  DPS document — no explicit save button needed.
+- Column widths are equal; horizontal scroll if > 6 machines visible.
+- Mobile-responsive: collapses to single-column with machine tabs.
+
+#### Permissions
+
+Page visibility follows the same roles as Daily Production Schedule:
+Manufacturing Manager and Manufacturing User can interact; Production Log
+User gets read-only view (drag disabled, status badges non-clickable).
+
+### 3.5 Phase 3: Gantt View & Machine Queue Page
+
+> **Phase 3 — Future.** These views are planned but not part of the initial
+> PPC deliverable. They are documented here to ensure the data model
+> supports them without schema changes.
+
+#### 3.5.1 Gantt View
+
+A time-axis Gantt chart showing Production Operations (Section 3.3) as
+horizontal bars on a workstation-per-row grid. This requires Phase 2's
+Production Operation doctype with `planned_start` and `planned_end`
+timestamps.
+
+```
+Machine        │ 06:00  08:00  10:00  12:00  14:00  16:00  18:00
+───────────────┼──────────────────────────────────────────────────
+Flexo Press #1 │ ██JC-L-042██  ████JC-L-039████      ░░░░░░░░
+Flexo Press #2 │ ████████JC-C-018████████  ██JC-C-015██████████
+Die Cutter #1  │ ░░░░░░  ██JC-L-042██  ██JC-L-039██  ░░░░░░░░
+Collator #1    │ ██JC-CP-031██  ░░░░░░░░░░░░░░░░░░░░  ░░░░░░░░
+───────────────┼──────────────────────────────────────────────────
+                 █ = Scheduled job    ░ = Available capacity
+```
+
+**Data source:** Production Operation documents filtered by date range.
+**Interaction:** Click bar to open operation details; drag bar ends to
+adjust planned_start / planned_end; drag entire bar to move to different
+machine (same validation as Schedule Board).
+**Implementation:** Frappe Gantt library (built-in) or frappe.ui.GanttChart.
+**Prerequisite:** Phase 2 Production Operation doctype must be live.
+
+#### 3.5.2 Machine Queue Page
+
+A per-machine view showing all upcoming work across multiple days — the
+"order book" for a single workstation. Useful for operators and supervisors
+who manage one machine or area.
+
+```
+Machine Queue: Flexo Press #1
+┌──────────┬────────────────┬──────────┬──────────┬─────────┬────────┐
+│ Date     │ Job Card       │ Customer │ Stage    │ Qty     │ Status │
+├──────────┼────────────────┼──────────┼──────────┼─────────┼────────┤
+│ Today    │ JC-L-00042     │ Acme Ltd │ Printing │ 5,000   │Pending │
+│ Today    │ JC-L-00039     │ Unilever │ Printing │ 8,000   │Pending │
+│ Tomorrow │ JC-L-00045     │ KWAL     │ Printing │ 3,000   │Pending │
+│ Tomorrow │ JC-C-00020     │ Bidco    │ Printing │ 6,000   │Pending │
+│ 18 Apr   │ JC-L-00041     │ BAT      │ Printing │ 12,000  │Pending │
+└──────────┴────────────────┴──────────┴──────────┴─────────┴────────┘
+```
+
+**Data source:** Schedule Lines from DPS documents where `workstation`
+matches, ordered by `schedule_date` then `sequence_order`.
+**Implementation:** Script Report or custom Frappe Page with list view.
+**Prerequisite:** Only requires Phase 1 DPS — no dependency on Phase 2.
+
+### 3.6 Section 3 Summary: Phased Delivery
+
+| Phase   | Deliverable                  | Depends On     | Status    |
+|---------|------------------------------|----------------|-----------|
+| Phase 1 | Daily Production Schedule    | Section 2 done | Priority  |
+| Phase 1 | Schedule Line child table    | DPS doctype    | Priority  |
+| Phase 1 | Daily Schedule Board page    | DPS doctype    | Priority  |
+| Phase 2 | Production Operation doctype | Phase 1 live   | Planned   |
+| Phase 3 | Gantt View                   | Phase 2 live   | Future    |
+| Phase 3 | Machine Queue Page           | Phase 1 live   | Future    |
