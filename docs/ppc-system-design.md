@@ -1371,3 +1371,212 @@ Report Type:    Script Report
 │  Real-time KPIs          │   │  Job Progress                    │
 └──────────────────────────┘   └──────────────────────────────────┘
 ```
+
+---
+
+## Section 5: Integration with Existing Doctypes
+
+The PPC layer must attach to the three existing job card doctypes without
+altering their core schema or breaking current workflows. All integration
+is achieved through Custom Fields (installed via fixtures) and doctype
+event hooks (declared in `hooks.py`).
+
+### 5.1 Custom Fields on Existing Job Cards
+
+Two Custom Fields are added to each of the three job card doctypes. They
+are installed via the same fixture mechanism described in Section 2.1.1.
+
+```
+Target Doctypes:  Job Card Computer Paper
+                  Job Card Label
+                  Job Card Carton
+
+┌──────────────────┬───────────┬────────┬──────────────────────────────────┐
+│ Field Name       │ Type      │ Reqd   │ Purpose                          │
+├──────────────────┼───────────┼────────┼──────────────────────────────────┤
+│ production_status│ Select    │ No     │ Options: Not Started,            │
+│                  │           │        │ In Progress, Completed.          │
+│                  │           │        │ Default: Not Started.            │
+│                  │           │        │ Read-only — set automatically    │
+│                  │           │        │ by Production Entry on_submit.   │
+│                  │           │        │ Not Started → In Progress on     │
+│                  │           │        │ first PE submit. In Progress →   │
+│                  │           │        │ Completed when total qty_produced│
+│                  │           │        │ ≥ quantity_ordered.              │
+├──────────────────┼───────────┼────────┼──────────────────────────────────┤
+│ current_stage    │ Link      │ No     │ Link to Production Stage.        │
+│                  │           │        │ Read-only — set automatically    │
+│                  │           │        │ to the stage of the most recent  │
+│                  │           │        │ submitted Production Entry for   │
+│                  │           │        │ this job card.                   │
+└──────────────────┴───────────┴────────┴──────────────────────────────────┘
+```
+
+**Insert after field:** `quantity_ordered` (present on all three job cards)
+**Section Break:** Added before these fields with label "Production Tracking"
+
+#### Fixture Filter Update
+
+The Custom Field fixture filter in `hooks.py` (Section 2.1.1) is expanded
+to include the job card doctypes:
+
+```python
+{
+    "dt": "Custom Field",
+    "filters": [
+        [
+            "dt", "in", [
+                "Workstation Type",
+                "Workstation",
+                "Job Card Computer Paper",
+                "Job Card Label",
+                "Job Card Carton",
+            ]
+        ]
+    ],
+}
+```
+
+### 5.2 Dashboard Connections
+
+Frappe's `get_dashboard_data` hook exposes linked documents in the sidebar
+of a doctype's form view. For each job card type, the dashboard shows
+related Production Entries and Schedule Lines without any schema change.
+
+Each job card type gets a `{doctype}_dashboard.py` file:
+
+```python
+# Example: job_card_label_dashboard.py
+def get_data():
+    return {
+        "fieldname": "job_card_id",
+        "dynamic_link_field": "job_card_type",
+        "transactions": [
+            {
+                "label": "Production",
+                "items": ["Production Entry"],
+            },
+            {
+                "label": "Schedule",
+                "items": ["Daily Production Schedule"],
+            },
+        ],
+    }
+```
+
+This surfaces counts and links in the job card form sidebar:
+
+```
+┌─────────────────────────────────────┐
+│  Job Card Label: JC-L-00042        │
+│  ─────────────────────────────────  │
+│  Production Tracking                │
+│  Status: In Progress                │
+│  Current Stage: Printing            │
+│  ─────────────────────────────────  │
+│  Connections:                       │
+│  Production Entry         3         │
+│  Daily Production Schedule 2        │
+└─────────────────────────────────────┘
+```
+
+### 5.3 hooks.py Changes
+
+Below is the complete set of additions to `hooks.py` for the PPC layer.
+Existing entries (Print Format fixture) are preserved.
+
+```python
+# --- Fixtures ---
+fixtures = [
+    {"dt": "Print Format", "filters": [["name", "=", "Carton Job Card"]]},
+    {
+        "dt": "Custom Field",
+        "filters": [
+            [
+                "dt", "in", [
+                    "Workstation Type",
+                    "Workstation",
+                    "Job Card Computer Paper",
+                    "Job Card Label",
+                    "Job Card Carton",
+                ]
+            ]
+        ],
+    },
+    {"dt": "Production Stage"},
+    {"dt": "Waste Reason"},
+    {"dt": "Downtime Reason"},
+    {"dt": "Workstation Type", "filters": [
+        ["name", "in", [
+            "Flexo Press", "Corrugator", "Folder Gluer",
+            "Numbering Machine", "Collator", "Die Cutter",
+        ]]
+    ]},
+]
+
+# --- Doctype Events ---
+doc_events = {
+    "Production Entry": {
+        "on_submit": "production_log.events.production_entry.on_submit",
+        "on_cancel": "production_log.events.production_entry.on_cancel",
+    },
+    "Downtime Entry": {
+        "on_submit": "production_log.events.downtime_entry.on_submit",
+        "on_cancel": "production_log.events.downtime_entry.on_cancel",
+    },
+}
+```
+
+#### Event Handler Summary
+
+| Event                              | Action                              |
+|------------------------------------|-------------------------------------|
+| `Production Entry.on_submit`       | Roll up qty_produced to job card.   |
+|                                    | Update production_status and        |
+|                                    | current_stage on job card.          |
+|                                    | Update Schedule Line status if DPS  |
+|                                    | is linked.                          |
+| `Production Entry.on_cancel`       | Reverse the rollup: recalculate     |
+|                                    | totals, revert production_status    |
+|                                    | if needed.                          |
+| `Downtime Entry.on_submit`         | Recalculate DPS utilization_pct     |
+|                                    | for the linked machine-day.         |
+| `Downtime Entry.on_cancel`         | Reverse utilization recalculation.  |
+
+### 5.4 Workflow: Job Card States
+
+The existing job card doctypes use Frappe's built-in submittable states:
+**Draft → Submitted → Cancelled** (with Amended). The PPC layer does NOT
+add a Frappe Workflow on top of this — the `production_status` Custom Field
+handles production-phase tracking independently.
+
+Rationale: Frappe Workflows override the submit/cancel button behaviour and
+add state transition permissions. This would complicate the existing job card
+creation flow (which works fine) just to surface production status. Instead:
+
+- **Draft / Submitted / Cancelled** = document lifecycle (unchanged)
+- **Not Started / In Progress / Completed** = production lifecycle (Custom
+  Field, set by event hooks, read-only on the form)
+
+These two axes are independent. A Submitted job card starts at "Not Started"
+and progresses to "Completed" as Production Entries accumulate. If the job
+card is Cancelled, production_status becomes irrelevant (no new Production
+Entries can link to a cancelled job card — enforced in PE validate).
+
+```
+Document Lifecycle          Production Lifecycle
+(Frappe built-in)           (Custom Field)
+
+  Draft ──► Submitted ──┐     Not Started
+                        │         │
+                        │    (first PE submitted)
+                        │         ▼
+                        │     In Progress
+                        │         │
+                        │    (total qty ≥ ordered qty)
+                        │         ▼
+                        │     Completed
+                        │
+                        └──► Cancelled
+                             (blocks new PEs)
+```
