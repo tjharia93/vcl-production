@@ -919,3 +919,455 @@ matches, ordered by `schedule_date` then `sequence_order`.
 | Phase 2 | Production Operation doctype | Phase 1 live   | Planned   |
 | Phase 3 | Gantt View                   | Phase 2 live   | Future    |
 | Phase 3 | Machine Queue Page           | Phase 1 live   | Future    |
+
+---
+
+## Section 4: Production Actuals + Tracking
+
+The scheduling layer (Section 3) answers "what should run where today." This
+section defines how the shop floor records **what actually happened** —
+quantities produced, waste generated, and downtime incurred. These actuals
+feed back into job card progress, machine utilization metrics, and the KPI
+dashboard.
+
+Two submittable doctypes capture actuals: **Production Entry** (output per
+job per machine) and **Downtime Entry** (stoppages per machine). Both link
+back to the Daily Production Schedule that governs the machine-day, creating
+a clean planned-vs-actual comparison.
+
+### 4.1 Production Entry Doctype
+
+A Production Entry records the actual output of one job on one machine for
+one shift or time window. Operators create these as work progresses — either
+via the Shop Floor Terminal (Phase 2) or directly in the Frappe desk.
+
+```
+Doctype:        Production Entry
+Module:         Production Log
+Naming Rule:    Expression: PE-.YYYY.-.#####
+Is Submittable: Yes
+Track Changes:  Yes
+```
+
+#### Fields
+
+```
+┌───────────────────────┬───────────┬────────┬─────────────────────────────┐
+│ Field Name            │ Type      │ Reqd   │ Purpose                     │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ section_job           │ Section   │ —      │ — Job Reference —           │
+│                       │ Break     │        │                             │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ job_card_type         │ Link      │ Yes    │ Link to DocType. Options:   │
+│                       │           │        │ Job Card Computer Paper,    │
+│                       │           │        │ Job Card Label,             │
+│                       │           │        │ Job Card Carton.            │
+│                       │           │        │ First half of Dynamic Link. │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ job_card_id           │ Dynamic   │ Yes    │ The specific job card this  │
+│                       │ Link      │        │ entry records output for.   │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ production_stage      │ Link      │ Yes    │ Link to Production Stage.   │
+│                       │           │        │ Which step was performed    │
+│                       │           │        │ (e.g., Printing, Collating).│
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ customer              │ Data      │ No     │ Fetched from job card.      │
+│                       │           │        │ Read-only display field.    │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ section_machine       │ Section   │ —      │ — Machine & Schedule —      │
+│                       │ Break     │        │                             │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ workstation           │ Link      │ Yes    │ Link to Workstation.        │
+│                       │           │        │ The machine that produced   │
+│                       │           │        │ this output.                │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ daily_production      │ Link      │ No     │ Link to Daily Production    │
+│ _schedule             │           │        │ Schedule. Auto-set if a DPS │
+│                       │           │        │ exists for this workstation │
+│                       │           │        │ + date. Links actual back   │
+│                       │           │        │ to planned.                 │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ section_time          │ Section   │ —      │ — Time & Shift —            │
+│                       │ Break     │        │                             │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ start_time            │ Datetime  │ Yes    │ When the run started.       │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ end_time              │ Datetime  │ Yes    │ When the run ended.         │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ duration_hours        │ Float     │ No     │ Calculated: (end_time -     │
+│                       │           │        │ start_time) in hours.       │
+│                       │           │        │ Read-only.                  │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ shift                 │ Select    │ No     │ Options: Day, Night.        │
+│                       │           │        │ Auto-detected from          │
+│                       │           │        │ start_time or set manually. │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ operator              │ Link      │ No     │ Link to Employee (ERPNext). │
+│                       │           │        │ The machine operator for    │
+│                       │           │        │ this run.                   │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ section_output        │ Section   │ —      │ — Output & Waste —          │
+│                       │ Break     │        │                             │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ qty_produced          │ Int       │ Yes    │ Good output quantity.       │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ qty_waste             │ Int       │ No     │ Waste quantity. Default: 0. │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ waste_reason          │ Link      │ No     │ Link to Waste Reason.       │
+│                       │           │        │ Required if qty_waste > 0.  │
+│                       │           │        │ Enforced in validate().     │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ waste_pct             │ Percent   │ No     │ Calculated: qty_waste /     │
+│                       │           │        │ (qty_produced + qty_waste)  │
+│                       │           │        │ × 100. Read-only.           │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ section_notes         │ Section   │ —      │ — Notes —                   │
+│                       │ Break     │        │                             │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ notes                 │ Small Text│ No     │ Operator remarks (e.g.,     │
+│                       │           │        │ "Ink change mid-run",       │
+│                       │           │        │ "Paper jam at 2,500 pcs").  │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ amended_from          │ Link      │ No     │ Standard amended_from.      │
+│                       │           │        │ Read-only.                  │
+└───────────────────────┴───────────┴────────┴─────────────────────────────┘
+```
+
+#### Auto-Update: Job Card Progress
+
+On submit, the Production Entry controller rolls up totals to the parent
+job card. A virtual (non-stored) or Custom Field `total_qty_produced` on
+each job card type aggregates all submitted Production Entries for that
+job card and stage:
+
+```python
+# production_entry.py — on_submit / on_cancel
+def update_job_card_progress(self):
+    total = frappe.db.sql("""
+        SELECT SUM(qty_produced) FROM `tabProduction Entry`
+        WHERE job_card_type = %s AND job_card_id = %s
+          AND production_stage = %s AND docstatus = 1
+    """, (self.job_card_type, self.job_card_id, self.production_stage))
+    # Update progress field on the job card
+```
+
+This avoids modifying the existing job card doctype schema — progress is
+fetched on demand or cached in a Custom Field added via fixtures.
+
+#### Relationships
+
+- **Links TO:** Job Card (Dynamic Link via job_card_type + job_card_id)
+- **Links TO:** Workstation, Production Stage, Waste Reason
+- **Links TO:** Daily Production Schedule (optional back-reference)
+- **Links TO:** Employee (operator)
+
+#### Permissions
+
+| Role                 | Read | Write | Create | Delete | Submit | Amend |
+|----------------------|------|-------|--------|--------|--------|-------|
+| Manufacturing Manager| ✓    | ✓     | ✓      | ✓      | ✓      | ✓     |
+| Manufacturing User   | ✓    | ✓     | ✓      | —      | ✓      | —     |
+| Production Log User  | ✓    | ✓     | ✓      | —      | ✓      | —     |
+
+> Note: Production Log User gets create/submit here — operators on the shop
+> floor need to record output without elevated Manufacturing permissions.
+
+### 4.2 Downtime Entry Doctype
+
+A Downtime Entry records a period when a machine was not producing. It is
+linked to the machine (not to a specific job card) because downtime affects
+the machine's availability regardless of which job was scheduled.
+
+```
+Doctype:        Downtime Entry
+Module:         Production Log
+Naming Rule:    Expression: DT-.YYYY.-.#####
+Is Submittable: Yes
+Track Changes:  Yes
+```
+
+#### Fields
+
+```
+┌───────────────────────┬───────────┬────────┬─────────────────────────────┐
+│ Field Name            │ Type      │ Reqd   │ Purpose                     │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ workstation           │ Link      │ Yes    │ Link to Workstation.        │
+│                       │           │        │ The machine that was down.  │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ downtime_reason       │ Link      │ Yes    │ Link to Downtime Reason.    │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ daily_production      │ Link      │ No     │ Link to Daily Production    │
+│ _schedule             │           │        │ Schedule. Auto-set if a DPS │
+│                       │           │        │ exists for this workstation │
+│                       │           │        │ + date. Used for planned-   │
+│                       │           │        │ vs-actual reporting.        │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ start_time            │ Datetime  │ Yes    │ When downtime began.        │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ end_time              │ Datetime  │ No     │ When downtime ended. Blank  │
+│                       │           │        │ if machine is still down.   │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ duration_minutes      │ Float     │ No     │ Calculated: (end_time -     │
+│                       │           │        │ start_time) in minutes.     │
+│                       │           │        │ Read-only. Null while       │
+│                       │           │        │ end_time is blank.          │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ is_planned            │ Check     │ No     │ Fetched from downtime_reason│
+│                       │           │        │ .is_planned. Read-only.     │
+│                       │           │        │ Planned downtime is excluded│
+│                       │           │        │ from OEE availability.      │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ operator              │ Link      │ No     │ Link to Employee. Who       │
+│                       │           │        │ reported the downtime.      │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ notes                 │ Small Text│ No     │ Details (e.g., "Bearing     │
+│                       │           │        │ seized on impression        │
+│                       │           │        │ cylinder, maintenance       │
+│                       │           │        │ called").                   │
+├───────────────────────┼───────────┼────────┼─────────────────────────────┤
+│ amended_from          │ Link      │ No     │ Standard amended_from.      │
+│                       │           │        │ Read-only.                  │
+└───────────────────────┴───────────┴────────┴─────────────────────────────┘
+```
+
+#### Validation Rules
+
+- `end_time` must be after `start_time` (if set).
+- `end_time` is required before submit — you cannot submit an open downtime
+  entry. Draft entries with blank `end_time` represent ongoing downtime.
+- `duration_minutes` is recalculated on every save and on submit.
+
+#### Relationships
+
+- **Links TO:** Workstation, Downtime Reason, Daily Production Schedule
+- **Links TO:** Employee (operator)
+- **Used BY:** OEE calculation, Machine Utilization report
+
+#### Permissions
+
+| Role                 | Read | Write | Create | Delete | Submit | Amend |
+|----------------------|------|-------|--------|--------|--------|-------|
+| Manufacturing Manager| ✓    | ✓     | ✓      | ✓      | ✓      | ✓     |
+| Manufacturing User   | ✓    | ✓     | ✓      | —      | ✓      | —     |
+| Production Log User  | ✓    | ✓     | ✓      | —      | ✓      | —     |
+
+### 4.3 Shop Floor Terminal (Phase 2)
+
+> **Phase 2.** A tablet/mobile-optimized custom Frappe Page for operators
+> to record production and downtime without navigating full desk forms.
+
+#### Page Details
+
+```
+Page Name:      shop-floor-terminal
+Module:         Production Log
+Route:          /app/shop-floor-terminal
+Type:           Custom Frappe Page (Python + JS)
+```
+
+#### Wireframe
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Shop Floor Terminal           Flexo Press #1  [▼]  │
+│  Operator: John Kamau          Shift: Day           │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  Current Job: JC-L-00042 — Acme Ltd — Printing      │
+│  Planned: 5,000    Produced so far: 3,200           │
+│  ████████████████████████░░░░░░░░  64%              │
+│                                                     │
+│  ┌──────────────┐  ┌──────────────┐                 │
+│  │  📦 Log      │  │  ⛔ Report   │                 │
+│  │  Output      │  │  Downtime    │                 │
+│  └──────────────┘  └──────────────┘                 │
+│                                                     │
+│  ┌──────────────┐  ┌──────────────┐                 │
+│  │  ✅ Complete  │  │  ⏭ Next     │                 │
+│  │  Job         │  │  Job         │                 │
+│  └──────────────┘  └──────────────┘                 │
+│                                                     │
+├─────────────────────────────────────────────────────┤
+│  Recent entries:                                    │
+│  PE-2026-00142  1,200 pcs  08:00–10:15  ✓          │
+│  PE-2026-00139  2,000 pcs  10:30–13:00  ✓          │
+│  DT-2026-00031  15 min     13:00–13:15  Ink change │
+└─────────────────────────────────────────────────────┘
+```
+
+#### Key Interactions
+
+| Action             | Behaviour                                          |
+|--------------------|----------------------------------------------------|
+| **Machine select** | Dropdown at top right. Filters today's DPS to show |
+|                    | only jobs for this machine. Remembers last choice  |
+|                    | via localStorage.                                  |
+| **Log Output**     | Opens a simplified dialog: qty_produced, qty_waste, |
+|                    | waste_reason (if waste > 0). Start/end time        |
+|                    | default to last entry's end_time → now. Creates    |
+|                    | and submits a Production Entry.                    |
+| **Report Downtime**| Opens dialog: downtime_reason, start_time (defaults |
+|                    | to now). end_time left blank (ongoing). Creates a  |
+|                    | Draft Downtime Entry. Closing downtime sets        |
+|                    | end_time and submits.                              |
+| **Complete Job**   | Sets the Schedule Line status to Done. Advances    |
+|                    | "Current Job" to the next Pending line.            |
+| **Next Job**       | Skips to next Pending Schedule Line without marking |
+|                    | current as Done (marks it Skipped instead).        |
+
+#### Technical Notes
+
+- Large touch targets (min 48×48 dp) for gloved-hand operation.
+- Auto-refreshes every 60 seconds to pick up schedule changes.
+- Works offline-first: queues entries in localStorage, syncs when
+  connection returns (Frappe's built-in offline support).
+- Operator identified via Frappe session user → Employee link.
+
+### 4.4 Production Dashboard
+
+A Frappe Workspace dashboard providing at-a-glance KPIs via Number Cards
+and Charts. Accessible from the Production Log module sidebar.
+
+#### Number Cards
+
+| Card Title              | Value Source                              | Color Logic          |
+|-------------------------|------------------------------------------|----------------------|
+| Today's Output          | SUM(qty_produced) from Production Entry  | —                    |
+|                         | WHERE posting_date = today               |                      |
+| Today's Waste %         | SUM(qty_waste) / SUM(qty_produced +      | Green ≤ 3%,          |
+|                         | qty_waste) × 100, today                  | Amber ≤ 5%, Red > 5% |
+| Machines Running        | COUNT(DISTINCT workstation) from          | —                    |
+|                         | Production Entry WHERE today AND         |                      |
+|                         | end_time is NULL or within last 2h       |                      |
+| Machines Down           | COUNT(DISTINCT workstation) from          | Red if > 0           |
+|                         | Downtime Entry WHERE end_time IS NULL    |                      |
+| Schedule Adherence      | Schedule Lines with status = Done /      | Green ≥ 90%,         |
+|                         | Total Schedule Lines for today × 100     | Amber ≥ 75%          |
+| OEE (Today)             | Availability × Performance × Quality     | Green ≥ 85%,         |
+|                         | (see formula below)                      | Amber ≥ 65%          |
+
+#### OEE Formula
+
+```
+Availability = (available_hours − unplanned_downtime_hours) / available_hours
+Performance  = actual_output / (run_time_hours × max_speed_per_hour)
+Quality      = qty_produced / (qty_produced + qty_waste)
+
+OEE = Availability × Performance × Quality × 100
+```
+
+All values are per-machine, then averaged across active machines for the
+dashboard card. Per-machine OEE is available in the Machine Utilization
+report (Section 4.5).
+
+#### Charts
+
+| Chart Title             | Type       | Data Source                        |
+|-------------------------|------------|------------------------------------|
+| Daily Output (7 days)   | Bar        | Production Entry grouped by date   |
+| Waste % Trend (30 days) | Line       | Daily waste_pct rolling average    |
+| Downtime by Reason      | Pie        | Downtime Entry grouped by reason,  |
+|                         |            | last 30 days                       |
+| OEE Trend (30 days)     | Line       | Daily OEE averaged across machines |
+
+### 4.5 Reports
+
+Three Script Reports cover the core reporting needs. All are filterable
+by date range, workstation, product line, and customer.
+
+#### 4.5.1 Daily Production Summary
+
+```
+Report Name:    Daily Production Summary
+Module:         Production Log
+Report Type:    Script Report
+```
+
+| Column           | Source                                              |
+|------------------|-----------------------------------------------------|
+| Date             | Production Entry posting date                       |
+| Workstation      | Production Entry → workstation                      |
+| Job Card         | Production Entry → job_card_id                      |
+| Customer         | Fetched from job card                               |
+| Stage            | Production Entry → production_stage                 |
+| Planned Qty      | Schedule Line → planned_qty (matched by job + date) |
+| Actual Qty       | SUM(qty_produced)                                   |
+| Waste Qty        | SUM(qty_waste)                                      |
+| Waste %          | Calculated                                          |
+| Variance         | Actual Qty − Planned Qty                            |
+| Duration (hrs)   | SUM(duration_hours)                                 |
+
+#### 4.5.2 Machine Utilization
+
+```
+Report Name:    Machine Utilization
+Module:         Production Log
+Report Type:    Script Report
+```
+
+| Column              | Source                                          |
+|---------------------|-------------------------------------------------|
+| Workstation         | Workstation name                                |
+| Workstation Type    | Fetched from workstation                        |
+| Available Hours     | DPS → available_hours (or working hours config) |
+| Run Hours           | SUM(Production Entry duration_hours)            |
+| Downtime (Unplanned)| SUM(Downtime Entry duration_minutes / 60)       |
+|                     | WHERE is_planned = 0                            |
+| Downtime (Planned)  | SUM(Downtime Entry duration_minutes / 60)       |
+|                     | WHERE is_planned = 1                            |
+| Idle Hours          | Available − Run − Downtime                     |
+| Utilization %       | Run Hours / Available Hours × 100               |
+| OEE %               | Per-machine OEE (see formula in 4.4)            |
+
+#### 4.5.3 Job Progress
+
+```
+Report Name:    Job Progress
+Module:         Production Log
+Report Type:    Script Report
+```
+
+| Column              | Source                                          |
+|---------------------|-------------------------------------------------|
+| Job Card            | Job card ID (across all three types)            |
+| Job Card Type       | Computer Paper / Label / Carton                 |
+| Customer            | Fetched from job card                           |
+| Order Qty           | Job card → quantity_ordered                     |
+| Qty Produced        | SUM(Production Entry qty_produced) for this job |
+| Qty Remaining       | Order Qty − Qty Produced                        |
+| Progress %          | Qty Produced / Order Qty × 100                  |
+| Total Waste         | SUM(Production Entry qty_waste) for this job    |
+| Due Date            | Job card → due_date                             |
+| Days Remaining      | due_date − today                                |
+| Status              | On Track (green) if Progress % ≥ expected pace, |
+|                     | At Risk (amber) if behind by > 10%,             |
+|                     | Overdue (red) if past due_date                  |
+
+### 4.6 Section 4 Data Flow Diagram
+
+```
+┌──────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│ Shop Floor   │     │ Frappe Desk      │     │ Schedule Board   │
+│ Terminal     │     │ (direct entry)   │     │ (status update)  │
+│ (Phase 2)    │     │                  │     │                  │
+└──────┬───────┘     └────────┬─────────┘     └────────┬─────────┘
+       │                      │                        │
+       ▼                      ▼                        ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                    Production Entry (PE)                         │
+│                    Downtime Entry (DT)                           │
+├──────────────────────────────────────────────────────────────────┤
+│  on_submit:                                                      │
+│  ├─ Update job card progress (qty rollup)                        │
+│  ├─ Update Schedule Line status (Pending → In Progress → Done)   │
+│  └─ Recalculate DPS utilization_pct (actual vs planned)          │
+└───────────────┬─────────────────────────────┬────────────────────┘
+                │                             │
+                ▼                             ▼
+┌──────────────────────────┐   ┌──────────────────────────────────┐
+│  Dashboard               │   │  Reports                         │
+│  (Number Cards + Charts) │   │  Daily Summary / Machine Util /  │
+│  Real-time KPIs          │   │  Job Progress                    │
+└──────────────────────────┘   └──────────────────────────────────┘
+```
