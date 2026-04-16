@@ -54,6 +54,7 @@
   "product_type",
   "board_plan_section",
   "html_board_plan",
+  "html_board_visualization",
   "section_break_3",
   "board_width_planned_mm",
   "board_width_actual_mm",
@@ -340,6 +341,11 @@
    "fieldtype": "HTML",
    "label": "",
    "options": "<div style=\"padding: 10px; background: #f5f7fa; border-radius: 4px; border-left: 3px solid #2B3990; font-size: 13px; color: #333; margin-bottom: 15px;\">\n<p style=\"margin: 0 0 8px; font-weight: 600; color: #2B3990;\">Board Plan Calculation Reference</p>\n<p style=\"margin: 0 0 4px;\"><b>Blank Width (1-UP)</b> = Flap + Carton Height + Flap</p>\n<p style=\"margin: 0 0 4px;\"><b>Blank Length (1-UP)</b> = (2 &times; Carton Length) + (2 &times; Carton Width) + Glue Tab (30mm)</p>\n<p style=\"margin: 0 0 4px;\"><b>Planned Board Width</b> = (Blank Width &times; UPS Across) + Knife Gap &times; (UPS Across &minus; 1) + Trim Allowance Width</p>\n<p style=\"margin: 0 0 4px;\"><b>Planned Board Length</b> = (Blank Length &times; UPS Along) + Knife Gap &times; (UPS Along &minus; 1) + Trim Allowance Length</p>\n<p style=\"margin: 8px 0 0; font-style: italic; color: #666;\">Approximate Weight (g) = (Planned Width &times; Planned Length / 1,000,000) &times; Total GSM</p>\n</div>"
+  },
+  {
+   "fieldname": "html_board_visualization",
+   "fieldtype": "HTML",
+   "label": ""
   },
   {
    "fieldname": "section_break_3",
