@@ -348,8 +348,10 @@ function vcl_autofill_flap_serial(frm) {
 }
 
 // --- Step 4: Calculate Board Sizes ---
-// Planned Width = Flap + Height + Flap + Trim Allowance Width
-// Planned Length = 2*L + 2*W + 30mm (glue tab) + Trim Allowance Length
+// Formulas vary by product type:
+//   2/3 Flap RSC: Width = Flap+H+Flap, Length = 2L+2W+TabWidth
+//   1 Flap RSC:   Width = H+Flap,       Length = 2L+2W+TabWidth
+//   Tray:         Width = W+2H,          Length = L+2H (no tab)
 // Actual = blank sizes (no trim) unless manually overridden
 
 function vcl_calc_board_sizes_serial(frm) {
@@ -361,11 +363,26 @@ function vcl_calc_board_sizes_serial(frm) {
 	const flap = frm.doc.ctn_flap_mm || 0;
 	const trim_w = frm.doc.trim_allowance_width_mm || 0;
 	const trim_l = frm.doc.trim_allowance_length_mm || 0;
-	const glue_tab = 30; // default glue tab width in mm
+	const productType = frm.doc.product_type || "";
+	const jointType = frm.doc.joint_type || "Stitched";
+	const joint = VCL_JOINT_CONFIG[jointType] || VCL_JOINT_CONFIG["Stitched"];
+	const tabWidth = joint.tabWidth;
 
-	// Blank sizes (1-UP, no trim)
-	const blank_width = flap + H + flap;
-	const blank_length = (2 * L) + (2 * W) + glue_tab;
+	// Blank sizes (1-UP, no trim) — formula depends on product type
+	let blank_width = 0;
+	let blank_length = 0;
+
+	if (productType === "Tray") {
+		blank_width = W + 2 * H;
+		blank_length = L + 2 * H;
+	} else if (productType === "1 Flap RSC") {
+		blank_width = H + flap;
+		blank_length = (2 * L) + (2 * W) + tabWidth;
+	} else {
+		// 2 Flap RSC, 3 Flap RSC, and default
+		blank_width = flap + H + flap;
+		blank_length = (2 * L) + (2 * W) + tabWidth;
+	}
 
 	// Planned = blank + trim (for 1-UP; UPS multiplier applied in child table rows)
 	const planned_width = blank_width + trim_w;
