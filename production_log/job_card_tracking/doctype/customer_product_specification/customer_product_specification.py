@@ -17,6 +17,7 @@ class CustomerProductSpecification(Document):
 		self.validate_product_type()
 		self.set_naming_series()
 		self.validate_computer_paper()
+		self.validate_carton()
 		self.validate_label()
 		self.validate_exercise_books()
 
@@ -35,6 +36,26 @@ class CustomerProductSpecification(Document):
 				"Exercise Books": "EXB-SPEC-.#####",
 			}
 			self.naming_series = series_map.get(self.product_type)
+
+	def validate_carton(self):
+		"""Validate carton specifications."""
+		if self.product_type != "Carton":
+			return
+
+		if not self.ply:
+			frappe.throw("Ply is required for Carton product type.")
+
+		if not self.ctn_length_mm or self.ctn_length_mm <= 0:
+			frappe.throw("Carton Length (mm) must be greater than 0.")
+
+		if not self.ctn_width_mm or self.ctn_width_mm <= 0:
+			frappe.throw("Carton Width (mm) must be greater than 0.")
+
+		if self.ply != "SFK":
+			if not self.ctn_height_mm or self.ctn_height_mm <= 0:
+				frappe.throw(
+					"Carton Height (mm) must be greater than 0 unless Ply is SFK."
+				)
 
 	def validate_computer_paper(self):
 		"""Validate computer paper specifications and colour of parts."""

@@ -16,7 +16,7 @@ frappe.ui.form.on("Job Card Label", {
 
 	customer(frm) {
 		frm.set_value("customer_product_spec", "");
-		clear_label_spec_fields(frm);
+		_clear_label_spec_fields(frm);
 		frm.refresh_field("customer_product_spec");
 
 		if (frm.doc.customer) {
@@ -24,21 +24,14 @@ frappe.ui.form.on("Job Card Label", {
 				method: "production_log.job_card_tracking.doctype.job_card_label.job_card_label.get_label_customer_product_spec_query",
 				args: {
 					doctype: "Customer Product Specification",
-					txt: "",
-					searchfield: "name",
-					start: 0,
-					page_len: 1,
+					txt: "", searchfield: "name", start: 0, page_len: 1,
 					filters: { customer: frm.doc.customer },
 				},
 				callback(r) {
 					if (r.message && r.message.length === 0) {
 						frappe.msgprint({
 							title: __("No Specifications Found"),
-							message: __(
-								"No active Label specifications found for this customer. "
-								+ "Please create a <strong>Customer Product Specification</strong> "
-								+ "with Product Type = 'Label' and Status = 'Active' first."
-							),
+							message: __("No active Label specifications found for this customer. Please create a Customer Product Specification with Product Type = 'Label' and Status = 'Active' first."),
 							indicator: "orange",
 						});
 					}
@@ -49,28 +42,15 @@ frappe.ui.form.on("Job Card Label", {
 
 	customer_product_spec(frm) {
 		if (!frm.doc.customer_product_spec) {
-			clear_label_spec_fields(frm);
+			_clear_label_spec_fields(frm);
 			return;
 		}
-
 		frappe.call({
 			method: "frappe.client.get",
-			args: {
-				doctype: "Customer Product Specification",
-				name: frm.doc.customer_product_spec,
-			},
+			args: { doctype: "Customer Product Specification", name: frm.doc.customer_product_spec },
 			callback(r) {
-				if (r.exc || !r.message) {
-					frappe.msgprint({
-						title: __("Error"),
-						message: __("Could not load the selected specification. Please try again."),
-						indicator: "red",
-					});
-					return;
-				}
-
+				if (r.exc || !r.message) return;
 				const spec = r.message;
-
 				frm.set_value("specification_name", spec.specification_name || "");
 				frm.set_value("job_size", spec.job_size || "");
 				frm.set_value("dies", spec.dies || "");
@@ -88,22 +68,15 @@ frappe.ui.form.on("Job Card Label", {
 				frm.set_value("numbering_required", spec.numbering_required || 0);
 				frm.set_value("standard_packing", spec.standard_packing || "");
 				frm.set_value("weight_per_carton", spec.standard_weight_per_carton || 0);
-
 				frm.refresh_fields();
 			},
 		});
 	},
 });
 
-function clear_label_spec_fields(frm) {
-	const fields = [
-		"specification_name", "job_size", "dies", "label_length", "label_width",
-		"label_number_of_colours", "cylinder_teeth", "plate_up", "plate_round",
-		"packing_up", "material_type", "packing_pieces", "gap_between", "side_trim",
-		"numbering_required", "standard_packing", "weight_per_carton",
-	];
-
-	fields.forEach(function (field) {
-		frm.set_value(field, null);
-	});
+function _clear_label_spec_fields(frm) {
+	["specification_name", "job_size", "dies", "material_type", "standard_packing"].forEach(f => frm.set_value(f, null));
+	["label_length", "label_width", "label_number_of_colours", "cylinder_teeth", "plate_up",
+	 "plate_round", "packing_up", "packing_pieces", "gap_between", "side_trim",
+	 "numbering_required", "weight_per_carton"].forEach(f => frm.set_value(f, null));
 }

@@ -1,0 +1,484 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-04-14 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "job_card_creation_tab",
+  "section_break_1",
+  "amended_from",
+  "column_break_1",
+  "naming_series",
+  "section_break_2",
+  "date_created",
+  "column_break_2",
+  "due_date",
+  "header_control",
+  "customer_name",
+  "customer_product_spec",
+  "specification_name",
+  "job_description",
+  "column_break_3",
+  "quantity_ordered",
+  "repeat",
+  "product_description_section",
+  "ply",
+  "printing_or_plain",
+  "no_of_colours",
+  "special_instructions",
+  "column_break_4",
+  "flute_type",
+  "colours_details",
+  "job_details_section",
+  "ctn_length_mm",
+  "ctn_width_mm",
+  "ctn_height_mm",
+  "ctn_flap_mm",
+  "column_break_5",
+  "1_ply_top_layer_gsm",
+  "2_ply_fluting_gsm",
+  "3_ply_bottom_gsm",
+  "4_ply_fluting_gsm",
+  "5_ply_fluting_gsm",
+  "column_break_6",
+  "1_ply_top_layer_material",
+  "2_ply_top_layer_material",
+  "3_ply_top_layer_material",
+  "4_ply_top_layer_material",
+  "5_ply_top_layer_material",
+  "box_layout_section",
+  "joint_type",
+  "idod",
+  "product_type",
+  "board_plan_section",
+  "html_board_plan",
+  "html_board_visualization",
+  "section_break_3",
+  "board_width_planned_mm",
+  "board_width_actual_mm",
+  "approximate_weight_grams",
+  "column_break_7",
+  "board_length_planned_mm",
+  "board_length_actual_mm",
+  "machine_constraints",
+  "max_reel_width",
+  "trim_allowance_width_mm",
+  "column_break_8",
+  "knife_gap_mm",
+  "trim_allowance_length_mm",
+  "section_break_4",
+  "carton_ups_selection"
+ ],
+ "fields": [
+  {
+   "fieldname": "job_card_creation_tab",
+   "fieldtype": "Tab Break",
+   "label": "JOB CARD CREATION"
+  },
+  {
+   "fieldname": "section_break_1",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Job Card Carton",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "JC-CORR-.YYYY.-.####.",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Naming Series",
+   "no_copy": 1,
+   "options": "JC-CORR-.YYYY.-.####.",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "section_break_2",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "Today",
+   "fieldname": "date_created",
+   "fieldtype": "Date",
+   "label": "Date Created"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "label": "Due Date"
+  },
+  {
+   "fieldname": "header_control",
+   "fieldtype": "Section Break",
+   "label": "Header and Control"
+  },
+  {
+   "fieldname": "customer_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Customer Name",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "customer_product_spec",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Customer Product Specification",
+   "options": "Customer Product Specification"
+  },
+  {
+   "fieldname": "specification_name",
+   "fieldtype": "Data",
+   "label": "Specification Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "job_description",
+   "fieldtype": "Data",
+   "label": "Job Description"
+  },
+  {
+   "fieldname": "column_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "quantity_ordered",
+   "fieldtype": "Data",
+   "label": "Quantity Ordered"
+  },
+  {
+   "fieldname": "repeat",
+   "fieldtype": "Select",
+   "label": "OLD JOB/ NEW JOB",
+   "options": "Old\nNew"
+  },
+  {
+   "fieldname": "product_description_section",
+   "fieldtype": "Section Break",
+   "label": "Product Description"
+  },
+  {
+   "fieldname": "ply",
+   "fieldtype": "Select",
+   "label": "Ply",
+   "options": "\nSFK\n3\n5"
+  },
+  {
+   "fieldname": "printing_or_plain",
+   "fieldtype": "Select",
+   "label": "Printing Or Plain",
+   "options": "Plain\nPrinted"
+  },
+  {
+   "fieldname": "no_of_colours",
+   "fieldtype": "Select",
+   "label": "No. Of Colours",
+   "options": "0\n1\n2\n3\n4"
+  },
+  {
+   "fieldname": "special_instructions",
+   "fieldtype": "Small Text",
+   "label": "Special Instructions"
+  },
+  {
+   "fieldname": "column_break_4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "flute_type",
+   "fieldtype": "Select",
+   "label": "Flute Type",
+   "options": "B\nC\nE"
+  },
+  {
+   "fieldname": "colours_details",
+   "fieldtype": "Data",
+   "label": "Colours (details)"
+  },
+  {
+   "fieldname": "job_details_section",
+   "fieldtype": "Section Break",
+   "label": "Job Details"
+  },
+  {
+   "description": "Internal length of the carton",
+   "fieldname": "ctn_length_mm",
+   "fieldtype": "Int",
+   "label": "Carton Length (mm)",
+   "reqd": 1
+  },
+  {
+   "description": "Internal width of the carton",
+   "fieldname": "ctn_width_mm",
+   "fieldtype": "Int",
+   "label": "Carton Width (mm)",
+   "reqd": 1
+  },
+  {
+   "description": "Hidden for SFK by client script",
+   "fieldname": "ctn_height_mm",
+   "fieldtype": "Int",
+   "label": "Carton Height (mm)"
+  },
+  {
+   "description": "Flap length = ceil((Carton Width + 5) / 2)",
+   "fieldname": "ctn_flap_mm",
+   "fieldtype": "Int",
+   "label": "Carton Flap (mm)"
+  },
+  {
+   "fieldname": "column_break_5",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "1_ply_top_layer_gsm",
+   "fieldtype": "Int",
+   "label": "1 Ply Top Layer"
+  },
+  {
+   "fieldname": "2_ply_fluting_gsm",
+   "fieldtype": "Int",
+   "label": "2 Ply Fluting"
+  },
+  {
+   "fieldname": "3_ply_bottom_gsm",
+   "fieldtype": "Int",
+   "label": "3 Ply Bottom"
+  },
+  {
+   "fieldname": "4_ply_fluting_gsm",
+   "fieldtype": "Int",
+   "label": "4 Ply Fluting"
+  },
+  {
+   "fieldname": "5_ply_fluting_gsm",
+   "fieldtype": "Int",
+   "label": "5 Ply Fluting"
+  },
+  {
+   "fieldname": "column_break_6",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "1_ply_top_layer_material",
+   "fieldtype": "Select",
+   "label": "1 Ply Top Layer Material",
+   "options": "\nTest Liner\nKraft\nWhite Test Liner"
+  },
+  {
+   "fieldname": "2_ply_top_layer_material",
+   "fieldtype": "Select",
+   "label": "2 Ply Material",
+   "options": "\nTest Liner\nKraft\nWhite Test Liner"
+  },
+  {
+   "fieldname": "3_ply_top_layer_material",
+   "fieldtype": "Select",
+   "label": "3 Ply Material",
+   "options": "\nTest Liner\nKraft\nWhite Test Liner"
+  },
+  {
+   "fieldname": "4_ply_top_layer_material",
+   "fieldtype": "Select",
+   "label": "4 Ply Material",
+   "options": "\nTest Liner\nKraft\nWhite Test Liner"
+  },
+  {
+   "fieldname": "5_ply_top_layer_material",
+   "fieldtype": "Select",
+   "label": "5 Ply Material",
+   "options": "\nTest Liner\nKraft\nWhite Test Liner"
+  },
+  {
+   "fieldname": "box_layout_section",
+   "fieldtype": "Section Break",
+   "label": "Box Layout"
+  },
+  {
+   "fieldname": "joint_type",
+   "fieldtype": "Select",
+   "label": "Joint Type",
+   "options": "Gluing - Manual\nGluing - Machine\nStitched"
+  },
+  {
+   "fieldname": "idod",
+   "fieldtype": "Select",
+   "label": "ID/OD",
+   "options": "ID\nOD"
+  },
+  {
+   "fieldname": "product_type",
+   "fieldtype": "Select",
+   "label": "Product Type",
+   "options": "Tray\nDie Cut\n2 Flap RSC\n3 Flap RSC"
+  },
+  {
+   "fieldname": "board_plan_section",
+   "fieldtype": "Section Break",
+   "label": "Board Plan"
+  },
+  {
+   "fieldname": "html_board_plan",
+   "fieldtype": "HTML",
+   "label": "",
+   "options": "<div style=\"padding: 10px; background: #f5f7fa; border-radius: 4px; border-left: 3px solid #2B3990; font-size: 13px; color: #333; margin-bottom: 15px;\">\n<p style=\"margin: 0 0 8px; font-weight: 600; color: #2B3990;\">Board Plan Calculation Reference</p>\n<p style=\"margin: 0 0 4px;\"><b>Blank Width (1-UP)</b> = Flap + Carton Height + Flap</p>\n<p style=\"margin: 0 0 4px;\"><b>Blank Length (1-UP)</b> = (2 &times; Carton Length) + (2 &times; Carton Width) + Glue Tab (30mm)</p>\n<p style=\"margin: 0 0 4px;\"><b>Planned Board Width</b> = (Blank Width &times; UPS Across) + Knife Gap &times; (UPS Across &minus; 1) + Trim Allowance Width</p>\n<p style=\"margin: 0 0 4px;\"><b>Planned Board Length</b> = (Blank Length &times; UPS Along) + Knife Gap &times; (UPS Along &minus; 1) + Trim Allowance Length</p>\n<p style=\"margin: 8px 0 0; font-style: italic; color: #666;\">Approximate Weight (g) = (Planned Width &times; Planned Length / 1,000,000) &times; Total GSM</p>\n</div>"
+  },
+  {
+   "fieldname": "html_board_visualization",
+   "fieldtype": "HTML",
+   "label": ""
+  },
+  {
+   "fieldname": "section_break_3",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "board_width_planned_mm",
+   "fieldtype": "Int",
+   "label": "Board Width Planned (mm)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "board_width_actual_mm",
+   "fieldtype": "Int",
+   "label": "Board Width Actual (mm)"
+  },
+  {
+   "fieldname": "approximate_weight_grams",
+   "fieldtype": "Float",
+   "label": "Approximate Weight (grams)",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_7",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "board_length_planned_mm",
+   "fieldtype": "Int",
+   "label": "Board Length Planned (mm)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "board_length_actual_mm",
+   "fieldtype": "Int",
+   "label": "Board Length Actual (mm)"
+  },
+  {
+   "fieldname": "machine_constraints",
+   "fieldtype": "Section Break",
+   "label": "Machine Constraints"
+  },
+  {
+   "default": "1500",
+   "fieldname": "max_reel_width",
+   "fieldtype": "Int",
+   "label": "Max Reel Width"
+  },
+  {
+   "fieldname": "trim_allowance_width_mm",
+   "fieldtype": "Int",
+   "label": "Trim Allowance Width (mm)"
+  },
+  {
+   "fieldname": "column_break_8",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "knife_gap_mm",
+   "fieldtype": "Int",
+   "label": "Gap/Knife Allowance (mm)"
+  },
+  {
+   "fieldname": "trim_allowance_length_mm",
+   "fieldtype": "Int",
+   "label": "Trim Allowance Length (mm)"
+  },
+  {
+   "fieldname": "section_break_4",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "carton_ups_selection",
+   "fieldtype": "Table",
+   "label": "Carton UPS Selection",
+   "options": "Carton Job Type UPS"
+  }
+ ],
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-04-14 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Job Card Tracking",
+ "name": "Job Card Carton",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "cancel": 0,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 0,
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing Manager",
+   "submit": 0,
+   "write": 1
+  },
+  {
+   "cancel": 1,
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales User",
+   "share": 1,
+   "submit": 1,
+   "write": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

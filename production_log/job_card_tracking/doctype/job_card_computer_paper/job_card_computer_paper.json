@@ -41,13 +41,7 @@
   "sales_rep_comments",
   "management_approver",
   "management_approval_date",
-  "management_comments",
-  "section_production_tracking",
-  "html_production_tracking_header",
-  "total_actual_good_qty",
-  "total_waste_qty",
-  "balance_qty",
-  "production_status"
+  "management_comments"
  ],
  "fields": [
   {
@@ -272,56 +266,11 @@
    "fieldname": "management_comments",
    "fieldtype": "Small Text",
    "label": "Management Comments"
-  },
-  {
-   "fieldname": "section_production_tracking",
-   "fieldtype": "Section Break",
-   "label": "Production Tracking"
-  },
-  {
-   "fieldname": "html_production_tracking_header",
-   "fieldtype": "HTML",
-   "options": "<div style=\"padding: 10px 14px; margin-bottom: 8px; background-color: #f0f4f7; border-left: 4px solid #28a745; border-radius: 4px;\">\n<strong style=\"font-size: 14px;\">Production Tracking</strong>\n<p style=\"margin: 4px 0 0 0; font-size: 12px; color: #6c757d;\">These fields are updated automatically whenever a Job Card Production Entry is submitted or cancelled. They show the cumulative totals across all submitted entries for this Job Card. Do not edit manually.</p>\n</div>"
-  },
-  {
-   "default": "0",
-   "fieldname": "total_actual_good_qty",
-   "fieldtype": "Int",
-   "label": "Total Actual Good Qty",
-   "read_only": 1,
-   "description": "Total usable output produced so far across all submitted Job Card Production Entries for this Job Card."
-  },
-  {
-   "default": "0",
-   "fieldname": "total_waste_qty",
-   "fieldtype": "Int",
-   "label": "Total Waste Qty",
-   "read_only": 1,
-   "description": "Total waste/rejected quantity across all submitted Job Card Production Entries. Does not reduce the order balance."
-  },
-  {
-   "default": "0",
-   "fieldname": "balance_qty",
-   "fieldtype": "Int",
-   "label": "Balance Qty",
-   "read_only": 1,
-   "description": "Remaining quantity to produce. Calculated as: Quantity Ordered \u2212 Total Actual Good Qty (minimum 0)."
-  },
-  {
-   "default": "Not Started",
-   "fieldname": "production_status",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Production Status",
-   "options": "Not Started\nIn Production\nCompleted",
-   "read_only": 1,
-   "description": "Auto-set based on production: 'Not Started' if no production yet, 'In Production' if partially fulfilled, 'Completed' when produced qty meets or exceeds order qty."
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-03-23 00:00:00.000000",
+ "modified": "2026-04-15 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Job Card Tracking",
  "name": "Job Card Computer Paper",

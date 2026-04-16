@@ -1,0 +1,13 @@
+[
+ {
+  "name": "Carton Job Card",
+  "doctype": "Print Format",
+  "doc_type": "Job Card Carton",
+  "module": "Job Card Tracking",
+  "print_format_type": "Jinja",
+  "raw_printing": 0,
+  "standard": "No",
+  "custom_format": 1,
+  "html": "<!-- Placeholder: Export real Jinja template from live instance using bench export-fixtures -->\n<h2>CARTON JOB TRAVELER</h2>\n<p>Job Card: {{ doc.name }}</p>\n<p>Customer: {{ doc.customer_name }}</p>\n<p>Description: {{ doc.job_description }}</p>\n<p>Quantity: {{ doc.quantity_ordered }}</p>\n<p>Due Date: {{ doc.due_date }}</p>\n<p>Dimensions: {{ doc.ctn_length_mm }}mm x {{ doc.ctn_width_mm }}mm x {{ doc.ctn_height_mm }}mm</p>\n<p>Ply: {{ doc.ply }} | Flute: {{ doc.flute_type }}</p>"
+ }
+]
