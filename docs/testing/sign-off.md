@@ -61,7 +61,8 @@ Deployer: ________________
 - [ ] 3. All list views load with no 500s
 - [ ] 4. Patch Log confirms all new patches ran
 - [ ] 5. Non-admin user can access and create (but not edit submitted records)
-- [ ] 6. Fixture sync — print formats present
+- [ ] 6. Carton visualization field exists — HTML areas render, no JS errors
+- [ ] 7. Fixture sync — print formats present
 
 ### OAT outcome
 
@@ -91,6 +92,8 @@ Tester: ________________  Manager: ________________
 - [ ] Scenario G — 3-ply → 5-ply conversion (row __)
 - [ ] Scenario H — Workspace & sidebar layout (confirms Daily Planning
       group and Department Daily Plan tiles removed)
+- [ ] Scenario I — Board Visualization across product types (2 Flap RSC,
+      3 Flap RSC, Tray, Die Cut, empty, SFK hidden)
 
 ### Full regression (rows 6 – 10)
 

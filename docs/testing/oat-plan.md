@@ -14,6 +14,34 @@ Run OAT **first**, UAT **second**. If OAT fails, UAT cannot begin.
 > **Update this section in every PR.** Note anything the deployer needs to
 > watch for: new patches, new fixtures, new hooks, role changes, etc.
 
+### 2026-04-16 — Live SVG die-cut visualization in Carton Job Card
+
+**Patches that will run on `bench migrate`:**
+
+* No new patches. Existing patches are idempotent and will no-op on re-run.
+
+**DocType changes:**
+
+* `Job Card Carton` — new HTML field `html_board_visualization` added to
+  the Board Plan section. `bench migrate` will add this column/field
+  automatically.
+
+**Client script changes:**
+
+* `job_card_carton.js` — significant additions (~320 lines): SVG
+  generation functions, board visualization rendering step (Step 6 in the
+  pipeline), and two new pipeline triggers (`product_type`, `joint_type`).
+* **`bench build --app production_log` is required** for this release
+  because client-side JS has changed.
+
+**Fixtures synced:**
+
+* No new fixtures.
+
+**Hook changes:**
+
+* No hook changes.
+
 ### 2026-04-15 — Hard reset of production execution layer
 
 **Patches that will run on `bench migrate`:**
@@ -87,8 +115,8 @@ Before running anything on the target site:
 
 - [ ] Fetch the target commit:
       `cd frappe-bench/apps/production_log && git fetch origin && git checkout <commit>`
-- [ ] `bench build --app production_log` (if any JS/CSS changed — confirm
-      from the PR diff).
+- [ ] `bench build --app production_log` (**required for 2026-04-16 release**
+      — `job_card_carton.js` has significant client-side changes).
 - [ ] `bench --site <site> migrate`
 - [ ] Migrate output is **clean** — no tracebacks, no "could not apply
       patch" lines, no "skipping …" that looks suspicious. Paste the tail
@@ -154,7 +182,19 @@ Open each of these list views and confirm no 500 / traceback:
 - [ ] That user **cannot** edit a submitted Job Card Carton (submit
       workflow still enforced).
 
-### 6. Fixture sync
+### 6. Carton visualization field exists
+
+- [ ] Open any existing Carton Job Card (or create a new one).
+- [ ] In the Board Plan section, confirm two HTML areas exist:
+  - [ ] The static **formula reference box** (blue left-border, shows
+        calculation formulas).
+  - [ ] Below it, the **visualization area** (either an SVG diagram, a
+        placeholder message, or empty depending on product type / dimensions).
+- [ ] Open browser DevTools → Console. No JavaScript errors related to
+      `html_board_visualization`, `vcl_render_board_visualization`, or
+      `VCL_COLORS` should appear.
+
+### 7. Fixture sync
 
 - [ ] `frappe.db.exists('Print Format', 'Carton Job Card')` returns the
       string name. If it returns None the fixture did not sync — rerun
