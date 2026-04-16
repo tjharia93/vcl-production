@@ -751,6 +751,13 @@ function vcl_svg_tray(L, W, H) {
 		{ x: 0, y: H + L, w: H, h: H },
 		{ x: H + W, y: H + L, w: H, h: H },
 	];
+	// Centroid offsets for label positioning inside each triangle
+	var earLabelOffsets = [
+		[0.65, 0.65], // top-left
+		[0.35, 0.65], // top-right
+		[0.65, 0.35], // bottom-left
+		[0.35, 0.35], // bottom-right
+	];
 	for (let i = 0; i < ears.length; i++) {
 		var e = ears[i];
 		var sx = ox + e.x * scale, sy = oy + e.y * scale;
@@ -761,15 +768,21 @@ function vcl_svg_tray(L, W, H) {
 		else if (i === 2) points = (sx + sw) + "," + sy + " " + sx + "," + (sy + sh) + " " + (sx + sw) + "," + (sy + sh);
 		else points = sx + "," + sy + " " + (sx + sw) + "," + sy + " " + sx + "," + (sy + sh);
 		svg += '<polygon points="' + points + '" fill="#E0E0E0" stroke="' + VCL_COLORS.cut + '" stroke-width="1" stroke-dasharray="3,3"/>';
+		// Corner tab dimension label
+		if (sw > 20 && sh > 20) {
+			var lx = sx + sw * earLabelOffsets[i][0];
+			var ly = sy + sh * earLabelOffsets[i][1];
+			svg += '<text x="' + lx + '" y="' + ly + '" text-anchor="middle" dominant-baseline="middle" font-size="7" fill="#888" font-weight="500">' + H + "x" + H + "</text>";
+		}
 	}
 
-	// Main panels: base + 4 walls
+	// Main panels: base + 4 walls (labels show both dimensions)
 	var allPanels = [
 		{ x: H, y: H, w: W, h: L, color: VCL_COLORS.base + "50", label: "Base (" + L + " x " + W + ")" },
-		{ x: H, y: 0, w: W, h: H, color: VCL_COLORS.trayWall + "50", label: "Front wall (" + H + ")" },
-		{ x: H, y: H + L, w: W, h: H, color: VCL_COLORS.trayWall + "50", label: "Back wall (" + H + ")" },
-		{ x: 0, y: H, w: H, h: L, color: VCL_COLORS.trayWall + "35", label: "Side (" + H + ")" },
-		{ x: H + W, y: H, w: H, h: L, color: VCL_COLORS.trayWall + "35", label: "Side (" + H + ")" },
+		{ x: H, y: 0, w: W, h: H, color: VCL_COLORS.trayWall + "50", label: "Front (" + W + "x" + H + ")" },
+		{ x: H, y: H + L, w: W, h: H, color: VCL_COLORS.trayWall + "50", label: "Back (" + W + "x" + H + ")" },
+		{ x: 0, y: H, w: H, h: L, color: VCL_COLORS.trayWall + "35", label: "Side (" + H + "x" + L + ")" },
+		{ x: H + W, y: H, w: H, h: L, color: VCL_COLORS.trayWall + "35", label: "Side (" + H + "x" + L + ")" },
 	];
 	for (let i = 0; i < allPanels.length; i++) {
 		var p = allPanels[i];

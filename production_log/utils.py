@@ -299,6 +299,13 @@ def _svg_tray(L, W, H):
         {"x": 0, "y": H + L, "w": H, "h": H},
         {"x": H + W, "y": H + L, "w": H, "h": H},
     ]
+    # Triangle centroid offsets (approx 1/3 from the right-angle corner)
+    ear_label_offsets = [
+        (0.65, 0.65),   # top-left: centroid near bottom-right
+        (0.35, 0.65),   # top-right: centroid near bottom-left
+        (0.65, 0.35),   # bottom-left: centroid near top-right
+        (0.35, 0.35),   # bottom-right: centroid near top-left
+    ]
     for i, e in enumerate(ears):
         sx = ox + e["x"] * scale
         sy = oy + e["y"] * scale
@@ -316,18 +323,23 @@ def _svg_tray(L, W, H):
             f'<polygon points="{pts}" fill="#E0E0E0" stroke="{_COLORS["cut"]}" '
             f'stroke-width="1" stroke-dasharray="3,3"/>'
         )
+        # corner tab dimension label
+        lx = sx + sw * ear_label_offsets[i][0]
+        ly = sy + sh * ear_label_offsets[i][1]
+        if sw > 20 and sh > 20:
+            parts.append(_text(lx, ly, f"{H}x{H}", 7, "#888", "500"))
 
-    # panels
+    # panels — show both dimensions on each wall
     panels = [
         {"label": f"Base ({L}x{W})", "x": H, "y": H, "w": W, "h": L,
          "color": _COLORS["base"] + "50"},
-        {"label": f"Front ({H})", "x": H, "y": 0, "w": W, "h": H,
+        {"label": f"Front ({W}x{H})", "x": H, "y": 0, "w": W, "h": H,
          "color": _COLORS["trayWall"] + "50"},
-        {"label": f"Back ({H})", "x": H, "y": H + L, "w": W, "h": H,
+        {"label": f"Back ({W}x{H})", "x": H, "y": H + L, "w": W, "h": H,
          "color": _COLORS["trayWall"] + "50"},
-        {"label": f"Side ({H})", "x": 0, "y": H, "w": H, "h": L,
+        {"label": f"Side ({H}x{L})", "x": 0, "y": H, "w": H, "h": L,
          "color": _COLORS["trayWall"] + "35"},
-        {"label": f"Side ({H})", "x": H + W, "y": H, "w": H, "h": L,
+        {"label": f"Side ({H}x{L})", "x": H + W, "y": H, "w": H, "h": L,
          "color": _COLORS["trayWall"] + "35"},
     ]
     for p in panels:
