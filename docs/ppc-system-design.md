@@ -1703,3 +1703,98 @@ Week  1  2  3  4  5  6  7  8  9  10  11  12+
                                                         Phase 5: Future
       ★ = Core Priority — ship this first
 ```
+
+---
+
+## Section 7: Appendix — End-to-End PPC Vision
+
+### 7.1 Full Production Lifecycle
+
+The PPC layer slots into a broader order-to-delivery lifecycle. While Phases
+1–4 focus on scheduling and actuals, the full vision connects every step
+from customer order to dispatch.
+
+```
+┌───────────┐    ┌───────────────┐    ┌──────────────┐    ┌──────────────┐
+│  Sales    │    │  Job Card     │    │  Production  │    │  Daily       │
+│  Order    │───▶│  (Computer    │───▶│  Operations  │───▶│  Production  │
+│  (ERPNext)│    │  Paper/Label/ │    │  (Phase 3)   │    │  Schedule    │
+│           │    │  Carton)      │    │              │    │  (Phase 2)   │
+└───────────┘    └───────────────┘    └──────────────┘    └──────┬───────┘
+                                                                 │
+                 ┌───────────────┐    ┌──────────────┐           │
+                 │  Delivery     │    │  Production  │◀──────────┘
+                 │  Note /       │◀───│  Entry +     │
+                 │  Dispatch     │    │  Downtime    │
+                 │  (ERPNext)    │    │  Entry       │
+                 └───────────────┘    └──────────────┘
+```
+
+**Step-by-step flow:**
+
+1. **Sales Order** (ERPNext standard) — customer places an order
+2. **Job Card creation** — planner creates a Job Card (Computer Paper,
+   Label, or Carton) referencing the Customer Product Specification
+3. **Routing** (Phase 3) — submitting the job card auto-generates
+   Production Operations based on the product line's stage sequence
+4. **Scheduling** — planner drags the job onto a machine-day via the
+   Daily Schedule Board, creating a Schedule Line in the DPS
+5. **Execution** — operator runs the machine and logs output via
+   Production Entry (or Shop Floor Terminal in Phase 4)
+6. **Tracking** — production_status and current_stage update on the job
+   card automatically; dashboard and reports reflect real-time progress
+7. **Delivery** — once Completed, the job card's output feeds into
+   ERPNext Delivery Note / dispatch workflow
+
+### 7.2 ERPNext Integration Points
+
+The PPC layer is designed to coexist with ERPNext standard modules. These
+integration points are not part of the initial build but are architecturally
+supported by the data model.
+
+| ERPNext Module        | Integration Point                            | Phase    |
+|-----------------------|----------------------------------------------|----------|
+| **Stock**             | Production Entry could auto-create Stock      | Future   |
+|                       | Entry (Manufacture) to move finished goods    |          |
+|                       | into warehouse. Requires BOM setup.           |          |
+| **HR / Employee**     | Operator field on Production Entry already    | Phase 2  |
+|                       | links to Employee. Timesheet generation from  |          |
+|                       | Production Entry time windows is possible.    |          |
+| **Manufacturing**     | If VCL adopts ERPNext Work Order, Production  | Future   |
+|                       | Operations could link to Work Order Operations|          |
+|                       | for cost rollup and BOM consumption.          |          |
+| **Quality Inspection**| Production Stages with is_qc_point = 1 could | Future   |
+|                       | auto-create ERPNext Quality Inspection docs   |          |
+|                       | at those checkpoints.                         |          |
+| **Selling**           | Job Progress report data could feed into      | Future   |
+|                       | Sales Order fulfillment tracking.             |          |
+
+### 7.3 Future Considerations
+
+#### Barcode / QR Scanning
+- Print QR codes on job card travellers encoding the job_card_type and
+  job_card_id. Operators scan at the Shop Floor Terminal to auto-select
+  the current job — eliminates manual lookup and reduces data entry errors.
+- Machine QR codes scanned to auto-select the workstation.
+
+#### IoT / Machine Integration
+- Connect machine counters (pulse output) to auto-log qty_produced in
+  real time. Each pulse creates or increments a Production Entry.
+- Machine state signals (running / idle / fault) auto-create Downtime
+  Entries when the machine stops unexpectedly.
+- Temperature, pressure, and speed sensors feed into a future Quality
+  module for SPC (Statistical Process Control) charting.
+
+#### AI-Assisted Scheduling
+- Constraint-based auto-scheduling: given all pending job cards, machine
+  capabilities, and due dates, generate an optimized Daily Production
+  Schedule that minimizes changeover time and maximizes on-time delivery.
+- Predictive maintenance: use downtime history to forecast machine
+  failures and auto-insert planned maintenance windows into the schedule.
+- Waste prediction: flag jobs likely to exceed waste thresholds based on
+  historical patterns (material type, machine, operator, run length).
+
+---
+
+*End of PPC System Design Document.*
+*Document version: 1.0 — Generated for Vimit Converters Ltd.*
