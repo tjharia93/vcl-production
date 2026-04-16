@@ -1580,3 +1580,126 @@ Document Lifecycle          Production Lifecycle
                         └──► Cancelled
                              (blocks new PEs)
 ```
+
+---
+
+## Section 6: Phased Implementation Plan
+
+> **Guiding principle:** Get daily scheduling and production actuals into
+> users' hands first. Routing templates, Gantt views, and advanced
+> scheduling are valuable — but the factory floor needs to answer "what
+> runs where today?" and "what did we actually produce?" before anything
+> else. Ship the spreadsheet-killer first, optimize later.
+
+### Phase 1: Master Data + Setup (Weeks 1–2)
+
+Foundation layer. No user-facing scheduling yet — this phase installs the
+vocabulary and configuration that every subsequent phase depends on.
+
+- Install Custom Fields on Workstation Type (`product_line`, `default_stage`)
+- Install Custom Fields on Workstation (`product_line`, `max_width_mm`,
+  `max_colors`, `max_speed_per_hour`, `location_note`)
+- Create Production Stage doctype + seed fixture data (10 stages)
+- Create Workstation Stage child table
+- Create Waste Reason doctype + seed fixture data (8 reasons)
+- Create Downtime Reason doctype + seed fixture data (8 reasons)
+- Create Workstation Type records (Flexo Press, Corrugator, Folder Gluer,
+  Numbering Machine, Collator, Die Cutter)
+- Create Workstation records for each physical machine on the shop floor
+- Populate Workstation Stage mappings (which machines do which stages)
+- Install Custom Fields on all three job card types (`production_status`,
+  `current_stage`)
+- Update `hooks.py` with fixture declarations
+- **Exit criteria:** All master data in place; existing job card forms show
+  new Production Tracking section (read-only, all "Not Started")
+
+### Phase 2: Daily Schedule + Production Entry (Weeks 3–5) — CORE PRIORITY
+
+> **This is the minimum viable PPC system.** At the end of Phase 2, planners
+> can assign jobs to machines by day, and operators can record what they
+> produced. Everything after this phase is enhancement.
+
+- Create Daily Production Schedule doctype (DPS-.YYYY.-.#####)
+- Create Schedule Line child table
+- Build Daily Schedule Board custom page (Kanban-by-machine-by-day)
+  - Date navigation, drag-to-reorder, drag-across-machines
+  - Utilization % per machine column
+  - Product line and workstation type filters
+- Create Production Entry doctype (PE-.YYYY.-.#####)
+- Implement on_submit hooks: roll up qty to job card, update
+  `production_status` and `current_stage`, update Schedule Line status
+- Implement on_cancel hooks: reverse rollups
+- Create Downtime Entry doctype (DT-.YYYY.-.#####)
+- Add dashboard connections on all three job card types (sidebar links
+  to Production Entries and DPS documents)
+- Create Daily Production Summary script report
+- Create Job Progress script report
+- **Exit criteria:** Planners build daily schedules via the board; operators
+  log output via Production Entry in Frappe desk; job cards show live
+  progress; daily summary report runs correctly
+
+### Phase 3: Production Operations + Routing (Weeks 6–8)
+
+Adds the finer-grained Production Operation doctype and operation sequence
+templates. This phase is valuable but NOT required for basic scheduling —
+Phase 2 already delivers a working daily plan.
+
+- Create Production Operation doctype (PO-.YYYY.-.#####)
+- Define operation sequence templates per product line (auto-generate
+  Production Operations when a job card is submitted)
+- Link Production Operations to Schedule Lines (optional cross-reference)
+- Add priority field handling (Low / Normal / High / Urgent) with sort
+  logic on the Schedule Board
+- Add operation-level status tracking (Not Started → In Progress →
+  Completed → QC Passed)
+- Create Machine Utilization script report (with OEE calculation)
+- **Exit criteria:** Submitting a job card auto-creates a sequence of
+  Production Operations; operations appear on the Schedule Board;
+  machine utilization report includes OEE
+
+### Phase 4: Shop Floor Terminal + Dashboards (Weeks 9–10)
+
+Optimizes the operator experience and gives management real-time visibility.
+
+- Build Shop Floor Terminal custom page (tablet/mobile optimized)
+  - Machine selector, current job display, progress bar
+  - Log Output dialog (simplified Production Entry creation)
+  - Report Downtime dialog (simplified Downtime Entry creation)
+  - Complete Job / Next Job buttons
+- Build Production Dashboard workspace
+  - Number Cards: Today's Output, Waste %, Machines Running/Down,
+    Schedule Adherence, OEE
+  - Charts: Daily Output (7d bar), Waste % Trend (30d line),
+    Downtime by Reason (pie), OEE Trend (30d line)
+- Offline-first support for Shop Floor Terminal (localStorage queue)
+- **Exit criteria:** Operators use tablets on the shop floor; management
+  views the dashboard for daily stand-ups; no manual spreadsheet tracking
+  remains
+
+### Phase 5: Advanced Scheduling (Future)
+
+Long-term enhancements. No timeline commitment — prioritized based on
+operational needs after Phases 1–4 are stable.
+
+- Gantt view (time-axis chart from Production Operations with
+  planned_start / planned_end)
+- Machine Queue page (per-machine multi-day order book)
+- Auto-scheduling engine (assign operations to machines based on
+  capability, capacity, and priority)
+- Capacity conflict detection and alerts
+- Multi-day job splitting (auto-split large jobs across consecutive
+  DPS documents)
+- Integration with ERPNext BOM / Work Order (if VCL adopts standard
+  manufacturing module)
+
+### Implementation Timeline Summary
+
+```
+Week  1  2  3  4  5  6  7  8  9  10  11  12+
+      ├──────┤                                   Phase 1: Master Data
+               ├───────────┤                     Phase 2: Daily Schedule ★
+                              ├───────────┤      Phase 3: Operations
+                                            ├──────┤  Phase 4: Shop Floor
+                                                        Phase 5: Future
+      ★ = Core Priority — ship this first
+```
