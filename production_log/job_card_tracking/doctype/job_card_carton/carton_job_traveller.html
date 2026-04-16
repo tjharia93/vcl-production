@@ -1,0 +1,326 @@
+<style>
+    /* GLOBAL PRINT SETTINGS */
+    @page { size: A4; margin: 10mm; }
+    .vcl-wrapper { font-family: 'Inter', Arial, sans-serif; color: #000; font-size: 10.5px; line-height: 1.2; }
+    .page-break { page-break-before: always; }
+
+    /* BRANDING & HEADERS */
+    .header-table { width: 100%; border-bottom: 3px solid #2B3990; margin-bottom: 8px; padding-bottom: 4px; }
+    .main-title { color: #2B3990; font-size: 20px; font-weight: 900; text-transform: uppercase; }
+    .sec-head { background: #2B3990; color: #fff; padding: 5px 8px; font-weight: 900; font-size: 10px; text-transform: uppercase; border-radius: 2px 2px 0 0; margin-top: 8px; }
+    .sec-head.alt { background: #00395D; }
+    .sec-head.dark { background: #333; }
+
+    /* BOXED GRID SYSTEM */
+    .dense-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; table-layout: fixed; }
+    .dense-table td, .dense-table th { border: 1.5px solid #666; padding: 6px; vertical-align: top; word-wrap: break-word; }
+    .dense-table th { background: #eee; text-align: left; font-weight: 900; font-size: 9px; text-transform: uppercase; }
+
+    /* LABELS & VALUES */
+    .lbl { font-size: 8px; color: #00395D; font-weight: 900; text-transform: uppercase; display: block; margin-bottom: 2px; }
+    .val { font-weight: 900; color: #000; font-size: 12px; }
+    .board-box { border: 2px solid #000; padding: 8px; text-align: center; font-size: 16px; font-weight: 900; background: #fff; margin-top: 4px; }
+    .sig-line { border-top: 1.5px solid #000; width: 85%; margin: 20px auto 5px auto; }
+
+    /* SUB-HEADER FOR PAGES 2 & 3 */
+    .sub-header-grid { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+    .sub-header-grid td { border: 1px solid #ccc; padding: 4px 8px; font-size: 9px; }
+    .sub-header-grid .k { background: #f4f4f4; font-weight: 900; width: 15%; text-transform: uppercase; }
+
+    .qc-box { width: 15px; height: 15px; border: 1.5px solid #000; margin: 2px auto; }
+
+    /* DIE-CUT VISUALIZATION */
+    .die-cut-container { text-align: center; padding: 8px 0; }
+    .die-cut-container svg { max-width: 100%; }
+</style>
+
+{%- set board_w = doc.get("board_width_planned_mm") | float if doc.get("board_width_planned_mm") else 0 -%}
+{%- set board_l = doc.get("board_length_planned_mm") | float if doc.get("board_length_planned_mm") else 0 -%}
+{%- set area = (board_w / 1000.0) * (board_l / 1000.0) -%}
+
+{#- Take-up Factor Logic -#}
+{%- set flute_type = (doc.get("flute_type") or "").upper() -%}
+{%- set factor = 1.7 if "E" in flute_type else 1.5 -%}
+
+{#- GSM Layers -#}
+{%- set gsm1 = doc.get("1_ply_top_layer_gsm") | float if doc.get("1_ply_top_layer_gsm") else 0 -%}
+{%- set gsm2 = doc.get("2_ply_fluting_gsm") | float if doc.get("2_ply_fluting_gsm") else 0 -%}
+{%- set gsm3 = doc.get("3_ply_bottom_gsm") | float if doc.get("3_ply_bottom_gsm") else 0 -%}
+{%- set gsm4 = doc.get("4_ply_fluting_gsm") | float if doc.get("4_ply_fluting_gsm") else 0 -%}
+{%- set gsm5 = doc.get("5_ply_fluting_gsm") | float if doc.get("5_ply_fluting_gsm") else 0 -%}
+
+{%- set ply = doc.get("ply") or "" -%}
+{%- if ply == "5" -%}
+    {%- set unit_weight = (area * gsm1) + (area * gsm2 * factor) + (area * gsm3) + (area * gsm4 * factor) + (area * gsm5) -%}
+{%- else -%}
+    {%- set unit_weight = (area * gsm1) + (area * gsm2 * factor) + (area * gsm3) -%}
+{%- endif -%}
+
+{#- Material display string -#}
+{%- set mat1 = doc.get("1_ply_top_layer_material") or "" -%}
+{%- set mat3 = doc.get("3_ply_top_layer_material") or "" -%}
+
+{#- Product type for conditional rendering -#}
+{%- set product_type = doc.get("product_type") or "" -%}
+{%- set joint_type = doc.get("joint_type") or "" -%}
+{%- set L = doc.get("ctn_length_mm") | int if doc.get("ctn_length_mm") else 0 -%}
+{%- set W = doc.get("ctn_width_mm") | int if doc.get("ctn_width_mm") else 0 -%}
+{%- set H = doc.get("ctn_height_mm") | int if doc.get("ctn_height_mm") else 0 -%}
+{%- set flap = doc.get("ctn_flap_mm") | int if doc.get("ctn_flap_mm") else 0 -%}
+
+<div class="vcl-wrapper">
+
+    <!-- PAGE 1: MASTER AUTHORIZATION -->
+    <div class="page-container">
+        <table class="header-table">
+            <tr>
+                <td>
+                    <div class="main-title">Carton Job Traveler</div>
+                    <div style="font-size:10px; font-weight:900; color:#00395D;">VIMIT CONVERTERS LTD &bull; MASTER AUTHORIZATION</div>
+                </td>
+                <td align="right" width="30%">
+                    <div style="border: 2px solid #2B3990; padding: 5px; text-align: center;">
+                        <span class="lbl">JOB CARD NO:</span>
+                        <div style="font-size: 16px; font-weight: 900; color: #2B3990;">{{ doc.name }}</div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <div class="sec-head">1. Commercial & Order Details</div>
+        <table class="dense-table">
+            <tr>
+                <td colspan="3">
+                    <span class="lbl">Customer Name</span>
+                    <span class="val">{{ doc.get("customer_name") or "INTERNAL / STOCK" }}</span>
+                    <div style="margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 4px;">
+                        <span class="lbl">Job Description / Specific Remarks</span>
+                        <span class="val" style="font-size: 11px; color: #333;">{{ doc.get("job_description") or "N/A" }}</span>
+                    </div>
+                </td>
+                <td>
+                    <span class="lbl">Order / LPO No.</span>
+                    <span class="val">________________</span>
+                    <div style="margin-top: 15px;">
+                        <span class="lbl">New / Repeat</span>
+                        <span class="val">{{ doc.get("repeat") or "NEW" }}</span>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td><span class="lbl">Qty Ordered</span><span class="val" style="font-size:16px;">{{ doc.get("quantity_ordered") or "0" }} PCS</span></td>
+                <td><span class="lbl">Due Date</span><span class="val">{{ frappe.utils.formatdate(doc.get("due_date"), "dd.mm.yyyy") if doc.get("due_date") else "" }}</span></td>
+                <td><span class="lbl">Colours</span><span class="val">{{ doc.get("colours_details") or "PLAIN" }}</span></td>
+                <td><span class="lbl">Date Created</span><span class="val">{{ frappe.utils.formatdate(doc.creation, "dd.mm.yyyy") }}</span></td>
+            </tr>
+        </table>
+
+        <div class="sec-head alt">2. Product Specifications (Carton Size)</div>
+        <table class="dense-table">
+            <tr>
+                <td><span class="lbl">Length (mm)</span><span class="val">{{ L }}</span></td>
+                <td><span class="lbl">Width (mm)</span><span class="val">{{ W }}</span></td>
+                <td><span class="lbl">Height (mm)</span><span class="val">{{ H }}</span></td>
+                <td><span class="lbl">Flap (mm)</span><span class="val">{{ flap }}</span></td>
+                <td><span class="lbl">Ply</span><span class="val" style="font-size:16px;">{{ ply or "N/A" }}</span></td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <span class="lbl">Paper Combination / GSM Detail</span>
+                    <span class="val">
+                        {%- if ply == "5" -%}
+                            {{ gsm1|int }} {{ mat1 }} / {{ gsm2|int }}F / {{ gsm3|int }} {{ mat3 }} / {{ gsm4|int }}F / {{ gsm5|int }}
+                        {%- elif ply == "3" -%}
+                            {{ gsm1|int }} {{ mat1 }} / {{ gsm2|int }}F / {{ gsm3|int }} {{ mat3 }}
+                        {%- elif ply == "SFK" -%}
+                            {{ gsm1|int }} {{ mat1 }} / {{ gsm2|int }}F
+                        {%- else -%}
+                            N/A
+                        {%- endif -%}
+                    </span>
+                </td>
+                <td><span class="lbl">Flute Type</span><span class="val">{{ doc.get("flute_type") or "N/A" }}</span></td>
+                <td><span class="lbl">Joint Type</span><span class="val">{{ joint_type or "N/A" }}</span></td>
+                <td><span class="lbl">Product Type</span><span class="val">{{ product_type or "N/A" }}</span></td>
+            </tr>
+        </table>
+
+        <div class="sec-head">3. Board Production & Calculated Weight</div>
+        <table class="dense-table">
+            <tr>
+                <td><span class="lbl">Planned Board Size (W x L)</span><div class="board-box">{{ board_w|int }} x {{ board_l|int }}</div></td>
+                <td><span class="lbl">Calc. Unit Weight (Grams)</span><div class="board-box" style="background:#f9f9f9; color:#2B3990;">{{ "%.2f" % unit_weight }}g</div></td>
+                <td><span class="lbl">Actual Board Size</span><div class="board-box" style="border-color:#999; color:#999;">____ x ____</div></td>
+            </tr>
+        </table>
+
+        <div class="sec-head alt">4. Die-Cut Layout & Creasing Dimensions</div>
+
+        {#- SVG die-cut visualization generated by Python utility -#}
+        {%- set carton_svg = get_carton_svg(doc) -%}
+        {%- if carton_svg -%}
+        <table class="dense-table">
+            <tr>
+                <td style="text-align:center; padding:10px; background:#fff;">
+                    <div class="die-cut-container">
+                        {{ carton_svg }}
+                    </div>
+                </td>
+            </tr>
+        </table>
+        {%- endif -%}
+
+        {#- Panel & Flap dimension table (RSC types) -#}
+        {%- if product_type in ("1 Flap RSC", "2 Flap RSC", "3 Flap RSC") -%}
+        <table class="dense-table">
+            <tr><th width="15%">TYPE</th><th>PART 1</th><th>PART 2</th><th>PART 3</th><th>PART 4</th><th>TAB</th><th>TOTAL</th></tr>
+            <tr>
+                <td style="background:#f9f9f9; font-weight:900;">FLAP/H</td>
+                {%- if product_type == "1 Flap RSC" -%}
+                <td>{{ H }}</td>
+                <td>{{ flap }}</td>
+                <td>-</td>
+                <td>-</td><td>-</td>
+                <td style="background:#eee;">{{ H + flap }}</td>
+                {%- else -%}
+                <td>{{ flap }}</td>
+                <td>{{ H }}</td>
+                <td>{{ flap }}</td>
+                <td>-</td><td>-</td>
+                <td style="background:#eee;">{{ (flap * 2) + H }}</td>
+                {%- endif -%}
+            </tr>
+            <tr>
+                <td style="background:#f9f9f9; font-weight:900;">PANEL</td>
+                <td>{{ L }}</td>
+                <td>{{ W }}</td>
+                <td>{{ L }}</td>
+                <td>{{ W }}</td>
+                <td>30</td>
+                <td style="background:#eee;">{{ board_l|int }}</td>
+            </tr>
+        </table>
+        {%- elif product_type == "Tray" -%}
+        <table class="dense-table">
+            <tr><th width="15%">TYPE</th><th>WALL</th><th>BASE</th><th>WALL</th><th>TOTAL</th></tr>
+            <tr>
+                <td style="background:#f9f9f9; font-weight:900;">WIDTH</td>
+                <td>{{ H }}</td>
+                <td>{{ W }}</td>
+                <td>{{ H }}</td>
+                <td style="background:#eee;">{{ H + W + H }}</td>
+            </tr>
+            <tr>
+                <td style="background:#f9f9f9; font-weight:900;">LENGTH</td>
+                <td>{{ H }}</td>
+                <td>{{ L }}</td>
+                <td>{{ H }}</td>
+                <td style="background:#eee;">{{ H + L + H }}</td>
+            </tr>
+        </table>
+        {%- endif -%}
+
+        <table width="100%" style="margin-top:30px;">
+            <tr>
+                <td align="center" width="33%"><div class="sig-line"></div><span class="lbl">Sales Rep</span></td>
+                <td align="center" width="34%"><div class="sig-line"></div><span class="lbl">Management</span></td>
+                <td align="center" width="33%"><div class="sig-line"></div><span class="lbl">Production Manager</span></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- PAGE 2: PRODUCTION LOG & REEL TRACKING -->
+    <div class="page-container">
+        <table class="header-table">
+            <tr>
+                <td><div class="main-title">Production Log & Reel Tracking</div></td>
+                <td align="right" width="25%"><div style="border: 1px solid #2B3990; padding: 4px; text-align: center;"><span class="lbl">JOB NO:</span> <span class="val">{{ doc.name }}</span></div></td>
+            </tr>
+        </table>
+
+        <table class="sub-header-grid">
+            <tr>
+                <td class="k">Customer</td><td>{{ doc.get("customer_name") }}</td>
+                <td class="k">Job Name</td><td>{{ doc.get("job_description") or "N/A" }}</td>
+            </tr>
+        </table>
+
+        <div class="sec-head">1A. Corrugation (Reel Tracking)</div>
+        <table class="dense-table">
+            <tr><th width="20%">Reel ID</th><th>Start Dia</th><th>End Dia</th><th>Start Wt</th><th>End Wt</th><th>Waste</th><th>Operator</th></tr>
+            {% for i in range(4) %}
+            <tr><td height="28"></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            {% endfor %}
+        </table>
+
+        <div class="sec-head alt">1B. Sheeting & Printing Output</div>
+        <table class="dense-table">
+            <tr><th width="30%">Station</th><th width="15%">Input Qty</th><th width="15%">Output Qty</th><th width="20%">Reject/Waste</th><th width="20%">Operator</th></tr>
+            <tr><td height="25">Sheeting Unit</td><td></td><td></td><td></td><td></td></tr>
+            <tr><td height="25">Printing & Slotting</td><td></td><td></td><td></td><td></td></tr>
+            <tr><td height="25">Pasting / Stitching</td><td></td><td></td><td></td><td></td></tr>
+        </table>
+
+        <div class="sec-head dark">2. Material Reconciliation (QA Verification)</div>
+        <table class="dense-table">
+            <tr><th>Material Item</th><th>Theoretical (KG)</th><th>Actual Used (KG)</th><th>Variance (+/-)</th><th>QA Sign</th></tr>
+            <tr><td height="35">Paper Rolls (Liner/Flute)</td><td></td><td></td><td></td><td></td></tr>
+            <tr><td height="35">Adhesive / Glue / Ink</td><td></td><td></td><td></td><td></td></tr>
+        </table>
+
+        <div class="sec-head">3. Final Dispatch Tally</div>
+        <table class="dense-table">
+            <tr><th>Date</th><th>Vehicle No.</th><th>Bundle Count</th><th>Total Pcs</th><th>Invoice/DN</th><th>Sign</th></tr>
+            <tr><td height="25"></td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr><td height="25"></td><td></td><td></td><td></td><td></td><td></td></tr>
+        </table>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- PAGE 3: QC CHECKLIST -->
+    <div class="page-container">
+        <table class="header-table">
+            <tr>
+                <td><div class="main-title">QC Production Checklist (5-Day Log)</div></td>
+                <td align="right" width="25%"><div style="border: 1px solid #2B3990; padding: 4px; text-align: center;"><span class="lbl">JOB NO:</span> <span class="val">{{ doc.name }}</span></div></td>
+            </tr>
+        </table>
+
+        <table class="sub-header-grid">
+            <tr>
+                <td class="k">Customer</td><td>{{ doc.get("customer_name") }}</td>
+                <td class="k">Job Name</td><td>{{ doc.get("job_description") or "N/A" }}</td>
+            </tr>
+        </table>
+
+        <table class="dense-table">
+            <thead>
+                <tr>
+                    <th width="35%">INSPECTION STAGE</th>
+                    <th>RUN 1</th><th>RUN 2</th><th>RUN 3</th><th>RUN 4</th><th>RUN 5</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>1. RAW MATERIAL <br><small>Moisture, GSM Check</small></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td></tr>
+                <tr><td>2. PRE-PRESS <br><small>Stereo/Die Alignment</small></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td></tr>
+                <tr><td>3. PRINTING & SLOTTING <br><small>Color Match, Ink Coverage</small></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td></tr>
+                <tr><td>4. DIE-CUTTING <br><small>Creasing Depth, Clean Cuts</small></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td></tr>
+                <tr><td>5. GLUING/STITCHING <br><small>Bond Strength, Squaring</small></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td></tr>
+                <tr><td>6. FINISHED CARTON <br><small>Bursting/Compression Check</small></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td></tr>
+                <tr><td>7. PACKING/LABELLING <br><small>Correct Bundle Count</small></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td><td><div class="qc-box"></div></td></tr>
+                <tr style="height:50px;">
+                    <td style="background:#eee; font-weight:900;">SUPERVISOR SIGN-OFF</td>
+                    <td></td><td></td><td></td><td></td><td></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="margin-top:15px; font-size: 9.5px; border: 1.5px solid #000; padding: 10px; background: #f9f9f9;">
+            <strong>AQL STANDARDS:</strong> Critical Defects: 0.0 | Major Defects: 1.0 | Minor Defects: 2.5. <br>
+            <strong>PROCEDURE:</strong> Perform First-off approval at start of run, then random sampling every 60 minutes. Log any deviations in the Production Remarks section of the Job Card.
+        </div>
+    </div>
+</div>

@@ -462,6 +462,9 @@ function vcl_render_board_visualization(frm) {
 	if (productType === "2 Flap RSC" || productType === "3 Flap RSC") {
 		svgContent = vcl_svg_two_flap_rsc(L, W, H, flap, jointType);
 		legendHtml = vcl_legend_rsc(jointType);
+	} else if (productType === "1 Flap RSC") {
+		svgContent = vcl_svg_one_flap_rsc(L, W, H, flap, jointType);
+		legendHtml = vcl_legend_rsc(jointType);
 	} else if (productType === "Tray") {
 		svgContent = vcl_svg_tray(L, W, H);
 		legendHtml = vcl_legend_tray();
@@ -592,6 +595,124 @@ function vcl_svg_two_flap_rsc(L, W, H, flap, jointType) {
 	svg += '<text x="' + (ox + totalW * scale + 6) + '" y="' + (oy + (flap + H / 2) * scale)
 		+ '" text-anchor="start" dominant-baseline="middle" font-size="10" fill="#666">' + H + "mm</text>";
 	svg += '<text x="' + (ox + totalW * scale + 6) + '" y="' + (oy + (flap / 2) * scale)
+		+ '" text-anchor="start" dominant-baseline="middle" font-size="10" fill="#666">' + flap + "mm</text>";
+	svg += '<text x="' + (ox + (tabWidth / 2) * scale) + '" y="' + (oy - 8)
+		+ '" text-anchor="middle" font-size="9" fill="#888">' + tabWidth + "mm</text>";
+
+	// Bottom summary line
+	svg += '<line x1="' + ox + '" y1="' + (oy + totalH * scale + 24)
+		+ '" x2="' + (ox + totalW * scale) + '" y2="' + (oy + totalH * scale + 24)
+		+ '" stroke="#999" stroke-width="0.5"/>';
+	svg += '<text x="' + (ox + (totalW / 2) * scale) + '" y="' + (oy + totalH * scale + 38)
+		+ '" text-anchor="middle" font-size="11" fill="' + VCL_COLORS.primary
+		+ '" font-weight="600">Blank: ' + totalW + "mm x " + totalH + "mm</text>";
+
+	svg += "</svg>";
+	return svg;
+}
+
+// --- 1-Flap RSC ---
+
+function vcl_svg_one_flap_rsc(L, W, H, flap, jointType) {
+	const joint = VCL_JOINT_CONFIG[jointType] || VCL_JOINT_CONFIG["Stitched"];
+	const tabWidth = joint.tabWidth;
+	const totalW = tabWidth + L + W + L + W;
+	const totalH = H + flap;
+
+	if (totalW <= 0 || totalH <= 0) return "";
+
+	const scale = Math.min(0.42, 580 / totalW, 380 / totalH);
+	const ox = 30, oy = 40;
+	const svgW = totalW * scale + 70;
+	const svgH = totalH * scale + 60;
+
+	let svg = '<svg width="' + svgW + '" height="' + svgH + '" style="background:#FAFAFA;border:1px solid #ddd;border-radius:4px;">';
+
+	// Panels — main body row (no top flap offset — body starts at y=0)
+	const panels = [
+		{ label: joint.label, x: 0, y: 0, w: tabWidth, h: H, color: joint.color },
+		{ label: "Side (" + W + "mm)", x: tabWidth, y: 0, w: L, h: H, color: VCL_COLORS.side + "60" },
+		{ label: "Front (" + L + "mm)", x: tabWidth + L, y: 0, w: W, h: H, color: VCL_COLORS.face + "80" },
+		{ label: "Side (" + W + "mm)", x: tabWidth + L + W, y: 0, w: L, h: H, color: VCL_COLORS.side + "60" },
+		{ label: "Back (" + L + "mm)", x: tabWidth + L + W + L, y: 0, w: W, h: H, color: VCL_COLORS.face + "80" },
+	];
+
+	// Only bottom flaps (below body)
+	const xPositions = [tabWidth, tabWidth + L, tabWidth + L + W, tabWidth + L + W + L];
+	const widths = [L, W, L, W];
+	const flapColors = [VCL_COLORS.top + "35", VCL_COLORS.top + "50", VCL_COLORS.top + "35", VCL_COLORS.top + "50"];
+	const flapSets = [];
+	for (let i = 0; i < xPositions.length; i++) {
+		flapSets.push({ x: xPositions[i], y: H, w: widths[i], h: flap, color: flapColors[i], label: "Flap" });
+	}
+
+	var allPanels = panels.concat(flapSets);
+
+	// Draw panels
+	for (let i = 0; i < allPanels.length; i++) {
+		var p = allPanels[i];
+		svg += '<rect x="' + (ox + p.x * scale) + '" y="' + (oy + p.y * scale)
+			+ '" width="' + (p.w * scale) + '" height="' + (p.h * scale)
+			+ '" fill="' + p.color + '" stroke="' + VCL_COLORS.cut + '" stroke-width="1.5"/>';
+		if (p.w * scale > 36) {
+			var fontSize = Math.min(11, p.w * scale * 0.13);
+			svg += '<text x="' + (ox + (p.x + p.w / 2) * scale)
+				+ '" y="' + (oy + (p.y + p.h / 2) * scale)
+				+ '" text-anchor="middle" dominant-baseline="middle" font-size="' + fontSize
+				+ '" fill="#333" font-weight="500">' + p.label + "</text>";
+		}
+	}
+
+	// Vertical fold lines
+	var foldXPositions = [tabWidth, tabWidth + L, tabWidth + L + W, tabWidth + L + W + L];
+	for (let i = 0; i < foldXPositions.length; i++) {
+		var fx = foldXPositions[i];
+		svg += '<line x1="' + (ox + fx * scale) + '" y1="' + oy
+			+ '" x2="' + (ox + fx * scale) + '" y2="' + (oy + totalH * scale)
+			+ '" stroke="' + VCL_COLORS.fold + '" stroke-width="1.5" stroke-dasharray="6,4"/>';
+	}
+
+	// Horizontal fold line (body/flap boundary)
+	svg += '<line x1="' + (ox + tabWidth * scale) + '" y1="' + (oy + H * scale)
+		+ '" x2="' + (ox + totalW * scale) + '" y2="' + (oy + H * scale)
+		+ '" stroke="' + VCL_COLORS.fold + '" stroke-width="1" stroke-dasharray="4,3"/>';
+
+	// Open end label at top
+	svg += '<text x="' + (ox + (totalW / 2) * scale) + '" y="' + (oy - 10)
+		+ '" text-anchor="middle" font-size="9" fill="#999" font-style="italic">Open end (no flap)</text>';
+
+	// Joint markers
+	if (joint.markerType === "stitch") {
+		var spacing = 25;
+		var count = Math.floor(H / spacing);
+		var startY = (H - count * spacing) / 2;
+		for (let i = 0; i <= count; i++) {
+			var cy = oy + (startY + i * spacing) * scale;
+			var cx = ox + (tabWidth * 0.6) * scale;
+			svg += '<line x1="' + (cx - 3) + '" y1="' + (cy - 3) + '" x2="' + (cx + 3) + '" y2="' + (cy + 3)
+				+ '" stroke="' + VCL_COLORS.stitch + '" stroke-width="1.5"/>';
+			svg += '<line x1="' + (cx + 3) + '" y1="' + (cy - 3) + '" x2="' + (cx - 3) + '" y2="' + (cy + 3)
+				+ '" stroke="' + VCL_COLORS.stitch + '" stroke-width="1.5"/>';
+		}
+	} else if (joint.markerType === "glue") {
+		var fracs = [0.25, 0.5, 0.75];
+		for (let i = 0; i < fracs.length; i++) {
+			var gy = oy + (H * fracs[i]) * scale;
+			svg += '<line x1="' + (ox + (tabWidth * 0.2) * scale)
+				+ '" y1="' + gy + '" x2="' + (ox + (tabWidth * 0.8) * scale)
+				+ '" y2="' + gy
+				+ '" stroke="' + VCL_COLORS.glue + '" stroke-width="2" stroke-dasharray="3,2" opacity="0.6"/>';
+		}
+	}
+
+	// Dimension labels
+	svg += '<text x="' + (ox + (tabWidth + L / 2) * scale) + '" y="' + (oy + totalH * scale + 14)
+		+ '" text-anchor="middle" font-size="10" fill="#666">' + L + "mm</text>";
+	svg += '<text x="' + (ox + (tabWidth + L + W / 2) * scale) + '" y="' + (oy + totalH * scale + 14)
+		+ '" text-anchor="middle" font-size="10" fill="#666">' + W + "mm</text>";
+	svg += '<text x="' + (ox + totalW * scale + 6) + '" y="' + (oy + (H / 2) * scale)
+		+ '" text-anchor="start" dominant-baseline="middle" font-size="10" fill="#666">' + H + "mm</text>";
+	svg += '<text x="' + (ox + totalW * scale + 6) + '" y="' + (oy + (H + flap / 2) * scale)
 		+ '" text-anchor="start" dominant-baseline="middle" font-size="10" fill="#666">' + flap + "mm</text>";
 	svg += '<text x="' + (ox + (tabWidth / 2) * scale) + '" y="' + (oy - 8)
 		+ '" text-anchor="middle" font-size="9" fill="#888">' + tabWidth + "mm</text>";

@@ -29,10 +29,11 @@ required_apps = ["erpnext"]
 # Jinja
 # ----------
 # add methods and filters to jinja environment
-# jinja = {
-#     "methods": "production_log.utils.jinja_methods",
-#     "filters": "production_log.utils.jinja_filters"
-# }
+jinja = {
+    "methods": [
+        "production_log.utils.get_carton_svg"
+    ]
+}
 
 # Installation
 # ------------

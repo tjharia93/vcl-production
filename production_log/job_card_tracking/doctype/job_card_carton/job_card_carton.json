@@ -329,7 +329,7 @@
    "fieldname": "product_type",
    "fieldtype": "Select",
    "label": "Product Type",
-   "options": "Tray\nDie Cut\n2 Flap RSC\n3 Flap RSC"
+   "options": "Tray\nDie Cut\n1 Flap RSC\n2 Flap RSC\n3 Flap RSC"
   },
   {
    "fieldname": "board_plan_section",
