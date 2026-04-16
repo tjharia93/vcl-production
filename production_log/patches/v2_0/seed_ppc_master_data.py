@@ -1,4 +1,5 @@
 import frappe
+from frappe.utils import now
 
 
 def execute():
@@ -22,8 +23,19 @@ def seed_production_stages():
     ]
     for stage in stages:
         if not frappe.db.exists("Production Stage", stage["stage_name"]):
-            doc = frappe.get_doc({"doctype": "Production Stage", **stage})
-            doc.insert(ignore_permissions=True)
+            frappe.db.sql(
+                """
+                INSERT INTO `tabProduction Stage`
+                    (name, creation, modified, modified_by, owner,
+                     stage_name, product_line, sequence, is_qc_point)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    stage["stage_name"], now(), now(), "Administrator", "Administrator",
+                    stage["stage_name"], stage["product_line"], stage["sequence"],
+                    stage["is_qc_point"],
+                ),
+            )
 
     frappe.db.commit()
 
@@ -41,8 +53,18 @@ def seed_waste_reasons():
     ]
     for reason in reasons:
         if not frappe.db.exists("Waste Reason", reason["reason_name"]):
-            doc = frappe.get_doc({"doctype": "Waste Reason", "enabled": 1, **reason})
-            doc.insert(ignore_permissions=True)
+            frappe.db.sql(
+                """
+                INSERT INTO `tabWaste Reason`
+                    (name, creation, modified, modified_by, owner,
+                     reason_name, category, enabled)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    reason["reason_name"], now(), now(), "Administrator", "Administrator",
+                    reason["reason_name"], reason["category"], 1,
+                ),
+            )
 
     frappe.db.commit()
 
@@ -60,7 +82,17 @@ def seed_downtime_reasons():
     ]
     for reason in reasons:
         if not frappe.db.exists("Downtime Reason", reason["reason_name"]):
-            doc = frappe.get_doc({"doctype": "Downtime Reason", "enabled": 1, **reason})
-            doc.insert(ignore_permissions=True)
+            frappe.db.sql(
+                """
+                INSERT INTO `tabDowntime Reason`
+                    (name, creation, modified, modified_by, owner,
+                     reason_name, category, is_planned, enabled)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    reason["reason_name"], now(), now(), "Administrator", "Administrator",
+                    reason["reason_name"], reason["category"], reason["is_planned"], 1,
+                ),
+            )
 
     frappe.db.commit()
