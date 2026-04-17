@@ -39,6 +39,7 @@ jinja = {
 # ------------
 # before_install = "production_log.install.before_install"
 after_install = "production_log.install.after_install"
+after_migrate = "production_log.patches.v2_0.seed_ppc_master_data.execute"
 
 # Uninstallation
 # ------------

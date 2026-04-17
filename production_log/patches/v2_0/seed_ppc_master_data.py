@@ -9,6 +9,9 @@ def execute():
 
 
 def seed_production_stages():
+    if not frappe.db.table_exists("Production Stage"):
+        return
+
     stages = [
         {"stage_name": "Printing", "product_line": "All", "sequence": 10, "is_qc_point": 0},
         {"stage_name": "Numbering", "product_line": "Computer Paper", "sequence": 20, "is_qc_point": 0},
@@ -41,6 +44,9 @@ def seed_production_stages():
 
 
 def seed_waste_reasons():
+    if not frappe.db.table_exists("Waste Reason"):
+        return
+
     reasons = [
         {"reason_name": "Setup Waste", "category": "Setup"},
         {"reason_name": "Misprinted", "category": "Running"},
@@ -70,6 +76,9 @@ def seed_waste_reasons():
 
 
 def seed_downtime_reasons():
+    if not frappe.db.table_exists("Downtime Reason"):
+        return
+
     reasons = [
         {"reason_name": "Mechanical Breakdown", "category": "Mechanical", "is_planned": 0},
         {"reason_name": "Electrical Fault", "category": "Electrical", "is_planned": 0},
