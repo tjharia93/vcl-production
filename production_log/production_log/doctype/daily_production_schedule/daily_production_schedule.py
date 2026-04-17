@@ -5,6 +5,7 @@ from frappe.model.document import Document
 class DailyProductionSchedule(Document):
     def validate(self):
         self.validate_unique_machine_day()
+        self.populate_line_estimates()
         self.calculate_totals()
 
     def validate_unique_machine_day(self):
@@ -22,6 +23,49 @@ class DailyProductionSchedule(Document):
         if existing:
             frappe.throw(
                 f"A schedule already exists for {self.workstation} on {self.schedule_date}: {existing}"
+            )
+
+    def populate_line_estimates(self):
+        if not self.workstation:
+            return
+
+        ws_max_speed = frappe.db.get_value(
+            "Workstation", self.workstation, "custom_max_speed_per_hour"
+        ) or 0
+
+        missing_rate_lines = []
+        for line in self.schedule_lines:
+            if line.estimated_hours:
+                continue
+            if not line.planned_qty or not line.production_stage:
+                continue
+
+            stage_row = frappe.db.get_value(
+                "Workstation Stage",
+                {"parent": line.production_stage, "workstation": self.workstation},
+                ["hourly_rate", "setup_time_mins"],
+                as_dict=True,
+            ) or {}
+            rate = stage_row.get("hourly_rate") or ws_max_speed
+            setup_mins = stage_row.get("setup_time_mins") or 0
+
+            if not rate:
+                missing_rate_lines.append(line.idx)
+                continue
+
+            line.estimated_hours = round(
+                (line.planned_qty / rate) + (setup_mins / 60.0), 2
+            )
+
+        if missing_rate_lines:
+            frappe.msgprint(
+                f"Estimated hours not calculated for line(s) "
+                f"{', '.join(str(i) for i in missing_rate_lines)}: no Max Speed "
+                f"on Workstation {self.workstation} and no Hourly Rate on the "
+                f"matching Workstation Stage. DPS saved; update the speed "
+                f"values to populate estimates.",
+                title="Missing Workstation Speed",
+                indicator="orange",
             )
 
     def calculate_totals(self):
