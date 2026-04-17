@@ -15,7 +15,7 @@ This document records the results of Operational Acceptance Testing (OAT) and Us
 | Phase 1 UAT (Master Data) | 37 | 18 | 1 | 18 | 95% |
 | Phase 1 OAT (Master Data) | 24 | 7 | 0 | 17 | 100% |
 | Phase 2 UAT (Daily Schedule) | 66 | 18 | 4 | 44 | 82% |
-| Phase 2 OAT (Daily Schedule) | 47 | 11 | 2 | 34 | 85% |
+| Phase 2 OAT (Daily Schedule) | 47 | 10 | 2 | 35 | 83% |
 
 ---
 
@@ -187,7 +187,7 @@ This document records the results of Operational Acceptance Testing (OAT) and Us
 
 ## PHASE 2 — OAT: DAILY SCHEDULE + PRODUCTION ENTRY
 
-47 tests | 11 PASS | 2 FAIL | 34 SKIP
+47 tests | 10 PASS | 2 FAIL | 35 SKIP
 
 | ID | Category | Test Case | Result | Notes |
 |----|----------|-----------|--------|-------|
