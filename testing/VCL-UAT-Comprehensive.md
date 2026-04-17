@@ -249,4 +249,82 @@ Covers all 4 product_types (2-Flap RSC, 1-Flap RSC, Tray / FTD, Die Cut), the SF
 
 ---
 
-<!-- SECTIONS-END -->
+## SECTION 10 — DOWNTIME ENTRY
+
+| ID | Category | Test Case | Steps | Expected Result | Result | Notes |
+|----|----------|-----------|-------|-----------------|--------|-------|
+| UT-10.01 | DT Create | Create a Downtime Entry | New DT: workstation=<any>, downtime_reason=Mechanical Breakdown, start_time=10:00 | Saved as Draft. end_time and duration_minutes blank |  |  |
+| UT-10.02 | DT Close | Close a downtime entry | Set end_time=10:45, save | duration_minutes = 45 auto-calc. is_planned=0 auto-fetched from Mechanical Breakdown |  |  |
+| UT-10.03 | DT Planned Fetch | Planned downtime auto-flag | New DT with downtime_reason=Planned Maintenance, save | is_planned = checked (fetched from Downtime Reason) |  |  |
+| UT-10.04 | DT DPS Link | Downtime auto-links to DPS | Create DT for a machine+date that has a DPS | daily_production_schedule auto-populated |  |  |
+| UT-10.05 | DT Operator | Operator field | Enter operator name or link | Saves |  |  |
+| UT-10.06 | DT Validation | Submit open downtime rejected | Try to Submit a DT with end_time blank | Validation: End Time is required before submitting |  |  |
+| UT-10.07 | DT Validation | End before Start rejected | start_time=14:00, end_time=13:00, save | Validation: End Time must be after Start Time |  |  |
+| UT-10.08 | DT Submit | Submit a closed downtime | Click Submit on a DT with end_time set | docstatus=1 |  |  |
+| UT-10.09 | DT Cancel | Cancel a submitted DT | Click Cancel | docstatus=2 |  |  |
+| UT-10.10 | DT List | Filter by is_planned | Filter list: is_planned=1 | Only planned entries shown |  |  |
+| UT-10.11 | DT List | Filter by workstation | Filter list: workstation=<any> | Only entries for that machine |  |  |
+
+---
+
+## SECTION 11 — DASHBOARD CONNECTIONS & REPORTS
+
+| ID | Category | Test Case | Steps | Expected Result | Result | Notes |
+|----|----------|-----------|-------|-----------------|--------|-------|
+| UT-11.01 | Dashboard | Job card sidebar shows Production Entries | Open a Job Card with submitted PEs | Connections section shows Production Entry count with link |  |  |
+| UT-11.02 | Dashboard | Job card sidebar shows DPS links | Open a job card referenced by a Schedule Line | Connections section shows Daily Production Schedule count |  |  |
+| UT-11.03 | Dashboard | Click connection → filtered list | Click Production Entry count from sidebar | Navigates to Production Entry list filtered by that job card |  |  |
+| UT-11.04 | Report — DPS | Daily Production Summary runs | Navigate to Daily Production Summary; from_date=today, to_date=today | Report renders. Columns: posting_date, workstation, job_card_id, customer, production_stage, actual_qty, waste_qty, waste_pct, variance, duration_hours |  |  |
+| UT-11.05 | Report — DPS | Filter by workstation | Apply workstation filter | Only rows for that workstation |  |  |
+| UT-11.06 | Report — DPS | waste_pct correct | Row with actual=4500, waste=500 | waste_pct = 10% |  |  |
+| UT-11.07 | Report — DPS | variance correct | Row with planned=5000, actual=4500 | variance = -500 |  |  |
+| UT-11.08 | Report — JP | Job Progress runs across all 3 types | Navigate to Job Progress; no filter | Report renders rows across Computer Paper, Label, Carton with no SQL error (regression guard for UT-2.57) |  |  |
+| UT-11.09 | Report — JP | Customer column populated for Carton | Look at Carton rows in the report | Customer value shown (from customer_name on Carton) |  |  |
+| UT-11.10 | Report — JP | Filter by customer | Apply customer filter | Only rows for that customer, including Carton entries |  |  |
+| UT-11.11 | Report — JP | Status colours | Check a job overdue (due_date < today, progress < 100) | Status shows Overdue (red) |  |  |
+| UT-11.12 | Report — JP | Status At Risk | Check a job with progress_pct<50 and days_remaining<3 | Status shows At Risk (amber) |  |  |
+| UT-11.13 | Report — JP | Status Completed | Job whose qty_produced ≥ quantity_ordered | Status shows Completed |  |  |
+| UT-11.14 | Report — JP | Status On Track | Job with neither Overdue nor At Risk triggers | Status shows On Track |  |  |
+| UT-11.15 | Report — MU | Machine Utilization runs | Navigate to Machine Utilization; set date range | Renders. Columns: workstation, workstation_type, available_hours, run_hours, downtime_unplanned, downtime_planned, idle_hours, utilization_pct |  |  |
+| UT-11.16 | Report — MU | Planned vs unplanned split | Machine with 1 Planned Maintenance DT and 1 Mechanical Breakdown DT | downtime_planned and downtime_unplanned columns each populated correctly |  |  |
+| UT-11.17 | Report — MU | utilization_pct formula | Machine with run_hours=6, available_hours=8 | utilization_pct = 75% |  |  |
+| UT-11.18 | Report Export | Export any report to CSV/Excel | Click Menu → Export on each of the 3 reports | Spreadsheet downloads; formatted correctly |  |  |
+| UT-11.19 | Workspace | VCL Production workspace loads | Navigate to the VCL Production workspace | Workspace renders shortcuts for CPS, Dies, Job Card New/List for all 3 types |  |  |
+
+---
+
+## SECTION 12 — PERMISSIONS
+
+Run each row after logging in with the specified role (typically a separate browser profile or incognito session).
+
+| ID | Role | Test Case | Steps | Expected Result | Result | Notes |
+|----|------|-----------|-------|-----------------|--------|-------|
+| UT-12.01 | Mfg Manager | Full CRUD on master data | Create/read/update/delete a Production Stage, Waste Reason, Downtime Reason | All 4 operations succeed on all 3 doctypes |  |  |
+| UT-12.02 | Mfg Manager | Full CRUD on DPS | Create, edit, submit, amend, cancel a DPS | All operations succeed |  |  |
+| UT-12.03 | Mfg Manager | Full CRUD on PE | Create, submit, cancel a Production Entry | All succeed |  |  |
+| UT-12.04 | Mfg Manager | Full CRUD on Downtime | Create, submit, cancel a Downtime Entry | All succeed |  |  |
+| UT-12.05 | Mfg User | Create + submit DPS | Create DPS, add lines, submit | Create + submit work; Delete button hidden |  |  |
+| UT-12.06 | Mfg User | Read-only master data | Try to create a Production Stage | Create blocked; list still readable |  |  |
+| UT-12.07 | Mfg User | Create + submit PE and DT | Create a Production Entry and a Downtime Entry | Both succeed |  |  |
+| UT-12.08 | Prod Log User | Read-only on DPS | Try to create a DPS | Blocked; New button hidden or action denied |  |  |
+| UT-12.09 | Prod Log User | Create + submit PE | Create a Production Entry | Succeeds (operators need this) |  |  |
+| UT-12.10 | Prod Log User | Create + submit DT | Create a Downtime Entry | Succeeds |  |  |
+| UT-12.11 | Prod Log User | Read-only on master data | Try to create a Waste Reason | Blocked |  |  |
+| UT-12.12 | Prod Log User | Schedule Board read-only | Open /app/daily-schedule-board | Board loads; drag disabled; status badges not clickable |  |  |
+| UT-12.13 | Sales User | Create + submit + cancel Job Card Carton | New JC-C, fill, submit, then cancel | All three actions succeed; Delete hidden |  |  |
+| UT-12.14 | Sales User | Create CPS | New Customer Product Specification | Succeeds (if role configured); otherwise blocked — record which |  |  |
+| UT-12.15 | Sales User | No access to PE/DPS/DT | Navigate to Production Entry list | Permission denied or empty list per permission rules |  |  |
+| UT-12.16 | System Manager | Full CRUD everything | Open any doctype, test all actions | All operations succeed |  |  |
+| UT-12.17 | Guest | No access | Log out; try /api/resource/Production Stage | 403 Forbidden |  |  |
+
+---
+
+## OUTCOME & SIGN-OFF
+
+**Overall Outcome:** ______________
+
+| | | | |
+|---|---|---|---|
+| **Tester:** | __________ | **Date:** | __________ |
+| **Role:** | __________ | **Outcome:** | __________ |
+| **Signature:** | ___________________ | **Approved by:** | ___________________ |
