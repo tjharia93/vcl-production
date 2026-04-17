@@ -1,5 +1,5 @@
 import frappe
-from frappe.utils import getdate, date_diff
+from frappe.utils import flt, getdate, date_diff
 
 
 JOB_CARD_TYPES = [
@@ -77,9 +77,9 @@ def get_data(filters):
                 as_dict=True,
             )[0]
 
-            qty_produced = pe_totals.produced
-            total_waste = pe_totals.waste
-            qty_ordered = jc.quantity_ordered or 0
+            qty_produced = flt(pe_totals.produced)
+            total_waste = flt(pe_totals.waste)
+            qty_ordered = flt(jc.quantity_ordered)
             qty_remaining = max(0, qty_ordered - qty_produced)
             progress_pct = (qty_produced / qty_ordered * 100) if qty_ordered else 0
             days_remaining = date_diff(jc.due_date, today) if jc.due_date else None

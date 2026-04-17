@@ -290,6 +290,7 @@ Covers all 4 product_types (2-Flap RSC, 1-Flap RSC, Tray / FTD, Die Cut), the SF
 | UT-11.17 | Report — MU | utilization_pct formula | Machine with run_hours=6, available_hours=8 | utilization_pct = 75% |  |  |
 | UT-11.18 | Report Export | Export any report to CSV/Excel | Click Menu → Export on each of the 3 reports | Spreadsheet downloads; formatted correctly |  |  |
 | UT-11.19 | Workspace | VCL Production workspace loads | Navigate to the VCL Production workspace | Workspace renders shortcuts for CPS, Dies, Job Card New/List for all 3 types |  |  |
+| UT-11.20 | Report — JP | Regression: handles string-encoded quantity_ordered | Run Job Progress on a site where quantity_ordered is returned from DB as string | No TypeError; qty_remaining and progress_pct render numerically (regression guard for flt() coercion fix) |  |  |
 
 ---
 
