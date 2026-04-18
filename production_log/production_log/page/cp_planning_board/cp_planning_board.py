@@ -112,7 +112,7 @@ def assign_job(workstation, schedule_date, job_card_id, production_stage, planne
     """
     Assign a Job Card to a workstation/date.
     Creates a draft DPS if none exists, then appends a Schedule Line.
-    Only works with draft DPS records â submitted schedules must be amended first.
+    Only works with draft DPS records Ã¢ÂÂ submitted schedules must be amended first.
     """
     # Find existing draft DPS for this workstation + date
     dps_name = frappe.db.get_value(
@@ -122,7 +122,7 @@ def assign_job(workstation, schedule_date, job_card_id, production_stage, planne
     )
 
     if not dps_name:
-        # Check if a submitted DPS exists â if so, warn the user
+        # Check if a submitted DPS exists Ã¢ÂÂ if so, warn the user
         submitted_name = frappe.db.get_value(
             "Daily Production Schedule",
             {"workstation": workstation, "schedule_date": schedule_date, "docstatus": 1},
@@ -136,16 +136,13 @@ def assign_job(workstation, schedule_date, job_card_id, production_stage, planne
                 ).format(submitted_name, workstation, schedule_date)
             )
 
-        # Create new draft DPS
+        # Create new draft DPS — do not insert yet; append the schedule line first below
         dps = frappe.new_doc("Daily Production Schedule")
         dps.workstation = workstation
         dps.schedule_date = schedule_date
         dps.available_hours = 8
-        dps.flags.ignore_permissions = True
-        dps.insert()
-        dps_name = dps.name
-
-    dps = frappe.get_doc("Daily Production Schedule", dps_name)
+    else:
+        dps = frappe.get_doc("Daily Production Schedule", dps_name)
 
     # Get customer from job card
     customer = frappe.db.get_value("Job Card Computer Paper", job_card_id, "customer") or ""
@@ -168,7 +165,10 @@ def assign_job(workstation, schedule_date, job_card_id, production_stage, planne
         },
     )
     dps.flags.ignore_permissions = True
-    dps.save()
+    if dps.is_new():
+        dps.insert()
+    else:
+        dps.save()
 
     return {"dps_name": dps.name, "status": "ok"}
 
