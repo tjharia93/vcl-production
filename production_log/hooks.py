@@ -39,6 +39,7 @@ jinja = {
 # ------------
 # before_install = "production_log.install.before_install"
 after_install = "production_log.install.after_install"
+after_migrate = "production_log.patches.v2_0.seed_ppc_master_data.execute"
 
 # Uninstallation
 # ------------
@@ -67,7 +68,16 @@ after_install = "production_log.install.after_install"
 # Document Events
 # ---------------
 # Hook on document methods and events
-# doc_events = {}
+doc_events = {
+    "Production Entry": {
+        "on_submit": "production_log.events.production_entry.on_submit",
+        "on_cancel": "production_log.events.production_entry.on_cancel",
+    },
+    "Downtime Entry": {
+        "on_submit": "production_log.events.downtime_entry.on_submit",
+        "on_cancel": "production_log.events.downtime_entry.on_cancel",
+    },
+}
 
 # Scheduled Tasks
 # ---------------
@@ -86,7 +96,24 @@ after_install = "production_log.install.after_install"
 # Fixtures
 # --------
 fixtures = [
-	{"dt": "Print Format", "filters": [["name", "in", ["Carton Job Card"]]]}
+	{"dt": "Print Format", "filters": [["name", "in", ["Carton Job Card"]]]},
+	{
+		"dt": "Custom Field",
+		"filters": [
+			[
+				"dt", "in", [
+					"Workstation Type",
+					"Workstation",
+					"Job Card Computer Paper",
+					"Job Card Label",
+					"Job Card Carton",
+				]
+			]
+		],
+	},
+	{"dt": "Production Stage"},
+	{"dt": "Waste Reason"},
+	{"dt": "Downtime Reason"},
 ]
 
 # Boot Session

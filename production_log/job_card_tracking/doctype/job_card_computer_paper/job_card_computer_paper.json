@@ -35,13 +35,16 @@
   "plate_status",
   "plate_code",
   "plate_notes",
+  "plates_confirmed",
   "section_approvals",
   "sales_rep",
   "sales_rep_approval_date",
   "sales_rep_comments",
   "management_approver",
   "management_approval_date",
-  "management_comments"
+  "management_comments",
+  "section_planning",
+  "planning_status"
  ],
  "fields": [
   {
@@ -231,6 +234,13 @@
    "label": "Plate Notes"
   },
   {
+   "depends_on": "eval:doc.plate_status=='New'",
+   "description": "Tick when new plates have arrived and are confirmed ready for production.",
+   "fieldname": "plates_confirmed",
+   "fieldtype": "Check",
+   "label": "Plates / Films Confirmed Ready"
+  },
+  {
    "fieldname": "section_approvals",
    "fieldtype": "Section Break",
    "label": "Approvals"
@@ -266,11 +276,26 @@
    "fieldname": "management_comments",
    "fieldtype": "Small Text",
    "label": "Management Comments"
+  },
+  {
+   "fieldname": "section_planning",
+   "fieldtype": "Section Break",
+   "label": "Planning"
+  },
+  {
+   "default": "Open",
+   "description": "Set by PPC: Open = not yet scheduled, Planned = on the board, Completed = all runs done.",
+   "fieldname": "planning_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Planning Status",
+   "options": "Open\nPlanned\nCompleted"
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-15 00:00:00.000000",
+ "modified": "2026-04-18 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Job Card Tracking",
  "name": "Job Card Computer Paper",
@@ -278,6 +303,8 @@
  "owner": "Administrator",
  "permissions": [
   {
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -288,11 +315,11 @@
    "role": "System Manager",
    "share": 1,
    "submit": 1,
-   "cancel": 1,
-   "amend": 1,
    "write": 1
   },
   {
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
    "delete": 0,
    "email": 1,
@@ -303,8 +330,6 @@
    "role": "Sales Manager",
    "share": 1,
    "submit": 1,
-   "cancel": 1,
-   "amend": 1,
    "write": 1
   },
   {
