@@ -1,5 +1,5 @@
 import frappe
-from frappe.utils import getdate, date_diff
+from frappe.utils import flt, getdate, date_diff
 
 
 JOB_CARD_TYPES = [
@@ -7,6 +7,12 @@ JOB_CARD_TYPES = [
     "Job Card Label",
     "Job Card Carton",
 ]
+
+CUSTOMER_FIELD_BY_TYPE = {
+    "Job Card Computer Paper": "customer",
+    "Job Card Label": "customer",
+    "Job Card Carton": "customer_name",
+}
 
 
 def execute(filters=None):
@@ -37,16 +43,20 @@ def get_data(filters):
 
     for jc_type in JOB_CARD_TYPES:
         short_type = jc_type.replace("Job Card ", "")
+        customer_col = CUSTOMER_FIELD_BY_TYPE[jc_type]
         conditions = "jc.docstatus = 1"
         values = {}
 
         if filters and filters.get("customer"):
-            conditions += " AND jc.customer = %(customer)s"
+            conditions += f" AND jc.{customer_col} = %(customer)s"
             values["customer"] = filters["customer"]
 
         job_cards = frappe.db.sql(
             f"""
-            SELECT jc.name, jc.customer, jc.quantity_ordered, jc.due_date
+            SELECT jc.name,
+                   jc.{customer_col} AS customer,
+                   jc.quantity_ordered,
+                   jc.due_date
             FROM `tab{jc_type}` jc
             WHERE {conditions}
             ORDER BY jc.due_date ASC
@@ -67,9 +77,9 @@ def get_data(filters):
                 as_dict=True,
             )[0]
 
-            qty_produced = pe_totals.produced
-            total_waste = pe_totals.waste
-            qty_ordered = jc.quantity_ordered or 0
+            qty_produced = flt(pe_totals.produced)
+            total_waste = flt(pe_totals.waste)
+            qty_ordered = flt(jc.quantity_ordered)
             qty_remaining = max(0, qty_ordered - qty_produced)
             progress_pct = (qty_produced / qty_ordered * 100) if qty_ordered else 0
             days_remaining = date_diff(jc.due_date, today) if jc.due_date else None
