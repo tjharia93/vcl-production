@@ -13,15 +13,25 @@ def seed_production_stages():
         return
 
     stages = [
+        {"stage_name": "Design", "product_line": "All", "sequence": 1, "is_qc_point": 0},
+        {"stage_name": "Pre-Press", "product_line": "All", "sequence": 5, "is_qc_point": 0},
         {"stage_name": "Printing", "product_line": "All", "sequence": 10, "is_qc_point": 0},
         {"stage_name": "Numbering", "product_line": "Computer Paper", "sequence": 20, "is_qc_point": 0},
         {"stage_name": "Collating", "product_line": "Computer Paper", "sequence": 30, "is_qc_point": 0},
         {"stage_name": "Wrapping", "product_line": "Computer Paper", "sequence": 40, "is_qc_point": 1},
         {"stage_name": "Die Cutting", "product_line": "Label", "sequence": 20, "is_qc_point": 0},
+        {"stage_name": "Re-winding", "product_line": "Label", "sequence": 25, "is_qc_point": 0},
+        {"stage_name": "Slitting", "product_line": "Label", "sequence": 28, "is_qc_point": 1},
         {"stage_name": "Finishing", "product_line": "Label", "sequence": 30, "is_qc_point": 1},
         {"stage_name": "Corrugating", "product_line": "Carton", "sequence": 10, "is_qc_point": 0},
-        {"stage_name": "Creasing & Slotting", "product_line": "Carton", "sequence": 20, "is_qc_point": 0},
+        {"stage_name": "Pasting", "product_line": "Carton", "sequence": 15, "is_qc_point": 0},
+        {"stage_name": "Creasing", "product_line": "Carton", "sequence": 20, "is_qc_point": 0},
+        {"stage_name": "Creasing & Slotting", "product_line": "Carton", "sequence": 22, "is_qc_point": 0},
+        {"stage_name": "Slotting", "product_line": "Carton", "sequence": 25, "is_qc_point": 0},
         {"stage_name": "Folding & Gluing", "product_line": "Carton", "sequence": 30, "is_qc_point": 0},
+        {"stage_name": "Stitching", "product_line": "Carton", "sequence": 35, "is_qc_point": 0},
+        {"stage_name": "Gluing", "product_line": "Carton", "sequence": 37, "is_qc_point": 0},
+        {"stage_name": "Bundling", "product_line": "Carton", "sequence": 45, "is_qc_point": 1},
         {"stage_name": "Packing", "product_line": "All", "sequence": 90, "is_qc_point": 1},
     ]
     for stage in stages:
