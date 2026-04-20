@@ -17,8 +17,10 @@
   "specification_name",
   "job_size",
   "pay_slip_size",
+  "column_break_product_spec",
   "number_of_colours",
   "number_of_parts",
+  "section_colour_of_parts",
   "colour_of_parts",
   "section_job_details",
   "quantity_ordered",
@@ -42,9 +44,7 @@
   "sales_rep_comments",
   "management_approver",
   "management_approval_date",
-  "management_comments",
-  "section_planning",
-  "planning_status"
+  "management_comments"
  ],
  "fields": [
   {
@@ -128,6 +128,10 @@
    "read_only": 1
   },
   {
+   "fieldname": "column_break_product_spec",
+   "fieldtype": "Column Break"
+  },
+  {
    "fieldname": "number_of_colours",
    "fieldtype": "Int",
    "label": "Number of Colours",
@@ -138,6 +142,11 @@
    "fieldtype": "Int",
    "label": "Number of Parts",
    "read_only": 1
+  },
+  {
+   "fieldname": "section_colour_of_parts",
+   "fieldtype": "Section Break",
+   "label": "Colour of Parts"
   },
   {
    "fieldname": "colour_of_parts",
@@ -276,21 +285,6 @@
    "fieldname": "management_comments",
    "fieldtype": "Small Text",
    "label": "Management Comments"
-  },
-  {
-   "fieldname": "section_planning",
-   "fieldtype": "Section Break",
-   "label": "Planning"
-  },
-  {
-   "default": "Open",
-   "description": "Set by PPC: Open = not yet scheduled, Planned = on the board, Completed = all runs done.",
-   "fieldname": "planning_status",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Planning Status",
-   "options": "Open\nPlanned\nCompleted"
   }
  ],
  "is_submittable": 1,

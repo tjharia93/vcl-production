@@ -67,6 +67,29 @@ CUSTOM_FIELDS_TO_REMOVE = [
 ]
 
 
+# Native (non-Custom Field) columns to drop from job cards.
+# These were real DocType fields that have now been removed from the JSON —
+# schema sync normally drops them on migrate, but we drop explicitly for safety.
+NATIVE_COLUMNS_TO_DROP = [
+    ("Job Card Computer Paper", "planning_status"),
+]
+
+
+def _drop_native_columns():
+    for doctype, fieldname in NATIVE_COLUMNS_TO_DROP:
+        table = "tab" + doctype
+        if not frappe.db.table_exists(table):
+            continue
+        existing_cols = {
+            row[0] for row in frappe.db.sql(f"SHOW COLUMNS FROM `{table}`")
+        }
+        if fieldname in existing_cols:
+            frappe.db.commit()
+            frappe.db.sql_ddl(
+                f"ALTER TABLE `{table}` DROP COLUMN `{fieldname}`"
+            )
+
+
 def _remove_custom_fields():
     for doctype, fieldname in CUSTOM_FIELDS_TO_REMOVE:
         cf_name = frappe.db.get_value(
@@ -153,18 +176,21 @@ def execute():
     # 1. Remove custom fields first so DocType deletes don't leave orphan columns
     _remove_custom_fields()
 
-    # 2. Delete child DocTypes
+    # 2. Drop native columns removed from the DocType JSON
+    _drop_native_columns()
+
+    # 3. Delete child DocTypes
     for child in CHILD_DOCTYPES:
         _delete_doctype(child)
 
-    # 3. Delete parent DocTypes
+    # 4. Delete parent DocTypes
     for parent in PARENT_DOCTYPES:
         _delete_doctype(parent)
 
-    # 4. Clean up pages, reports, workspace links
+    # 5. Clean up pages, reports, workspace links
     _cleanup_pages_and_reports()
     _cleanup_workspace_links()
 
-    # 5. Clear cache
+    # 6. Clear cache
     frappe.clear_cache()
     frappe.db.commit()
