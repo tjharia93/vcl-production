@@ -39,7 +39,6 @@ jinja = {
 # ------------
 # before_install = "production_log.install.before_install"
 after_install = "production_log.install.after_install"
-after_migrate = "production_log.patches.v2_0.seed_ppc_master_data.execute"
 
 # Uninstallation
 # ------------
@@ -68,16 +67,6 @@ after_migrate = "production_log.patches.v2_0.seed_ppc_master_data.execute"
 # Document Events
 # ---------------
 # Hook on document methods and events
-doc_events = {
-    "Production Entry": {
-        "on_submit": "production_log.events.production_entry.on_submit",
-        "on_cancel": "production_log.events.production_entry.on_cancel",
-    },
-    "Downtime Entry": {
-        "on_submit": "production_log.events.downtime_entry.on_submit",
-        "on_cancel": "production_log.events.downtime_entry.on_cancel",
-    },
-}
 
 # Scheduled Tasks
 # ---------------
@@ -111,9 +100,6 @@ fixtures = [
 			]
 		],
 	},
-	{"dt": "Production Stage"},
-	{"dt": "Waste Reason"},
-	{"dt": "Downtime Reason"},
 ]
 
 # Boot Session
