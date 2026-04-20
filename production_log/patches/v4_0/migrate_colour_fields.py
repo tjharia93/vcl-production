@@ -44,6 +44,11 @@ OLD_COLUMNS = [
 
 
 def execute():
+	# Ensure the target DocTypes (which carry the new colour_notes /
+	# number_of_colours fields) are synced before we write to them.
+	for dt in ("customer_product_specification", "job_card_label", "job_card_carton"):
+		frappe.reload_doc("job_card_tracking", "doctype", dt)
+
 	for table, column, is_numeric in OLD_COLUMNS:
 		if not frappe.db.table_exists(table):
 			continue

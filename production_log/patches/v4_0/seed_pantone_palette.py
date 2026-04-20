@@ -90,6 +90,10 @@ def _display_name(friendly, code):
 
 
 def execute():
+	# Sync the DocType JSON before inserting records so the patch works
+	# in the pre_model_sync phase (when the DocType hasn't been synced yet).
+	frappe.reload_doc("job_card_tracking", "doctype", "pantone_colour")
+
 	for code, friendly, hex_value, c, m, y, k, category in PALETTE:
 		display_name = _display_name(friendly, code)
 
