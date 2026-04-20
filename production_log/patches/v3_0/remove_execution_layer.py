@@ -94,7 +94,7 @@ def _remove_custom_fields():
 
 # ── 3. Pages and reports to clean up ────────────────────────────────────────
 
-PAGES_TO_DELETE = ["daily-schedule-board"]
+PAGES_TO_DELETE = ["daily-schedule-board", "cp-planning-board"]
 REPORTS_TO_DELETE = [
     "Daily Production Summary",
     "Job Progress",
@@ -136,6 +136,7 @@ WORKSPACE_LINK_TARGETS = [
     "Waste Reason",
     "Downtime Reason",
     "daily-schedule-board",
+    "cp-planning-board",
 ]
 
 
