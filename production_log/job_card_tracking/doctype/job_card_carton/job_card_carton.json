@@ -26,11 +26,20 @@
   "product_description_section",
   "ply",
   "printing_or_plain",
-  "no_of_colours",
   "special_instructions",
   "column_break_4",
   "flute_type",
-  "colours_details",
+  "section_print_colours",
+  "ink_type",
+  "uses_c",
+  "uses_m",
+  "uses_y",
+  "uses_k",
+  "column_break_print_colours",
+  "number_of_colours",
+  "section_spot_colours",
+  "spot_colours",
+  "colour_notes",
   "job_details_section",
   "ctn_length_mm",
   "ctn_width_mm",
@@ -189,12 +198,6 @@
    "options": "Plain\nPrinted"
   },
   {
-   "fieldname": "no_of_colours",
-   "fieldtype": "Select",
-   "label": "No. Of Colours",
-   "options": "0\n1\n2\n3\n4"
-  },
-  {
    "fieldname": "special_instructions",
    "fieldtype": "Small Text",
    "label": "Special Instructions"
@@ -210,9 +213,73 @@
    "options": "B\nC\nE"
   },
   {
-   "fieldname": "colours_details",
+   "description": "Print inks pulled from the spec. Edit the spec to change these.",
+   "fieldname": "section_print_colours",
+   "fieldtype": "Section Break",
+   "label": "Print Colours"
+  },
+  {
+   "fieldname": "ink_type",
    "fieldtype": "Data",
-   "label": "Colours (details)"
+   "label": "Ink Type",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "uses_c",
+   "fieldtype": "Check",
+   "label": "C \u2014 Cyan",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "uses_m",
+   "fieldtype": "Check",
+   "label": "M \u2014 Magenta",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "uses_y",
+   "fieldtype": "Check",
+   "label": "Y \u2014 Yellow",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "uses_k",
+   "fieldtype": "Check",
+   "label": "K \u2014 Black",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_print_colours",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "number_of_colours",
+   "fieldtype": "Int",
+   "label": "Number of Colours",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_spot_colours",
+   "fieldtype": "Section Break",
+   "label": "Spot Colours"
+  },
+  {
+   "fieldname": "spot_colours",
+   "fieldtype": "Table",
+   "label": "Spot Colours",
+   "options": "Spot Colour",
+   "read_only": 1
+  },
+  {
+   "fieldname": "colour_notes",
+   "fieldtype": "Small Text",
+   "label": "Colour Notes",
+   "read_only": 1
   },
   {
    "fieldname": "job_details_section",

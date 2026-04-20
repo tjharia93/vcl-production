@@ -47,7 +47,6 @@ class JobCardLabel(Document):
 		self.dies = spec.dies
 		self.label_length = spec.label_length
 		self.label_width = spec.label_width
-		self.label_number_of_colours = spec.label_number_of_colours
 		self.cylinder_teeth = spec.cylinder_teeth
 		self.plate_up = spec.plate_up
 		self.plate_round = spec.plate_round
@@ -60,11 +59,28 @@ class JobCardLabel(Document):
 		self.standard_packing = spec.standard_packing
 		self.weight_per_carton = spec.standard_weight_per_carton
 
+		# Print colours block (shared with CP and Carton)
+		for f in ("ink_type", "uses_c", "uses_m", "uses_y", "uses_k",
+				  "number_of_colours", "colour_notes"):
+			self.set(f, spec.get(f))
+
+		self.spot_colours = []
+		for sc in spec.get("spot_colours") or []:
+			self.append("spot_colours", {
+				"pantone_code": sc.pantone_code,
+				"pantone_name": sc.pantone_name,
+				"hex_preview":  sc.hex_preview,
+				"cmyk_c":       sc.cmyk_c,
+				"cmyk_m":       sc.cmyk_m,
+				"cmyk_y":       sc.cmyk_y,
+				"cmyk_k":       sc.cmyk_k,
+				"notes":        sc.notes,
+			})
+
 	def validate_spec_fields(self):
 		required_fields = {
-			"label_length": "Label Length",
-			"label_width": "Label Width",
-			"label_number_of_colours": "Label Number of Colours",
+			"label_length":  "Label Length",
+			"label_width":   "Label Width",
 			"material_type": "Material Type",
 		}
 

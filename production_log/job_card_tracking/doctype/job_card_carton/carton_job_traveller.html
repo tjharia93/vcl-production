@@ -110,7 +110,7 @@
             <tr>
                 <td><span class="lbl">Qty Ordered</span><span class="val" style="font-size:16px;">{{ doc.get("quantity_ordered") or "0" }} PCS</span></td>
                 <td><span class="lbl">Due Date</span><span class="val">{{ frappe.utils.formatdate(doc.get("due_date"), "dd.mm.yyyy") if doc.get("due_date") else "" }}</span></td>
-                <td><span class="lbl">Colours</span><span class="val">{{ doc.get("colours_details") or "PLAIN" }}</span></td>
+                <td><span class="lbl">Colours</span><span class="val">{% set _spots = doc.get("spot_colours") or [] %}{% set _cmyk = [] %}{% if doc.get("uses_c") %}{% set _ = _cmyk.append("C") %}{% endif %}{% if doc.get("uses_m") %}{% set _ = _cmyk.append("M") %}{% endif %}{% if doc.get("uses_y") %}{% set _ = _cmyk.append("Y") %}{% endif %}{% if doc.get("uses_k") %}{% set _ = _cmyk.append("K") %}{% endif %}{% set _parts = [] %}{% if _cmyk %}{% set _ = _parts.append(_cmyk | join("")) %}{% endif %}{% for s in _spots %}{% set _ = _parts.append(s.pantone_code or s.pantone_name or s.hex_preview) %}{% endfor %}{% if _parts %}{{ _parts | join(", ") }} ({{ doc.get("number_of_colours") }}){% else %}PLAIN{% endif %}</span></td>
                 <td><span class="lbl">Date Created</span><span class="val">{{ frappe.utils.formatdate(doc.creation, "dd.mm.yyyy") }}</span></td>
             </tr>
         </table>

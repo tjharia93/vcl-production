@@ -1,6 +1,9 @@
 // Job Card Carton - Client Script
 // Implements spec auto-populate + serial calculation pipeline with anti-race protection
 
+const PRINT_COLOUR_FIELDS = ["ink_type", "uses_c", "uses_m", "uses_y", "uses_k", "number_of_colours", "colour_notes"];
+const SPOT_COLOUR_FIELDS  = ["pantone_code", "pantone_name", "hex_preview", "cmyk_c", "cmyk_m", "cmyk_y", "cmyk_k", "notes"];
+
 let _pipeline_running = false;
 let _pipeline_queued = false;
 
@@ -96,9 +99,17 @@ frappe.ui.form.on("Job Card Carton", {
 				frm.set_value("ply", spec.ply || "");
 				frm.set_value("flute_type", spec.flute_type || "");
 				frm.set_value("printing_or_plain", spec.printing_or_plain || "");
-				frm.set_value("no_of_colours", spec.no_of_colours_carton || "0");
-				frm.set_value("colours_details", spec.colours_details || "");
 				frm.set_value("special_instructions", spec.special_instructions_carton || "");
+
+				// Print colours block (shared with CP and Label)
+				PRINT_COLOUR_FIELDS.forEach((f) =>
+					frm.set_value(f, spec[f] || (f === "ink_type" || f === "colour_notes" ? "" : 0))
+				);
+				frm.clear_table("spot_colours");
+				(spec.spot_colours || []).forEach((sc) => {
+					const row = frm.add_child("spot_colours");
+					SPOT_COLOUR_FIELDS.forEach((f) => { row[f] = sc[f]; });
+				});
 
 				// Dimensions
 				frm.set_value("ctn_length_mm", spec.ctn_length_mm || 0);
@@ -193,9 +204,13 @@ function _clear_spec_fields(frm) {
 	frm.set_value("ply", "");
 	frm.set_value("flute_type", "");
 	frm.set_value("printing_or_plain", "");
-	frm.set_value("no_of_colours", "0");
-	frm.set_value("colours_details", "");
 	frm.set_value("special_instructions", "");
+
+	// Print colours block
+	["ink_type", "colour_notes"].forEach((f) => frm.set_value(f, ""));
+	["uses_c", "uses_m", "uses_y", "uses_k", "number_of_colours"].forEach((f) => frm.set_value(f, 0));
+	frm.clear_table("spot_colours");
+	frm.refresh_field("spot_colours");
 	frm.set_value("ctn_length_mm", 0);
 	frm.set_value("ctn_width_mm", 0);
 	frm.set_value("ctn_height_mm", 0);

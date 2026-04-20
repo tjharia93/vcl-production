@@ -1,0 +1,99 @@
+{
+ "actions": [],
+ "creation": "2026-04-20 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "pantone_code",
+  "pantone_name",
+  "hex_preview",
+  "cmyk_c",
+  "cmyk_m",
+  "cmyk_y",
+  "cmyk_k",
+  "notes"
+ ],
+ "fields": [
+  {
+   "allow_on_submit": 1,
+   "fieldname": "pantone_code",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Pantone",
+   "options": "Pantone Colour"
+  },
+  {
+   "allow_on_submit": 1,
+   "fetch_from": "pantone_code.display_name",
+   "fetch_if_empty": 1,
+   "fieldname": "pantone_name",
+   "fieldtype": "Data",
+   "label": "Name",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Approximate preview. Override per job if the customer's brand guide disagrees.",
+   "fetch_from": "pantone_code.hex_value",
+   "fetch_if_empty": 1,
+   "fieldname": "hex_preview",
+   "fieldtype": "Color",
+   "in_list_view": 1,
+   "label": "Hex"
+  },
+  {
+   "allow_on_submit": 1,
+   "fetch_from": "pantone_code.default_cmyk_c",
+   "fetch_if_empty": 1,
+   "fieldname": "cmyk_c",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "C %"
+  },
+  {
+   "allow_on_submit": 1,
+   "fetch_from": "pantone_code.default_cmyk_m",
+   "fetch_if_empty": 1,
+   "fieldname": "cmyk_m",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "M %"
+  },
+  {
+   "allow_on_submit": 1,
+   "fetch_from": "pantone_code.default_cmyk_y",
+   "fetch_if_empty": 1,
+   "fieldname": "cmyk_y",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Y %"
+  },
+  {
+   "allow_on_submit": 1,
+   "fetch_from": "pantone_code.default_cmyk_k",
+   "fetch_if_empty": 1,
+   "fieldname": "cmyk_k",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "K %"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "notes",
+   "fieldtype": "Data",
+   "label": "Notes"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-04-20 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Job Card Tracking",
+ "name": "Spot Colour",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}

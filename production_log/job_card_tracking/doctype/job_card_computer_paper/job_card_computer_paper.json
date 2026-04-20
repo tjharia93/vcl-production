@@ -18,10 +18,20 @@
   "job_size",
   "pay_slip_size",
   "column_break_product_spec",
-  "number_of_colours",
   "number_of_parts",
   "section_colour_of_parts",
   "colour_of_parts",
+  "section_print_colours",
+  "ink_type",
+  "uses_c",
+  "uses_m",
+  "uses_y",
+  "uses_k",
+  "column_break_print_colours",
+  "number_of_colours",
+  "section_spot_colours",
+  "spot_colours",
+  "colour_notes",
   "section_job_details",
   "quantity_ordered",
   "packing",
@@ -132,18 +142,13 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "number_of_colours",
-   "fieldtype": "Int",
-   "label": "Number of Colours",
-   "read_only": 1
-  },
-  {
    "fieldname": "number_of_parts",
    "fieldtype": "Int",
    "label": "Number of Parts",
    "read_only": 1
   },
   {
+   "description": "Pre-tinted paper per ply. Copied from the spec \u2014 separate from print inks.",
    "fieldname": "section_colour_of_parts",
    "fieldtype": "Section Break",
    "label": "Colour of Parts"
@@ -153,6 +158,75 @@
    "fieldtype": "Table",
    "label": "Colour of Parts",
    "options": "Colour of Parts",
+   "read_only": 1
+  },
+  {
+   "description": "Print inks pulled from the spec. Edit the spec to change these.",
+   "fieldname": "section_print_colours",
+   "fieldtype": "Section Break",
+   "label": "Print Colours"
+  },
+  {
+   "fieldname": "ink_type",
+   "fieldtype": "Data",
+   "label": "Ink Type",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "uses_c",
+   "fieldtype": "Check",
+   "label": "C \u2014 Cyan",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "uses_m",
+   "fieldtype": "Check",
+   "label": "M \u2014 Magenta",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "uses_y",
+   "fieldtype": "Check",
+   "label": "Y \u2014 Yellow",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "uses_k",
+   "fieldtype": "Check",
+   "label": "K \u2014 Black",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_print_colours",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "number_of_colours",
+   "fieldtype": "Int",
+   "label": "Number of Colours",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_spot_colours",
+   "fieldtype": "Section Break",
+   "label": "Spot Colours"
+  },
+  {
+   "fieldname": "spot_colours",
+   "fieldtype": "Table",
+   "label": "Spot Colours",
+   "options": "Spot Colour",
+   "read_only": 1
+  },
+  {
+   "fieldname": "colour_notes",
+   "fieldtype": "Small Text",
+   "label": "Colour Notes",
    "read_only": 1
   },
   {

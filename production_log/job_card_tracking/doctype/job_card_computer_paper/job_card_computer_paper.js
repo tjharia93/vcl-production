@@ -1,3 +1,6 @@
+const PRINT_COLOUR_FIELDS = ["ink_type", "uses_c", "uses_m", "uses_y", "uses_k", "number_of_colours", "colour_notes"];
+const SPOT_COLOUR_FIELDS  = ["pantone_code", "pantone_name", "hex_preview", "cmyk_c", "cmyk_m", "cmyk_y", "cmyk_k", "notes"];
+
 frappe.ui.form.on("Job Card Computer Paper", {
 	refresh(frm) {
 		frm.set_query("customer_product_spec", function () {
@@ -60,22 +63,32 @@ frappe.ui.form.on("Job Card Computer Paper", {
 				frm.set_value("specification_name", spec.specification_name || "");
 				frm.set_value("job_size", spec.job_size || "");
 				frm.set_value("pay_slip_size", spec.pay_slip_size || "");
-				frm.set_value("number_of_colours", spec.number_of_colours || 0);
 				frm.set_value("number_of_parts", spec.number_of_parts || 0);
 				frm.set_value("numbering_required", spec.numbering_required || 0);
 				frm.set_value("packing", spec.standard_packing || "");
 				frm.set_value("weight_per_carton", spec.standard_weight_per_carton || 0);
+
+				// Print colours block
+				PRINT_COLOUR_FIELDS.forEach((f) => frm.set_value(f, spec[f] || (f === "ink_type" || f === "colour_notes" ? "" : 0)));
+
+				// Colour of Parts (paper tints)
 				frm.clear_table("colour_of_parts");
-				if (spec.colour_of_parts && spec.colour_of_parts.length) {
-					spec.colour_of_parts.forEach(function (part) {
-						const row = frm.add_child("colour_of_parts");
-						row.part_number = part.part_number;
-						row.paper_type = part.paper_type;
-						row.gsm = part.gsm;
-						row.colour = part.colour;
-						row.purpose = part.purpose;
-					});
-				}
+				(spec.colour_of_parts || []).forEach((part) => {
+					const row = frm.add_child("colour_of_parts");
+					row.part_number = part.part_number;
+					row.paper_type  = part.paper_type;
+					row.gsm         = part.gsm;
+					row.colour      = part.colour;
+					row.purpose     = part.purpose;
+				});
+
+				// Spot Colours (print inks)
+				frm.clear_table("spot_colours");
+				(spec.spot_colours || []).forEach((sc) => {
+					const row = frm.add_child("spot_colours");
+					SPOT_COLOUR_FIELDS.forEach((f) => { row[f] = sc[f]; });
+				});
+
 				frm.refresh_fields();
 			},
 		});
@@ -83,10 +96,12 @@ frappe.ui.form.on("Job Card Computer Paper", {
 });
 
 function _clear_spec_fields(frm) {
-	["specification_name", "job_size", "pay_slip_size"].forEach(f => frm.set_value(f, ""));
-	["number_of_colours", "number_of_parts", "numbering_required"].forEach(f => frm.set_value(f, 0));
+	["specification_name", "job_size", "pay_slip_size", "ink_type", "colour_notes"].forEach(f => frm.set_value(f, ""));
+	["number_of_colours", "number_of_parts", "numbering_required", "uses_c", "uses_m", "uses_y", "uses_k"].forEach(f => frm.set_value(f, 0));
 	frm.set_value("packing", "");
 	frm.set_value("weight_per_carton", 0);
 	frm.clear_table("colour_of_parts");
+	frm.clear_table("spot_colours");
 	frm.refresh_field("colour_of_parts");
+	frm.refresh_field("spot_colours");
 }

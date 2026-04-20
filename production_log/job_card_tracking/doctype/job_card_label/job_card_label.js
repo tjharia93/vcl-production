@@ -1,3 +1,6 @@
+const PRINT_COLOUR_FIELDS = ["ink_type", "uses_c", "uses_m", "uses_y", "uses_k", "number_of_colours", "colour_notes"];
+const SPOT_COLOUR_FIELDS  = ["pantone_code", "pantone_name", "hex_preview", "cmyk_c", "cmyk_m", "cmyk_y", "cmyk_k", "notes"];
+
 frappe.ui.form.on("Job Card Label", {
 	refresh(frm) {
 		frm.set_query("customer_product_spec", function () {
@@ -56,7 +59,6 @@ frappe.ui.form.on("Job Card Label", {
 				frm.set_value("dies", spec.dies || "");
 				frm.set_value("label_length", spec.label_length || 0);
 				frm.set_value("label_width", spec.label_width || 0);
-				frm.set_value("label_number_of_colours", spec.label_number_of_colours || 0);
 				frm.set_value("cylinder_teeth", spec.cylinder_teeth || 0);
 				frm.set_value("plate_up", spec.plate_up || 0);
 				frm.set_value("plate_round", spec.plate_round || 0);
@@ -68,6 +70,17 @@ frappe.ui.form.on("Job Card Label", {
 				frm.set_value("numbering_required", spec.numbering_required || 0);
 				frm.set_value("standard_packing", spec.standard_packing || "");
 				frm.set_value("weight_per_carton", spec.standard_weight_per_carton || 0);
+
+				PRINT_COLOUR_FIELDS.forEach((f) =>
+					frm.set_value(f, spec[f] || (f === "ink_type" || f === "colour_notes" ? "" : 0))
+				);
+
+				frm.clear_table("spot_colours");
+				(spec.spot_colours || []).forEach((sc) => {
+					const row = frm.add_child("spot_colours");
+					SPOT_COLOUR_FIELDS.forEach((f) => { row[f] = sc[f]; });
+				});
+
 				frm.refresh_fields();
 			},
 		});
@@ -75,8 +88,12 @@ frappe.ui.form.on("Job Card Label", {
 });
 
 function _clear_label_spec_fields(frm) {
-	["specification_name", "job_size", "dies", "material_type", "standard_packing"].forEach(f => frm.set_value(f, null));
-	["label_length", "label_width", "label_number_of_colours", "cylinder_teeth", "plate_up",
+	["specification_name", "job_size", "dies", "material_type", "standard_packing",
+	 "ink_type", "colour_notes"].forEach(f => frm.set_value(f, null));
+	["label_length", "label_width", "cylinder_teeth", "plate_up",
 	 "plate_round", "packing_up", "packing_pieces", "gap_between", "side_trim",
-	 "numbering_required", "weight_per_carton"].forEach(f => frm.set_value(f, null));
+	 "numbering_required", "weight_per_carton",
+	 "number_of_colours", "uses_c", "uses_m", "uses_y", "uses_k"].forEach(f => frm.set_value(f, null));
+	frm.clear_table("spot_colours");
+	frm.refresh_field("spot_colours");
 }

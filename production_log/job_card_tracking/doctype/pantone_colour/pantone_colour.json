@@ -1,0 +1,153 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:code",
+ "creation": "2026-04-20 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "code",
+  "display_name",
+  "category",
+  "column_break_1",
+  "hex_value",
+  "section_break_cmyk",
+  "default_cmyk_c",
+  "default_cmyk_m",
+  "column_break_cmyk",
+  "default_cmyk_y",
+  "default_cmyk_k",
+  "section_break_notes",
+  "notes"
+ ],
+ "fields": [
+  {
+   "description": "Pantone code, e.g. \"186 C\" or \"Warm Red C\"",
+   "fieldname": "code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Code",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "description": "Human-readable name, e.g. \"Pantone 186 C\" or \"PMS Warm Red\"",
+   "fieldname": "display_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Display Name"
+  },
+  {
+   "default": "Solid",
+   "fieldname": "category",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Category",
+   "options": "Solid\nMetallic\nFluorescent\nNeon\nPastel\nOther"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Approximate sRGB preview. Not colour-accurate \u2014 always verify against physical Pantone chips.",
+   "fieldname": "hex_value",
+   "fieldtype": "Color",
+   "in_list_view": 1,
+   "label": "Hex Value"
+  },
+  {
+   "collapsible": 1,
+   "description": "Default CMYK mixing percentages for this Pantone. Designers can override these on the Customer Product Specification per-job.",
+   "fieldname": "section_break_cmyk",
+   "fieldtype": "Section Break",
+   "label": "Default CMYK Mix (%)"
+  },
+  {
+   "fieldname": "default_cmyk_c",
+   "fieldtype": "Percent",
+   "label": "Cyan %"
+  },
+  {
+   "fieldname": "default_cmyk_m",
+   "fieldtype": "Percent",
+   "label": "Magenta %"
+  },
+  {
+   "fieldname": "column_break_cmyk",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "default_cmyk_y",
+   "fieldtype": "Percent",
+   "label": "Yellow %"
+  },
+  {
+   "fieldname": "default_cmyk_k",
+   "fieldtype": "Percent",
+   "label": "Black %"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_break_notes",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "links": [],
+ "modified": "2026-04-20 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Job Card Tracking",
+ "name": "Pantone Colour",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Sales User",
+   "share": 1,
+   "write": 0
+  }
+ ],
+ "sort_field": "code",
+ "sort_order": "ASC",
+ "track_changes": 1
+}

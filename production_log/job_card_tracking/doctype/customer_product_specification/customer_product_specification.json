@@ -13,7 +13,18 @@
   "specification_name",
   "customer",
   "job_size",
+  "print_colours_section",
+  "ink_type",
+  "uses_c",
+  "uses_m",
+  "uses_y",
+  "uses_k",
+  "column_break_print_colours",
   "number_of_colours",
+  "full_cmyk_button",
+  "spot_colours_section",
+  "spot_colours",
+  "colour_notes",
   "computer_paper_section",
   "pay_slip_size",
   "number_of_parts",
@@ -27,8 +38,6 @@
   "ctn_height_mm",
   "column_break_carton_1",
   "printing_or_plain",
-  "no_of_colours_carton",
-  "colours_details",
   "joint_type",
   "product_type_carton",
   "idod",
@@ -49,7 +58,6 @@
   "dies",
   "label_length",
   "label_width",
-  "label_number_of_colours",
   "cylinder_teeth",
   "plate_up",
   "plate_round",
@@ -130,10 +138,87 @@
    "reqd": 1
   },
   {
+   "depends_on": "eval:['Computer Paper','Label','Carton'].includes(doc.product_type)",
+   "fieldname": "print_colours_section",
+   "fieldtype": "Section Break",
+   "label": "Print Colours"
+  },
+  {
+   "default": "Process Offset",
+   "description": "Defaults to Process Offset for CP and Carton, Process UV for Label. Override if the job requires a different ink system.",
+   "fieldname": "ink_type",
+   "fieldtype": "Select",
+   "label": "Ink Type",
+   "options": "Process Offset\nProcess UV",
+   "allow_on_submit": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "uses_c",
+   "fieldtype": "Check",
+   "label": "C \u2014 Cyan",
+   "allow_on_submit": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "uses_m",
+   "fieldtype": "Check",
+   "label": "M \u2014 Magenta",
+   "allow_on_submit": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "uses_y",
+   "fieldtype": "Check",
+   "label": "Y \u2014 Yellow",
+   "allow_on_submit": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "uses_k",
+   "fieldtype": "Check",
+   "label": "K \u2014 Black",
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "column_break_print_colours",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "description": "Auto-calculated: ticked CMYK inks + spot colour rows.",
    "fieldname": "number_of_colours",
    "fieldtype": "Int",
    "label": "Number of Colours",
-   "reqd": 1
+   "read_only": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "description": "Tick all four CMYK process inks with one click.",
+   "fieldname": "full_cmyk_button",
+   "fieldtype": "Button",
+   "label": "Set Full CMYK"
+  },
+  {
+   "depends_on": "eval:['Computer Paper','Label','Carton'].includes(doc.product_type)",
+   "fieldname": "spot_colours_section",
+   "fieldtype": "Section Break",
+   "label": "Spot Colours"
+  },
+  {
+   "description": "Pantone / spot inks. Each row = one additional ink plate. CMYK values are the mixing recipe; edit per row if the customer wants a tweaked recipe.",
+   "fieldname": "spot_colours",
+   "fieldtype": "Table",
+   "label": "Spot Colours",
+   "options": "Spot Colour",
+   "allow_on_submit": 1
+  },
+  {
+   "description": "Free-text notes for anything the structured fields don't cover (e.g. metallic finishes, customer brand requirements).",
+   "fieldname": "colour_notes",
+   "fieldtype": "Small Text",
+   "label": "Colour Notes",
+   "allow_on_submit": 1
   },
   {
    "depends_on": "eval:doc.product_type=='Computer Paper'",
@@ -156,6 +241,7 @@
   },
   {
    "depends_on": "eval:doc.product_type=='Computer Paper'",
+   "description": "Pre-tinted paper parts (not print colours). Paper type, GSM, and colour per ply.",
    "fieldname": "colour_of_parts",
    "fieldtype": "Table",
    "label": "Colour of Parts",
@@ -221,19 +307,6 @@
    "fieldtype": "Select",
    "label": "Printing Or Plain",
    "options": "\nPlain\nPrinted"
-  },
-  {
-   "depends_on": "eval:doc.product_type=='Carton'",
-   "fieldname": "no_of_colours_carton",
-   "fieldtype": "Select",
-   "label": "No. Of Colours",
-   "options": "0\n1\n2\n3\n4"
-  },
-  {
-   "depends_on": "eval:doc.product_type=='Carton'",
-   "fieldname": "colours_details",
-   "fieldtype": "Data",
-   "label": "Colours (details)"
   },
   {
    "depends_on": "eval:doc.product_type=='Carton'",
@@ -371,13 +444,6 @@
   },
   {
    "depends_on": "eval:doc.product_type=='Label'",
-   "fieldname": "label_number_of_colours",
-   "fieldtype": "Int",
-   "label": "Number of Colours",
-   "mandatory_depends_on": "eval:doc.product_type=='Label'"
-  },
-  {
-   "depends_on": "eval:doc.product_type=='Label'",
    "fieldname": "cylinder_teeth",
    "fieldtype": "Data",
    "label": "Cylinder Teeth",
@@ -416,7 +482,6 @@
    "fieldname": "packing_pieces",
    "fieldtype": "Int",
    "label": "Packing Pieces"
-  
   },
   {
    "depends_on": "eval:doc.product_type=='Label'",
@@ -502,7 +567,7 @@
   }
  ],
  "links": [],
- "modified": "2026-03-22 00:00:00.000000",
+ "modified": "2026-04-20 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Job Card Tracking",
  "name": "Customer Product Specification",
