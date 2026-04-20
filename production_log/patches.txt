@@ -7,4 +7,4 @@ production_log.patches.v2_0.add_carton_sfk_flag
 production_log.patches.v3_0.remove_execution_layer
 production_log.patches.v4_0.seed_pantone_palette
 production_log.patches.v4_0.migrate_colour_fields
-production_log.patches.v4_0.set_label_default_print_format
+production_log.patches.v4_0.set_default_print_formats
