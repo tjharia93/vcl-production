@@ -1,0 +1,515 @@
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact; }
+
+    @media print {
+        .print-format { padding: 0px !important; margin: 0px !important; }
+        @page { size: A4 portrait; margin: 6mm; }
+        .page-break { page-break-before: always; }
+    }
+
+    .print-format {
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        font-size: 8.2pt;
+        color: #000;
+        line-height: 1.1;
+        background: #FFF;
+    }
+
+    .page-container {
+        width: 100%;
+        display: block;
+        padding: 2mm 0mm;
+        page-break-after: always;
+    }
+
+    .vcl-header-table {
+        width: 100%;
+        border-bottom: 2.5pt solid #2B3990;
+        margin-bottom: 6px;
+        padding-bottom: 4px;
+    }
+
+    .company-title {
+        font-size: 16pt;
+        font-weight: 800;
+        color: #2B3990;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+    }
+
+    .job-badge {
+        background-color: #2B3990;
+        color: #FFFFFF;
+        padding: 5px 12px;
+        font-size: 11pt;
+        font-weight: bold;
+        text-align: center;
+        border-radius: 2px;
+    }
+
+    .job-type-indicator {
+        font-size: 10pt;
+        font-weight: 900;
+        color: #00395D;
+        text-transform: uppercase;
+        margin-top: 5px;
+    }
+
+    .section-header-compact {
+        background-color: #2B3990;
+        color: #FFF;
+        padding: 3px 10px;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-top: 8px;
+        font-size: 8.5pt;
+    }
+
+    .subheader-vcl {
+        background-color: #00395D;
+        color: #FFF;
+        padding: 2px 8px;
+        font-weight: bold;
+        font-size: 8pt;
+        margin-top: 5px;
+    }
+
+    .vcl-table-compact {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 2px;
+        table-layout: fixed;
+    }
+
+    .vcl-table-compact td, .vcl-table-compact th {
+        border: 0.8pt solid #000;
+        padding: 3px 5px;
+        vertical-align: middle;
+        word-wrap: break-word;
+    }
+
+    .label-cell-compact {
+        background-color: #F4F4F4;
+        font-weight: bold;
+        width: 18%;
+    }
+
+    .highlight-cell {
+        background-color: #e8ebff !important;
+        font-weight: bold;
+        color: #2B3990;
+    }
+
+    .example-row {
+        background-color: #f1f4ff !important;
+        font-style: italic;
+        color: #2B3990;
+        font-weight: bold;
+        font-size: 7.8pt;
+    }
+
+    .manual-entry-row { height: 26px; }
+
+    .colour-chip {
+        display: inline-block;
+        width: 11px;
+        height: 11px;
+        border: 0.8pt solid #555;
+        border-radius: 2px;
+        vertical-align: middle;
+        margin-right: 4px;
+    }
+
+    .colour-pill {
+        display: inline-block;
+        padding: 1px 6px 1px 4px;
+        margin: 1px 2px;
+        border: 0.6pt solid #999;
+        border-radius: 8px;
+        font-size: 7.8pt;
+        background: #FAFAFA;
+    }
+
+    .sop-list {
+        font-size: 8pt;
+        margin: 4px 8px 0 20px;
+        line-height: 1.35;
+    }
+    .sop-list li { margin-bottom: 3px; }
+
+    .qc-box { width: 14px; height: 14px; border: 1pt solid #000; margin: 2px auto; }
+</style>
+
+<div class="print-format">
+
+    <!-- ============================================================
+         PAGE 1 · MASTER AUTHORIZATION
+         ============================================================ -->
+    <div class="page-container">
+        <table class="vcl-header-table">
+            <tr>
+                <td>
+                    <div class="company-title">VIMIT CONVERTERS LIMITED</div>
+                    <div style="font-weight: bold; font-size: 10pt;">LABEL JOB TRAVELLER: {{ doc.name }}</div>
+                    <div class="job-type-indicator">
+                        JOB TYPE:
+                        {% if doc.amended_from %}REPEAT JOB{% else %}NEW JOB{% endif %}
+                    </div>
+                </td>
+                <td style="text-align: right; width: 30%;">
+                    <div class="job-badge">{{ doc.name }}</div>
+                    <div style="margin-top: 4px; font-size: 9pt;">
+                        Due Date: <span style="color: #CC0000; font-weight: bold;">{{ frappe.utils.formatdate(doc.due_date, "dd-MMM-yy") }}</span>
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <div class="section-header-compact">1. JOB INFORMATION</div>
+        <table class="vcl-table-compact">
+            <tr>
+                <td class="label-cell-compact">Customer:</td>
+                <td><strong>{{ doc.customer }}</strong></td>
+                <td class="label-cell-compact">Order Date:</td>
+                <td>{{ frappe.utils.formatdate(doc.order_date, "dd-MMM-yy") }}</td>
+            </tr>
+            <tr>
+                <td class="label-cell-compact">LPO No.:</td>
+                <td>{{ doc.lpo_number or "—" }}</td>
+                <td class="label-cell-compact">Sales Rep:</td>
+                <td>{{ doc.sales_rep or "—" }}</td>
+            </tr>
+        </table>
+
+        <div class="section-header-compact">2. PRODUCT SPECIFICATION</div>
+        <table class="vcl-table-compact">
+            <tr>
+                <td class="label-cell-compact">Product Spec:</td>
+                <td style="width: 32%;"><strong>{{ doc.customer_product_spec }}</strong></td>
+                <td class="label-cell-compact">Spec Name:</td>
+                <td style="width: 32%;">{{ doc.specification_name }}</td>
+            </tr>
+            <tr>
+                <td class="label-cell-compact">Job Size:</td>
+                <td>{{ doc.job_size }}</td>
+                <td class="label-cell-compact">Qty Ordered:</td>
+                <td><strong>{{ "{:,}".format(doc.quantity_ordered) if doc.quantity_ordered else 0 }}</strong></td>
+            </tr>
+            <tr>
+                <td class="label-cell-compact">Plate Status:</td>
+                <td class="highlight-cell">{{ doc.plate_status or "Check Spec" }}{% if doc.plate_code %} &middot; <span style="font-weight:normal;">{{ doc.plate_code }}</span>{% endif %}</td>
+                <td class="label-cell-compact">Material:</td>
+                <td>{{ doc.material_type }}</td>
+            </tr>
+        </table>
+
+        <div class="subheader-vcl">PRINT COLOURS</div>
+        <table class="vcl-table-compact">
+            <tr>
+                <td class="label-cell-compact">Ink Type:</td>
+                <td style="width: 20%;"><strong>{{ doc.ink_type or "—" }}</strong></td>
+                <td class="label-cell-compact">Count:</td>
+                <td style="width: 15%;" class="highlight-cell">{{ doc.number_of_colours or 0 }} colour{% if (doc.number_of_colours or 0) != 1 %}s{% endif %}</td>
+                <td class="label-cell-compact">Process:</td>
+                <td>
+                    {% set _cmyk = [] %}
+                    {% if doc.uses_c %}{% set _ = _cmyk.append("C") %}{% endif %}
+                    {% if doc.uses_m %}{% set _ = _cmyk.append("M") %}{% endif %}
+                    {% if doc.uses_y %}{% set _ = _cmyk.append("Y") %}{% endif %}
+                    {% if doc.uses_k %}{% set _ = _cmyk.append("K") %}{% endif %}
+                    {% if _cmyk %}<strong>{{ _cmyk | join("") }}</strong>{% else %}—{% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td class="label-cell-compact">Spot Inks:</td>
+                <td colspan="5">
+                    {% set _spots = doc.spot_colours or [] %}
+                    {% if _spots %}
+                        {% for s in _spots %}
+                            <span class="colour-pill">
+                                <span class="colour-chip" style="background: {{ s.hex_preview or '#FFF' }};"></span>
+                                <strong>{{ s.pantone_name or s.pantone_code or "—" }}</strong>
+                                {% if s.pantone_code and s.pantone_name and (s.pantone_code not in (s.pantone_name or '')) %}&middot; {{ s.pantone_code }}{% endif %}
+                                {% if s.cmyk_c or s.cmyk_m or s.cmyk_y or s.cmyk_k %}
+                                    &middot; C{{ s.cmyk_c|int }} M{{ s.cmyk_m|int }} Y{{ s.cmyk_y|int }} K{{ s.cmyk_k|int }}
+                                {% endif %}
+                                {% if s.notes %}&middot; <em>{{ s.notes }}</em>{% endif %}
+                            </span>
+                        {% endfor %}
+                    {% else %}
+                        <em>No spot inks</em>
+                    {% endif %}
+                </td>
+            </tr>
+            {% if doc.colour_notes %}
+            <tr>
+                <td class="label-cell-compact">Notes:</td>
+                <td colspan="5" style="font-size: 7.8pt; font-style: italic;">{{ doc.colour_notes }}</td>
+            </tr>
+            {% endif %}
+        </table>
+
+        <div class="subheader-vcl">TECHNICAL SNAPSHOT & DIMENSIONS</div>
+        <table class="vcl-table-compact">
+            <tr>
+                <td class="label-cell-compact">Label Length:</td><td>{{ doc.label_length }} mm</td>
+                <td class="label-cell-compact">Plate Up:</td><td><strong>{{ doc.plate_up }} LANES</strong></td>
+                <td class="label-cell-compact">Cylinder:</td><td>{{ doc.cylinder_teeth }} T</td>
+            </tr>
+            <tr>
+                <td class="label-cell-compact">Label Width:</td><td>{{ doc.label_width }} mm</td>
+                <td class="label-cell-compact">Plate Round:</td><td>{{ doc.plate_round }}</td>
+                <td class="label-cell-compact">Gap:</td><td>{{ doc.gap_between }} mm</td>
+            </tr>
+            <tr>
+                <td class="label-cell-compact highlight-cell">Approx Reel Width:</td>
+                <td class="highlight-cell">
+                    {% if doc.label_width and doc.plate_up %}
+                        {{ (doc.label_width | float) * (doc.plate_up | float) }} mm
+                    {% else %}
+                        TBD
+                    {% endif %}
+                </td>
+                <td class="label-cell-compact">Side Trim:</td><td>{{ doc.side_trim }} mm</td>
+                <td class="label-cell-compact">Packing Pcs:</td><td>{{ doc.packing_pieces }}</td>
+            </tr>
+        </table>
+
+        <div class="section-header-compact">3. PRE-PRODUCTION QC APPROVAL (FIRST-OFF)</div>
+        <table class="vcl-table-compact">
+            <tr style="background: #F4F4F4; font-weight: bold; text-align: center;">
+                <td style="width: 40%;">Check Item</td><td>Status (OK/FAIL)</td><td>QC Signature</td><td>Remarks</td>
+            </tr>
+            <tr class="manual-entry-row"><td>Plate condition / verification</td><td></td><td></td><td></td></tr>
+            <tr class="manual-entry-row"><td>Shade matching vs. approved sample</td><td></td><td></td><td></td></tr>
+            <tr class="manual-entry-row"><td>Barcode / text clarity (ANSI grade ≥ B)</td><td></td><td></td><td></td></tr>
+            <tr class="manual-entry-row"><td>Registration &amp; colour alignment</td><td></td><td></td><td></td></tr>
+            <tr class="manual-entry-row"><td>Die-cut shape &amp; dimensions</td><td></td><td></td><td></td></tr>
+            <tr class="manual-entry-row"><td>Adhesive / release liner integrity</td><td></td><td></td><td></td></tr>
+        </table>
+
+        <div style="margin-top: 28px; border: 2pt solid #2B3990; padding: 16px;">
+            <div style="font-size: 11pt; font-weight: bold; color: #2B3990; margin-bottom: 12px; text-transform: uppercase;">Final Authorization to Run</div>
+            <table style="width: 100%; font-size: 9pt;">
+                <tr>
+                    <td style="width: 45%; border-bottom: 0.8pt solid #000;">SALES / ACCOUNTS:</td>
+                    <td style="width: 10%;"></td>
+                    <td style="width: 45%; border-bottom: 0.8pt solid #000;">PROD. MANAGER:</td>
+                </tr>
+                <tr><td colspan="3" style="height: 32px;"></td></tr>
+                <tr>
+                    <td style="border-bottom: 0.8pt solid #000;">PLATE RELEASE:</td>
+                    <td></td>
+                    <td style="border-bottom: 0.8pt solid #000;">CYLINDER RELEASE:</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         PAGE 2 · MATERIAL + LABOUR + OPERATOR SOP
+         ============================================================ -->
+    <div class="page-container page-break">
+        <table class="vcl-header-table">
+            <tr>
+                <td><div class="company-title">PRINTING PRODUCTION LOG (PAGE 2)</div></td>
+                <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
+            </tr>
+        </table>
+
+        <div class="subheader-vcl">SECTION 4 · MATERIAL USAGE &amp; PRINTED OUTPUT (MASTER REELS)</div>
+        <table class="vcl-table-compact" style="text-align: center;">
+            <thead>
+                <tr style="background: #F4F4F4; font-weight: bold;">
+                    <td style="width: 15%;">RAW BATCH</td>
+                    <td style="width: 12%;">START MTRS</td>
+                    <td style="width: 12%;">END MTRS</td>
+                    <td style="width: 12%;">USED MTRS</td>
+                    <td style="width: 16%;">ASSIGNED REEL ID</td>
+                    <td>WASTE / REMARKS</td>
+                    <td style="width: 10%;">SIGN</td>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="example-row"><td>B-1001 (Jumbo)</td><td>5000 m</td><td>4200 m</td><td>800 m</td><td>R-0001</td><td>Created 1 Master Reel</td><td>---</td></tr>
+                {% for i in range(1, 11) %}<tr class="manual-entry-row"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>{% endfor %}
+            </tbody>
+        </table>
+
+        <div class="subheader-vcl">SECTION 5 · LABOUR &amp; OPERATOR TIMINGS</div>
+        <table class="vcl-table-compact" style="font-size: 7.2pt; text-align: center;">
+            <thead>
+                <tr style="background: #F4F4F4; font-weight: bold;">
+                    <td rowspan="2" style="width: 10%;">DATE</td>
+                    <td rowspan="2" style="width: 22%;">OPERATOR NAME</td>
+                    <td colspan="2">SETTING TIME</td>
+                    <td colspan="2">ACTUAL RUN</td>
+                    <td rowspan="2" style="width: 10%;">DT (HRS)</td>
+                    <td rowspan="2" style="width: 15%;">SHIFT</td>
+                </tr>
+                <tr style="background: #F4F4F4; font-weight: bold;">
+                    <td>START</td><td>END</td><td>START</td><td>END</td>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in range(1, 11) %}<tr style="height:24px;"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>{% endfor %}
+            </tbody>
+        </table>
+
+        <div class="section-header-compact">SECTION 6 · OPERATOR SOP (LABEL PRESS)</div>
+        <table class="vcl-table-compact">
+            <tr>
+                <td class="label-cell-compact" style="vertical-align: top; width: 22%;">A. PRE-RUN SETUP</td>
+                <td>
+                    <ol class="sop-list">
+                        <li>Verify job card details against approved customer artwork &amp; this traveller.</li>
+                        <li>Confirm substrate reel matches <strong>{{ doc.material_type or "spec" }}</strong>, width and batch.</li>
+                        <li>Mount plates by code; check for damage, edge chips, or residual ink.</li>
+                        <li>For UV jobs ({{ "YES" if doc.ink_type == "Process UV" else "N/A" }}): verify lamp hours &lt; 1200h; confirm dichroic reflectors clean.</li>
+                        <li>Set anilox roll by BCM / screen count per ink deck; record in log.</li>
+                        <li>Mix inks to recipe shown in <em>Print Colours</em> above; verify viscosity (Zahn #2) and tack.</li>
+                        <li>Load die-cut tooling; confirm cylinder teeth = <strong>{{ doc.cylinder_teeth or "—" }}</strong>.</li>
+                    </ol>
+                </td>
+            </tr>
+            <tr>
+                <td class="label-cell-compact" style="vertical-align: top;">B. FIRST ARTICLE</td>
+                <td>
+                    <ol class="sop-list">
+                        <li>Produce a short proof run (≥ 50 labels) at reduced speed.</li>
+                        <li>Check registration on all {{ doc.number_of_colours or "—" }} colour{% if (doc.number_of_colours or 0) != 1 %}s{% endif %}; tolerance ≤ 0.15 mm.</li>
+                        <li>Densitometer read: ΔE ≤ 2.0 vs. approved swatch for each spot colour.</li>
+                        <li>Barcode verification: ANSI grade B or better on every SKU.</li>
+                        <li>Die-cut test: clean cut through face stock, liner intact, no feathering.</li>
+                        <li><strong>Do not start the main run until QC signs off the First-Off row in Section 3.</strong></li>
+                    </ol>
+                </td>
+            </tr>
+            <tr>
+                <td class="label-cell-compact" style="vertical-align: top;">C. IN-PROCESS</td>
+                <td>
+                    <ol class="sop-list">
+                        <li>Every reel change: record start / end meters, operator, and time in Section 4.</li>
+                        <li>Every 30 min or every reel: visual check for streaks, ghosting, misregistration, splice breaks.</li>
+                        <li>Every 60 min: densitometer spot-check on each ink; retighten colour if ΔE &gt; 3.0.</li>
+                        <li>Log any downtime &gt; 5 min in Section 5 with cause code.</li>
+                        <li>Tag and separate any waste reels; do NOT release them into finished stock.</li>
+                    </ol>
+                </td>
+            </tr>
+            <tr>
+                <td class="label-cell-compact" style="vertical-align: top;">D. POST-RUN</td>
+                <td>
+                    <ol class="sop-list">
+                        <li>Clean plates with plate-wash; return to plate store with job reference and plate code.</li>
+                        <li>Wash ink decks and anilox rolls; log anilox hours.</li>
+                        <li>Package finished reels with reel ID labels (count, meters, job no., customer).</li>
+                        <li>Retain 3 sample labels in QC retention file (minimum 12 months).</li>
+                        <li>Complete dispatch authorization (Page 3); hand traveller to Production Supervisor.</li>
+                    </ol>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- ============================================================
+         PAGE 3 · SLITTING, FINISHING, QC LOG, DISPATCH
+         ============================================================ -->
+    <div class="page-container page-break">
+        <table class="vcl-header-table">
+            <tr>
+                <td><div class="company-title">SLITTING, QC &amp; DISPATCH (PAGE 3)</div></td>
+                <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
+            </tr>
+        </table>
+
+        <div class="subheader-vcl">SECTION 7 · SLITTING &amp; REWINDING ({{ doc.plate_up or "?" }} LANES)</div>
+        <table class="vcl-table-compact" style="text-align: center;">
+            <thead>
+                <tr style="background: #F4F4F4; font-weight: bold;">
+                    <td style="width: 11%;">DATE</td>
+                    <td style="width: 14%;">MASTER REEL ID</td>
+                    <td style="width: 11%;">NO. PASSES</td>
+                    <td style="width: 14%;">ROLLS/PASS</td>
+                    <td style="width: 14%;">TOTAL ROLLS</td>
+                    <td>REMARKS</td>
+                    <td style="width: 9%;">SIGN</td>
+                </tr>
+            </thead>
+            <tbody>
+                {% set _pu = (doc.plate_up | int) if doc.plate_up else 0 %}
+                {% if _pu %}
+                <tr class="example-row">
+                    <td>{{ frappe.utils.formatdate(frappe.utils.nowdate(), "dd-MMM") }}</td>
+                    <td>R-0001</td>
+                    <td>12 Passes</td>
+                    <td>{{ _pu }} Rolls</td>
+                    <td>{{ 12 * _pu }} Rolls</td>
+                    <td>Ex: {{ 12 * _pu }} rolls from 1 Master</td>
+                    <td>---</td>
+                </tr>
+                {% endif %}
+                {% for i in range(1, 14) %}<tr style="height:24px;"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>{% endfor %}
+            </tbody>
+        </table>
+
+        <div class="section-header-compact">SECTION 8 · IN-PROCESS QC LOG (EVERY 60 MIN)</div>
+        <table class="vcl-table-compact" style="text-align: center;">
+            <thead>
+                <tr style="background: #F4F4F4; font-weight: bold;">
+                    <td style="width: 10%;">TIME</td>
+                    <td>COLOUR (ΔE)</td>
+                    <td>REGISTRATION</td>
+                    <td>BARCODE (ANSI)</td>
+                    <td>DIE-CUT</td>
+                    <td>ADHESIVE</td>
+                    <td>REMARKS</td>
+                    <td style="width: 9%;">SIGN</td>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in range(1, 9) %}
+                <tr style="height:26px;">
+                    <td></td>
+                    <td><div class="qc-box"></div></td>
+                    <td><div class="qc-box"></div></td>
+                    <td><div class="qc-box"></div></td>
+                    <td><div class="qc-box"></div></td>
+                    <td><div class="qc-box"></div></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div style="margin-top: 6px; font-size: 7.8pt; border: 0.8pt solid #000; padding: 6px 10px; background: #f9f9f9;">
+            <strong>AQL standards:</strong> Critical 0.0 · Major 1.0 · Minor 2.5 &nbsp;&bull;&nbsp;
+            <strong>Colour tolerance:</strong> ΔE ≤ 2.0 (first-off), ΔE ≤ 3.0 (in-process) &nbsp;&bull;&nbsp;
+            <strong>Barcode:</strong> ANSI grade B or better &nbsp;&bull;&nbsp;
+            <strong>Registration:</strong> ≤ 0.15 mm.
+            Log any deviation in Remarks and flag to the Production Supervisor.
+        </div>
+
+        <div style="margin-top: 20px; border: 2pt solid #2B3990; padding: 14px;">
+            <div style="font-size: 10pt; font-weight: bold; color: #2B3990; margin-bottom: 10px; text-transform: uppercase;">QC &amp; Dispatch Authorization</div>
+            <table style="width: 100%; font-size: 8.5pt;">
+                <tr>
+                    <td style="width: 45%; border-bottom: 0.8pt solid #000;">PROD. SUPERVISOR:</td>
+                    <td style="width: 10%;"></td>
+                    <td style="width: 45%; border-bottom: 0.8pt solid #000;">QC FINAL RELEASE:</td>
+                </tr>
+                <tr><td colspan="3" style="height: 32px;"></td></tr>
+                <tr>
+                    <td style="border-bottom: 0.8pt solid #000;">STORES / DISPATCH:</td>
+                    <td></td>
+                    <td style="border-bottom: 0.8pt solid #000;">DATE &amp; TIME:</td>
+                </tr>
+            </table>
+        </div>
+
+        <div style="margin-top: 18px; text-align: right; font-size: 7.5pt; color: #666; font-style: italic;">
+            VCL Production System &middot; Printed: {{ frappe.utils.now_datetime().strftime("%d-%b-%Y %I:%M %p") }}
+        </div>
+    </div>
+</div>

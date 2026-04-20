@@ -23,7 +23,7 @@
  ],
  "fields": [
   {
-   "description": "Pantone code, e.g. \"186 C\" or \"Warm Red C\"",
+   "description": "Pantone code, e.g. \"186 C\" or \"Warm Red C\".",
    "fieldname": "code",
    "fieldtype": "Data",
    "in_list_view": 1,
@@ -33,10 +33,12 @@
    "unique": 1
   },
   {
-   "description": "Human-readable name, e.g. \"Pantone 186 C\" or \"PMS Warm Red\"",
+   "description": "Friendly name shown in grids and printed travellers, e.g. \"Warm Red \u00b7 186 C\".",
    "fieldname": "display_name",
    "fieldtype": "Data",
+   "in_global_search": 1,
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Display Name"
   },
   {
@@ -147,7 +149,10 @@
    "write": 0
   }
  ],
+ "search_fields": "display_name,category",
+ "show_name_in_global_search": 1,
  "sort_field": "code",
  "sort_order": "ASC",
+ "title_field": "display_name",
  "track_changes": 1
 }
