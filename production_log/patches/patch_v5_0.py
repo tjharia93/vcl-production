@@ -75,16 +75,29 @@ def _install_custom_fields():
 
 
 def _seed_design():
+	# Workstation Type on this ERPNext build has a regular field
+	# literally called `name` (label "Workstation Type") plus an
+	# autoname of `field:name`. `wt = frappe.new_doc(...); wt.name =
+	# "Design"` only sets the Document primary key, leaving the
+	# namesake field empty — which makes set_name_from_naming_options
+	# throw "Workstation Type is required" at insert time. Building
+	# the doc from a dict routes every key through Document.update /
+	# Document.set, which populates the field attribute as well, so
+	# naming resolves cleanly.
 	if not frappe.db.exists("Workstation Type", "Design"):
-		wt = frappe.new_doc("Workstation Type")
-		wt.name = "Design"
-		wt.custom_product_line = "All"
+		wt = frappe.get_doc({
+			"doctype": "Workstation Type",
+			"name": "Design",
+			"custom_product_line": "All",
+		})
 		wt.insert(ignore_permissions=True)
 
 	if not frappe.db.exists("Workstation", "Design Desk"):
-		ws = frappe.new_doc("Workstation")
-		ws.workstation_name = "Design Desk"
-		ws.workstation_type = "Design"
+		ws = frappe.get_doc({
+			"doctype": "Workstation",
+			"workstation_name": "Design Desk",
+			"workstation_type": "Design",
+		})
 		ws.insert(ignore_permissions=True)
 
 	ws = frappe.get_doc("Workstation", "Design Desk")
