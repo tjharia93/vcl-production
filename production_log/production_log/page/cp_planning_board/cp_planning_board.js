@@ -525,7 +525,7 @@ class ProductionPlanner {
 	// ─────────────────────────────────────────────────────────────
 	// frappe.call wrapper
 	// ─────────────────────────────────────────────────────────────
-	call(method, args = {}) {
+	call(method, args = {}, opts = {}) {
 		return frappe
 			.call({
 				method: `production_log.production_log.page.cp_planning_board.cp_planning_board.${method}`,
@@ -534,7 +534,9 @@ class ProductionPlanner {
 			.then((r) => r && r.message)
 			.catch((err) => {
 				console.error(`[planner] ${method} failed`, err);
-				this.toast(__("Server error — see console."), "err");
+				if (!opts.silent) {
+					this.toast(__("Server error — see console."), "err");
+				}
 				throw err;
 			});
 	}
@@ -627,21 +629,39 @@ class ProductionPlanner {
 		const dateFrom = this._iso(this.weekStart);
 		const dateTo = this._iso(this._addDays(this.weekStart, 5)); // Mon..Sat
 
-		try {
-			const [columns, entries, conflicts, jobCards] = await Promise.all([
-				this.call("get_workstation_columns", { product_line: this.dept }),
-				this.call("get_schedule_entries", {
-					date_from: dateFrom,
-					date_to: dateTo,
-					product_line: this.dept,
-				}),
-				this.call("get_machine_conflicts", {
-					date_from: dateFrom,
-					date_to: dateTo,
-				}),
-				this.call("get_job_cards", { product_line: this.dept }),
-			]);
+		// Promise.allSettled so one failing endpoint doesn't nuke the
+		// rest of the board. Each `call()` runs in silent mode — we
+		// summarise at the end with the names of the methods that
+		// failed, and log each rejection's stack to the console so a
+		// browser session can trivially produce a diagnostic report.
+		const plan = [
+			["get_workstation_columns", { product_line: this.dept }],
+			[
+				"get_schedule_entries",
+				{ date_from: dateFrom, date_to: dateTo, product_line: this.dept },
+			],
+			["get_machine_conflicts", { date_from: dateFrom, date_to: dateTo }],
+			["get_job_cards", { product_line: this.dept }],
+		];
 
+		const settled = await Promise.allSettled(
+			plan.map(([method, args]) => this.call(method, args, { silent: true })),
+		);
+
+		const failures = [];
+		const pick = (i, fallback) => {
+			const r = settled[i];
+			if (r.status === "fulfilled") return r.value;
+			failures.push(plan[i][0]);
+			return fallback;
+		};
+
+		const columns = pick(0, []);
+		const entries = pick(1, { schedule: [], actuals: [] });
+		const conflicts = pick(2, []);
+		const jobCards = pick(3, []);
+
+		try {
 			this.columns = Array.isArray(columns) ? columns : [];
 			this._buildStages();
 			this.entries = this._indexByName(entries && entries.schedule);
@@ -654,8 +674,18 @@ class ProductionPlanner {
 			this._renderConflictBadge();
 			this._renderJobCards();
 		} catch (err) {
-			// call() already toasted the user.
+			console.error("[planner] render pipeline threw", err);
 			this._showLoadError();
+			return;
+		}
+
+		if (failures.length) {
+			this.toast(
+				__("Some data failed to load: {0}. See console.", [
+					failures.join(", "),
+				]),
+				"err",
+			);
 		}
 	}
 
