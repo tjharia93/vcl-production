@@ -115,6 +115,13 @@ const JOB_CARD_DOCTYPE_BY_DEPT = {
 	"ETR / Thermal": "Job Card Label",
 };
 
+// Bundle version marker. Change every commit — when the planner loads
+// and the browser console prints a stale version, you know the asset
+// cache or Frappe Cloud rebuild hasn't picked up the newest push yet.
+// Also rendered in the header so a field report can confirm which
+// build they're on without opening DevTools.
+const PLANNER_BUNDLE = "2026-04-21-step-resilient";
+
 
 frappe.pages["cp_planning_board"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({
@@ -177,6 +184,8 @@ class ProductionPlanner {
 		this.jobCardFilter = "";
 		this.selectedJobCard = null;
 
+		console.info(`[planner] bundle ${PLANNER_BUNDLE}`);
+
 		this._render();
 		this._bindEvents();
 		this._loadAll();
@@ -194,7 +203,7 @@ class ProductionPlanner {
 						<div class="logo-box">VCL</div>
 						<div class="logo-text">
 							<div class="logo-name">PRODUCTION PLANNER</div>
-							<div class="logo-sub">Vimit Converters Ltd</div>
+							<div class="logo-sub">Vimit Converters Ltd · build ${PLANNER_BUNDLE}</div>
 						</div>
 					</div>
 
@@ -661,29 +670,41 @@ class ProductionPlanner {
 		const conflicts = pick(2, []);
 		const jobCards = pick(3, []);
 
-		try {
-			this.columns = Array.isArray(columns) ? columns : [];
-			this._buildStages();
-			this.entries = this._indexByName(entries && entries.schedule);
-			this.actuals = this._indexByName(entries && entries.actuals);
-			this._indexConflicts(Array.isArray(conflicts) ? conflicts : []);
-			this.jobCards = Array.isArray(jobCards) ? jobCards : [];
+		// State assignments — cheap and individually safe. A prior
+		// revision wrapped the whole block in one try/catch; that
+		// meant a throw in *any* render step (e.g. the grid) took
+		// down `_renderJobCards` which runs last, producing the
+		// observed "Loading job cards…" + "Failed to load" symptom
+		// even when the JC call had succeeded. Each step now gets
+		// its own try/catch so a broken grid doesn't hide the JC
+		// panel, and each failure logs its stack against a named
+		// step so the cause is visible in the console.
+		this.columns = Array.isArray(columns) ? columns : [];
+		this.entries = this._indexByName(entries && entries.schedule);
+		this.actuals = this._indexByName(entries && entries.actuals);
+		this.jobCards = Array.isArray(jobCards) ? jobCards : [];
 
-			this._renderViewHeader();
-			this._renderViewGrid();
-			this._renderConflictBadge();
-			this._renderJobCards();
-		} catch (err) {
-			console.error("[planner] render pipeline threw", err);
-			this._showLoadError();
-			return;
-		}
+		const step = (name, fn) => {
+			try {
+				fn.call(this);
+			} catch (err) {
+				failures.push(name);
+				console.error(`[planner] ${name} threw`, err);
+			}
+		};
+
+		step("_buildStages", this._buildStages);
+		step("_indexConflicts", () =>
+			this._indexConflicts(Array.isArray(conflicts) ? conflicts : []),
+		);
+		step("_renderViewHeader", this._renderViewHeader);
+		step("_renderViewGrid", this._renderViewGrid);
+		step("_renderConflictBadge", this._renderConflictBadge);
+		step("_renderJobCards", this._renderJobCards);
 
 		if (failures.length) {
 			this.toast(
-				__("Some data failed to load: {0}. See console.", [
-					failures.join(", "),
-				]),
+				__("Planner had trouble: {0}. See console.", [failures.join(", ")]),
 				"err",
 			);
 		}
