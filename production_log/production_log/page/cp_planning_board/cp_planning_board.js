@@ -452,13 +452,10 @@ class ProductionPlanner {
 	}
 
 	_onViewChange() {
-		if (this.view === "week") {
-			// Re-render against current data without re-fetching.
-			this._renderStageHeader();
-			this._renderWeekGrid();
-		} else {
-			this.toast(__("{0} view lands in Phase 5.", [this.view]), "ok");
-		}
+		// All three views run against the same cached data — no
+		// refetch needed, just a re-render.
+		this._renderViewHeader();
+		this._renderViewGrid();
 	}
 
 	_onWeekChange() {
@@ -590,13 +587,27 @@ class ProductionPlanner {
 			this.actuals = this._indexByName(entries && entries.actuals);
 			this._indexConflicts(Array.isArray(conflicts) ? conflicts : []);
 
-			this._renderStageHeader();
-			this._renderWeekGrid();
+			this._renderViewHeader();
+			this._renderViewGrid();
 			this._renderConflictBadge();
 		} catch (err) {
 			// call() already toasted the user.
 			this._showLoadError();
 		}
+	}
+
+	// ─────────────────────────────────────────────────────────────
+	// View dispatch (Week / Job Card / Station)
+	// ─────────────────────────────────────────────────────────────
+	_renderViewHeader() {
+		if (this.view === "station") this._renderDayHeader();
+		else this._renderStageHeader();
+	}
+
+	_renderViewGrid() {
+		if (this.view === "jobcard") this._renderJobCardGrid();
+		else if (this.view === "station") this._renderStationGrid();
+		else this._renderWeekGrid();
 	}
 
 	_indexConflicts(rows) {
@@ -1526,5 +1537,188 @@ class ProductionPlanner {
 			'<div class="footer-note">Vimit Converters Ltd · Production Planner</div>' +
 			"</body></html>"
 		);
+	}
+
+	// ─────────────────────────────────────────────────────────────
+	// Station view — day-column header (Mon–Sat)
+	// ─────────────────────────────────────────────────────────────
+	_renderDayHeader() {
+		const $h = this.$root.find(".stage-header");
+		const days = this._weekDays();
+		const parts = ['<div class="sh-corner">Stage · Machine</div>'];
+		for (const d of days) {
+			parts.push(
+				'<div class="stage-group" style="flex:1;min-width:120px;">' +
+				`<div class="sg-top"><span class="sg-name">${d.dow}</span></div>` +
+				`<div class="sg-bottom"><div class="sg-single">${d.display}</div></div>` +
+				"</div>",
+			);
+		}
+		$h.html(parts.join(""));
+	}
+
+	// ─────────────────────────────────────────────────────────────
+	// Job Card view — rows per job card, columns per stage×machine
+	// ─────────────────────────────────────────────────────────────
+	_renderJobCardGrid() {
+		const $wrap = this.$root.find(".grid-wrap");
+
+		if (!this.stages.length) {
+			$wrap.html(
+				'<div style="padding:40px 20px;text-align:center;color:var(--text-faint);font-size:12px;">' +
+					__("No columns available for {0}.", [frappe.utils.escape_html(this.dept)]) +
+					"</div>",
+			);
+			return;
+		}
+
+		const jobs = this._uniqueJobs();
+		if (!jobs.length) {
+			$wrap.html(
+				'<div style="padding:40px 20px;text-align:center;color:var(--text-faint);font-size:12px;">' +
+					__("No job cards scheduled this week. Switch to Week view and add some.") +
+					"</div>",
+			);
+			return;
+		}
+
+		const rows = jobs
+			.map((job) => {
+				const label =
+					'<td class="row-label">' +
+					`<div class="rl-main">${frappe.utils.escape_html(job.label)}</div>` +
+					`<div class="rl-sub">${frappe.utils.escape_html(job.sub)}</div>` +
+					"</td>";
+
+				const cells = this.stages
+					.map((st) => {
+						if (!st.workstations.length) {
+							return '<td class="grid-cell col-disabled"></td>';
+						}
+						return st.workstations
+							.map((ws) => this._renderCellForJob(st, ws, job))
+							.join("");
+					})
+					.join("");
+
+				return `<tr>${label}${cells}</tr>`;
+			})
+			.join("");
+
+		$wrap.html(`<table class="grid"><tbody>${rows}</tbody></table>`);
+	}
+
+	_uniqueJobs() {
+		const jobMap = new Map();
+		const bump = (e) => {
+			if (e.is_manual) {
+				if (!jobMap.has("__manual__")) {
+					jobMap.set("__manual__", {
+						key: "__manual__",
+						label: "MANUAL",
+						sub: __("Ad-hoc / maintenance"),
+						isManual: true,
+					});
+				}
+				return;
+			}
+			if (!e.job_card) return;
+			if (!jobMap.has(e.job_card)) {
+				jobMap.set(e.job_card, {
+					key: e.job_card,
+					label: e.job_card,
+					sub: e.job_card_doctype || "",
+					isManual: false,
+				});
+			}
+		};
+		for (const name in this.entries) bump(this.entries[name]);
+		for (const name in this.actuals) bump(this.actuals[name]);
+
+		// Stable order: MANUAL last, real job cards alphabetical.
+		const jobs = [...jobMap.values()].sort((a, b) => {
+			if (a.isManual && !b.isManual) return 1;
+			if (!a.isManual && b.isManual) return -1;
+			return String(a.key).localeCompare(String(b.key));
+		});
+		return jobs;
+	}
+
+	_renderCellForJob(stage, workstation, job) {
+		const tiles = this._entriesMatchingJob(stage.id, workstation, job);
+		const inner = tiles.length
+			? tiles.map((t) => this._entryTile(t, stage)).join("")
+			: '<div style="color:var(--text-faint);text-align:center;font-size:10px;padding:4px;">—</div>';
+
+		// No add button here: Job Card view has no date context (rows
+		// are jobs, not days). Users add entries from Week view.
+		return '<td class="grid-cell">' + inner + "</td>";
+	}
+
+	_entriesMatchingJob(stageId, workstation, job) {
+		const out = [];
+		const scan = (bag, kind) => {
+			for (const name in bag) {
+				const e = bag[name];
+				if (!e) continue;
+				if (this._stageIdFromWT(e.workstation_type) !== stageId) continue;
+				if (e.workstation !== workstation) continue;
+				if (job.isManual) {
+					if (!e.is_manual) continue;
+				} else {
+					if (e.is_manual) continue;
+					if (e.job_card !== job.key) continue;
+				}
+				out.push(Object.assign({ _kind: kind }, e));
+			}
+		};
+		scan(this.entries, "plan");
+		scan(this.actuals, "actual");
+		out.sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+		return out;
+	}
+
+	// ─────────────────────────────────────────────────────────────
+	// Station view — rows per stage×machine, columns per day
+	// ─────────────────────────────────────────────────────────────
+	_renderStationGrid() {
+		const $wrap = this.$root.find(".grid-wrap");
+
+		if (!this.stages.length) {
+			$wrap.html(
+				'<div style="padding:40px 20px;text-align:center;color:var(--text-faint);font-size:12px;">' +
+					__("No workstations tagged for {0}.", [frappe.utils.escape_html(this.dept)]) +
+					"</div>",
+			);
+			return;
+		}
+
+		const days = this._weekDays();
+		const rows = [];
+		for (const st of this.stages) {
+			for (const ws of st.workstations) {
+				const label =
+					'<td class="row-label">' +
+					`<div class="rl-main">${frappe.utils.escape_html(ws)}</div>` +
+					`<div class="rl-sub">${frappe.utils.escape_html(st.name)}</div>` +
+					"</td>";
+
+				const cells = days
+					.map((d) => this._renderCell(d.iso, st, ws))
+					.join("");
+				rows.push(`<tr>${label}${cells}</tr>`);
+			}
+		}
+
+		if (!rows.length) {
+			$wrap.html(
+				'<div style="padding:40px 20px;text-align:center;color:var(--text-faint);font-size:12px;">' +
+					__("No workstations available.") +
+					"</div>",
+			);
+			return;
+		}
+
+		$wrap.html(`<table class="grid"><tbody>${rows.join("")}</tbody></table>`);
 	}
 }

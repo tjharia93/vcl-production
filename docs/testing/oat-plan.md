@@ -14,6 +14,74 @@ Run OAT **first**, UAT **second**. If OAT fails, UAT cannot begin.
 > **Update this section in every PR.** Note anything the deployer needs to
 > watch for: new patches, new fixtures, new hooks, role changes, etc.
 
+### 2026-04-21 — Production Planner (cp_planning_board) first cut
+
+**Patches that will run on `bench migrate`:**
+
+* `production_log.patches.patch_v5_0` — idempotent, safe to re-run.
+  Does three things:
+  1. Extends the `custom_product_line` Select options on Workstation
+     Type and Workstation to `All / Computer Paper / ETR / Thermal
+     / Label / Carton` via `create_custom_fields(..., update=True)`.
+     Existing data is preserved (same field name + Select type).
+  2. Adds a Table field `custom_product_line_tags` on Workstation
+     pointing at the new `Workstation Product Line Tag` child
+     DocType.
+  3. Seeds a `Design` Workstation Type (`custom_product_line=All`)
+     and a `Design Desk` Workstation tagged `All`. Then loops every
+     existing Workstation and inserts a matching `custom_product_line_tags`
+     row from its legacy single-Select value (skips `Label` /
+     `Carton` tags — those aren't valid child-table options in the
+     Phase 1 planner scope).
+
+**New DocTypes:**
+
+* `Workstation Product Line Tag` (child table, module Production Log)
+* `Production Schedule Line` (standard DocType, autoname
+  `PSL-YYYY-#####`, non-submittable, `title_field: job_card`)
+* `Production Entry` (standard DocType, autoname `PE-YYYY-#####`,
+  submittable, `title_field: job_card`, has `amended_from` field)
+
+**New permissions (declared in the DocType JSONs, applied on sync):**
+
+* Production Manager: full rights on PSL and PE, including Submit +
+  Cancel + Amend on PE.
+* Production User: create/read/write/submit on both (no cancel).
+* System Manager: read-only + export/share (no write).
+
+The Production Manager and Production User roles ship with ERPNext.
+No custom role creation needed.
+
+**Workspace change:**
+
+* `VCL Production` workspace JSON picks up a new `Production Planning`
+  header with three shortcuts: Production Planner (Page), Production
+  Schedule Lines (DocType), Production Entries (DocType).
+
+**Hooks / fixtures:**
+
+* No changes to `hooks.py` fixtures list (the existing `Custom Field`
+  filter already covers Workstation + Workstation Type, so any
+  future `bench export-fixtures` will pick up the new Table field).
+* No new print formats, no new scheduler events.
+
+**Assets (requires `bench build`):**
+
+* New stylesheet `production_log/public/css/cp_planning_board.css`
+  served from `/assets/production_log/css/cp_planning_board.css`.
+  The page loads it via `frappe.require` inside `on_page_load` —
+  without `bench build` the page will render unstyled.
+
+**Other watch-outs:**
+
+* The page is scoped under `#cp-planner-root`; no global CSS
+  pollution. The modal animation keyframe is `cpPlannerPopIn` (also
+  scoped) so it can't collide with anything else on the desk.
+* Print Daily opens in a new window via `Blob` + `URL.createObjectURL`
+  + `window.open`. If popup blockers are aggressive, the user sees a
+  fallback `<a download>` + toast. Verify the browser's popup
+  settings on the test station before UAT.
+
 ### 2026-04-16 — Live SVG die-cut visualization in Carton Job Card
 
 **Patches that will run on `bench migrate`:**
@@ -199,6 +267,42 @@ Open each of these list views and confirm no 500 / traceback:
 - [ ] `frappe.db.exists('Print Format', 'Carton Job Card')` returns the
       string name. If it returns None the fixture did not sync — rerun
       `bench --site <site> migrate`.
+
+### 8. Production Planner page + DocTypes load
+
+- [ ] `bench --site <site> execute 'frappe.reload_doctype' --kwargs "{'doctype': 'Production Schedule Line'}"`
+      completes without errors. Same for `Production Entry` and
+      `Workstation Product Line Tag`.
+- [ ] `frappe.db.exists('Workstation Type', 'Design')` returns `'Design'`.
+      If it returns `None`, patch_v5_0 didn't run — rerun
+      `bench --site <site> migrate`.
+- [ ] `frappe.db.exists('Workstation', 'Design Desk')` returns
+      `'Design Desk'`. Pull the row:
+      `frappe.get_doc('Workstation', 'Design Desk').custom_product_line_tags`
+      returns a list with at least one entry whose `product_line`
+      is `'All'`.
+- [ ] `frappe.db.get_value('Custom Field', {'dt': 'Workstation', 'fieldname': 'custom_product_line_tags'}, 'options')`
+      returns `'Workstation Product Line Tag'`. If blank, the
+      Table field wasn't installed.
+- [ ] `frappe.db.get_value('Custom Field', {'dt': 'Workstation Type', 'fieldname': 'custom_product_line'}, 'options')`
+      contains `'ETR / Thermal'` (and still contains `Label` /
+      `Carton`). Same check on Workstation's `custom_product_line`.
+- [ ] Open `/app/cp_planning_board` in a browser. The page loads with
+      the scoped blue header, dept tabs, view buttons, and Print
+      Daily button. Browser console shows no JS errors.
+- [ ] Open DevTools → Network. Switching dept tabs fires three
+      parallel requests to
+      `production_log.production_log.page.cp_planning_board.cp_planning_board.get_workstation_columns`,
+      `…get_schedule_entries`, and `…get_machine_conflicts`, each
+      returning HTTP 200 with JSON.
+- [ ] The stylesheet request to
+      `/assets/production_log/css/cp_planning_board.css` returns
+      HTTP 200. If 404, rerun `bench build` and hard-refresh.
+- [ ] Open `/app/production-schedule-line` list view — loads without
+      500. Same for `/app/production-entry`.
+- [ ] Open the VCL Production workspace — the new **Production
+      Planning** header appears with three shortcuts (Production
+      Planner, Production Schedule Lines, Production Entries).
 
 ---
 
