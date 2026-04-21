@@ -125,6 +125,15 @@ class ProductionPlanner {
 		this.entries = {};
 		this.actuals = {};
 
+		// Conflict state. `conflicts` is the raw array from
+		// get_machine_conflicts; `conflictByCell` maps
+		// `${date}|${workstation}` -> conflict info so the renderer
+		// can look up in O(1); `conflictedNames` is a Set of PSL names
+		// the renderer marks with `.conflicted`.
+		this.conflicts = [];
+		this.conflictByCell = {};
+		this.conflictedNames = new Set();
+
 		this._render();
 		this._bindEvents();
 		this._loadAll();
@@ -170,6 +179,8 @@ class ProductionPlanner {
 							</svg>
 							Print Daily
 						</button>
+
+						<span class="conflict-badge" data-role="conflict-badge" style="display:none;">⚠ 0 conflicts</span>
 					</div>
 				</div>
 
@@ -298,6 +309,40 @@ class ProductionPlanner {
 					</div>
 				</div>
 
+				<div class="overlay day-picker-overlay" data-role="day-picker-overlay">
+					<div class="modal" style="width:380px;">
+						<div class="modal-head">
+							<div>
+								<div class="modal-title">Print Daily Schedule</div>
+								<div class="modal-sub">Pick a day from this week</div>
+							</div>
+							<button class="modal-close" type="button" data-role="day-picker-close" aria-label="Close">×</button>
+						</div>
+						<div class="modal-body">
+							<div class="day-picker-grid" data-role="day-grid"></div>
+							<div class="divider"></div>
+							<div class="section-label">Include</div>
+							<div class="toggle-row" style="gap:16px;font-size:12px;color:var(--text-dim);">
+								<label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
+									<input type="radio" name="print-scope" value="current" checked />
+									Current dept only
+								</label>
+								<label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
+									<input type="radio" name="print-scope" value="all" />
+									All departments
+								</label>
+							</div>
+						</div>
+						<div class="modal-foot">
+							<div class="foot-left"></div>
+							<div class="foot-right">
+								<button class="btn btn-ghost" type="button" data-role="day-picker-cancel">Cancel</button>
+								<button class="btn btn-primary" type="button" data-role="print-confirm" disabled>Print Schedule</button>
+							</div>
+						</div>
+					</div>
+				</div>
+
 				<div class="toast" role="status" aria-live="polite"></div>
 			</div>
 		`;
@@ -387,10 +432,19 @@ class ProductionPlanner {
 			this._setManualMode(isManual);
 		});
 
-		// Print Daily (Phase 4)
-		this.$root.on("click", ".print-btn", () => {
-			this.toast(__("Print Daily lands in Phase 4."), "ok");
+		// Print Daily — opens the day picker.
+		this.$root.on("click", ".print-btn", () => this._openDayPicker());
+		this.$root.on("click", '[data-role="day-picker-close"]', () => this._closeDayPicker());
+		this.$root.on("click", '[data-role="day-picker-cancel"]', () => this._closeDayPicker());
+		this.$root.on("click", ".day-picker-overlay", (e) => {
+			if ($(e.target).hasClass("day-picker-overlay")) this._closeDayPicker();
 		});
+		this.$root.on("click", ".day-pick-btn", (e) => {
+			this.$root.find(".day-pick-btn").removeClass("selected");
+			$(e.currentTarget).addClass("selected");
+			this.$root.find('[data-role="print-confirm"]').prop("disabled", false);
+		});
+		this.$root.on("click", '[data-role="print-confirm"]', () => this._onPrintConfirm());
 	}
 
 	_onDeptChange() {
@@ -517,12 +571,16 @@ class ProductionPlanner {
 		const dateTo = this._iso(this._addDays(this.weekStart, 5)); // Mon..Sat
 
 		try {
-			const [columns, entries] = await Promise.all([
+			const [columns, entries, conflicts] = await Promise.all([
 				this.call("get_workstation_columns", { product_line: this.dept }),
 				this.call("get_schedule_entries", {
 					date_from: dateFrom,
 					date_to: dateTo,
 					product_line: this.dept,
+				}),
+				this.call("get_machine_conflicts", {
+					date_from: dateFrom,
+					date_to: dateTo,
 				}),
 			]);
 
@@ -530,13 +588,36 @@ class ProductionPlanner {
 			this._buildStages();
 			this.entries = this._indexByName(entries && entries.schedule);
 			this.actuals = this._indexByName(entries && entries.actuals);
+			this._indexConflicts(Array.isArray(conflicts) ? conflicts : []);
 
 			this._renderStageHeader();
 			this._renderWeekGrid();
+			this._renderConflictBadge();
 		} catch (err) {
 			// call() already toasted the user.
 			this._showLoadError();
 		}
+	}
+
+	_indexConflicts(rows) {
+		this.conflicts = rows;
+		this.conflictByCell = {};
+		this.conflictedNames = new Set();
+		for (const c of rows) {
+			const key = `${c.date}|${c.workstation}`;
+			this.conflictByCell[key] = c;
+			for (const n of c.psl_names || []) this.conflictedNames.add(n);
+		}
+	}
+
+	_renderConflictBadge() {
+		const $b = this.$root.find('[data-role="conflict-badge"]');
+		const n = this.conflicts.length;
+		if (!n) {
+			$b.hide();
+			return;
+		}
+		$b.text(`⚠ ${n} conflict${n === 1 ? "" : "s"}`).show();
 	}
 
 	_showLoading() {
@@ -688,8 +769,25 @@ class ProductionPlanner {
 
 	_renderCell(iso, stage, workstation) {
 		const tiles = this._entriesIn(iso, stage.id, workstation);
+		const conflict = this.conflictByCell[`${iso}|${workstation}`];
+		const cellClass = conflict ? "grid-cell conflict" : "grid-cell";
+
+		let chip = "";
+		if (conflict) {
+			const lines = (conflict.product_lines || []).join(" + ");
+			chip =
+				'<div class="conflict-chip">' +
+				'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">' +
+				'<path d="M12 9v4"></path><path d="M12 17h.01"></path>' +
+				'<path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>' +
+				"</svg>" +
+				`<span>Double-booked · ${frappe.utils.escape_html(lines)}</span>` +
+				"</div>";
+		}
+
 		const inner =
 			tiles.map((t) => this._entryTile(t, stage)).join("") +
+			chip +
 			'<button class="add-btn" type="button"' +
 			` data-date="${iso}"` +
 			` data-stage-id="${stage.id}"` +
@@ -697,7 +795,7 @@ class ProductionPlanner {
 			' title="Add entry">+</button>';
 
 		return (
-			'<td class="grid-cell"' +
+			`<td class="${cellClass}"` +
 			` data-date="${iso}"` +
 			` data-stage-id="${stage.id}"` +
 			` data-workstation="${frappe.utils.escape_html(workstation)}">` +
@@ -755,8 +853,12 @@ class ProductionPlanner {
 			? ` · ${frappe.utils.escape_html(entry.status)}`
 			: "";
 
+		const conflictClass = this.conflictedNames.has(entry.name)
+			? " conflicted"
+			: "";
+
 		return (
-			`<div class="entry-block ${cssKind}" data-name="${frappe.utils.escape_html(entry.name)}" data-kind="${entry._kind}">` +
+			`<div class="entry-block ${cssKind}${conflictClass}" data-name="${frappe.utils.escape_html(entry.name)}" data-kind="${entry._kind}">` +
 			'<div class="eb-top">' +
 			`<span class="eb-id" title="${frappe.utils.escape_html(entry.name)}">${frappe.utils.escape_html(shortId)}</span>` +
 			`<span class="eb-type">${label}${status}</span>` +
@@ -1115,7 +1217,8 @@ class ProductionPlanner {
 				"ok",
 			);
 			this._closeEntryModal();
-			this._loadAll();
+			await this._loadAll();
+			this._checkPostSaveConflict(pslName, values.workstation, values.date);
 		} catch (err) {
 			// call() already toasted.
 		} finally {
@@ -1153,5 +1256,275 @@ class ProductionPlanner {
 			console.error("[planner] delete failed", err);
 			this.toast(__("Delete failed — see console."), "err");
 		}
+	}
+
+	// ─────────────────────────────────────────────────────────────
+	// Conflicts — post-save detection
+	// ─────────────────────────────────────────────────────────────
+	_checkPostSaveConflict(pslName, workstation, date) {
+		if (!pslName) return;
+		// Prefer a conflict row that actually lists the PSL we just
+		// saved. Fall back to (date, workstation) in case the server
+		// name didn't round-trip cleanly.
+		let match = this.conflicts.find((c) =>
+			(c.psl_names || []).includes(pslName),
+		);
+		if (!match && date && workstation) {
+			match = this.conflictByCell[`${date}|${workstation}`];
+		}
+		if (!match) return;
+
+		const others = (match.product_lines || []).filter((pl) => pl !== this.dept);
+		const othersLabel = others.length ? others.join(", ") : match.product_lines.join(", ");
+		this.toast(
+			__("⚠ Machine conflict: {0} is also booked for {1} on {2}.", [
+				match.workstation,
+				othersLabel,
+				match.date,
+			]),
+			"err",
+		);
+	}
+
+	// ─────────────────────────────────────────────────────────────
+	// Print — day picker
+	// ─────────────────────────────────────────────────────────────
+	_openDayPicker() {
+		const $overlay = this.$root.find(".day-picker-overlay");
+		const $grid = this.$root.find('[data-role="day-grid"]');
+		const todayIso = this._iso(new Date());
+
+		// Entry counts per day — simple O(entries) pass keyed by date.
+		const countByDate = {};
+		const bump = (d) => {
+			if (!d) return;
+			countByDate[d] = (countByDate[d] || 0) + 1;
+		};
+		for (const name in this.entries) bump(this.entries[name].date);
+		for (const name in this.actuals) bump(this.actuals[name].date);
+
+		const days = this._weekDays();
+		$grid.html(
+			days
+				.map((d) => {
+					const has = (countByDate[d.iso] || 0) > 0 ? "has-entries" : "";
+					const today = d.iso === todayIso ? "today" : "";
+					return (
+						`<button type="button" class="day-pick-btn ${has} ${today}" data-iso="${d.iso}">` +
+						`<div class="dpb-day">${d.dow}</div>` +
+						`<div class="dpb-date">${d.display}</div>` +
+						`<div class="dpb-dot"></div>` +
+						"</button>"
+					);
+				})
+				.join(""),
+		);
+
+		// Reset state.
+		this.$root.find('[data-role="print-confirm"]').prop("disabled", true);
+		this.$root.find('input[name="print-scope"][value="current"]').prop("checked", true);
+
+		$overlay.addClass("open");
+	}
+
+	_closeDayPicker() {
+		this.$root.find(".day-picker-overlay").removeClass("open");
+	}
+
+	async _onPrintConfirm() {
+		const $sel = this.$root.find(".day-pick-btn.selected");
+		if (!$sel.length) {
+			this.toast(__("Pick a day."), "err");
+			return;
+		}
+		const iso = $sel.data("iso");
+		const scope = this.$root
+			.find('input[name="print-scope"]:checked')
+			.val();
+		const depts = scope === "all" ? ["Computer Paper", "ETR / Thermal"] : [this.dept];
+
+		const $btn = this.$root.find('[data-role="print-confirm"]');
+		$btn.prop("disabled", true).text(__("Loading…"));
+
+		try {
+			const data = await this.call("get_daily_schedule", {
+				date: iso,
+				depts: JSON.stringify(depts),
+			});
+			this._closeDayPicker();
+			this._openPrintWindow(iso, depts, data || {});
+		} catch (err) {
+			// call() already toasted.
+		} finally {
+			$btn.prop("disabled", false).text(__("Print Schedule"));
+		}
+	}
+
+	// ─────────────────────────────────────────────────────────────
+	// Print — HTML generator + window opener
+	// ─────────────────────────────────────────────────────────────
+	_openPrintWindow(iso, depts, dataByDept) {
+		const html = this._buildPrintHTML(iso, depts, dataByDept);
+		const blob = new Blob([html], { type: "text/html" });
+		const url = URL.createObjectURL(blob);
+
+		const win = window.open(url, "_blank");
+		if (!win) {
+			// Popup blocked — fall back to download.
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = `production-schedule-${iso}.html`;
+			a.style.display = "none";
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			this.toast(
+				__("Popup blocked — schedule downloaded. Open + print manually."),
+				"ok",
+			);
+			// Hold the object URL long enough for the download, then
+			// release.
+			setTimeout(() => URL.revokeObjectURL(url), 5000);
+			return;
+		}
+
+		// Trigger print after the new window's load completes; some
+		// browsers ignore window.print() if called too early.
+		const tryPrint = () => {
+			try {
+				win.focus();
+				win.print();
+			} catch (e) {
+				console.warn("[planner] auto-print failed", e);
+			}
+		};
+		if (win.document.readyState === "complete") {
+			setTimeout(tryPrint, 200);
+		} else {
+			win.addEventListener("load", () => setTimeout(tryPrint, 200));
+		}
+	}
+
+	_buildPrintHTML(iso, depts, dataByDept) {
+		const esc = frappe.utils.escape_html;
+		const dateObj = new Date(iso + "T00:00:00");
+		const dayName = dateObj.toLocaleString("en-GB", { weekday: "long" });
+		const dateDisplay = dateObj.toLocaleString("en-GB", {
+			weekday: "long",
+			day: "2-digit",
+			month: "long",
+			year: "numeric",
+		});
+		const now = new Date();
+		const timestamp = now.toLocaleString("en-GB");
+
+		const renderRow = (row) => {
+			const stage = `${esc(row.workstation_type || "")} · ${esc(row.workstation || "")}`;
+			const jc = row.is_manual
+				? `<em>MANUAL: ${esc(row.description || "")}</em>`
+				: esc(row.job_card || "");
+			const stageId = this._stageIdFromWT(row.workstation_type);
+			const uomMap = UOM_BY_STAGE[stageId] || { planned: "" };
+			const qty =
+				stageId === "printing"
+					? `${Number(row.planned_reels || 0)} reels / ${Number(row.planned_sheets || 0)} sheets`
+					: `${Number(row.planned_qty || 0)} ${uomMap.planned}`;
+			const shift = esc(row.shift || "");
+			const op = esc(row.operator || "");
+			const type = row.is_manual ? "MANUAL" : "PLAN";
+			const notes = esc(row.notes || "");
+			return (
+				"<tr>" +
+				`<td>${stage}</td>` +
+				`<td>${jc}</td>` +
+				`<td>${qty}</td>` +
+				`<td>${shift}</td>` +
+				`<td>${op}</td>` +
+				`<td class="type-tag type-${type.toLowerCase()}">${type}</td>` +
+				`<td>${notes}</td>` +
+				'<td class="signoff-cell"></td>' +
+				"</tr>"
+			);
+		};
+
+		const renderDeptSection = (dept) => {
+			const rows = dataByDept[dept] || [];
+			const body = rows.length
+				? rows.map(renderRow).join("")
+				: '<tr><td colspan="8" style="text-align:center;color:#888;padding:12pt;">No scheduled entries.</td></tr>';
+			return (
+				`<div class="dept-title">${esc(dept)}</div>` +
+				'<table class="sched-table">' +
+				"<thead><tr>" +
+				"<th>Stage / Machine</th>" +
+				"<th>Job Card</th>" +
+				"<th>Planned Qty</th>" +
+				"<th>Shift</th>" +
+				"<th>Operator</th>" +
+				"<th>Type</th>" +
+				"<th>Notes</th>" +
+				"<th>Sign-off</th>" +
+				"</tr></thead>" +
+				`<tbody>${body}</tbody>` +
+				"</table>"
+			);
+		};
+
+		const sections = depts.map(renderDeptSection).join("");
+
+		// Self-contained HTML — no external assets. Inline everything.
+		return (
+			"<!doctype html>" +
+			'<html lang="en"><head>' +
+			'<meta charset="utf-8" />' +
+			`<title>Production Schedule — ${dateDisplay}</title>` +
+			"<style>" +
+			"@page { size: A4 landscape; margin: 10mm; }" +
+			"* { box-sizing: border-box; }" +
+			"body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #000; margin: 0; padding: 0; }" +
+			".hdr { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2B3990; padding-bottom: 6pt; margin-bottom: 10pt; }" +
+			".hdr-left { display: flex; gap: 10pt; align-items: center; }" +
+			".logo-box { width: 44pt; height: 30pt; background: #2B3990; color: #fff; font-weight: 700; font-size: 10pt; display: flex; align-items: center; justify-content: center; border-radius: 3pt; }" +
+			".hdr-title { font-size: 14pt; font-weight: 700; color: #2B3990; }" +
+			".hdr-sub { font-size: 10pt; color: #333; }" +
+			".hdr-right { text-align: right; font-size: 9pt; color: #555; }" +
+			".dept-title { background: #eef0fa; border-left: 4pt solid #2B3990; padding: 5pt 10pt; margin: 10pt 0 4pt; font-weight: 700; font-size: 12pt; color: #2B3990; }" +
+			".sched-table { width: 100%; border-collapse: collapse; margin-bottom: 8pt; }" +
+			".sched-table th, .sched-table td { border: 0.5pt solid #888; padding: 4pt 6pt; text-align: left; vertical-align: top; font-size: 9pt; }" +
+			".sched-table th { background: #f3f4f8; font-weight: 700; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.5pt; color: #444; }" +
+			".signoff-cell { width: 60pt; min-height: 22pt; }" +
+			".type-tag { font-weight: 700; text-align: center; letter-spacing: 0.5pt; }" +
+			".type-plan { background: #eef0fa; color: #2B3990; }" +
+			".type-actual { background: #e6f7ef; color: #0e9e5a; }" +
+			".type-manual { background: #f3eeff; color: #7c3aed; }" +
+			".signoff-block { display: flex; justify-content: space-between; gap: 20pt; margin-top: 18pt; padding-top: 8pt; border-top: 1pt solid #888; }" +
+			".signoff-line { flex: 1; }" +
+			".signoff-line .label { font-size: 9pt; color: #444; margin-bottom: 18pt; }" +
+			".signoff-line .rule { border-bottom: 0.5pt solid #000; }" +
+			".footer-note { margin-top: 10pt; font-size: 8pt; color: #888; text-align: center; }" +
+			"</style>" +
+			"</head><body>" +
+			'<div class="hdr">' +
+			'<div class="hdr-left">' +
+			'<div class="logo-box">VCL</div>' +
+			"<div>" +
+			'<div class="hdr-title">Vimit Converters Ltd · Production Schedule</div>' +
+			`<div class="hdr-sub">${esc(dayName)} · ${esc(dateDisplay)}</div>` +
+			"</div>" +
+			"</div>" +
+			'<div class="hdr-right">' +
+			"<div><strong>Daily Production Schedule</strong></div>" +
+			`<div>Printed ${esc(timestamp)}</div>` +
+			"</div>" +
+			"</div>" +
+			sections +
+			'<div class="signoff-block">' +
+			'<div class="signoff-line"><div class="label">Production Manager Sign-off</div><div class="rule"></div></div>' +
+			'<div class="signoff-line"><div class="label">Floor Supervisor Sign-off</div><div class="rule"></div></div>' +
+			'<div class="signoff-line"><div class="label">Date &amp; Time</div><div class="rule"></div></div>' +
+			"</div>" +
+			'<div class="footer-note">Vimit Converters Ltd · Production Planner</div>' +
+			"</body></html>"
+		);
 	}
 }
