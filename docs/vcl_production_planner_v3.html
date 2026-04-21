@@ -1,0 +1,1772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VCL Production Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: 'Inter', sans-serif; font-size: 13px; background: #f0f2f8; color: #1e2235; display: flex; flex-direction: column; }
+
+/* ── VARIABLES ── */
+:root {
+  --blue: #2B3990;
+  --blue-lt: #3d54cc;
+  --blue-bg: #eef0fa;
+  --red: #ED1C24;
+  --red-bg: #fdecea;
+  --green: #0e9e5a;
+  --green-bg: #e6f7ef;
+  --amber: #c07800;
+  --amber-bg: #fff3dc;
+  --purple: #7c3aed;
+  --purple-bg: #f3eeff;
+  --grey: #6b7280;
+  --border: #dde0ed;
+  --panel: #ffffff;
+  --surface: #f7f8fc;
+  --text: #1e2235;
+  --text-dim: #6b7090;
+  --text-faint: #b0b4cc;
+  --mono: 'IBM Plex Mono', monospace;
+}
+
+/* ── HEADER ── */
+.header {
+  height: 54px; background: var(--blue); display: flex; align-items: center;
+  justify-content: space-between; padding: 0 20px; flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(43,57,144,.25);
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-box {
+  width: 32px; height: 32px; background: #fff; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 9px; font-weight: 700; color: var(--blue);
+}
+.logo-text { color: #fff; }
+.logo-name { font-size: 13px; font-weight: 700; letter-spacing: .5px; }
+.logo-sub  { font-size: 10px; opacity: .7; }
+.h-controls { display: flex; align-items: center; gap: 10px; }
+.dept-btn {
+  padding: 5px 14px; border-radius: 20px; border: 1.5px solid rgba(255,255,255,.3);
+  background: transparent; color: rgba(255,255,255,.75); cursor: pointer;
+  font-size: 12px; font-weight: 500; transition: all .15s;
+}
+.dept-btn:hover { background: rgba(255,255,255,.12); }
+.dept-btn.active { background: #fff; color: var(--blue); border-color: #fff; font-weight: 600; }
+.hdiv { width: 1px; height: 22px; background: rgba(255,255,255,.2); }
+.view-btn {
+  padding: 4px 12px; border-radius: 4px; border: none;
+  background: rgba(255,255,255,.15); color: rgba(255,255,255,.7);
+  cursor: pointer; font-size: 11px; font-weight: 500; transition: all .15s;
+}
+.view-btn.active { background: #fff; color: var(--blue); font-weight: 600; }
+.view-btn:hover:not(.active) { background: rgba(255,255,255,.25); color: #fff; }
+.week-input {
+  border: 1.5px solid rgba(255,255,255,.3); background: rgba(255,255,255,.1);
+  color: #fff; border-radius: 5px; padding: 4px 9px;
+  font-family: var(--mono); font-size: 11px; outline: none;
+}
+.week-input:focus { border-color: #fff; }
+.print-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 14px; border-radius: 5px;
+  border: 1.5px solid rgba(255,255,255,.4); background: rgba(255,255,255,.12);
+  color: #fff; cursor: pointer; font-size: 12px; font-weight: 600; transition: all .15s;
+}
+.print-btn:hover { background: rgba(255,255,255,.25); border-color: rgba(255,255,255,.7); }
+.print-btn svg { flex-shrink: 0; }
+
+/* Conflict indicators */
+.grid-cell.conflict { background: #fffbeb; }
+.conflict-chip {
+  display: flex; align-items: center; gap: 4px; margin-top: 3px;
+  background: #fff3dc; border: 1px solid #f0c060; border-radius: 4px;
+  padding: 3px 6px; font-size: 10px; font-weight: 600; color: #c07800;
+}
+.conflict-chip svg { flex-shrink: 0; }
+.entry-block.conflicted { outline: 2px solid #f0c060; outline-offset: -1px; }
+.conflict-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: #fff3dc; border: 1px solid #f0c060; border-radius: 10px;
+  padding: 1px 7px; font-size: 9px; font-weight: 700; color: #c07800;
+  margin-left: 6px; vertical-align: middle;
+}
+
+/* Day picker modal */
+.day-picker-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 4px; }
+.day-pick-btn {
+  border: 1.5px solid var(--border); border-radius: 7px; padding: 12px 8px;
+  background: var(--surface); cursor: pointer; text-align: center; transition: all .15s;
+}
+.day-pick-btn:hover { border-color: var(--blue); background: var(--blue-bg); }
+.day-pick-btn.today { border-color: var(--blue); background: var(--blue-bg); }
+.dpb-day  { font-size: 12px; font-weight: 600; color: var(--text); }
+.dpb-date { font-size: 10px; color: var(--text-dim); margin-top: 2px; font-family: var(--mono); }
+.dpb-dot  { width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin: 5px auto 0; display: none; }
+.day-pick-btn.has-entries .dpb-dot { display: block; }
+
+/* ── BODY ── */
+.body { display: flex; flex: 1; overflow: hidden; }
+
+/* ── LEFT PANEL ── */
+.left {
+  width: 260px; flex-shrink: 0; background: var(--panel);
+  border-right: 1px solid var(--border); display: flex; flex-direction: column;
+}
+.lp-head {
+  padding: 12px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.lp-label { font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text-faint); margin-bottom: 8px; }
+.lp-search {
+  width: 100%; padding: 6px 10px; border: 1.5px solid var(--border); border-radius: 6px;
+  font-size: 12px; color: var(--text); background: var(--surface); outline: none;
+}
+.lp-search:focus { border-color: var(--blue); }
+.lp-list { flex: 1; overflow-y: auto; padding: 8px; }
+.job-card {
+  border: 1.5px solid var(--border); border-radius: 7px; padding: 9px 10px;
+  margin-bottom: 6px; cursor: pointer; background: var(--panel);
+  transition: all .12s; position: relative;
+}
+.job-card:hover { border-color: var(--blue); background: var(--blue-bg); }
+.job-card.selected { border-color: var(--blue); background: var(--blue-bg); }
+.job-card.s-hold { border-left: 3px solid var(--red); }
+.job-card.s-active { border-left: 3px solid var(--green); }
+.job-card.s-open { border-left: 3px solid var(--amber); }
+.job-card.s-scheduled { border-left: 3px solid var(--blue); }
+.jc-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
+.jc-id { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--text); }
+.jc-badge {
+  font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 10px;
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.badge-open      { background: var(--amber-bg); color: var(--amber); }
+.badge-active    { background: var(--green-bg);  color: var(--green); }
+.badge-hold      { background: var(--red-bg);    color: var(--red); }
+.badge-scheduled { background: var(--blue-bg);   color: var(--blue); }
+.jc-cust { font-size: 11px; color: var(--text-dim); margin-bottom: 2px; }
+.jc-prod { font-size: 10px; color: var(--text-faint); margin-bottom: 6px; }
+.jc-meta { display: flex; gap: 12px; }
+.jc-meta-item { font-size: 10px; }
+.jc-meta-label { color: var(--text-faint); }
+.jc-meta-val   { color: var(--text-dim); font-weight: 500; }
+.progress-bar { height: 3px; background: #e8eaf2; border-radius: 2px; margin-top: 7px; }
+.progress-fill { height: 100%; background: var(--green); border-radius: 2px; }
+.hold-btn {
+  position: absolute; top: 8px; right: 38px;
+  background: none; border: none; font-size: 12px; cursor: pointer; opacity: .4;
+  padding: 2px 4px; border-radius: 3px; transition: opacity .12s;
+}
+.hold-btn:hover { opacity: 1; background: var(--red-bg); }
+.lp-foot {
+  padding: 10px 12px; border-top: 1px solid var(--border); flex-shrink: 0;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.lp-count { font-size: 11px; color: var(--text-dim); }
+.btn-add-job {
+  background: var(--blue); color: #fff; border: none; border-radius: 5px;
+  padding: 6px 12px; font-size: 11px; font-weight: 600; cursor: pointer;
+  transition: background .15s;
+}
+.btn-add-job:hover { background: var(--blue-lt); }
+
+/* ── RIGHT PANEL ── */
+.right { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Stage header */
+.stage-header {
+  background: var(--panel); border-bottom: 2px solid var(--border);
+  display: flex; flex-shrink: 0; overflow-x: auto; overflow-y: hidden;
+  height: 52px;
+}
+.stage-header::-webkit-scrollbar { height: 0; }
+.sh-corner {
+  width: 190px; min-width: 190px; flex-shrink: 0; border-right: 2px solid var(--border);
+  display: flex; align-items: center; padding: 0 14px;
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint);
+}
+.stage-group {
+  border-right: 1px solid var(--border); flex-shrink: 0; display: flex; flex-direction: column;
+}
+.stage-group.disabled { opacity: .3; pointer-events: none; background: #fafafa; }
+.sg-top {
+  padding: 5px 8px 3px; display: flex; align-items: center; justify-content: center; gap: 6px;
+  border-bottom: 1px solid var(--border); white-space: nowrap; text-align: center;
+}
+.sg-name { font-size: 11px; font-weight: 600; color: var(--text-dim); }
+.sg-tag {
+  font-size: 9px; padding: 1px 5px; border-radius: 3px;
+  font-weight: 600; letter-spacing: .5px;
+}
+.tag-design { background: var(--purple-bg); color: var(--purple); }
+.tag-print  { background: var(--blue-bg);   color: var(--blue); }
+.tag-col    { background: var(--green-bg);  color: var(--green); }
+.tag-slit   { background: var(--amber-bg);  color: var(--amber); }
+.tag-na     { background: #f3f4f8; color: var(--text-faint); }
+.sg-bottom  { display: flex; flex: 1; }
+.sg-machine {
+  min-width: 78px; flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--text-dim); border-right: 1px solid var(--border);
+  font-family: var(--mono); padding: 0 4px;
+}
+.sg-machine:last-child { border-right: none; }
+.sg-single {
+  flex: 1; min-width: 100px; display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--text-faint); font-family: var(--mono);
+}
+
+/* Grid */
+.grid-wrap { flex: 1; overflow: auto; }
+.grid-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+.grid-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.grid { border-collapse: collapse; min-width: 100%; }
+.grid tr { border-bottom: 1px solid var(--border); }
+.grid tr:hover { background: #f8f9fc; }
+.row-label {
+  position: sticky; left: 0; z-index: 10; background: var(--panel);
+  width: 190px; min-width: 190px; max-width: 190px;
+  border-right: 2px solid var(--border); vertical-align: middle; padding: 10px 14px;
+}
+.grid tr:hover .row-label { background: #f8f9fc; }
+.rl-main { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--text); }
+.rl-sub  { font-size: 10px; color: var(--text-dim); margin-top: 1px; }
+.grid-cell {
+  border-right: 1px solid var(--border); vertical-align: top;
+  padding: 5px 6px; min-height: 58px;
+}
+.grid-cell.col-disabled { background: repeating-linear-gradient(45deg, #f8f8fb, #f8f8fb 4px, #f3f4f8 4px, #f3f4f8 8px); }
+
+/* Entry blocks */
+.entry-block {
+  border-radius: 5px; padding: 5px 8px; margin-bottom: 4px;
+  cursor: pointer; transition: all .12s; border: 1.5px solid;
+}
+.entry-block.plan   { background: var(--blue-bg);   border-color: #c5caf0; }
+.entry-block.actual { background: var(--green-bg);  border-color: #b3e6cf; }
+.entry-block.manual { background: var(--purple-bg); border-color: #d4bfff; }
+.entry-block:hover  { filter: brightness(.96); }
+.eb-top  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+.eb-id   { font-family: var(--mono); font-size: 9px; font-weight: 600; color: var(--blue); }
+.entry-block.actual .eb-id { color: var(--green); }
+.entry-block.manual .eb-id { color: var(--purple); }
+.eb-type { font-size: 8px; font-weight: 600; letter-spacing: .5px; color: var(--text-faint); }
+.eb-qty  { font-size: 13px; font-weight: 700; color: var(--text); line-height: 1; }
+.eb-uom  { font-size: 9px; color: var(--text-dim); font-weight: 400; margin-left: 2px; }
+.eb-meta { font-size: 9px; color: var(--text-dim); margin-top: 2px; }
+.add-btn {
+  width: 100%; padding: 4px; border: 1.5px dashed var(--border); border-radius: 5px;
+  background: transparent; color: var(--text-faint); cursor: pointer; font-size: 13px;
+  transition: all .12s; display: block; text-align: center;
+}
+.add-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-bg); }
+
+/* ── MODAL OVERLAY ── */
+.overlay {
+  position: fixed; inset: 0; background: rgba(30,34,53,.45);
+  z-index: 100; display: none; align-items: center; justify-content: center;
+}
+.overlay.open { display: flex; }
+.modal {
+  background: #fff; border-radius: 10px; width: 520px; max-width: 95vw;
+  box-shadow: 0 10px 40px rgba(30,34,53,.2); animation: popIn .18s ease-out;
+  max-height: 90vh; overflow-y: auto;
+}
+@keyframes popIn { from { opacity:0; transform:translateY(12px) scale(.98); } to { opacity:1; transform:none; } }
+.modal-head {
+  padding: 16px 20px 12px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: flex-start; position: sticky; top: 0; background: #fff; z-index:1;
+}
+.modal-title { font-size: 15px; font-weight: 700; color: var(--text); }
+.modal-sub   { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+.modal-close {
+  background: none; border: none; font-size: 20px; cursor: pointer;
+  color: var(--text-dim); line-height: 1; padding: 0 4px;
+}
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+.field-row   { display: grid; gap: 12px; }
+.field-row.cols-2 { grid-template-columns: 1fr 1fr; }
+.field-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label {
+  font-size: 11px; font-weight: 600; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: .6px;
+}
+.field label .uom { font-size: 10px; font-weight: 400; color: var(--text-faint); text-transform: none; letter-spacing: 0; margin-left: 4px; }
+.field input, .field select, .field textarea {
+  border: 1.5px solid var(--border); border-radius: 6px; padding: 8px 10px;
+  font-size: 13px; color: var(--text); background: var(--surface); outline: none;
+  font-family: inherit; transition: border-color .15s; width: 100%;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  border-color: var(--blue); background: #fff; box-shadow: 0 0 0 3px rgba(43,57,144,.08);
+}
+.field input[readonly], .field input.readonly {
+  background: #f3f4f8; color: var(--text-dim); cursor: default;
+}
+.field input[readonly]:focus, .field input.readonly:focus {
+  border-color: var(--border); box-shadow: none;
+}
+.divider { height: 1px; background: var(--border); }
+.section-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint);
+}
+.toggle-row { display: flex; align-items: center; gap: 10px; }
+.toggle-track {
+  width: 36px; height: 20px; border-radius: 10px; background: var(--border);
+  cursor: pointer; position: relative; transition: background .2s; flex-shrink: 0;
+}
+.toggle-track.on { background: var(--green); }
+.toggle-thumb {
+  position: absolute; width: 14px; height: 14px; border-radius: 50%;
+  background: #fff; top: 3px; left: 3px; transition: left .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.toggle-track.on .toggle-thumb { left: 19px; }
+.toggle-label { font-size: 12px; color: var(--text-dim); }
+.manual-note {
+  background: var(--purple-bg); border: 1.5px solid #d4bfff; border-radius: 6px;
+  padding: 8px 12px; font-size: 11px; color: var(--purple); display: none;
+}
+.manual-note.show { display: block; }
+.modal-foot {
+  padding: 12px 20px 16px; border-top: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  position: sticky; bottom: 0; background: #fff;
+}
+.foot-left  { display: flex; gap: 8px; }
+.foot-right { display: flex; gap: 8px; }
+.btn {
+  padding: 8px 18px; border-radius: 6px; font-size: 12px; font-weight: 600;
+  cursor: pointer; border: 1.5px solid transparent; transition: all .15s;
+}
+.btn-primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+.btn-primary:hover { background: var(--blue-lt); border-color: var(--blue-lt); }
+.btn-ghost { background: #fff; color: var(--text-dim); border-color: var(--border); }
+.btn-ghost:hover { background: var(--surface); color: var(--text); }
+.btn-danger { background: #fff; color: var(--red); border-color: #fcc; }
+.btn-danger:hover { background: var(--red-bg); border-color: var(--red); }
+
+/* Add Job Modal */
+.add-job-modal { width: 440px; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; background: var(--text);
+  color: #fff; border-radius: 6px; padding: 10px 16px; font-size: 12px;
+  font-weight: 500; z-index: 999; opacity: 0; transform: translateY(8px);
+  transition: all .25s ease; pointer-events: none;
+}
+.toast.show { opacity: 1; transform: none; }
+.toast.ok   { background: var(--green); }
+.toast.err  { background: var(--red); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">
+    <div class="logo-box">VCL</div>
+    <div class="logo-text">
+      <div class="logo-name">Vimit Converters</div>
+      <div class="logo-sub">Production Planner</div>
+    </div>
+  </div>
+  <div class="h-controls">
+    <button class="dept-btn active" id="btn-cp"  onclick="setDept('cp')">Computer Paper</button>
+    <button class="dept-btn"        id="btn-etr" onclick="setDept('etr')">ETR / Thermal</button>
+    <div class="hdiv"></div>
+    <button class="view-btn active" id="vbtn-week"    onclick="setView('week')">Week</button>
+    <button class="view-btn"        id="vbtn-jobcard" onclick="setView('jobcard')">Job Card</button>
+    <button class="view-btn"        id="vbtn-station" onclick="setView('station')">Station</button>
+    <div class="hdiv"></div>
+    <input class="week-input" type="week" id="weekPicker">
+    <div class="hdiv"></div>
+    <button class="print-btn" onclick="openDayPicker()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+        <rect x="6" y="14" width="12" height="8"/>
+      </svg>
+      Print Daily
+    </button>
+  </div>
+</header>
+
+<!-- BODY -->
+<div class="body">
+
+  <!-- LEFT PANEL -->
+  <div class="left">
+    <div class="lp-head">
+      <div class="lp-label">Open Job Cards</div>
+      <input class="lp-search" id="jobSearch" placeholder="Search jobs or customers…" oninput="renderJobs()">
+    </div>
+    <div class="lp-list" id="jobList"></div>
+    <div class="lp-foot">
+      <span class="lp-count" id="jobCount">—</span>
+      <button class="btn-add-job" onclick="openAddJobModal()">+ Add Job</button>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right">
+    <div class="stage-header" id="stageHeader">
+      <div class="sh-corner" id="cornerLabel">DAY</div>
+    </div>
+    <div class="grid-wrap">
+      <table class="grid"><tbody id="gridBody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ── ENTRY MODAL ── -->
+<div class="overlay" id="entryOverlay" onclick="overlayClick(event,'entryOverlay')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="modalTitle">Add Entry</div>
+        <div class="modal-sub"   id="modalSub">—</div>
+      </div>
+      <button class="modal-close" onclick="closeEntry()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="manual-note" id="manualNote">
+        ⚡ <strong>Manual entry</strong> — no job card linked. Use for maintenance, machine trials, or ad-hoc work.
+      </div>
+
+      <!-- Job Card -->
+      <div class="field-row cols-2">
+        <div class="field">
+          <label>Job Card</label>
+          <select id="fJobCard" onchange="jobCardChanged()">
+            <option value="">— select —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Description <span class="uom">(manual entries)</span></label>
+          <input id="fDesc" placeholder="e.g. Machine maintenance">
+        </div>
+      </div>
+
+      <!-- Workstation + Stage + Date -->
+      <div class="field-row cols-3">
+        <div class="field">
+          <label>Workstation</label>
+          <select id="fWorkstation"></select>
+        </div>
+        <div class="field">
+          <label>Stage</label>
+          <input id="fStage" class="readonly" readonly>
+        </div>
+        <div class="field">
+          <label>Date</label>
+          <input id="fDate" type="date">
+        </div>
+      </div>
+
+      <!-- Shift + Operator -->
+      <div class="field-row cols-2">
+        <div class="field">
+          <label>Shift</label>
+          <select id="fShift">
+            <option value="Day">Day Shift</option>
+            <option value="Evening">Evening Shift</option>
+            <option value="Night">Night Shift</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Operator / Assigned To</label>
+          <input id="fOperator" placeholder="e.g. James Mwangi">
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section-label">Quantities</div>
+
+      <!-- Dynamic quantity fields — rebuilt per stage -->
+      <div id="qtySection"></div>
+
+      <!-- Mark as Actual toggle -->
+      <div class="toggle-row">
+        <div class="toggle-track" id="toggleTrack" onclick="toggleActual()">
+          <div class="toggle-thumb"></div>
+        </div>
+        <span class="toggle-label" id="toggleLabel">Plan only — toggle to include actuals</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Notes -->
+      <div class="field">
+        <label>Notes / Issues</label>
+        <input id="fNotes" placeholder="e.g. Plate change, downtime, material issue, quality hold…">
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <div class="foot-left">
+        <button class="btn btn-danger" id="btnDelete" style="display:none" onclick="deleteCurrentEntry()">Delete Entry</button>
+      </div>
+      <div class="foot-right">
+        <button class="btn btn-ghost" onclick="closeEntry()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEntry()">Save Entry</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── ADD JOB MODAL ── -->
+<div class="overlay" id="addJobOverlay" onclick="overlayClick(event,'addJobOverlay')">
+  <div class="modal add-job-modal" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">Add Job Card</div>
+        <div class="modal-sub">Add a job to track in the planner</div>
+      </div>
+      <button class="modal-close" onclick="closeAddJob()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-row cols-2">
+        <div class="field">
+          <label>Job ID</label>
+          <input id="ajId" placeholder="e.g. CP-2026-050" oninput="autoFillJobId()">
+        </div>
+        <div class="field">
+          <label>Customer</label>
+          <input id="ajCust" placeholder="e.g. Equity Bank">
+        </div>
+      </div>
+      <div class="field">
+        <label>Product Description</label>
+        <input id="ajProd" placeholder="e.g. A4 80gsm NCR 2-part">
+      </div>
+      <div class="field-row cols-2">
+        <div class="field">
+          <label>Order Qty</label>
+          <input id="ajQty" type="number" min="1" placeholder="0">
+        </div>
+        <div class="field">
+          <label>Due Date</label>
+          <input id="ajDue" type="date">
+        </div>
+      </div>
+      <div class="field-row cols-2">
+        <div class="field">
+          <label>Paper / Stock</label>
+          <input id="ajPaper" placeholder="e.g. 80gsm Bond">
+        </div>
+        <div class="field">
+          <label>Artwork Status</label>
+          <select id="ajArt">
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="N/A">N/A</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <div class="foot-left"></div>
+      <div class="foot-right">
+        <button class="btn btn-ghost" onclick="closeAddJob()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveNewJob()">Add Job</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── DAY PICKER MODAL ── -->
+<div class="overlay" id="dayPickerOverlay" onclick="overlayClick(event,'dayPickerOverlay')">
+  <div class="modal" style="width:400px" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">Print Daily Schedule</div>
+        <div class="modal-sub" id="dayPickerSub">Select the day to print</div>
+      </div>
+      <button class="modal-close" onclick="closeDayPicker()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="day-picker-grid" id="dayPickerGrid"></div>
+      <div style="margin-top:8px">
+        <div class="field">
+          <label>Include</label>
+          <select id="printScope" style="border:1.5px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;color:var(--text);background:var(--surface);outline:none;width:100%">
+            <option value="all">All departments</option>
+            <option value="dept">Current department only</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <div class="foot-left"></div>
+      <div class="foot-right">
+        <button class="btn btn-ghost" onclick="closeDayPicker()">Cancel</button>
+        <button class="btn btn-primary" id="doPrintBtn" onclick="executePrint()">
+          Print Schedule
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════
+
+// Job lists per department
+const JOBS = {
+  cp: [
+    { id:'CP-2026-041', cust:'Printwell Kenya Ltd',    prod:'A4 80gsm Ream',  qty:20000, done:8000,  status:'active',    due:'2026-04-25', art:'Approved', paper:'80gsm Bond'  },
+    { id:'CP-2026-042', cust:'Nairobi Stationery Co.', prod:'A4 75gsm Box',   qty:15000, done:0,     status:'open',      due:'2026-04-28', art:'Pending',  paper:'75gsm Bond'  },
+    { id:'CP-2026-043', cust:'Equity Bank Ltd',        prod:'A4 NCR 2-part',  qty:8000,  done:2000,  status:'active',    due:'2026-04-30', art:'Approved', paper:'55gsm NCR'   },
+    { id:'CP-2026-039', cust:'KCB Group',              prod:'A3 80gsm Ream',  qty:5000,  done:5000,  status:'hold',      due:'2026-04-22', art:'Approved', paper:'80gsm Bond'  },
+    { id:'CP-2026-045', cust:'Gilani Investments',     prod:'A4 NCR 3-part',  qty:6000,  done:0,     status:'scheduled', due:'2026-05-05', art:'Approved', paper:'55gsm NCR'   },
+  ],
+  etr: [
+    { id:'ETR-2026-018', cust:'Safaricom POS Dept',   prod:'57×40mm Thermal', qty:50000, done:22000, status:'active', due:'2026-04-24', art:'N/A', paper:'Thermal 55gsm' },
+    { id:'ETR-2026-019', cust:'Naivas Supermarkets',  prod:'80×80mm Thermal', qty:30000, done:0,     status:'open',   due:'2026-04-29', art:'N/A', paper:'Thermal 60gsm' },
+    { id:'ETR-2026-020', cust:'Kenya Revenue Auth.',  prod:'76×70mm ETR Roll', qty:20000, done:5000,  status:'active', due:'2026-05-01', art:'N/A', paper:'Thermal 58gsm' },
+  ]
+};
+
+// Stages with UOM — Design is Option A: real Workstation Type in ERPNext
+// sub: array of workstation names (from ERPNext in production)
+// dis: disabled for this dept
+const STAGES = {
+  cp: [
+    { id:'design',  name:'Design',    tag:'tag-design', sub:['Design Desk'],      disabled:false, uom:'Job'   },
+    { id:'print',   name:'Printing',  tag:'tag-print',  sub:['M1','M2','M3','M4','M5'], disabled:false, uom:'Reels' },
+    { id:'collate', name:'Collation', tag:'tag-col',    sub:null,                 disabled:false, uom:'Sets'  },
+    { id:'slit',    name:'Slitting',  tag:'tag-slit',   sub:null,                 disabled:true,  uom:'Rolls', disNote:'N/A for CP' },
+  ],
+  etr: [
+    { id:'design',  name:'Design',    tag:'tag-design', sub:['Design Desk'],      disabled:false, uom:'Job'   },
+    { id:'print',   name:'Printing',  tag:'tag-print',  sub:['M1','M2','M3','M4','M5'], disabled:false, uom:'Reels' },
+    { id:'collate', name:'Collation', tag:'tag-col',    sub:null,                 disabled:true,  uom:'Sets',  disNote:'N/A for ETR' },
+    { id:'slit',    name:'Slitting',  tag:'tag-slit',   sub:null,                 disabled:false, uom:'Rolls' },
+  ]
+};
+
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+// ═══════════════════════════════════════════════
+// STAGE-SPECIFIC QTY CONFIG
+// Defines what fields appear in Planned vs Actual mode per stage
+// ═══════════════════════════════════════════════
+const STAGE_QTY = {
+  design: {
+    planned: [
+      { id:'fPlannedDays', label:'Planned Days', uom:'days', cols:1 },
+    ],
+    actual: [
+      { id:'fActualDays',  label:'Actual Days',  uom:'days', cols:1 },
+    ],
+  },
+  print: {
+    // Planning: both input material (reels) and expected yield (sheets)
+    planned: [
+      { id:'fPlannedReels',  label:'Planned Reels',  uom:'reels',  cols:1 },
+      { id:'fPlannedSheets', label:'Planned Sheets', uom:'sheets', cols:1 },
+    ],
+    // Actuals: only sheets — what actually came off the machine
+    actual: [
+      { id:'fActualSheets',  label:'Actual Sheets',  uom:'sheets', cols:1 },
+    ],
+  },
+  collate: {
+    planned: [
+      { id:'fPlannedSets', label:'Planned Sets', uom:'sets', cols:1 },
+    ],
+    actual: [
+      { id:'fActualSets',  label:'Actual Sets',  uom:'sets', cols:1 },
+    ],
+  },
+  slit: {
+    planned: [
+      { id:'fPlannedRolls', label:'Planned Rolls', uom:'rolls', cols:1 },
+    ],
+    actual: [
+      { id:'fActualRolls',  label:'Actual Rolls',  uom:'rolls', cols:1 },
+    ],
+  },
+};
+
+// Build quantity HTML for the modal based on stage and whether actuals are toggled on
+function buildQtySection(stageId, showActual, savedValues) {
+  const cfg = STAGE_QTY[stageId] || STAGE_QTY['collate']; // fallback
+  const planned = cfg.planned;
+  const actual  = cfg.actual;
+  const sv = savedValues || {};
+
+  // Always show planned fields; show actual fields only when toggled
+  const fields = showActual ? [...planned, ...actual] : [...planned];
+  const totalCols = fields.length <= 1 ? 1 : fields.length === 2 ? 2 : 3;
+  const gridCols  = Math.min(totalCols, 3);
+
+  let html = `<div class="field-row" style="grid-template-columns:repeat(${gridCols},1fr)">`;
+  fields.forEach(f => {
+    const isActualField = actual.some(a => a.id === f.id);
+    const borderStyle   = isActualField ? 'border-color:#b3e6cf' : '';
+    const bgStyle       = isActualField ? 'background:#f0faf5'   : '';
+    html += `
+      <div class="field">
+        <label>${f.label} <span class="uom">· ${f.uom}</span>
+          ${isActualField ? '<span style="font-size:9px;color:var(--green);margin-left:4px;text-transform:none;letter-spacing:0">ACTUAL</span>' : ''}
+        </label>
+        <input id="${f.id}" type="number" min="0" placeholder="0"
+               value="${sv[f.id] != null ? sv[f.id] : ''}"
+               style="${borderStyle};${bgStyle}">
+      </div>`;
+  });
+  html += '</div>';
+  document.getElementById('qtySection').innerHTML = html;
+}
+
+// Collect all qty field values from the current modal state
+function collectQtyValues(stageId) {
+  const cfg = STAGE_QTY[stageId] || STAGE_QTY['collate'];
+  const allFields = [...cfg.planned, ...cfg.actual];
+  const vals = {};
+  allFields.forEach(f => {
+    const el = document.getElementById(f.id);
+    if (el) vals[f.id] = parseInt(el.value) || 0;
+  });
+  return vals;
+}
+
+// Get the "primary planned" value for display on grid blocks
+function getPrimaryPlanned(stageId, qtyVals) {
+  const cfg = STAGE_QTY[stageId] || STAGE_QTY['collate'];
+  if (!cfg.planned.length) return 0;
+  const firstId = cfg.planned[0].id;
+  return qtyVals[firstId] || 0;
+}
+function getPrimaryActual(stageId, qtyVals) {
+  const cfg = STAGE_QTY[stageId] || STAGE_QTY['collate'];
+  if (!cfg.actual.length) return 0;
+  const firstId = cfg.actual[0].id;
+  return qtyVals[firstId] || 0;
+}
+function getPrimaryUom(stageId, isActual) {
+  const cfg = STAGE_QTY[stageId] || STAGE_QTY['collate'];
+  const arr = isActual ? cfg.actual : cfg.planned;
+  return arr.length ? arr[0].uom : '';
+}
+
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let dept    = 'cp';
+let view    = 'week';
+// entries keyed by unique ID — each entry carries all context (jobCard, stageId, mach, date, dept)
+// so the same entry is visible in ALL views (week by date, job card by jobCard, station by stage+mach)
+let entries  = {};
+let isActual = false;
+let editingId = null;    // null = new entry, string = editing existing entry by its unique ID
+
+// Context captured when "+" is clicked in a cell
+let modalCtx = { stageId: null, mach: null, prefillDate: null, prefillJobCard: null };
+
+// ─────────────────────────────────────────────
+// ENTRY LOOKUP — filter entries by arbitrary attributes
+// ─────────────────────────────────────────────
+function getEntriesFor(filters) {
+  // Returns array of [id, entry] pairs matching ALL supplied filters
+  return Object.entries(entries).filter(([id, e]) => {
+    if (filters.dept     !== undefined && e.dept     !== filters.dept)     return false;
+    if (filters.stageId  !== undefined && e.stageId  !== filters.stageId)  return false;
+    if (filters.mach     !== undefined && (e.mach || '_') !== (filters.mach || '_')) return false;
+    if (filters.jobCard  !== undefined && e.jobCard  !== filters.jobCard)  return false;
+    if (filters.date     !== undefined && e.date     !== filters.date)     return false;
+    return true;
+  });
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  const now  = new Date();
+  const yyyy = now.getFullYear();
+  const wk   = String(getISOWeek(now)).padStart(2,'0');
+  document.getElementById('weekPicker').value = `${yyyy}-W${wk}`;
+  document.getElementById('fDate').value = now.toISOString().split('T')[0];
+  document.getElementById('ajDue').value  = now.toISOString().split('T')[0];
+  document.getElementById('weekPicker').addEventListener('change', () => { if (view==='week') renderGrid(); });
+  renderAll();
+});
+
+function getISOWeek(d) {
+  const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  dt.setUTCDate(dt.getUTCDate() + 4 - (dt.getUTCDay() || 7));
+  const y1 = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1));
+  return Math.ceil((((dt - y1) / 86400000) + 1) / 7);
+}
+
+function newEntryId() { return 'e-' + Date.now() + '-' + Math.random().toString(36).slice(2,6); }
+
+// ═══════════════════════════════════════════════
+// CONFLICT DETECTION
+// A conflict = same stageId + mach + date booked by 2+ entries (any dept, any job card)
+// Only applies to stages with physical machines (print, etc.) — not design/collate/slit
+// ═══════════════════════════════════════════════
+const SHARED_MACHINES = ['print']; // stages where machines are shared across depts
+
+function buildConflictMap() {
+  // Returns Map: "stageId__mach__date" → [list of entry IDs that share it]
+  const map = new Map();
+  Object.entries(entries).forEach(([id, e]) => {
+    if (!SHARED_MACHINES.includes(e.stageId)) return;
+    if (!e.date || e.isManual) return;
+    const key = `${e.stageId}__${e.mach}__${e.date}`;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(id);
+  });
+  // Keep only keys with 2+ bookings
+  const conflicts = new Map();
+  map.forEach((ids, key) => { if (ids.length > 1) conflicts.set(key, ids); });
+  return conflicts;
+}
+
+function conflictKey(stageId, mach, date) {
+  return `${stageId}__${mach || '_'}__${date}`;
+}
+
+// Returns how many conflicts exist in the current week (used for header badge)
+function weekConflictCount(conflictMap) {
+  let count = 0;
+  for (let i = 0; i < 6; i++) {
+    const iso = getDayISO(i);
+    conflictMap.forEach((ids, key) => {
+      if (key.endsWith('__' + iso)) count++;
+    });
+  }
+  return count;
+}
+
+// ═══════════════════════════════════════════════
+// DEPT & VIEW
+// ═══════════════════════════════════════════════
+function setDept(d) {
+  dept = d;
+  document.getElementById('btn-cp').classList.toggle('active',  d === 'cp');
+  document.getElementById('btn-etr').classList.toggle('active', d === 'etr');
+  renderAll();
+}
+function setView(v) {
+  view = v;
+  ['week','jobcard','station'].forEach(x =>
+    document.getElementById('vbtn-' + x).classList.toggle('active', x === v));
+  renderAll();
+}
+function renderAll() { renderJobs(); renderHeader(); renderGrid(); renderConflictBadge(); }
+
+function renderConflictBadge() {
+  const cmap  = buildConflictMap();
+  const count = cmap.size;
+  // Remove existing badge
+  document.querySelectorAll('.conflict-badge').forEach(b => b.remove());
+  if (count === 0) return;
+  // Add badge near the week picker
+  const badge = document.createElement('span');
+  badge.className = 'conflict-badge';
+  badge.title = `${count} machine conflict${count > 1 ? 's' : ''} this week — same machine booked in CP and ETR`;
+  badge.innerHTML = `⚠ ${count} conflict${count > 1 ? 's' : ''}`;
+  document.querySelector('.h-controls').appendChild(badge);
+}
+
+// ═══════════════════════════════════════════════
+// JOB LIST
+// ═══════════════════════════════════════════════
+function renderJobs() {
+  const q = document.getElementById('jobSearch').value.toLowerCase();
+  const jobs = JOBS[dept].filter(j =>
+    j.id.toLowerCase().includes(q) || j.cust.toLowerCase().includes(q) || j.prod.toLowerCase().includes(q));
+
+  const list = document.getElementById('jobList');
+  list.innerHTML = '';
+  jobs.forEach(j => {
+    const pct  = j.qty > 0 ? Math.min(100, Math.round(j.done / j.qty * 100)) : 0;
+    const dueD = new Date(j.due);
+    const dueStr = dueD.toLocaleDateString('en-KE', {day:'numeric', month:'short'});
+    const el = document.createElement('div');
+    el.className = `job-card s-${j.status}`;
+    el.dataset.id = j.id;
+    el.onclick = () => selectJob(j.id);
+    el.innerHTML = `
+      <button class="hold-btn" title="Toggle hold" onclick="toggleHold(event,'${j.id}')">⏸</button>
+      <div class="jc-row">
+        <div class="jc-id">${j.id}</div>
+        <div class="jc-badge badge-${j.status}">${j.status}</div>
+      </div>
+      <div class="jc-cust">${j.cust}</div>
+      <div class="jc-prod">${j.prod}</div>
+      <div class="jc-meta">
+        <div class="jc-meta-item"><span class="jc-meta-label">Qty </span><span class="jc-meta-val">${j.qty.toLocaleString()}</span></div>
+        <div class="jc-meta-item"><span class="jc-meta-label">Due </span><span class="jc-meta-val">${dueStr}</span></div>
+        <div class="jc-meta-item"><span class="jc-meta-label">Art </span><span class="jc-meta-val">${j.art}</span></div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>`;
+    list.appendChild(el);
+  });
+  document.getElementById('jobCount').textContent = `${jobs.length} job${jobs.length !== 1 ? 's' : ''}`;
+}
+
+function selectJob(id) {
+  document.querySelectorAll('.job-card').forEach(c => c.classList.toggle('selected', c.dataset.id === id));
+}
+
+function toggleHold(ev, id) {
+  ev.stopPropagation();
+  const job = JOBS[dept].find(j => j.id === id);
+  if (!job) return;
+  job.status = job.status === 'hold' ? 'active' : 'hold';
+  renderJobs();
+  toast(job.status === 'hold' ? `${id} placed on hold` : `${id} hold released`, 'ok');
+}
+
+// ═══════════════════════════════════════════════
+// STAGE HEADER
+// ═══════════════════════════════════════════════
+function renderHeader() {
+  const hdr = document.getElementById('stageHeader');
+  // Remove old stage groups
+  hdr.querySelectorAll('.stage-group').forEach(e => e.remove());
+
+  const corner = document.getElementById('cornerLabel');
+  corner.textContent = view === 'week' ? 'DAY' : view === 'jobcard' ? 'JOB CARD' : 'STATION';
+
+  if (view === 'station') {
+    // station view: columns are job cards — built in renderGrid
+    return;
+  }
+
+  STAGES[dept].forEach(st => {
+    const grp = document.createElement('div');
+    grp.className = 'stage-group' + (st.disabled ? ' disabled' : '');
+    const tagName = { design:'DES', print:'PRN', collate:'COL', slit:'SLT' }[st.id] || '';
+    let bottom = '';
+    if (st.sub && !st.disabled) {
+      bottom = '<div class="sg-bottom">' +
+        st.sub.map(m => `<div class="sg-machine">${m}</div>`).join('') +
+        '</div>';
+    } else {
+      const note = st.disabled ? (st.disNote || '—') : '—';
+      bottom = `<div class="sg-bottom"><div class="sg-single">${note}</div></div>`;
+    }
+    grp.innerHTML = `
+      <div class="sg-top">
+        <span class="sg-name">${st.name}</span>
+        <span class="sg-tag ${st.tag}">${tagName}</span>
+      </div>
+      ${bottom}`;
+    hdr.appendChild(grp);
+  });
+}
+
+// ═══════════════════════════════════════════════
+// GRID
+// ═══════════════════════════════════════════════
+function renderGrid() {
+  const body = document.getElementById('gridBody');
+  body.innerHTML = '';
+  const cmap = buildConflictMap();
+  if (view === 'week')    renderWeekGrid(body, cmap);
+  if (view === 'jobcard') renderJobCardGrid(body, cmap);
+  if (view === 'station') renderStationGrid(body, cmap);
+}
+
+// viewType: 'week' | 'jobcard' | 'station'
+// rowKey:   ISO date string (week), job ID (jobcard/station)
+function buildCells(viewType, rowKey, conflictMap) {
+  const cmap = conflictMap || buildConflictMap();
+  let html = '';
+  STAGES[dept].forEach(st => {
+    const machines = (st.sub && !st.disabled) ? st.sub : [null];
+    machines.forEach(mach => {
+      const cellW = st.sub ? 78 : 110;
+
+      // Determine cell date for conflict checking
+      // Week view: rowKey IS the date. Job card/station: look at individual entry dates
+      let cellDate = viewType === 'week' ? rowKey : null;
+      const ck = cellDate ? conflictKey(st.id, mach || '_', cellDate) : null;
+      const hasConflict = ck && cmap.has(ck);
+
+      html += `<td class="grid-cell${st.disabled ? ' col-disabled' : ''}${hasConflict ? ' conflict' : ''}" style="min-width:${cellW}px;width:${cellW}px">`;
+      if (!st.disabled) {
+        let filters = { dept, stageId: st.id, mach: mach || '_' };
+        if (viewType === 'week')    filters.date    = rowKey;
+        if (viewType === 'jobcard') filters.jobCard = rowKey;
+        if (viewType === 'station') filters.jobCard = rowKey;
+        const matched = getEntriesFor(filters);
+
+        matched.forEach(([id, e]) => {
+          // Flag entry as conflicted if its date+mach is double-booked
+          const eck = conflictKey(e.stageId, e.mach, e.date);
+          const entryConflict = cmap.has(eck);
+          html += entryBlockHTML(e, id, entryConflict);
+        });
+
+        // Conflict chip in week view cells
+        if (hasConflict) {
+          const conflictIds = cmap.get(ck);
+          const depts = [...new Set(conflictIds.map(cid => entries[cid]?.dept).filter(Boolean))];
+          html += `<div class="conflict-chip">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Double-booked · ${depts.map(d => d.toUpperCase()).join(' + ')}
+          </div>`;
+        }
+
+        const prefillDate    = viewType === 'week' ? rowKey : '';
+        const prefillJobCard = viewType !== 'week' ? rowKey : '';
+        html += `<button class="add-btn" onclick="openEntry('${st.id}','${mach||''}','${prefillDate}','${prefillJobCard}')">+</button>`;
+      }
+      html += `</td>`;
+    });
+  });
+  return html;
+}
+
+function entryBlockHTML(e, key, isConflicted) {
+  const cls       = (e.isManual ? 'manual' : e.isActual ? 'actual' : 'plan') + (isConflicted ? ' conflicted' : '');
+  const label     = e.jobCard || e.desc || 'Manual';
+  const short     = label.length > 15 ? label.slice(0,14)+'…' : label;
+  const typeLabel = e.isManual ? 'Manual' : e.isActual ? 'Actual' : 'Plan';
+  const op        = e.operator ? `👤 ${e.operator}` : '';
+  const shift     = e.shift ? `· ${e.shift}` : '';
+  const sv        = e.qtyVals || {};
+  const cfg       = STAGE_QTY[e.stageId] || STAGE_QTY['collate'];
+
+  // Build compact qty lines for the block
+  let qtyLines = '';
+  if (e.stageId === 'print') {
+    // Show reels → sheets for printing
+    const reels  = sv['fPlannedReels']  || 0;
+    const sheets = sv['fPlannedSheets'] || 0;
+    if (reels)  qtyLines += `<div><span class="eb-qty">${reels.toLocaleString()}</span> <span class="eb-uom">reels</span></div>`;
+    if (sheets) qtyLines += `<div style="font-size:10px;color:var(--text-dim)">${sheets.toLocaleString()} <span class="eb-uom">sheets planned</span></div>`;
+    if (e.isActual) {
+      const actSh = sv['fActualSheets'] || 0;
+      if (actSh) qtyLines += `<div style="color:var(--green);font-size:10px;font-weight:600">${actSh.toLocaleString()} <span style="font-weight:400">sheets actual</span></div>`;
+    }
+  } else {
+    // Other stages: single planned value
+    const firstPlan = cfg.planned[0];
+    const firstAct  = cfg.actual[0];
+    const pVal = firstPlan ? (sv[firstPlan.id] || e.planned || 0) : 0;
+    const aVal = firstAct  ? (sv[firstAct.id]  || e.actual  || 0) : 0;
+    const pUom = firstPlan ? firstPlan.uom : (e.uom || '');
+    const aUom = firstAct  ? firstAct.uom  : (e.actualUom || e.uom || '');
+    if (pVal) qtyLines += `<div><span class="eb-qty">${pVal.toLocaleString()}</span> <span class="eb-uom">${pUom}</span></div>`;
+    if (e.isActual && aVal) qtyLines += `<div style="color:var(--green);font-size:10px;font-weight:600">${aVal.toLocaleString()} <span style="font-weight:400">${aUom} actual</span></div>`;
+  }
+
+  return `
+    <div class="entry-block ${cls}" onclick="openEntry(null,null,null,null,'${key}')">
+      <div class="eb-top">
+        <span class="eb-id">${short}</span>
+        <span class="eb-type">${typeLabel}</span>
+      </div>
+      ${qtyLines}
+      ${op ? `<div class="eb-meta">${op} ${shift}</div>` : ''}
+      ${e.notes ? `<div class="eb-meta" style="color:var(--amber)">⚠ ${e.notes.slice(0,28)}${e.notes.length>28?'…':''}</div>` : ''}
+    </div>`;
+}
+
+function renderWeekGrid(body, cmap) {
+  DAYS.forEach((day, i) => {
+    const dateStr = getDayDate(i);
+    const isoDate = getDayISO(i);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="row-label">
+        <div class="rl-main">${day}</div>
+        <div class="rl-sub">${dateStr}</div>
+      </td>${buildCells('week', isoDate, cmap)}`;
+    body.appendChild(tr);
+  });
+}
+
+function renderJobCardGrid(body, cmap) {
+  JOBS[dept].forEach(j => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="row-label">
+        <div class="rl-main">${j.id}</div>
+        <div class="rl-sub">${j.cust}</div>
+      </td>${buildCells('jobcard', j.id, cmap)}`;
+    body.appendChild(tr);
+  });
+}
+
+function renderStationGrid(body, cmap) {
+  const hdr = document.getElementById('stageHeader');
+  hdr.querySelectorAll('.stage-group').forEach(e => e.remove());
+  const jobs = JOBS[dept];
+  // Header columns = job cards
+  jobs.forEach(j => {
+    const grp = document.createElement('div');
+    grp.className = 'stage-group';
+    grp.style.minWidth = '120px';
+    grp.innerHTML = `
+      <div class="sg-top">
+        <span class="sg-name" style="font-size:9px">${j.id}</span>
+        <span class="sg-tag badge-${j.status}">${j.status.toUpperCase()}</span>
+      </div>
+      <div class="sg-bottom"><div class="sg-single" style="font-size:9px">${j.cust.split(' ').slice(0,2).join(' ')}</div></div>`;
+    hdr.appendChild(grp);
+  });
+
+  // Rows = stations
+  STAGES[dept].forEach(st => {
+    const machines = (st.sub && !st.disabled) ? st.sub : [null];
+    machines.forEach(mach => {
+      const tr = document.createElement('tr');
+      const rowName = mach ? `${st.name} – ${mach}` : st.name;
+      let cells = '';
+      jobs.forEach(j => {
+        const matched = getEntriesFor({ dept, stageId: st.id, mach: mach || '_', jobCard: j.id });
+        cells += `<td class="grid-cell${st.disabled ? ' col-disabled' : ''}" style="min-width:120px">`;
+        if (!st.disabled) {
+          matched.forEach(([id, e]) => {
+            const eck = conflictKey(e.stageId, e.mach, e.date);
+            cells += entryBlockHTML(e, id, cmap && cmap.has(eck));
+          });
+          cells += `<button class="add-btn" onclick="openEntry('${st.id}','${mach||''}','','${j.id}')">+</button>`;
+        }
+        cells += '</td>';
+      });
+      tr.innerHTML = `
+        <td class="row-label" style="${st.disabled ? 'opacity:.35;' : ''}">
+          <div class="rl-main">${rowName}</div>
+          <div class="rl-sub">${st.uom}</div>
+        </td>${cells}`;
+      body.appendChild(tr);
+    });
+  });
+}
+
+function _weekDay(i) {
+  const v = document.getElementById('weekPicker').value;
+  if (!v) return new Date();
+  const [yr, wk] = v.split('-W').map(Number);
+  const jan4 = new Date(yr, 0, 4);
+  const d = new Date(jan4);
+  d.setDate(jan4.getDate() - ((jan4.getDay() || 7) - 1) + (wk - 1) * 7 + i);
+  return d;
+}
+function getDayDate(i) {
+  return _weekDay(i).toLocaleDateString('en-KE', { day:'numeric', month:'short' });
+}
+function getDayISO(i) {
+  return _weekDay(i).toISOString().split('T')[0];  // YYYY-MM-DD
+}
+
+// ═══════════════════════════════════════════════
+// ENTRY MODAL — OPEN
+// New signature: openEntry(stageId, mach, prefillDate, prefillJobCard, editId)
+//   stageId/mach/prefillDate/prefillJobCard — context from "+" click
+//   editId — unique entry ID when editing an existing block
+// All args can be null/empty
+// ═══════════════════════════════════════════════
+function openEntry(stageId, mach, prefillDate, prefillJobCard, editId) {
+  editingId = editId || null;
+  isActual  = false;
+
+  // Reset UI state
+  document.getElementById('toggleTrack').classList.remove('on');
+  document.getElementById('toggleLabel').textContent = 'Plan only — toggle to include actuals';
+  document.getElementById('manualNote').classList.remove('show');
+  document.getElementById('btnDelete').style.display = 'none';
+
+  // Populate job card dropdown
+  const jcSel = document.getElementById('fJobCard');
+  jcSel.innerHTML = '<option value="">— select job card —</option>';
+  JOBS[dept].forEach(j => {
+    const opt = document.createElement('option');
+    opt.value = j.id;
+    opt.textContent = `${j.id} · ${j.cust}`;
+    jcSel.appendChild(opt);
+  });
+  const manOpt = document.createElement('option');
+  manOpt.value = '__manual__';
+  manOpt.textContent = '⚡ Manual entry (no job card)';
+  jcSel.appendChild(manOpt);
+
+  if (editId) {
+    // ── Editing existing entry ──
+    const e = entries[editId];
+    if (!e) return;
+    const st = STAGES[dept].find(s => s.id === e.stageId);
+
+    document.getElementById('modalTitle').textContent = 'Edit Entry';
+    document.getElementById('modalSub').textContent   = `${st ? st.name : e.stageId}${e.mach && e.mach !== '_' ? ' – ' + e.mach : ''} · ${dept.toUpperCase()}`;
+    jcSel.value = e.isManual ? '__manual__' : (e.jobCard || '');
+    if (e.isManual) document.getElementById('manualNote').classList.add('show');
+    document.getElementById('fDesc').value     = e.desc     || '';
+    document.getElementById('fDate').value     = e.date     || new Date().toISOString().split('T')[0];
+    document.getElementById('fShift').value    = e.shift    || 'Day';
+    document.getElementById('fOperator').value = e.operator || '';
+    document.getElementById('fNotes').value    = e.notes    || '';
+    document.getElementById('fStage').value    = st ? st.name : e.stageId;
+    populateWorkstations(e.stageId, e.mach);
+    if (e.isActual) {
+      isActual = true;
+      document.getElementById('toggleTrack').classList.add('on');
+      document.getElementById('toggleLabel').textContent = 'Actual recorded';
+    }
+    buildQtySection(e.stageId, isActual, e.qtyVals || {});
+    document.getElementById('btnDelete').style.display = 'inline-block';
+    modalCtx = { stageId: e.stageId, mach: e.mach };
+
+  } else {
+    // ── New entry from "+" cell click ──
+    const st = STAGES[dept].find(s => s.id === stageId);
+    modalCtx = { stageId, mach };
+
+    document.getElementById('modalTitle').textContent = 'Add Entry';
+    document.getElementById('modalSub').textContent   = `${st ? st.name : (stageId||'Entry')}${mach ? ' – ' + mach : ''} · ${dept.toUpperCase()}`;
+
+    // Pre-fill job card if coming from job card or station view
+    if (prefillJobCard) jcSel.value = prefillJobCard;
+
+    document.getElementById('fDesc').value     = '';
+    document.getElementById('fDate').value     = prefillDate || new Date().toISOString().split('T')[0];
+    document.getElementById('fShift').value    = 'Day';
+    document.getElementById('fOperator').value = '';
+    document.getElementById('fNotes').value    = '';
+    document.getElementById('fStage').value    = st ? st.name : (stageId || '');
+    populateWorkstations(stageId, mach);
+    buildQtySection(stageId, false, {});
+  }
+
+  document.getElementById('entryOverlay').classList.add('open');
+}
+
+function setUomHints(st) {
+  // UOM hints are now embedded inside buildQtySection — nothing to do here
+}
+
+function populateWorkstations(stageId, currentMach) {
+  const st  = STAGES[dept].find(s => s.id === stageId);
+  const sel = document.getElementById('fWorkstation');
+  sel.innerHTML = '';
+  if (st && st.sub) {
+    st.sub.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m;
+      if (m === currentMach) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  } else {
+    const opt = document.createElement('option');
+    opt.value = st ? st.name : stageId;
+    opt.textContent = st ? st.name : stageId;
+    sel.appendChild(opt);
+  }
+}
+
+function jobCardChanged() {
+  const val = document.getElementById('fJobCard').value;
+  const isManual = (val === '__manual__' || val === '');
+  document.getElementById('manualNote').classList.toggle('show', val === '__manual__');
+}
+
+// ═══════════════════════════════════════════════
+// ENTRY MODAL — SAVE / DELETE
+// ═══════════════════════════════════════════════
+function toggleActual() {
+  const sId      = resolveStageId();
+  const curVals  = collectQtyValues(sId);
+  isActual       = !isActual;
+  document.getElementById('toggleTrack').classList.toggle('on', isActual);
+  document.getElementById('toggleLabel').textContent = isActual ? 'Actual recorded' : 'Plan only — toggle to include actuals';
+  buildQtySection(sId, isActual, curVals);
+}
+
+function resolveStageId() {
+  // Get stageId from modal context or fall back to the stage input text
+  const fromCtx = modalCtx.stageId;
+  if (fromCtx) return fromCtx;
+  const stageName = document.getElementById('fStage').value;
+  return STAGES[dept].find(s => s.name === stageName)?.id || stageName;
+}
+
+function saveEntry() {
+  const jcVal  = document.getElementById('fJobCard').value;
+  const isMan  = (jcVal === '__manual__' || jcVal === '');
+  const op     = document.getElementById('fOperator').value.trim();
+  const notes  = document.getElementById('fNotes').value.trim();
+  const desc   = document.getElementById('fDesc').value.trim();
+  const date   = document.getElementById('fDate').value;
+  const shift  = document.getElementById('fShift').value;
+  const wks    = document.getElementById('fWorkstation').value;
+  const sId    = resolveStageId();
+  const st     = STAGES[dept].find(s => s.id === sId);
+
+  const qtyVals       = collectQtyValues(sId);
+  const primaryPlanned = getPrimaryPlanned(sId, qtyVals);
+
+  if (!jcVal && !desc) {
+    toast('Select a job card or enter a description for manual entry', 'err');
+    return;
+  }
+  if (primaryPlanned <= 0) {
+    toast('Enter a planned quantity', 'err');
+    return;
+  }
+
+  const id = editingId || newEntryId();
+
+  entries[id] = {
+    jobCard:   isMan ? null : jcVal,
+    desc,
+    isManual:  isMan,
+    isActual,
+    qtyVals,
+    planned:   primaryPlanned,
+    actual:    getPrimaryActual(sId, qtyVals),
+    uom:       getPrimaryUom(sId, false),
+    actualUom: getPrimaryUom(sId, true),
+    operator:  op,
+    notes,
+    date,
+    shift,
+    stageId:   sId,
+    mach:      wks || '_',
+    dept,   // store dept so cross-dept filtering works correctly
+  };
+
+  closeEntry();
+  renderAll();
+
+  // Check if this entry created a machine conflict
+  const cmap = buildConflictMap();
+  const ck   = conflictKey(sId, wks || '_', date);
+  if (SHARED_MACHINES.includes(sId) && cmap.has(ck)) {
+    const conflictEntries = cmap.get(ck).map(cid => entries[cid]);
+    const depts = [...new Set(conflictEntries.map(e => e.dept?.toUpperCase()).filter(Boolean))];
+    setTimeout(() => toast(`⚠ Machine conflict: ${wks || sId} is also booked for ${depts.filter(d => d !== dept.toUpperCase()).join(', ')} on this date`, 'err'), 300);
+  } else {
+    toast(editingId ? 'Entry updated ✓' : 'Entry saved ✓', 'ok');
+  }
+}
+
+function deleteCurrentEntry() {
+  if (!editingId) return;
+  delete entries[editingId];
+  closeEntry();
+  renderGrid();
+  toast('Entry deleted');
+}
+
+function closeEntry() {
+  document.getElementById('entryOverlay').classList.remove('open');
+  editingId = null;
+  isActual  = false;
+}
+
+// ═══════════════════════════════════════════════
+// ADD JOB MODAL
+// ═══════════════════════════════════════════════
+function openAddJobModal() {
+  // Auto-fill next job ID
+  autoFillJobId();
+  document.getElementById('ajCust').value  = '';
+  document.getElementById('ajProd').value  = '';
+  document.getElementById('ajQty').value   = '';
+  document.getElementById('ajPaper').value = '';
+  document.getElementById('ajArt').value   = 'Pending';
+  document.getElementById('ajDue').value   = new Date().toISOString().split('T')[0];
+  document.getElementById('addJobOverlay').classList.add('open');
+}
+
+function autoFillJobId() {
+  const prefix = dept === 'cp' ? 'CP' : 'ETR';
+  const year   = new Date().getFullYear();
+  const nums   = JOBS[dept].map(j => {
+    const m = j.id.match(/-(\d+)$/);
+    return m ? parseInt(m[1]) : 0;
+  });
+  const next = (Math.max(0, ...nums) + 1).toString().padStart(3, '0');
+  if (!document.getElementById('ajId').value) {
+    document.getElementById('ajId').value = `${prefix}-${year}-${next}`;
+  }
+}
+
+function saveNewJob() {
+  const id    = document.getElementById('ajId').value.trim();
+  const cust  = document.getElementById('ajCust').value.trim();
+  const prod  = document.getElementById('ajProd').value.trim();
+  const qty   = parseInt(document.getElementById('ajQty').value) || 0;
+  const due   = document.getElementById('ajDue').value;
+  const paper = document.getElementById('ajPaper').value.trim();
+  const art   = document.getElementById('ajArt').value;
+
+  if (!id || !cust || !prod || qty <= 0) {
+    toast('Fill in Job ID, Customer, Product and Qty', 'err');
+    return;
+  }
+  if (JOBS[dept].find(j => j.id === id)) {
+    toast('Job ID already exists', 'err');
+    return;
+  }
+
+  JOBS[dept].unshift({ id, cust, prod, qty, done:0, status:'open', due: due || new Date().toISOString().split('T')[0], art, paper });
+  closeAddJob();
+  renderAll();
+  toast(`${id} added ✓`, 'ok');
+}
+
+function closeAddJob() {
+  document.getElementById('addJobOverlay').classList.remove('open');
+  document.getElementById('ajId').value = '';
+}
+
+// ═══════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════
+function overlayClick(ev, id) {
+  if (ev.target === document.getElementById(id)) {
+    if (id === 'entryOverlay')    closeEntry();
+    if (id === 'addJobOverlay')   closeAddJob();
+    if (id === 'dayPickerOverlay') closeDayPicker();
+  }
+}
+
+// ═══════════════════════════════════════════════
+// PRINT — DAY PICKER
+// ═══════════════════════════════════════════════
+let selectedPrintDay = null;
+
+function openDayPicker() {
+  selectedPrintDay = null;
+  document.getElementById('doPrintBtn').disabled = true;
+  document.getElementById('doPrintBtn').style.opacity = '.5';
+
+  const grid = document.getElementById('dayPickerGrid');
+  grid.innerHTML = '';
+  const today = new Date();
+
+  DAYS.forEach((day, i) => {
+    const dateStr = getDayDate(i);
+    const rk      = `day-${i}`;
+    // Check if any entries exist for this day (any dept)
+    const hasEnt  = Object.keys(entries).some(k => k.startsWith(rk + '__'));
+    const isToday = getDayDate(i) === today.toLocaleDateString('en-KE', {day:'numeric', month:'short'});
+    const btn = document.createElement('div');
+    btn.className = `day-pick-btn${isToday ? ' today' : ''}${hasEnt ? ' has-entries' : ''}`;
+    btn.dataset.dayIdx = i;
+    btn.innerHTML = `
+      <div class="dpb-day">${day}</div>
+      <div class="dpb-date">${dateStr}</div>
+      <div class="dpb-dot"></div>`;
+    btn.onclick = () => selectPrintDay(i, btn);
+    grid.appendChild(btn);
+  });
+
+  const sub = document.getElementById('dayPickerSub');
+  const v   = document.getElementById('weekPicker').value;
+  sub.textContent = v ? `Week ${v.split('-W')[1]}, ${v.split('-W')[0]}` : 'Select the day to print';
+  document.getElementById('dayPickerOverlay').classList.add('open');
+}
+
+function selectPrintDay(idx, el) {
+  document.querySelectorAll('.day-pick-btn').forEach(b => b.style.background = '');
+  el.style.background = 'var(--blue-bg)';
+  el.style.borderColor = 'var(--blue)';
+  selectedPrintDay = idx;
+  document.getElementById('doPrintBtn').disabled = false;
+  document.getElementById('doPrintBtn').style.opacity = '1';
+}
+
+function closeDayPicker() {
+  document.getElementById('dayPickerOverlay').classList.remove('open');
+  selectedPrintDay = null;
+}
+
+// ═══════════════════════════════════════════════
+// PRINT — GENERATE DOCUMENT
+// ═══════════════════════════════════════════════
+function executePrint() {
+  if (selectedPrintDay === null) return;
+  const scope      = document.getElementById('printScope').value;
+  const depts      = scope === 'all' ? ['cp','etr'] : [dept];
+  const dayIdx     = selectedPrintDay;
+  const dayName    = DAYS[dayIdx];
+  const dateStr    = getDayDate(dayIdx);
+  const rk         = `day-${dayIdx}`;
+  const weekVal    = document.getElementById('weekPicker').value;
+  const weekLabel  = weekVal ? `Week ${weekVal.split('-W')[1]}, ${weekVal.split('-W')[0]}` : '';
+
+  // Collect all entries for this day across selected depts
+  // We store entries by rowKey__stageId__mach — for week view rowKey = day-N
+  // We also need job card view entries where rowKey = jobId
+  // For daily print we show ALL entries that have date = this day's date OR rowKey = day-N
+
+  const sections = [];
+
+  depts.forEach(d => {
+    const deptLabel = d === 'cp' ? 'Computer Paper' : 'ETR / Thermal';
+    const stages    = STAGES[d];
+    const deptRows  = [];
+
+    stages.forEach(st => {
+      if (st.disabled) return;
+      const machines = (st.sub) ? st.sub : [null];
+      machines.forEach(mach => {
+        // Use the unified filter: dept + stageId + mach + date
+        const isoDate = getDayISO(dayIdx);
+        const matched = getEntriesFor({ dept: d, stageId: st.id, mach: mach || '_', date: isoDate });
+
+        matched.forEach(([id, e]) => {
+          deptRows.push({
+            stage:     st.name,
+            mach:      mach || '—',
+            jobCard:   e.jobCard || '—',
+            desc:      e.desc    || '',
+            isManual:  e.isManual,
+            isActual:  e.isActual,
+            qtyVals:   e.qtyVals || {},
+            uom:       e.uom     || '',
+            operator:  e.operator || '—',
+            shift:     e.shift   || 'Day',
+            notes:     e.notes   || '',
+            stageId:   st.id,
+          });
+        });
+      });
+    });
+
+    sections.push({ dept: d, label: deptLabel, rows: deptRows });
+  });
+
+  // Build print HTML and open via Blob URL (avoids popup-blocked issues)
+  const html = buildPrintHTML(dayName, dateStr, weekLabel, sections);
+  const blob = new Blob([html], { type: 'text/html' });
+  const url  = URL.createObjectURL(blob);
+  const w    = window.open(url, '_blank');
+  if (w) {
+    w.addEventListener('load', () => { w.print(); URL.revokeObjectURL(url); });
+  } else {
+    // Fallback: download the file
+    const a = document.createElement('a');
+    a.href = url; a.download = `VCL_Schedule_${dayName}_${dateStr}.html`;
+    a.click(); URL.revokeObjectURL(url);
+    toast('Schedule saved — open the file to print', 'ok');
+  }
+  closeDayPicker();
+}
+
+function buildPrintHTML(dayName, dateStr, weekLabel, sections) {
+  const generatedAt = new Date().toLocaleTimeString('en-KE', {hour:'2-digit', minute:'2-digit'});
+
+  let deptSections = '';
+  sections.forEach(sec => {
+    if (sec.rows.length === 0) {
+      deptSections += `
+        <div class="dept-block">
+          <div class="dept-title">${sec.label}</div>
+          <p class="empty">No entries scheduled for this day.</p>
+        </div>`;
+      return;
+    }
+
+    let rows = '';
+    sec.rows.forEach((r, idx) => {
+      const bg = idx % 2 === 0 ? '#fff' : '#f8f9fc';
+      const typeTag = r.isManual ? '<span class="tag tag-manual">Manual</span>'
+                    : r.isActual ? '<span class="tag tag-actual">Actual</span>'
+                    : '<span class="tag tag-plan">Plan</span>';
+
+      // Build qty display
+      let qtyDisplay = '';
+      if (r.stageId === 'print') {
+        const reels  = r.qtyVals['fPlannedReels']  || 0;
+        const sheets = r.qtyVals['fPlannedSheets'] || 0;
+        const actSh  = r.qtyVals['fActualSheets']  || 0;
+        qtyDisplay   = `${reels} reels / ${sheets} sheets`;
+        if (r.isActual && actSh) qtyDisplay += `<br><span style="color:#0e9e5a;font-weight:600">${actSh} sheets (actual)</span>`;
+      } else {
+        const cfg    = STAGE_QTY[r.stageId] || STAGE_QTY['collate'];
+        const pField = cfg.planned[0];
+        const aField = cfg.actual[0];
+        const pVal   = pField ? (r.qtyVals[pField.id] || 0) : 0;
+        const aVal   = aField ? (r.qtyVals[aField.id] || 0) : 0;
+        const pUom   = pField ? pField.uom : r.uom;
+        const aUom   = aField ? aField.uom : r.uom;
+        qtyDisplay   = `${pVal} ${pUom}`;
+        if (r.isActual && aVal) qtyDisplay += `<br><span style="color:#0e9e5a;font-weight:600">${aVal} ${aUom} (actual)</span>`;
+      }
+
+      rows += `
+        <tr style="background:${bg}">
+          <td>${r.stage}${r.mach !== '—' ? '<br><span class="sub">' + r.mach + '</span>' : ''}</td>
+          <td>${r.isManual ? '<em style="color:#7c3aed">' + (r.desc || 'Manual') + '</em>' : '<strong>' + r.jobCard + '</strong>' + (r.desc ? '<br><span class="sub">' + r.desc + '</span>' : '')}</td>
+          <td>${qtyDisplay}</td>
+          <td>${r.shift}</td>
+          <td>${r.operator}</td>
+          <td>${typeTag}</td>
+          <td>${r.notes ? '⚠ ' + r.notes : '—'}</td>
+          <td class="sign-box"></td>
+        </tr>`;
+    });
+
+    deptSections += `
+      <div class="dept-block">
+        <div class="dept-title">${sec.label}</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Stage / Machine</th>
+              <th>Job Card</th>
+              <th>Planned Qty</th>
+              <th>Shift</th>
+              <th>Operator</th>
+              <th>Type</th>
+              <th>Notes</th>
+              <th>Sign-off</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  });
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>VCL Daily Production Schedule — ${dayName} ${dateStr}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; font-size: 12px; color: #1e2235; background: #fff; }
+  @page { size: A4 landscape; margin: 15mm 12mm; }
+
+  /* Header */
+  .page-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    border-bottom: 3px solid #2B3990; padding-bottom: 10px; margin-bottom: 16px;
+  }
+  .logo-row { display: flex; align-items: center; gap: 12px; }
+  .logo-box {
+    width: 40px; height: 40px; background: #2B3990; border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 700; color: #fff;
+  }
+  .logo-name { font-size: 16px; font-weight: 700; color: #2B3990; letter-spacing: .3px; }
+  .logo-sub  { font-size: 10px; color: #6b7090; margin-top: 2px; }
+  .doc-meta  { text-align: right; }
+  .doc-title { font-size: 18px; font-weight: 700; color: #1e2235; }
+  .doc-date  { font-size: 12px; color: #6b7090; margin-top: 3px; }
+  .doc-week  { font-size: 11px; color: #b0b4cc; margin-top: 2px; font-family: 'IBM Plex Mono', monospace; }
+
+  /* Dept section */
+  .dept-block { margin-bottom: 22px; break-inside: avoid; }
+  .dept-title {
+    font-size: 13px; font-weight: 700; color: #2B3990;
+    background: #eef0fa; padding: 6px 10px; border-radius: 5px;
+    margin-bottom: 6px; border-left: 4px solid #2B3990;
+  }
+  .empty { font-size: 11px; color: #b0b4cc; padding: 8px 10px; font-style: italic; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  thead tr { background: #1e2235; color: #fff; }
+  th { padding: 7px 8px; text-align: left; font-weight: 600; font-size: 10px; letter-spacing: .4px; text-transform: uppercase; }
+  td { padding: 7px 8px; border-bottom: 1px solid #e8eaf2; vertical-align: top; line-height: 1.4; }
+  tr:last-child td { border-bottom: none; }
+  .sub { font-size: 10px; color: #6b7090; }
+
+  /* Tags */
+  .tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 9px; font-weight: 700; letter-spacing: .5px; }
+  .tag-plan   { background: #eef0fa; color: #2B3990; }
+  .tag-actual { background: #e6f7ef; color: #0e9e5a; }
+  .tag-manual { background: #f3eeff; color: #7c3aed; }
+
+  /* Sign-off box */
+  .sign-box { width: 60px; border: 1px solid #ccc; min-height: 24px; }
+
+  /* Footer */
+  .page-footer {
+    margin-top: 16px; border-top: 1px solid #e8eaf2; padding-top: 8px;
+    display: flex; justify-content: space-between;
+    font-size: 9px; color: #b0b4cc; font-family: 'IBM Plex Mono', monospace;
+  }
+  .sign-section {
+    margin-top: 20px; display: flex; gap: 40px;
+  }
+  .sign-field { flex: 1; }
+  .sign-line  { border-bottom: 1px solid #1e2235; margin-bottom: 4px; height: 28px; }
+  .sign-label { font-size: 10px; color: #6b7090; }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+  <div class="page-header">
+    <div class="logo-row">
+      <div class="logo-box">VCL</div>
+      <div>
+        <div class="logo-name">Vimit Converters Ltd</div>
+        <div class="logo-sub">Production Schedule</div>
+      </div>
+    </div>
+    <div class="doc-meta">
+      <div class="doc-title">${dayName} — ${dateStr}</div>
+      <div class="doc-date">Daily Production Schedule</div>
+      <div class="doc-week">${weekLabel} · Generated ${generatedAt}</div>
+    </div>
+  </div>
+
+  ${deptSections}
+
+  <div class="sign-section">
+    <div class="sign-field">
+      <div class="sign-line"></div>
+      <div class="sign-label">Production Manager Sign-off</div>
+    </div>
+    <div class="sign-field">
+      <div class="sign-line"></div>
+      <div class="sign-label">Floor Supervisor Sign-off</div>
+    </div>
+    <div class="sign-field">
+      <div class="sign-line"></div>
+      <div class="sign-label">Date &amp; Time</div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <span>Vimit Converters Ltd · Production Planner</span>
+    <span>CONFIDENTIAL — Internal Use Only</span>
+    <span>Printed: ${new Date().toLocaleString('en-KE')}</span>
+  </div>
+</body>
+</html>`;
+}
+
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast' + (type ? ' ' + type : '');
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 2400);
+}
+</script>
+</body>
+</html>
