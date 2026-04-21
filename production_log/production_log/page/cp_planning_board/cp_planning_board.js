@@ -39,6 +39,47 @@ const UOM_BY_STAGE = {
 // the prototype). Sunday is treated as non-working.
 const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+// Qty field definitions per stage. `key` matches the DocType fieldname
+// on PSL / PE, so the same map drives both the modal form and the
+// save payload. Printing is asymmetric: two planned fields (reels in,
+// sheets out) and one actual field (sheets).
+const STAGE_QTY = {
+	design: {
+		planned: [{ key: "planned_qty",    label: "Planned Days",   uom: "days" }],
+		actual:  [{ key: "actual_qty",     label: "Actual Days",    uom: "days" }],
+	},
+	printing: {
+		planned: [
+			{ key: "planned_reels",  label: "Planned Reels",  uom: "reels" },
+			{ key: "planned_sheets", label: "Planned Sheets", uom: "sheets" },
+		],
+		actual: [{ key: "actual_sheets", label: "Actual Sheets", uom: "sheets" }],
+	},
+	collation: {
+		planned: [{ key: "planned_qty",    label: "Planned Sets",   uom: "sets" }],
+		actual:  [{ key: "actual_qty",     label: "Actual Sets",    uom: "sets" }],
+	},
+	slitting: {
+		planned: [{ key: "planned_qty",    label: "Planned Rolls",  uom: "rolls" }],
+		actual:  [{ key: "actual_qty",     label: "Actual Rolls",   uom: "rolls" }],
+	},
+};
+
+// Options for the Job Card Type Select. Order matches the PSL JSON.
+const JOB_CARD_DOCTYPES = [
+	"Job Card Computer Paper",
+	"Job Card Label",
+	"Job Card Carton",
+];
+
+// PSL status values — kept in one place so the modal and the tile
+// renderer agree on the option set.
+const STATUS_OPTIONS = ["Draft", "Confirmed", "Cancelled"];
+
+// Shift option values — stored on PSL/PE verbatim. Prototype form
+// with the " Shift" suffix, per user direction.
+const SHIFT_OPTIONS = ["Day Shift", "Evening Shift", "Night Shift"];
+
 
 frappe.pages["cp_planning_board"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({
@@ -155,6 +196,108 @@ class ProductionPlanner {
 					</section>
 				</div>
 
+				<div class="overlay entry-overlay" data-role="entry-overlay">
+					<div class="modal">
+						<div class="modal-head">
+							<div>
+								<div class="modal-title" data-role="modal-title">Add Entry</div>
+								<div class="modal-sub" data-role="modal-sub"></div>
+							</div>
+							<button class="modal-close" type="button" data-role="modal-close" aria-label="Close">×</button>
+						</div>
+
+						<div class="modal-body">
+							<div class="manual-note" data-role="manual-note">
+								⚡ <strong>Manual entry</strong> — no job card linked. Use for maintenance, machine trials, or ad-hoc work.
+							</div>
+
+							<div class="field-row cols-2">
+								<div class="field">
+									<label>Job Card Type</label>
+									<select data-field="job_card_doctype">
+										<option value="">—</option>
+										${JOB_CARD_DOCTYPES.map(
+											(d) => `<option value="${d}">${d}</option>`,
+										).join("")}
+									</select>
+								</div>
+								<div class="field">
+									<label>Job Card</label>
+									<input type="text" data-field="job_card" placeholder="e.g. JCCP-2026-00042" />
+								</div>
+							</div>
+
+							<div class="field" data-role="description-field" style="display:none;">
+								<label>Description <span class="uom">(manual entries)</span></label>
+								<input type="text" data-field="description" placeholder="Maintenance, machine trial, plate change…" />
+							</div>
+
+							<div class="field-row cols-3">
+								<div class="field">
+									<label>Stage</label>
+									<input type="text" class="readonly" data-field="workstation_type" readonly />
+								</div>
+								<div class="field">
+									<label>Workstation</label>
+									<select data-field="workstation"></select>
+								</div>
+								<div class="field">
+									<label>Date</label>
+									<input type="date" data-field="date" />
+								</div>
+							</div>
+
+							<div class="field-row cols-3">
+								<div class="field">
+									<label>Shift</label>
+									<select data-field="shift">
+										<option value="">—</option>
+										${SHIFT_OPTIONS.map(
+											(s) => `<option value="${s}">${s}</option>`,
+										).join("")}
+									</select>
+								</div>
+								<div class="field">
+									<label>Operator / Assigned To</label>
+									<input type="text" data-field="operator" />
+								</div>
+								<div class="field">
+									<label>Status</label>
+									<select data-field="status">
+										${STATUS_OPTIONS.map(
+											(s) => `<option value="${s}">${s}</option>`,
+										).join("")}
+									</select>
+								</div>
+							</div>
+
+							<div class="divider"></div>
+							<div class="section-label">Quantities</div>
+							<div data-role="qty-section"></div>
+
+							<div class="toggle-row">
+								<div class="toggle-track" data-role="actual-toggle"><div class="toggle-thumb"></div></div>
+								<div class="toggle-label" data-role="toggle-label">Plan only — toggle to include actuals</div>
+							</div>
+
+							<div class="field">
+								<label>Notes / Issues</label>
+								<textarea data-field="notes" rows="2"></textarea>
+							</div>
+						</div>
+
+						<div class="modal-foot">
+							<div class="foot-left">
+								<button class="btn btn-danger" data-role="delete-btn" style="display:none;">Delete Entry</button>
+							</div>
+							<div class="foot-right">
+								<button class="btn btn-ghost" data-role="cancel-btn">Cancel</button>
+								<button class="btn btn-primary" data-role="save-btn">Save Entry</button>
+							</div>
+						</div>
+					</div>
+				</div>
+
 				<div class="toast" role="status" aria-live="polite"></div>
 			</div>
 		`;
@@ -204,20 +347,44 @@ class ProductionPlanner {
 			this._onWeekChange();
 		});
 
-		// Entry tile click — opens the edit modal in Phase 3. For now
-		// just toast the target so testers can confirm the wiring.
+		// Entry tile click — open modal in edit mode on the matched
+		// PSL or PE.
 		this.$root.on("click", ".entry-block", (e) => {
-			const name = $(e.currentTarget).data("name");
-			this.toast(__("Edit {0} — modal lands in Phase 3.", [name]), "ok");
+			const $tile = $(e.currentTarget);
+			const name = $tile.data("name");
+			const kind = $tile.data("kind"); // "plan" | "actual"
+			this._openEntryModal({ mode: "edit", name, kind });
 		});
 
-		// Empty-cell "+" button. Same story — Phase 3 opens the modal.
+		// Empty-cell "+" button. Cell context (date + stage + ws) goes
+		// into the modal as pre-fill.
 		this.$root.on("click", ".add-btn", (e) => {
 			e.stopPropagation();
 			const $btn = $(e.currentTarget);
-			const iso = $btn.data("date");
-			const ws = $btn.data("workstation");
-			this.toast(__("Add on {0} / {1} — modal lands in Phase 3.", [iso, ws]), "ok");
+			this._openEntryModal({
+				mode: "new",
+				date: $btn.data("date"),
+				stageId: $btn.data("stage-id"),
+				workstation: $btn.data("workstation"),
+			});
+		});
+
+		// ── Modal wiring ──
+		this.$root.on("click", '[data-role="modal-close"]', () => this._closeEntryModal());
+		this.$root.on("click", '[data-role="cancel-btn"]', () => this._closeEntryModal());
+		this.$root.on("click", ".entry-overlay", (e) => {
+			// Click on the dark backdrop (but not the dialog itself) closes.
+			if ($(e.target).hasClass("entry-overlay")) this._closeEntryModal();
+		});
+		this.$root.on("click", '[data-role="save-btn"]', () => this._saveEntry());
+		this.$root.on("click", '[data-role="delete-btn"]', () => this._deleteEntry());
+		this.$root.on("click", '[data-role="actual-toggle"]', () => this._toggleActual());
+
+		// Job Card Type switch: empty means manual. Keep description
+		// field + ⚡ banner in sync.
+		this.$root.on("change", '[data-field="job_card_doctype"]', (e) => {
+			const isManual = !$(e.currentTarget).val();
+			this._setManualMode(isManual);
 		});
 
 		// Print Daily (Phase 4)
@@ -618,5 +785,373 @@ class ProductionPlanner {
 				display: `${dayNum} ${monShort}`,
 			};
 		});
+	}
+
+	// ─────────────────────────────────────────────────────────────
+	// Modal — open / close
+	// ─────────────────────────────────────────────────────────────
+	_openEntryModal({ mode, name, kind, date, stageId, workstation } = {}) {
+		const $modal = this.$root.find(".entry-overlay");
+		this._resetModalForm();
+
+		let stage;
+		let entry = null;
+
+		if (mode === "edit" && name) {
+			entry = this._lookupEntry(name, kind);
+			if (!entry) {
+				this.toast(__("Entry not found — reload the board."), "err");
+				return;
+			}
+			stageId = this._stageIdFromWT(entry.workstation_type);
+			stage = this.stages.find((s) => s.id === stageId);
+			workstation = entry.workstation;
+			date = entry.date;
+		} else {
+			stage = this.stages.find((s) => s.id === stageId);
+		}
+
+		if (!stage) {
+			this.toast(__("Unknown stage — reload the board."), "err");
+			return;
+		}
+
+		this._currentEditing = {
+			mode: mode || "new",
+			name: entry ? entry.name : null,
+			kind: kind || (entry && entry._kind) || null,
+		};
+
+		// Header copy
+		$modal.find('[data-role="modal-title"]').text(
+			entry ? __("Edit Entry") : __("Add Entry"),
+		);
+		$modal.find('[data-role="modal-sub"]').text(
+			entry
+				? `${entry.name} · ${stage.name} · ${workstation}`
+				: `${stage.name} · ${workstation || "—"}`,
+		);
+		$modal.find('[data-role="delete-btn"]').toggle(!!entry);
+
+		// Seed form values. For a new entry we default shift=Day Shift,
+		// status=Draft, date=clicked day (falls back to Monday).
+		const defaults = {
+			job_card_doctype: "",
+			job_card: "",
+			is_manual: 0,
+			description: "",
+			workstation_type: stage.name,
+			workstation: workstation || stage.workstations[0] || "",
+			date: date || this._iso(this.weekStart),
+			shift: "Day Shift",
+			operator: "",
+			status: "Draft",
+			planned_qty: "",
+			planned_reels: "",
+			planned_sheets: "",
+			actual_qty: "",
+			actual_sheets: "",
+			notes: "",
+		};
+		const values = entry ? Object.assign({}, defaults, entry) : defaults;
+
+		this._populateWorkstationOptions(stage.id, values.workstation);
+
+		// Scalar fields.
+		$modal.find("[data-field]").each((i, el) => {
+			const $f = $(el);
+			const key = $f.data("field");
+			if (!(key in values)) return;
+			$f.val(values[key] == null ? "" : values[key]);
+		});
+
+		// Manual mode follows the Job Card Type value (+ is_manual for
+		// server-side saved entries).
+		const isManual = !!values.is_manual || !values.job_card_doctype;
+		this._setManualMode(isManual);
+
+		// Actual toggle on if we're editing a PE tile or the row has
+		// any actual figures recorded.
+		const hasActual =
+			Number(values.actual_qty || 0) > 0 ||
+			Number(values.actual_sheets || 0) > 0;
+		const toggleOn = this._currentEditing.kind === "actual" || hasActual;
+		this._setActualToggle(toggleOn);
+
+		this._buildQtySection(stage.id, toggleOn, values);
+
+		$modal.addClass("open");
+		setTimeout(() => {
+			$modal.find('[data-field="job_card_doctype"]').trigger("focus");
+		}, 50);
+	}
+
+	_closeEntryModal() {
+		this.$root.find(".entry-overlay").removeClass("open");
+		this._currentEditing = null;
+	}
+
+	_resetModalForm() {
+		const $m = this.$root.find(".entry-overlay");
+		$m.find("input, select, textarea").each((i, el) => {
+			if (el.type === "checkbox" || el.type === "radio") el.checked = false;
+			else el.value = "";
+		});
+		$m.find('[data-role="qty-section"]').empty();
+		$m.find('[data-role="manual-note"]').removeClass("show");
+		$m.find('[data-role="description-field"]').hide();
+		$m.find('[data-role="actual-toggle"]').removeClass("on");
+		$m.find('[data-role="toggle-label"]').text(
+			__("Plan only — toggle to include actuals"),
+		);
+		$m.find('[data-field="job_card"]').prop("disabled", false);
+	}
+
+	_lookupEntry(name, kind) {
+		if (kind === "actual") return this.actuals[name] || null;
+		return this.entries[name] || this.actuals[name] || null;
+	}
+
+	// ─────────────────────────────────────────────────────────────
+	// Modal — field helpers
+	// ─────────────────────────────────────────────────────────────
+	_populateWorkstationOptions(stageId, currentValue) {
+		const stage = this.stages.find((s) => s.id === stageId);
+		const $sel = this.$root.find('[data-field="workstation"]');
+		$sel.empty();
+		if (!stage) return;
+		for (const ws of stage.workstations) {
+			const opt = document.createElement("option");
+			opt.value = ws;
+			opt.textContent = ws;
+			if (ws === currentValue) opt.selected = true;
+			$sel.append(opt);
+		}
+	}
+
+	_buildQtySection(stageId, includeActual, savedValues) {
+		const cfg = STAGE_QTY[stageId] || { planned: [], actual: [] };
+		const render = (f) => {
+			const raw = savedValues && savedValues[f.key];
+			const val =
+				raw == null || raw === undefined || Number.isNaN(Number(raw))
+					? ""
+					: raw;
+			return (
+				'<div class="field">' +
+				`<label>${f.label} <span class="uom">(${f.uom})</span></label>` +
+				`<input type="number" step="0.01" min="0" data-field="${f.key}" value="${val}" />` +
+				"</div>"
+			);
+		};
+
+		const planned = cfg.planned.map(render).join("");
+		const actual = includeActual ? cfg.actual.map(render).join("") : "";
+		const cls = cfg.planned.length + (includeActual ? cfg.actual.length : 0) >= 3
+			? "cols-3"
+			: "cols-2";
+
+		this.$root
+			.find('[data-role="qty-section"]')
+			.html(`<div class="field-row ${cls}">${planned}${actual}</div>`);
+	}
+
+	_setManualMode(isManual) {
+		const $m = this.$root.find(".entry-overlay");
+		if (isManual) {
+			$m.find('[data-role="manual-note"]').addClass("show");
+			$m.find('[data-role="description-field"]').show();
+			$m.find('[data-field="job_card_doctype"]').val("");
+			$m.find('[data-field="job_card"]').val("").prop("disabled", true);
+		} else {
+			$m.find('[data-role="manual-note"]').removeClass("show");
+			$m.find('[data-role="description-field"]').hide();
+			$m.find('[data-field="description"]').val("");
+			$m.find('[data-field="job_card"]').prop("disabled", false);
+		}
+	}
+
+	_setActualToggle(on) {
+		const $t = this.$root.find('[data-role="actual-toggle"]');
+		const $l = this.$root.find('[data-role="toggle-label"]');
+		if (on) {
+			$t.addClass("on");
+			$l.text(__("Actual recorded"));
+		} else {
+			$t.removeClass("on");
+			$l.text(__("Plan only — toggle to include actuals"));
+		}
+	}
+
+	_toggleActual() {
+		const $t = this.$root.find('[data-role="actual-toggle"]');
+		const newState = !$t.hasClass("on");
+		this._setActualToggle(newState);
+
+		// Re-render the qty section preserving whatever the user typed.
+		const stageId = this._stageIdFromWT(
+			this.$root.find('[data-field="workstation_type"]').val(),
+		);
+		const savedValues = this._collectFormValues();
+		this._buildQtySection(stageId, newState, savedValues);
+	}
+
+	_collectFormValues() {
+		const out = {};
+		this.$root.find(".entry-overlay [data-field]").each((i, el) => {
+			const $f = $(el);
+			const key = $f.data("field");
+			let v = $f.val();
+			if (el.tagName === "INPUT" && el.type === "number") {
+				v = v === "" ? null : Number(v);
+				if (Number.isNaN(v)) v = null;
+			}
+			out[key] = v;
+		});
+		return out;
+	}
+
+	// ─────────────────────────────────────────────────────────────
+	// Modal — save
+	// ─────────────────────────────────────────────────────────────
+	async _saveEntry() {
+		const $save = this.$root.find('[data-role="save-btn"]');
+		if ($save.prop("disabled")) return;
+
+		const values = this._collectFormValues();
+		const editing = this._currentEditing || {};
+		const toggleOn = this.$root
+			.find('[data-role="actual-toggle"]')
+			.hasClass("on");
+
+		// Dept tab is authoritative for product_line. Stamp unconditionally.
+		values.product_line = this.dept;
+
+		// Manual-vs-job-card invariant — same rules the server-side
+		// before_save enforces. Fail fast here so the user sees the
+		// error without a round-trip.
+		const isManual = !values.job_card_doctype;
+		values.is_manual = isManual ? 1 : 0;
+
+		if (isManual) {
+			if (!String(values.description || "").trim()) {
+				this.toast(__("Description is required for manual entries."), "err");
+				return;
+			}
+			values.job_card_doctype = null;
+			values.job_card = null;
+		} else {
+			if (!String(values.job_card || "").trim()) {
+				this.toast(__("Job Card is required unless this is a manual entry."), "err");
+				return;
+			}
+		}
+
+		if (!values.workstation) {
+			this.toast(__("Workstation is required."), "err");
+			return;
+		}
+		if (!values.date) {
+			this.toast(__("Date is required."), "err");
+			return;
+		}
+
+		$save.prop("disabled", true).text(__("Saving…"));
+
+		try {
+			// Editing a PE tile directly — save as PE, don't touch PSL.
+			if (editing.mode === "edit" && editing.kind === "actual") {
+				const pePayload = Object.assign({}, values, { name: editing.name });
+				await this.call("save_production_entry", {
+					entry: JSON.stringify(pePayload),
+				});
+				this.toast(__("Entry updated ✓"), "ok");
+				this._closeEntryModal();
+				this._loadAll();
+				return;
+			}
+
+			// Otherwise: save/update PSL. Strip PE-only fields first —
+			// PSL doesn't have actual_qty / actual_sheets / schedule_line.
+			const pslPayload = Object.assign({}, values);
+			delete pslPayload.actual_qty;
+			delete pslPayload.actual_sheets;
+			delete pslPayload.schedule_line;
+
+			if (editing.mode === "edit" && editing.kind === "plan" && editing.name) {
+				pslPayload.name = editing.name;
+			}
+
+			const pslName = await this.call("save_schedule_entry", {
+				entry: JSON.stringify(pslPayload),
+			});
+
+			// If the actual toggle is on, also create/update a PE that
+			// points back at this PSL. Phase 3 always creates a new PE —
+			// updating an existing linked PE requires editing its tile
+			// directly.
+			if (toggleOn) {
+				const pePayload = Object.assign({}, values, {
+					schedule_line: pslName,
+				});
+				delete pePayload.name;
+				try {
+					await this.call("save_production_entry", {
+						entry: JSON.stringify(pePayload),
+					});
+				} catch (err) {
+					this.toast(
+						__("Plan saved; actual failed — see console."),
+						"err",
+					);
+					this._closeEntryModal();
+					this._loadAll();
+					return;
+				}
+			}
+
+			this.toast(
+				editing.mode === "edit" ? __("Entry updated ✓") : __("Entry saved ✓"),
+				"ok",
+			);
+			this._closeEntryModal();
+			this._loadAll();
+		} catch (err) {
+			// call() already toasted.
+		} finally {
+			$save.prop("disabled", false).text(__("Save Entry"));
+		}
+	}
+
+	// ─────────────────────────────────────────────────────────────
+	// Modal — delete
+	// ─────────────────────────────────────────────────────────────
+	async _deleteEntry() {
+		const editing = this._currentEditing || {};
+		if (editing.mode !== "edit" || !editing.name) return;
+
+		const doctype =
+			editing.kind === "actual"
+				? "Production Entry"
+				: "Production Schedule Line";
+
+		const confirmed = await new Promise((resolve) => {
+			frappe.confirm(
+				__("Delete {0} {1}? This cannot be undone.", [doctype, editing.name]),
+				() => resolve(true),
+				() => resolve(false),
+			);
+		});
+		if (!confirmed) return;
+
+		try {
+			await frappe.db.delete_doc(doctype, editing.name);
+			this.toast(__("Deleted"), "ok");
+			this._closeEntryModal();
+			this._loadAll();
+		} catch (err) {
+			console.error("[planner] delete failed", err);
+			this.toast(__("Delete failed — see console."), "err");
+		}
 	}
 }
