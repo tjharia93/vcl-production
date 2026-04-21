@@ -80,6 +80,14 @@ const STATUS_OPTIONS = ["Draft", "Confirmed", "Cancelled"];
 // with the " Shift" suffix, per user direction.
 const SHIFT_OPTIONS = ["Day Shift", "Evening Shift", "Night Shift"];
 
+// Left-panel Job Card doctype per planner dept. Mirrors the server's
+// JOB_CARD_DOCTYPE_BY_PRODUCT_LINE map and drives the "+ Add Job"
+// route. Carton isn't in Phase 1 planner scope.
+const JOB_CARD_DOCTYPE_BY_DEPT = {
+	"Computer Paper": "Job Card Computer Paper",
+	"ETR / Thermal": "Job Card Label",
+};
+
 
 frappe.pages["cp_planning_board"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({
@@ -133,6 +141,14 @@ class ProductionPlanner {
 		this.conflicts = [];
 		this.conflictByCell = {};
 		this.conflictedNames = new Set();
+
+		// Left-panel Job Card state. `jobCards` is the full server
+		// payload for the current dept; `jobCardFilter` is the current
+		// `.lp-search` query (client-side filter only); `selectedJobCard`
+		// is `{doctype, name}` when a tile is active, otherwise null.
+		this.jobCards = [];
+		this.jobCardFilter = "";
+		this.selectedJobCard = null;
 
 		this._render();
 		this._bindEvents();
@@ -192,12 +208,12 @@ class ProductionPlanner {
 						</div>
 						<div class="lp-list" data-empty>
 							<div style="padding:24px 12px;text-align:center;color:var(--text-faint);font-size:11px;">
-								Job card list arrives in Phase 2.
+								Loading job cards…
 							</div>
 						</div>
 						<div class="lp-foot">
 							<span class="lp-count">0 jobs</span>
-							<button class="btn-add-job" disabled title="Available in Phase 3">+ Add Job</button>
+							<button class="btn-add-job" type="button">+ Add Job</button>
 						</div>
 					</aside>
 
@@ -432,6 +448,17 @@ class ProductionPlanner {
 			this._setManualMode(isManual);
 		});
 
+		// Left-panel Job Card list — search, tile select, + Add Job.
+		this.$root.on("input", ".lp-search", (e) => {
+			this.jobCardFilter = (e.currentTarget.value || "").trim();
+			this._renderJobCards();
+		});
+		this.$root.on("click", ".job-card", (e) => {
+			const $c = $(e.currentTarget);
+			this._onJobCardClick($c.data("name"), $c.data("doctype"));
+		});
+		this.$root.on("click", ".btn-add-job", () => this._onAddJobClick());
+
 		// Print Daily — opens the day picker.
 		this.$root.on("click", ".print-btn", () => this._openDayPicker());
 		this.$root.on("click", '[data-role="day-picker-close"]', () => this._closeDayPicker());
@@ -448,6 +475,12 @@ class ProductionPlanner {
 	}
 
 	_onDeptChange() {
+		// CP job cards aren't valid on ETR entries and vice versa — drop
+		// any active selection + search box before refetch so stale state
+		// can't bleed into the next modal open.
+		this.selectedJobCard = null;
+		this.jobCardFilter = "";
+		this.$root.find(".lp-search").val("");
 		this._loadAll();
 	}
 
@@ -568,7 +601,7 @@ class ProductionPlanner {
 		const dateTo = this._iso(this._addDays(this.weekStart, 5)); // Mon..Sat
 
 		try {
-			const [columns, entries, conflicts] = await Promise.all([
+			const [columns, entries, conflicts, jobCards] = await Promise.all([
 				this.call("get_workstation_columns", { product_line: this.dept }),
 				this.call("get_schedule_entries", {
 					date_from: dateFrom,
@@ -579,6 +612,7 @@ class ProductionPlanner {
 					date_from: dateFrom,
 					date_to: dateTo,
 				}),
+				this.call("get_job_cards", { product_line: this.dept }),
 			]);
 
 			this.columns = Array.isArray(columns) ? columns : [];
@@ -586,10 +620,12 @@ class ProductionPlanner {
 			this.entries = this._indexByName(entries && entries.schedule);
 			this.actuals = this._indexByName(entries && entries.actuals);
 			this._indexConflicts(Array.isArray(conflicts) ? conflicts : []);
+			this.jobCards = Array.isArray(jobCards) ? jobCards : [];
 
 			this._renderViewHeader();
 			this._renderViewGrid();
 			this._renderConflictBadge();
+			this._renderJobCards();
 		} catch (err) {
 			// call() already toasted the user.
 			this._showLoadError();
@@ -629,6 +665,94 @@ class ProductionPlanner {
 			return;
 		}
 		$b.text(`⚠ ${n} conflict${n === 1 ? "" : "s"}`).show();
+	}
+
+	// ─────────────────────────────────────────────────────────────
+	// Left-panel — Job Card tiles
+	// ─────────────────────────────────────────────────────────────
+	_renderJobCards() {
+		const $list = this.$root.find(".lp-list");
+		const $count = this.$root.find(".lp-count");
+		const filter = (this.jobCardFilter || "").toLowerCase();
+		const rows = filter
+			? this.jobCards.filter((jc) => this._jobCardMatches(jc, filter))
+			: this.jobCards;
+
+		$count.text(`${rows.length} job${rows.length === 1 ? "" : "s"}`);
+
+		if (!rows.length) {
+			$list.attr("data-empty", "");
+			const msg = filter
+				? __("No jobs match your search.")
+				: __("No job cards for {0}.", [frappe.utils.escape_html(this.dept)]);
+			$list.html(
+				`<div style="padding:24px 12px;text-align:center;color:var(--text-faint);font-size:11px;">${msg}</div>`,
+			);
+			return;
+		}
+
+		$list.removeAttr("data-empty");
+		const sel = this.selectedJobCard;
+		const html = rows
+			.map((jc) => {
+				const badgeKey = jc.badge || "open";
+				const cardClass = `s-${badgeKey}`;
+				const badgeText = badgeKey.toUpperCase();
+				const isSelected =
+					sel && sel.name === jc.name && sel.doctype === jc.doctype;
+				const name = frappe.utils.escape_html(jc.name || "");
+				const cust = frappe.utils.escape_html(jc.customer || "");
+				const spec = frappe.utils.escape_html(jc.customer_product_spec || "");
+				return `
+					<div class="job-card ${cardClass}${isSelected ? " selected" : ""}"
+						data-name="${name}"
+						data-doctype="${frappe.utils.escape_html(jc.doctype || "")}">
+						<div class="jc-row">
+							<div class="jc-id">${name}</div>
+							<span class="jc-badge badge-${badgeKey}">${badgeText}</span>
+						</div>
+						<div class="jc-cust">${cust || "—"}</div>
+						<div class="jc-meta">${spec || "&nbsp;"}</div>
+					</div>
+				`;
+			})
+			.join("");
+		$list.html(html);
+	}
+
+	_jobCardMatches(jc, filterLower) {
+		return (
+			(jc.name || "").toLowerCase().includes(filterLower) ||
+			(jc.customer || "").toLowerCase().includes(filterLower) ||
+			(jc.customer_product_spec || "")
+				.toLowerCase()
+				.includes(filterLower)
+		);
+	}
+
+	_onJobCardClick(name, doctype) {
+		if (!name || !doctype) return;
+		const already =
+			this.selectedJobCard &&
+			this.selectedJobCard.name === name &&
+			this.selectedJobCard.doctype === doctype;
+		this.selectedJobCard = already ? null : { name, doctype };
+		this._renderJobCards();
+	}
+
+	_onAddJobClick() {
+		const dt = JOB_CARD_DOCTYPE_BY_DEPT[this.dept];
+		if (!dt) {
+			this.toast(
+				__("No Job Card doctype mapped for {0}.", [this.dept]),
+				"err",
+			);
+			return;
+		}
+		// New tab so the planner keeps its week / selection state while
+		// the user creates the Job Card.
+		const slug = dt.toLowerCase().replace(/\s+/g, "-");
+		window.open(`/app/${slug}/new`, "_blank", "noopener");
 	}
 
 	_showLoading() {
@@ -947,10 +1071,14 @@ class ProductionPlanner {
 		$modal.find('[data-role="delete-btn"]').toggle(!!entry);
 
 		// Seed form values. For a new entry we default shift=Day Shift,
-		// status=Draft, date=clicked day (falls back to Monday).
+		// status=Draft, date=clicked day (falls back to Monday). If the
+		// user has a job tile selected in the left panel, pre-fill the
+		// Job Card Type + Job Card — the dept switch always clears the
+		// selection, so the tile cannot mismatch the current dept.
+		const preJc = !entry ? this.selectedJobCard : null;
 		const defaults = {
-			job_card_doctype: "",
-			job_card: "",
+			job_card_doctype: preJc ? preJc.doctype : "",
+			job_card: preJc ? preJc.name : "",
 			is_manual: 0,
 			description: "",
 			workstation_type: stage.name,

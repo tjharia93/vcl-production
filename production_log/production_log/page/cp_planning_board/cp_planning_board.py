@@ -14,6 +14,15 @@ SHARED_WORKSTATION_TYPES = ["Printing"]
 # tag — any workstation tagged `All` is reachable from every dept.
 PLANNER_PRODUCT_LINES = ["Computer Paper", "ETR / Thermal"]
 
+# Left-panel Job Card doctype per planner dept. Carton is intentionally
+# absent — no carton workstations are in Phase 1 scope, so the panel has
+# nothing to render for it. The entry modal's Job Card Type dropdown
+# still offers all three for manual reassignment.
+JOB_CARD_DOCTYPE_BY_PRODUCT_LINE = {
+	"Computer Paper": "Job Card Computer Paper",
+	"ETR / Thermal": "Job Card Label",
+}
+
 
 # ---------------------------------------------------------------------------
 # Columns
@@ -67,6 +76,59 @@ def get_workstation_columns(product_line=None):
 
 	for row in rows:
 		row["is_shared"] = 1 if row["workstation_type"] in SHARED_WORKSTATION_TYPES else 0
+
+	return rows
+
+
+# ---------------------------------------------------------------------------
+# Job Card list (left panel)
+# ---------------------------------------------------------------------------
+@frappe.whitelist()
+def get_job_cards(product_line, search=None, limit=200):
+	"""
+	Return recent, non-cancelled Job Cards for the planner's left panel.
+
+	Picks the Job Card doctype from `JOB_CARD_DOCTYPE_BY_PRODUCT_LINE`;
+	returns `[]` if the caller passes an unknown product line. The Select
+	picker in the entry modal still offers every Job Card doctype for
+	manual reassignment — this method only feeds the browse panel.
+
+	Each row: `name`, `customer`, `customer_product_spec`, `docstatus`,
+	`creation`, plus a derived `badge` (`"active"` when submitted, else
+	`"open"`) and `doctype` so the client can route Add Entry pre-fill
+	without another round-trip.
+	"""
+	doctype = JOB_CARD_DOCTYPE_BY_PRODUCT_LINE.get(product_line)
+	if not doctype:
+		return []
+
+	try:
+		limit = max(1, min(int(limit), 500))
+	except (TypeError, ValueError):
+		limit = 200
+
+	filters = {"docstatus": ["!=", 2]}
+	or_filters = None
+	if search:
+		pattern = f"%{search}%"
+		or_filters = {
+			"name": ["like", pattern],
+			"customer": ["like", pattern],
+			"customer_product_spec": ["like", pattern],
+		}
+
+	rows = frappe.get_all(
+		doctype,
+		fields=["name", "customer", "customer_product_spec", "docstatus", "creation"],
+		filters=filters,
+		or_filters=or_filters,
+		order_by="creation desc",
+		limit_page_length=limit,
+	)
+
+	for row in rows:
+		row["doctype"] = doctype
+		row["badge"] = "active" if row.get("docstatus") == 1 else "open"
 
 	return rows
 

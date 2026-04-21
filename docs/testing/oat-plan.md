@@ -34,6 +34,18 @@ Run OAT **first**, UAT **second**. If OAT fails, UAT cannot begin.
      `Carton` tags — those aren't valid child-table options in the
      Phase 1 planner scope).
 
+* `production_log.patches.patch_v5_1` — idempotent, safe to re-run.
+  Realigns the `custom_product_line_tags` child rows on the eight
+  canonical workstations from FINAL §A2 (Design Desk, Miyakoshi 01/02,
+  Hamada 01, Collator 1/2, Slitter 1/2). Needed because `patch_v5_0`
+  preserved the legacy site default `custom_product_line = 'All'`
+  on every workstation, so both dept tabs in the planner were
+  showing every workstation. After this patch runs, only Design
+  Desk carries `All`; each press/collator/slitter has its specific
+  product-line tags. Any workstation **not** in the canonical table
+  is left untouched — custom workstations Tanuj adds later stay
+  under his control.
+
 **New DocTypes:**
 
 * `Workstation Product Line Tag` (child table, module Production Log)
@@ -287,14 +299,31 @@ Open each of these list views and confirm no 500 / traceback:
 - [ ] `frappe.db.get_value('Custom Field', {'dt': 'Workstation Type', 'fieldname': 'custom_product_line'}, 'options')`
       contains `'ETR / Thermal'` (and still contains `Label` /
       `Carton`). Same check on Workstation's `custom_product_line`.
+- [ ] After `patch_v5_1` runs: for each of the eight canonical
+      workstations, `frappe.get_doc('Workstation', <name>).custom_product_line_tags`
+      yields exactly the tag set from FINAL §A2 (Design Desk → `All`;
+      Miyakoshi 01/02 → `Computer Paper` + `ETR / Thermal`; Hamada 01 /
+      Collator 1/2 → `Computer Paper`; Slitter 1/2 → `ETR / Thermal`).
+      If any workstation in the table doesn't exist yet, the patch
+      skips it silently — create it first, then rerun
+      `bench --site <site> migrate`.
 - [ ] Open `/app/cp_planning_board` in a browser. The page loads with
       the scoped blue header, dept tabs, view buttons, and Print
       Daily button. Browser console shows no JS errors.
-- [ ] Open DevTools → Network. Switching dept tabs fires three
+- [ ] Open DevTools → Network. Switching dept tabs fires four
       parallel requests to
       `production_log.production_log.page.cp_planning_board.cp_planning_board.get_workstation_columns`,
-      `…get_schedule_entries`, and `…get_machine_conflicts`, each
-      returning HTTP 200 with JSON.
+      `…get_schedule_entries`, `…get_machine_conflicts`, and
+      `…get_job_cards`, each returning HTTP 200 with JSON.
+- [ ] Left panel populates with Job Card tiles (no more
+      "Job card list arrives in Phase 2." placeholder). Typing in
+      the search box filters the list client-side; **+ Add Job** is
+      enabled and opens a fresh Job Card form in a new tab.
+- [ ] On the Computer Paper tab the stage header shows columns for
+      Design Desk, Miyakoshi 01, Miyakoshi 02, Hamada 01, Collator 1,
+      Collator 2 — **no Slitter columns**. Switching to ETR / Thermal
+      shows Design Desk, Miyakoshi 01, Miyakoshi 02, Slitter 1,
+      Slitter 2 — **no Hamada / Collator columns**.
 - [ ] The stylesheet request to
       `/assets/production_log/css/cp_planning_board.css` returns
       HTTP 200. If 404, rerun `bench build` and hard-refresh.
