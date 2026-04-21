@@ -213,11 +213,13 @@
   font-size: 9px; padding: 1px 5px; border-radius: 3px;
   font-weight: 600; letter-spacing: .5px;
 }
-#cp-planner-root .tag-design   { background: var(--purple-bg); color: var(--purple); }
-#cp-planner-root .tag-printing { background: var(--blue-bg);   color: var(--blue); }
-#cp-planner-root .tag-collation{ background: var(--green-bg);  color: var(--green); }
-#cp-planner-root .tag-slitting { background: var(--amber-bg);  color: var(--amber); }
-#cp-planner-root .tag-na       { background: #f3f4f8; color: var(--text-faint); }
+#cp-planner-root .tag-design                 { background: var(--purple-bg); color: var(--purple); }
+#cp-planner-root .tag-reel_to_reel_printing  { background: var(--blue-bg);   color: var(--blue); }
+#cp-planner-root .tag-ruling                 { background: #e0f1f7;          color: #0d6e9b; }
+#cp-planner-root .tag-sheeting               { background: #fdefec;          color: #c84e2e; }
+#cp-planner-root .tag-collation              { background: var(--green-bg);  color: var(--green); }
+#cp-planner-root .tag-slitting               { background: var(--amber-bg);  color: var(--amber); }
+#cp-planner-root .tag-na                     { background: #f3f4f8; color: var(--text-faint); }
 #cp-planner-root .sg-bottom    { display: flex; flex: 1; }
 #cp-planner-root .sg-machine {
   min-width: 78px; flex: 1;
@@ -282,7 +284,17 @@
   z-index: 100; display: none; align-items: center; justify-content: center;
 }
 #cp-planner-root .overlay.open { display: flex; }
-#cp-planner-root .modal {
+/* Renamed from `.modal` to `.vcl-modal` — Frappe desk ships Bootstrap,
+ * which has `.modal { display: none; }`. Our rule didn't set `display`
+ * so Bootstrap won and the dialog stayed invisible even when the
+ * overlay was `.open`. Renaming is the bulletproof fix; leaving the
+ * child classes (`.modal-head`, `.modal-body`, `.modal-foot`,
+ * `.modal-close`, `.modal-title`, `.modal-sub`) untouched because
+ * Bootstrap's `.modal-header` / `.modal-footer` don't collide with
+ * our `-head` / `-foot`, and `.modal-body` / `.modal-title` only
+ * inherit mild styling which our rules already override. */
+#cp-planner-root .vcl-modal {
+  display: block;
   background: #fff; border-radius: 10px; width: 520px; max-width: 95vw;
   box-shadow: 0 10px 40px rgba(30,34,53,.2); animation: cpPlannerPopIn .18s ease-out;
   max-height: 90vh; overflow-y: auto;

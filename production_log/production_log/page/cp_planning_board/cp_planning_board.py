@@ -8,7 +8,9 @@ from frappe import _
 
 # Workstation Types where one workstation can be tagged for more than one
 # product line (e.g. shared presses). Used to scope conflict detection.
-SHARED_WORKSTATION_TYPES = ["Printing"]
+# Verbatim ERPNext Workstation Type name on the VCL site — not the
+# shorthand "Printing" from the handover/prototype.
+SHARED_WORKSTATION_TYPES = ["Reel to Reel Printing"]
 
 # Product lines that ever appear in the planner UI. `All` is a passthrough
 # tag — any workstation tagged `All` is reachable from every dept.

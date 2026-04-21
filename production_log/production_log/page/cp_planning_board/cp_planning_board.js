@@ -10,29 +10,46 @@
 // Module constants
 // ─────────────────────────────────────────────────────────────────────
 
-// Canonical stage ordering on the board. Any Workstation Type not in
-// this list still renders but gets appended at the end — keeps Phase 1
-// tidy without preventing Tanuj from spinning up new WTs later.
-const STAGE_ORDER = ["Design", "Printing", "Collation", "Slitting"];
+// Canonical stage ordering on the board. Matched against raw
+// Workstation Type names (`row.workstation_type`). Any WT not in this
+// list still renders but gets appended at the end — keeps the flow
+// predictable without preventing Tanuj from spinning up new WTs.
+// Names are verbatim — `Reel to Reel Printing` is how VCL's ERPNext
+// stores the press WT, not the prototype shorthand `Printing`.
+const STAGE_ORDER = [
+	"Design",
+	"Reel to Reel Printing",
+	"Ruling",
+	"Sheeting",
+	"Collation",
+	"Slitting",
+];
 
-// 3-letter chip label next to each stage name. Hand-mapped so the
-// server-side lowercased stage ids (`printing`, `collation`, `slitting`)
-// don't yield the wrong abbreviation ("PRI"/"COL"/"SLI").
+// 3-letter chip label next to each stage name. Keys are the stage
+// ids that `_stageIdFromWT` produces (lowercase + space→underscore).
+// Hand-mapped so an id like `reel_to_reel_printing` yields `PRN`,
+// not `REE`.
 const TAG_BY_ID = {
 	design: "DES",
-	printing: "PRN",
+	reel_to_reel_printing: "PRN",
+	ruling: "RUL",
+	sheeting: "SHE",
 	collation: "COL",
 	slitting: "SLT",
 };
 
-// UOM per stage. Printing is asymmetric: planned side tracks reels in
-// (the scheduler input); actual side tracks sheets out (what actually
-// came off the press). Every other stage uses the same unit both ways.
+// UOM per stage. Reel-to-reel printing is asymmetric: planned side
+// tracks reels in (the scheduler's input) + expected sheet yield,
+// actual side tracks sheets out. Ruling and Sheeting default to
+// `sheets` per live-site notes — confirm with Tanuj before the
+// next UAT pass; swap to reams/jobs if that's how the floor counts.
 const UOM_BY_STAGE = {
-	design:    { planned: "days",  actual: "days" },
-	printing:  { planned: "reels", actual: "sheets" },
-	collation: { planned: "sets",  actual: "sets" },
-	slitting:  { planned: "rolls", actual: "rolls" },
+	design:                { planned: "days",   actual: "days" },
+	reel_to_reel_printing: { planned: "reels",  actual: "sheets" },
+	ruling:                { planned: "sheets", actual: "sheets" },
+	sheeting:              { planned: "sheets", actual: "sheets" },
+	collation:             { planned: "sets",   actual: "sets" },
+	slitting:              { planned: "rolls",  actual: "rolls" },
 };
 
 // Day-of-week labels for the Week view (Mon–Sat, six rows — matches
@@ -41,19 +58,29 @@ const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 // Qty field definitions per stage. `key` matches the DocType fieldname
 // on PSL / PE, so the same map drives both the modal form and the
-// save payload. Printing is asymmetric: two planned fields (reels in,
-// sheets out) and one actual field (sheets).
+// save payload. Reel-to-reel printing is asymmetric: two planned
+// fields (reels in, sheets out) and one actual field (sheets). Ruling
+// and Sheeting use single planned/actual sheet fields pending UOM
+// confirmation.
 const STAGE_QTY = {
 	design: {
 		planned: [{ key: "planned_qty",    label: "Planned Days",   uom: "days" }],
 		actual:  [{ key: "actual_qty",     label: "Actual Days",    uom: "days" }],
 	},
-	printing: {
+	reel_to_reel_printing: {
 		planned: [
 			{ key: "planned_reels",  label: "Planned Reels",  uom: "reels" },
 			{ key: "planned_sheets", label: "Planned Sheets", uom: "sheets" },
 		],
 		actual: [{ key: "actual_sheets", label: "Actual Sheets", uom: "sheets" }],
+	},
+	ruling: {
+		planned: [{ key: "planned_sheets", label: "Planned Sheets", uom: "sheets" }],
+		actual:  [{ key: "actual_sheets",  label: "Actual Sheets",  uom: "sheets" }],
+	},
+	sheeting: {
+		planned: [{ key: "planned_sheets", label: "Planned Sheets", uom: "sheets" }],
+		actual:  [{ key: "actual_sheets",  label: "Actual Sheets",  uom: "sheets" }],
 	},
 	collation: {
 		planned: [{ key: "planned_qty",    label: "Planned Sets",   uom: "sets" }],
@@ -224,7 +251,7 @@ class ProductionPlanner {
 				</div>
 
 				<div class="overlay entry-overlay" data-role="entry-overlay">
-					<div class="modal">
+					<div class="vcl-modal">
 						<div class="modal-head">
 							<div>
 								<div class="modal-title" data-role="modal-title">Add Entry</div>
@@ -326,7 +353,7 @@ class ProductionPlanner {
 				</div>
 
 				<div class="overlay day-picker-overlay" data-role="day-picker-overlay">
-					<div class="modal" style="width:380px;">
+					<div class="vcl-modal" style="width:380px;">
 						<div class="modal-head">
 							<div>
 								<div class="modal-title">Print Daily Schedule</div>
@@ -966,10 +993,10 @@ class ProductionPlanner {
 		let qtyVal;
 		let uom;
 		if (entry._kind === "actual") {
-			qtyVal = stage.id === "printing" ? entry.actual_sheets : entry.actual_qty;
+			qtyVal = stage.id === "reel_to_reel_printing" ? entry.actual_sheets : entry.actual_qty;
 			uom = uomMap.actual;
 		} else {
-			qtyVal = stage.id === "printing" ? entry.planned_reels : entry.planned_qty;
+			qtyVal = stage.id === "reel_to_reel_printing" ? entry.planned_reels : entry.planned_qty;
 			uom = uomMap.planned;
 		}
 		qtyVal = Number(qtyVal || 0);
@@ -1565,7 +1592,7 @@ class ProductionPlanner {
 			const stageId = this._stageIdFromWT(row.workstation_type);
 			const uomMap = UOM_BY_STAGE[stageId] || { planned: "" };
 			const qty =
-				stageId === "printing"
+				stageId === "reel_to_reel_printing"
 					? `${Number(row.planned_reels || 0)} reels / ${Number(row.planned_sheets || 0)} sheets`
 					: `${Number(row.planned_qty || 0)} ${uomMap.planned}`;
 			const shift = esc(row.shift || "");
