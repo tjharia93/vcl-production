@@ -253,6 +253,11 @@
 #cp-planner-root .grid-cell {
   border-right: 1px solid var(--border); vertical-align: top;
   padding: 5px 6px; min-height: 58px;
+  /* Must match .sg-machine / .sg-single min-width in the stage header
+   * above, or header labels drift out of alignment with the cells
+   * beneath them. Both width + min-width forces the cell to honour
+   * 110px even when its content is just the "+" button. */
+  min-width: 110px; width: 110px;
 }
 #cp-planner-root .grid-cell.col-disabled { background: repeating-linear-gradient(45deg, #f8f8fb, #f8f8fb 4px, #f3f4f8 4px, #f3f4f8 8px); }
 

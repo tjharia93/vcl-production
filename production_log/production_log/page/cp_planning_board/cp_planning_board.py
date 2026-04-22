@@ -335,9 +335,50 @@ def get_daily_schedule(date, depts=None):
 			filters={"date": date, "product_line": dept, "status": ["!=", "Cancelled"]},
 			order_by="workstation_type, workstation, shift",
 		)
+		_enrich_job_card_details(rows)
 		result[dept] = rows
 
 	return result
+
+
+def _enrich_job_card_details(rows):
+	"""
+	Attach `customer` and `customer_product_spec` to each row whose
+	`job_card_doctype` + `job_card` resolves. The printed daily schedule
+	renders the job name underneath the JC id, so a handoff to the floor
+	reads as "JC-CPT-2026-00014 / Excel Chemicals Ltd · CPT-SPEC-00024"
+	instead of just the opaque id.
+
+	Cached per (doctype, name) so a schedule with many rows pointing at
+	the same job card only hits the DB once. Carton's customer field is
+	named `customer_name`, not `customer` — branch accordingly.
+	"""
+	cache = {}
+	for row in rows:
+		row["customer"] = ""
+		row["customer_product_spec"] = ""
+		dt = (row.get("job_card_doctype") or "").strip()
+		name = (row.get("job_card") or "").strip()
+		if not dt or not name:
+			continue
+		key = (dt, name)
+		if key not in cache:
+			customer_field = "customer_name" if dt == "Job Card Carton" else "customer"
+			try:
+				vals = frappe.db.get_value(
+					dt,
+					name,
+					[customer_field, "customer_product_spec"],
+					as_dict=True,
+				) or {}
+			except Exception:
+				vals = {}
+			cache[key] = {
+				"customer": vals.get(customer_field) or "",
+				"customer_product_spec": vals.get("customer_product_spec") or "",
+			}
+		row["customer"] = cache[key]["customer"]
+		row["customer_product_spec"] = cache[key]["customer_product_spec"]
 
 
 # ---------------------------------------------------------------------------

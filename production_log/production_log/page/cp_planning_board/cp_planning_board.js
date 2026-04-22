@@ -120,7 +120,7 @@ const JOB_CARD_DOCTYPE_BY_DEPT = {
 // cache or Frappe Cloud rebuild hasn't picked up the newest push yet.
 // Also rendered in the header so a field report can confirm which
 // build they're on without opening DevTools.
-const PLANNER_BUNDLE = "2026-04-21-ux-pass-1";
+const PLANNER_BUNDLE = "2026-04-21-ux-pass-2";
 
 
 frappe.pages["cp_planning_board"].on_page_load = function (wrapper) {
@@ -508,6 +508,17 @@ class ProductionPlanner {
 			this.$root.find('[data-role="print-confirm"]').prop("disabled", false);
 		});
 		this.$root.on("click", '[data-role="print-confirm"]', () => this._onPrintConfirm());
+
+		// Horizontal scroll sync. The stage header and grid body are
+		// separate scroll containers, so a wide week (13+ machine
+		// columns) drifts out of alignment the moment the user scrolls
+		// the grid right. Sync the header's scrollLeft to track the
+		// grid as the user pans.
+		const $wrap = this.$root.find(".grid-wrap");
+		const $header = this.$root.find(".stage-header");
+		$wrap.on("scroll", () => {
+			$header.scrollLeft($wrap.scrollLeft());
+		});
 	}
 
 	_onDeptChange() {
@@ -1658,9 +1669,23 @@ class ProductionPlanner {
 
 		const renderRow = (row) => {
 			const stage = `${esc(row.workstation_type || "")} · ${esc(row.workstation || "")}`;
-			const jc = row.is_manual
-				? `<em>MANUAL: ${esc(row.description || "")}</em>`
-				: esc(row.job_card || "");
+			let jc;
+			if (row.is_manual) {
+				jc = `<em>MANUAL: ${esc(row.description || "")}</em>`;
+			} else {
+				// Server attaches customer + customer_product_spec via
+				// _enrich_job_card_details. Render the id on top and the
+				// customer / spec on a second muted line so the floor
+				// sees who it's for at a glance.
+				const id = esc(row.job_card || "");
+				const bits = [];
+				if (row.customer) bits.push(esc(row.customer));
+				if (row.customer_product_spec) bits.push(esc(row.customer_product_spec));
+				const sub = bits.length
+					? `<div class="jc-sub">${bits.join(" · ")}</div>`
+					: "";
+				jc = `<div class="jc-id">${id}</div>${sub}`;
+			}
 			const stageId = this._stageIdFromWT(row.workstation_type);
 			const uomMap = UOM_BY_STAGE[stageId] || { planned: "" };
 			const qty =
@@ -1731,6 +1756,8 @@ class ProductionPlanner {
 			".sched-table th, .sched-table td { border: 0.5pt solid #888; padding: 4pt 6pt; text-align: left; vertical-align: top; font-size: 9pt; }" +
 			".sched-table th { background: #f3f4f8; font-weight: 700; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.5pt; color: #444; }" +
 			".signoff-cell { width: 60pt; min-height: 22pt; }" +
+			".jc-id { font-weight: 600; }" +
+			".jc-sub { font-size: 8pt; color: #555; margin-top: 1pt; }" +
 			".type-tag { font-weight: 700; text-align: center; letter-spacing: 0.5pt; }" +
 			".type-plan { background: #eef0fa; color: #2B3990; }" +
 			".type-actual { background: #e6f7ef; color: #0e9e5a; }" +
