@@ -120,7 +120,7 @@ const JOB_CARD_DOCTYPE_BY_DEPT = {
 // cache or Frappe Cloud rebuild hasn't picked up the newest push yet.
 // Also rendered in the header so a field report can confirm which
 // build they're on without opening DevTools.
-const PLANNER_BUNDLE = "2026-04-21-step-resilient";
+const PLANNER_BUNDLE = "2026-04-21-fmt-number-fix";
 
 
 frappe.pages["cp_planning_board"].on_page_load = function (wrapper) {
@@ -1077,7 +1077,7 @@ class ProductionPlanner {
 			`<span class="eb-type">${label}${status}</span>` +
 			"</div>" +
 			'<div class="eb-qty">' +
-			frappe.utils.format_number(qtyVal, null, 0) +
+			Math.round(qtyVal || 0).toLocaleString("en-IN") +
 			`<span class="eb-uom">${uom}</span>` +
 			"</div>" +
 			(metaBits ? `<div class="eb-meta">${metaBits}</div>` : "") +
