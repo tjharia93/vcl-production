@@ -222,15 +222,17 @@
 #cp-planner-root .tag-na                     { background: #f3f4f8; color: var(--text-faint); }
 #cp-planner-root .sg-bottom    { display: flex; flex: 1; }
 #cp-planner-root .sg-machine {
-  min-width: 78px; flex: 1;
+  min-width: 110px; flex: 1;
   display: flex; align-items: center; justify-content: center;
   font-size: 10px; color: var(--text-dim); border-right: 1px solid var(--border);
   font-family: var(--mono); padding: 0 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 #cp-planner-root .sg-machine:last-child { border-right: none; }
 #cp-planner-root .sg-single {
-  flex: 1; min-width: 100px; display: flex; align-items: center; justify-content: center;
+  flex: 1; min-width: 110px; display: flex; align-items: center; justify-content: center;
   font-size: 10px; color: var(--text-faint); font-family: var(--mono);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 4px;
 }
 
 /* Grid */

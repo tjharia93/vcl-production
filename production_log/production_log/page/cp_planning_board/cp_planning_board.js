@@ -120,7 +120,7 @@ const JOB_CARD_DOCTYPE_BY_DEPT = {
 // cache or Frappe Cloud rebuild hasn't picked up the newest push yet.
 // Also rendered in the header so a field report can confirm which
 // build they're on without opening DevTools.
-const PLANNER_BUNDLE = "2026-04-21-fmt-number-fix";
+const PLANNER_BUNDLE = "2026-04-21-ux-pass-1";
 
 
 frappe.pages["cp_planning_board"].on_page_load = function (wrapper) {
@@ -1041,16 +1041,25 @@ class ProductionPlanner {
 		const label = cssKind === "manual" ? "MANUAL" : cssKind === "actual" ? "ACTUAL" : "PLAN";
 
 		const uomMap = UOM_BY_STAGE[stage.id] || { planned: "", actual: "" };
-		let qtyVal;
-		let uom;
-		if (entry._kind === "actual") {
-			qtyVal = stage.id === "reel_to_reel_printing" ? entry.actual_sheets : entry.actual_qty;
-			uom = uomMap.actual;
+		const fmt = (v) => Math.round(Number(v || 0)).toLocaleString("en-IN");
+
+		// Composite qty string. Reel-to-reel printing carries both reels
+		// AND sheets on the plan side; the actual side carries just
+		// sheets. Every other stage has a single planned_qty / actual_qty.
+		let qtyHtml;
+		if (stage.id === "reel_to_reel_printing") {
+			if (entry._kind === "actual") {
+				qtyHtml = `${fmt(entry.actual_sheets)}<span class="eb-uom">sheets</span>`;
+			} else {
+				qtyHtml =
+					`${fmt(entry.planned_reels)}<span class="eb-uom">reels</span>` +
+					` · ${fmt(entry.planned_sheets)}<span class="eb-uom">sheets</span>`;
+			}
 		} else {
-			qtyVal = stage.id === "reel_to_reel_printing" ? entry.planned_reels : entry.planned_qty;
-			uom = uomMap.planned;
+			const v = entry._kind === "actual" ? entry.actual_qty : entry.planned_qty;
+			const u = entry._kind === "actual" ? uomMap.actual : uomMap.planned;
+			qtyHtml = `${fmt(v)}<span class="eb-uom">${u}</span>`;
 		}
-		qtyVal = Number(qtyVal || 0);
 
 		const shortId = isManual
 			? "MANUAL"
@@ -1077,8 +1086,7 @@ class ProductionPlanner {
 			`<span class="eb-type">${label}${status}</span>` +
 			"</div>" +
 			'<div class="eb-qty">' +
-			Math.round(qtyVal || 0).toLocaleString("en-IN") +
-			`<span class="eb-uom">${uom}</span>` +
+			qtyHtml +
 			"</div>" +
 			(metaBits ? `<div class="eb-meta">${metaBits}</div>` : "") +
 			"</div>"
@@ -1582,12 +1590,19 @@ class ProductionPlanner {
 	// ─────────────────────────────────────────────────────────────
 	_openPrintWindow(iso, depts, dataByDept) {
 		const html = this._buildPrintHTML(iso, depts, dataByDept);
-		const blob = new Blob([html], { type: "text/html" });
-		const url = URL.createObjectURL(blob);
 
-		const win = window.open(url, "_blank");
+		// Use document.write directly on a blank popup rather than a
+		// blob: URL. Frappe Cloud's CSP used to kill blob: navigation
+		// and some browsers silently swallow blob: popups. Writing
+		// straight into the child document is more portable.
+		// No third arg — we need to keep opener access so we can
+		// document.write() into the child.
+		const win = window.open("", "_blank");
 		if (!win) {
-			// Popup blocked — fall back to download.
+			// Popup genuinely blocked — fall back to a Blob download so
+			// the user can still print manually.
+			const blob = new Blob([html], { type: "text/html" });
+			const url = URL.createObjectURL(blob);
 			const a = document.createElement("a");
 			a.href = url;
 			a.download = `production-schedule-${iso}.html`;
@@ -1595,18 +1610,24 @@ class ProductionPlanner {
 			document.body.appendChild(a);
 			a.click();
 			document.body.removeChild(a);
+			setTimeout(() => URL.revokeObjectURL(url), 5000);
 			this.toast(
 				__("Popup blocked — schedule downloaded. Open + print manually."),
-				"ok",
+				"err",
 			);
-			// Hold the object URL long enough for the download, then
-			// release.
-			setTimeout(() => URL.revokeObjectURL(url), 5000);
 			return;
 		}
 
-		// Trigger print after the new window's load completes; some
-		// browsers ignore window.print() if called too early.
+		try {
+			win.document.open();
+			win.document.write(html);
+			win.document.close();
+		} catch (e) {
+			console.error("[planner] print window write failed", e);
+			this.toast(__("Print failed — see console."), "err");
+			return;
+		}
+
 		const tryPrint = () => {
 			try {
 				win.focus();
@@ -1616,9 +1637,9 @@ class ProductionPlanner {
 			}
 		};
 		if (win.document.readyState === "complete") {
-			setTimeout(tryPrint, 200);
+			setTimeout(tryPrint, 250);
 		} else {
-			win.addEventListener("load", () => setTimeout(tryPrint, 200));
+			win.addEventListener("load", () => setTimeout(tryPrint, 250));
 		}
 	}
 
@@ -1815,6 +1836,15 @@ class ProductionPlanner {
 	}
 
 	_uniqueJobs() {
+		// Index the current-dept Job Cards so we can decorate each row
+		// with the customer name + product spec instead of the bare
+		// doctype name. Missing entries fall back to the doctype so
+		// cross-dept leftovers still render something sensible.
+		const jcIndex = {};
+		for (const jc of this.jobCards || []) {
+			if (jc && jc.name) jcIndex[jc.name] = jc;
+		}
+
 		const jobMap = new Map();
 		const bump = (e) => {
 			if (e.is_manual) {
@@ -1830,10 +1860,17 @@ class ProductionPlanner {
 			}
 			if (!e.job_card) return;
 			if (!jobMap.has(e.job_card)) {
+				const jc = jcIndex[e.job_card];
+				const subBits = [];
+				if (jc && jc.customer) subBits.push(jc.customer);
+				if (jc && jc.customer_product_spec) subBits.push(jc.customer_product_spec);
+				const sub = subBits.length
+					? subBits.join(" · ")
+					: e.job_card_doctype || "";
 				jobMap.set(e.job_card, {
 					key: e.job_card,
 					label: e.job_card,
-					sub: e.job_card_doctype || "",
+					sub,
 					isManual: false,
 				});
 			}
