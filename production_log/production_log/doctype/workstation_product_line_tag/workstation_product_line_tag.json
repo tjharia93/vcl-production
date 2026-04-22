@@ -13,7 +13,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Product Line",
-   "options": "All\nComputer Paper\nETR / Thermal",
+   "options": "All\nComputer Paper\nETR\nLabel\nGeneral Stationery and Exercise Book\nMono Boxes\nCorrugation and Carton Department",
    "reqd": 1
   }
  ],

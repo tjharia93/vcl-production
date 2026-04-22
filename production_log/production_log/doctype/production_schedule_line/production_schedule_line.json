@@ -71,7 +71,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Product Line",
-   "options": "\nComputer Paper\nETR / Thermal",
+   "options": "\nComputer Paper\nETR\nLabel\nGeneral Stationery and Exercise Book\nMono Boxes\nCorrugation and Carton Department",
    "reqd": 1
   },
   {

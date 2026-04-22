@@ -108,19 +108,34 @@ const STATUS_OPTIONS = ["Draft", "Confirmed", "Cancelled"];
 const SHIFT_OPTIONS = ["Day Shift", "Evening Shift", "Night Shift"];
 
 // Left-panel Job Card doctype per planner dept. Mirrors the server's
-// JOB_CARD_DOCTYPE_BY_PRODUCT_LINE map and drives the "+ Add Job"
-// route. Carton isn't in Phase 1 planner scope.
+// JOB_CARD_DOCTYPE_BY_PRODUCT_LINE. ETR / General Stationery /
+// Mono Boxes / Corrugation and Carton Department don't have a Job
+// Card doctype yet — those tabs render the empty state in the left
+// panel, and `+ Add Job` disables itself via _onAddJobClick.
 const JOB_CARD_DOCTYPE_BY_DEPT = {
 	"Computer Paper": "Job Card Computer Paper",
-	"ETR / Thermal": "Job Card Label",
+	"Label": "Job Card Label",
 };
+
+// Dept tabs rendered in the header, in order. Values are the exact
+// product_line strings — the client sends them verbatim to the server
+// in every get_workstation_columns / get_schedule_entries /
+// get_job_cards / get_machine_conflicts call.
+const PLANNER_DEPTS = [
+	"Computer Paper",
+	"ETR",
+	"Label",
+	"General Stationery and Exercise Book",
+	"Mono Boxes",
+	"Corrugation and Carton Department",
+];
 
 // Bundle version marker. Change every commit — when the planner loads
 // and the browser console prints a stale version, you know the asset
 // cache or Frappe Cloud rebuild hasn't picked up the newest push yet.
 // Also rendered in the header so a field report can confirm which
 // build they're on without opening DevTools.
-const PLANNER_BUNDLE = "2026-04-21-ux-pass-2";
+const PLANNER_BUNDLE = "2026-04-26-phase7-wt-tagging";
 
 
 frappe.pages["cp_planning_board"].on_page_load = function (wrapper) {
@@ -145,9 +160,10 @@ class ProductionPlanner {
 		this.wrapper = wrapper;
 		this.$body = $(wrapper).find(".layout-main-section");
 
-		// Dept tab state. `Computer Paper` and `ETR / Thermal` are the
-		// canonical product_line strings — match the stored Select values
-		// verbatim so server calls can filter without translation.
+		// Dept tab state. Each value is the exact `product_line` string
+		// stored on PSL / PE / Workstation Product Line Tag, so server
+		// calls filter without translation. Full list lives in
+		// PLANNER_DEPTS at module top.
 		this.dept = "Computer Paper";
 
 		// View state. `week` is the only view wired up in Phase 1;
@@ -188,6 +204,7 @@ class ProductionPlanner {
 
 		this._render();
 		this._bindEvents();
+		this._refreshAddJobState();
 		this._loadAll();
 	}
 
@@ -208,8 +225,10 @@ class ProductionPlanner {
 					</div>
 
 					<div class="h-controls">
-						<button class="dept-btn active" data-dept="Computer Paper">Computer Paper</button>
-						<button class="dept-btn" data-dept="ETR / Thermal">ETR / Thermal</button>
+						${PLANNER_DEPTS.map(
+							(d) =>
+								`<button class="dept-btn${d === this.dept ? " active" : ""}" data-dept="${frappe.utils.escape_html(d)}">${frappe.utils.escape_html(d)}</button>`,
+						).join("")}
 
 						<div class="hdiv"></div>
 
@@ -528,7 +547,24 @@ class ProductionPlanner {
 		this.selectedJobCard = null;
 		this.jobCardFilter = "";
 		this.$root.find(".lp-search").val("");
+		this._refreshAddJobState();
 		this._loadAll();
+	}
+
+	_refreshAddJobState() {
+		// Grey out + Add Job on dept tabs that don't have a Job Card
+		// doctype yet (ETR / General Stationery / Mono Boxes /
+		// Corrugation). Title attribute surfaces the reason on hover so
+		// a user doesn't wonder why the button went quiet.
+		const hasDoctype = !!JOB_CARD_DOCTYPE_BY_DEPT[this.dept];
+		const $btn = this.$root.find(".btn-add-job");
+		$btn.prop("disabled", !hasDoctype);
+		$btn.attr(
+			"title",
+			hasDoctype
+				? ""
+				: __("No Job Card doctype for {0} yet.", [this.dept]),
+		);
 	}
 
 	_onViewChange() {
@@ -1577,7 +1613,7 @@ class ProductionPlanner {
 		const scope = this.$root
 			.find('input[name="print-scope"]:checked')
 			.val();
-		const depts = scope === "all" ? ["Computer Paper", "ETR / Thermal"] : [this.dept];
+		const depts = scope === "all" ? PLANNER_DEPTS.slice() : [this.dept];
 
 		const $btn = this.$root.find('[data-role="print-confirm"]');
 		$btn.prop("disabled", true).text(__("Loading…"));

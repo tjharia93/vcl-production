@@ -46,8 +46,9 @@
 
 /* ── HEADER ── */
 #cp-planner-root .header {
-  height: 54px; background: var(--blue); display: flex; align-items: center;
-  justify-content: space-between; padding: 0 20px; flex-shrink: 0;
+  min-height: 54px; background: var(--blue); display: flex; align-items: center;
+  justify-content: space-between; padding: 8px 20px; flex-shrink: 0;
+  gap: 12px;
   box-shadow: 0 2px 8px rgba(43,57,144,.25);
 }
 #cp-planner-root .logo { display: flex; align-items: center; gap: 10px; }
@@ -59,7 +60,13 @@
 #cp-planner-root .logo-text { color: #fff; }
 #cp-planner-root .logo-name { font-size: 13px; font-weight: 700; letter-spacing: .5px; }
 #cp-planner-root .logo-sub  { font-size: 10px; opacity: .7; }
-#cp-planner-root .h-controls { display: flex; align-items: center; gap: 10px; }
+/* Wraps so the 6 dept tabs + view buttons + week nav + Print Daily
+ * all still fit on narrow viewports. Header `min-height` lets the bar
+ * grow vertically when content wraps. */
+#cp-planner-root .h-controls {
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap; row-gap: 8px; justify-content: flex-end;
+}
 #cp-planner-root .dept-btn {
   padding: 5px 14px; border-radius: 20px; border: 1.5px solid rgba(255,255,255,.3);
   background: transparent; color: rgba(255,255,255,.75); cursor: pointer;

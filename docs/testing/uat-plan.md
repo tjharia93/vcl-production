@@ -42,9 +42,14 @@ deployed. It is the last check before we merge to `main`.
     `SHARED_WORKSTATION_TYPES`).
   * `get_daily_schedule(date, depts)` — rows for the printed
     schedule.
-* Dept tabs (`Computer Paper` / `ETR / Thermal`) switch the column
-  set + entry list; prev/next arrows + `<input type="week">` navigate
-  the Mon–Sat window.
+* Dept tabs — six in total (`Computer Paper`, `ETR`, `Label`,
+  `General Stationery and Exercise Book`, `Mono Boxes`,
+  `Corrugation and Carton Department`) — switch the column set +
+  entry list; prev/next arrows + `<input type="week">` navigate
+  the Mon–Sat window. Tagging lives on Workstation Type
+  (`custom_product_line_tags`), so a workstation inherits its
+  parent WT's product-line coverage; there is no per-workstation
+  override.
 * Entry modal (add / edit / delete) with stage-specific qty fields
   (Design → days, Printing → reels + sheets planned / sheets
   actual, Collation → sets, Slitting → rolls). Status dropdown
@@ -52,8 +57,8 @@ deployed. It is the last check before we merge to `main`.
   PE linked to the PSL via `schedule_line`. Manual-entry path (no
   job card) shows the ⚡ banner and requires a Description.
 * Conflict highlighting on shared presses: amber cell bg,
-  `.conflict-chip` reading "Double-booked · Computer Paper + ETR /
-  Thermal", `.entry-block.conflicted` outline on each involved
+  `.conflict-chip` reading "Double-booked · Computer Paper + ETR",
+  `.entry-block.conflicted` outline on each involved
   tile, header pill "⚠ N conflict(s)". Saving into a conflict
   triggers a red toast — the save itself still succeeds (warn +
   allow, matches FINAL handover §F5).
@@ -66,7 +71,7 @@ deployed. It is the last check before we merge to `main`.
   `Production Entry` (submittable, `PE-YYYY-#####` naming).
 * Patch `patch_v5_0`:
   * Extends `custom_product_line` Select options on Workstation
-    Type and Workstation to include `ETR / Thermal` (`Label` /
+    Type and Workstation to include `ETR` (`Label` /
     `Carton` kept).
   * Adds `custom_product_line_tags` Table field on Workstation.
   * Seeds `Design` Workstation Type + `Design Desk` Workstation
@@ -426,7 +431,7 @@ tagging table (FINAL §A2) has been applied manually.
 - [ ] Stage header shows at least these columns, in order: **Design**
       (Design Desk), **Printing** (Miyakoshi 01, Miyakoshi 02, Hamada
       01), **Collation** (Collator 1, Collator 2).
-- [ ] Switch to **ETR / Thermal**. Columns change to **Design** (Design
+- [ ] Switch to **ETR**. Columns change to **Design** (Design
       Desk), **Printing** (Miyakoshi 01, Miyakoshi 02 only), **Slitting**
       (Slitter 1, Slitter 2). No Hamada 01, no Collators.
 - [ ] Switch back to **Computer Paper**. Columns return to CP set.
@@ -501,7 +506,7 @@ K1 with Planned Reels = 4, Status = `Draft`, Operator = "TEST UAT-L".
 - [ ] On **Computer Paper**, add a PSL on **Printing · Miyakoshi 01**
       for a test day (e.g. Wednesday of this week). Status Draft,
       planned reels 3, operator "TEST UAT-M-CP".
-- [ ] Switch to **ETR / Thermal**. Verify the conflict badge in the
+- [ ] Switch to **ETR**. Verify the conflict badge in the
       header is NOT showing yet.
 - [ ] Still on ETR, add a PSL on **Printing · Miyakoshi 01** for the
       same Wednesday. Status Draft, planned reels 2, operator
@@ -509,7 +514,7 @@ K1 with Planned Reels = 4, Status = `Draft`, Operator = "TEST UAT-L".
 - [ ] Save triggers a red toast "⚠ Machine conflict: Miyakoshi 01 is
       also booked for Computer Paper on <date>."
 - [ ] The Wednesday Printing·Miyakoshi 01 cell shows amber background,
-      an orange "⚠ Double-booked · Computer Paper + ETR / Thermal"
+      an orange "⚠ Double-booked · Computer Paper + ETR"
       chip, and the two tiles each have an amber outline
       (`.entry-block.conflicted`).
 - [ ] Header shows "⚠ 1 conflict" pill.
@@ -544,7 +549,7 @@ K1 with Planned Reels = 4, Status = `Draft`, Operator = "TEST UAT-L".
       Sign-off", "Floor Supervisor Sign-off", "Date & Time".
 - [ ] Close the print tab. Open the day picker again, tick **All
       departments**, select today, Print. Two dept sections now appear
-      ("Computer Paper" then "ETR / Thermal"), each with their own
+      ("Computer Paper" then "ETR"), each with their own
       title bar and table.
 - [ ] Block popups in the browser settings, repeat the print flow. An
       HTML file is downloaded instead; a toast says "Popup blocked —

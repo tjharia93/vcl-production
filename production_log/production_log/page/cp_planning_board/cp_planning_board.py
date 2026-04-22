@@ -12,17 +12,26 @@ from frappe import _
 # shorthand "Printing" from the handover/prototype.
 SHARED_WORKSTATION_TYPES = ["Reel to Reel Printing"]
 
-# Product lines that ever appear in the planner UI. `All` is a passthrough
-# tag — any workstation tagged `All` is reachable from every dept.
-PLANNER_PRODUCT_LINES = ["Computer Paper", "ETR / Thermal"]
+# Product lines that appear in the planner UI. `All` is a passthrough
+# tag — any Workstation Type tagged `All` is reachable from every dept.
+# Order here is the dept-tab order the client renders.
+PLANNER_PRODUCT_LINES = [
+	"Computer Paper",
+	"ETR",
+	"Label",
+	"General Stationery and Exercise Book",
+	"Mono Boxes",
+	"Corrugation and Carton Department",
+]
 
-# Left-panel Job Card doctype per planner dept. Carton is intentionally
-# absent — no carton workstations are in Phase 1 scope, so the panel has
-# nothing to render for it. The entry modal's Job Card Type dropdown
-# still offers all three for manual reassignment.
+# Left-panel Job Card doctype per planner dept. Only product lines with
+# a dedicated Job Card doctype appear here — everything else falls
+# through `.get()` → None → `get_job_cards` returns [] → the left panel
+# renders its empty state. ETR / General Stationery / Mono Boxes /
+# Corrugation don't have a doctype yet; they'll be added once designed.
 JOB_CARD_DOCTYPE_BY_PRODUCT_LINE = {
 	"Computer Paper": "Job Card Computer Paper",
-	"ETR / Thermal": "Job Card Label",
+	"Label": "Job Card Label",
 }
 
 
@@ -43,9 +52,12 @@ def get_workstation_columns(product_line=None):
 	        "is_shared": 1
 	    }
 
-	`product_line` may be None (returns all lines) or one of
-	`Computer Paper` / `ETR / Thermal`. A workstation matches if it has a
-	`custom_product_line_tags` row for that product_line or for `All`.
+	`product_line` may be None (returns all lines) or one of the values
+	in `PLANNER_PRODUCT_LINES`. A workstation matches when its
+	Workstation Type carries a `custom_product_line_tags` row for that
+	product_line, or for `All`. Tagging moved from Workstation to
+	Workstation Type in patch_v5_2 — this query joins against the
+	Workstation Type's tag rows.
 	"""
 	conditions = []
 	values = {}
@@ -66,8 +78,8 @@ def get_workstation_columns(product_line=None):
 		INNER JOIN `tabWorkstation Type` wt
 			ON wt.name = ws.workstation_type
 		INNER JOIN `tabWorkstation Product Line Tag` tag
-			ON tag.parent = ws.name
-			AND tag.parenttype = 'Workstation'
+			ON tag.parent = wt.name
+			AND tag.parenttype = 'Workstation Type'
 			AND tag.parentfield = 'custom_product_line_tags'
 		{where_clause}
 		ORDER BY wt.name, ws.name

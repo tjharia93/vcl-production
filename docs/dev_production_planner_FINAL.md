@@ -7,6 +7,18 @@
 **UAT doc:** `C:\Claude\VCL ERPNext Apps\vcl_production\uat_production_planner.md`  
 **Scope:** Production Planning Board only — job card creation and CPS creation are separate sprints
 
+> **Amendment 2026-04-26 (patch_v5_2):** the product-line taxonomy
+> below is superseded. New set is `All / Computer Paper / ETR /
+> Label / General Stationery and Exercise Book / Mono Boxes /
+> Corrugation and Carton Department` (i.e. `ETR / Thermal` renamed
+> to `ETR`, and four new lines added). Tagging source-of-truth has
+> also moved from **Workstation** up to **Workstation Type** — the
+> per-Workstation `custom_product_line_tags` child field has been
+> removed. Any reference below to "Workstation ... child table" or
+> "ETR / Thermal" should be read through this amendment. See
+> `patch_v5_2` and the 2026-04-26 entry in `docs/testing/oat-plan.md`
+> for the migration detail.
+
 ---
 
 ## How to use this document

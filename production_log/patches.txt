@@ -10,3 +10,4 @@ production_log.patches.v4_0.migrate_colour_fields
 production_log.patches.v4_0.set_default_print_formats
 production_log.patches.patch_v5_0
 production_log.patches.patch_v5_1
+production_log.patches.patch_v5_2
