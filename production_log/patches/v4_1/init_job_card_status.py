@@ -17,12 +17,26 @@ Idempotent — only touches rows where status IS NULL or empty.
 import frappe
 
 
-DOCTYPES = ("Job Card Carton", "Job Card Computer Paper")
+# (DocType name, snake-case module-relative folder name)
+DOCTYPES = (
+	("Job Card Carton",         "job_card_carton"),
+	("Job Card Computer Paper", "job_card_computer_paper"),
+)
 
 
 def execute():
-	for doctype in DOCTYPES:
+	# Reload the DocType JSON first so the newly-added `status` column is
+	# present on the DB table before we UPDATE it. This runs in the
+	# pre_model_sync phase where the schema sync hasn't yet applied our JSON.
+	for _, folder in DOCTYPES:
+		frappe.reload_doc("job_card_tracking", "doctype", folder)
+
+	for doctype, _ in DOCTYPES:
 		if not frappe.db.table_exists(doctype):
+			continue
+		if not frappe.db.has_column(doctype, "status"):
+			# Defensive: if reload_doc didn't add the column for any reason,
+			# skip rather than blow up. A later migrate will pick it up.
 			continue
 
 		table = f"tab{doctype}"

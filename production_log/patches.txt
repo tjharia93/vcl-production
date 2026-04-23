@@ -8,7 +8,5 @@ production_log.patches.v3_0.remove_execution_layer
 production_log.patches.v4_0.seed_pantone_palette
 production_log.patches.v4_0.migrate_colour_fields
 production_log.patches.v4_0.set_default_print_formats
-
-[post_model_sync]
 production_log.patches.v4_1.migrate_label_status_to_in_progress
 production_log.patches.v4_1.init_job_card_status
