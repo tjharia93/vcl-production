@@ -3,9 +3,10 @@ from frappe.model.document import Document
 
 
 INK_TYPE_DEFAULTS = {
-	"Computer Paper": "Process Offset",
-	"Carton":         "Process Offset",
-	"Label":          "Process UV",
+	"Computer Paper":               "Process Offset",
+	"Carton":                       "Process Offset",
+	"Label":                        "Process UV",
+	"ETR (Reel to Reel Printing)":  "Water Based",
 }
 
 
@@ -27,6 +28,7 @@ class CustomerProductSpecification(Document):
 		self.validate_carton()
 		self.validate_label()
 		self.validate_exercise_books()
+		self.validate_etr()
 
 	def validate_product_type(self):
 		if not self.product_type:
@@ -35,10 +37,11 @@ class CustomerProductSpecification(Document):
 	def set_naming_series(self):
 		if self.product_type and not self.naming_series:
 			series_map = {
-				"Computer Paper": "CPT-SPEC-.#####",
-				"Carton":         "CTN-SPEC-.#####",
-				"Label":          "LBL-SPEC-.#####",
-				"Exercise Books": "EXB-SPEC-.#####",
+				"Computer Paper":               "CPT-SPEC-.#####",
+				"Carton":                       "CTN-SPEC-.#####",
+				"Label":                        "LBL-SPEC-.#####",
+				"Exercise Books":               "EXB-SPEC-.#####",
+				"ETR (Reel to Reel Printing)": "ETR-SPEC-.#####",
 			}
 			self.naming_series = series_map.get(self.product_type)
 
@@ -107,6 +110,35 @@ class CustomerProductSpecification(Document):
 		for field_name, field_label in required_fields:
 			if not getattr(self, field_name, None):
 				frappe.throw(f"{field_label} is required for Label product type.")
+
+	def validate_etr(self):
+		if self.product_type != "ETR (Reel to Reel Printing)":
+			return
+
+		if not self.etr_substrate:
+			frappe.throw("Substrate is required for ETR (Reel to Reel Printing).")
+
+		if self.etr_substrate == "Other" and not self.etr_substrate_other:
+			frappe.throw("When Substrate is 'Other', please specify the substrate name in 'Substrate (Other)'.")
+
+		if not self.etr_gsm or self.etr_gsm <= 0:
+			frappe.throw("GSM must be greater than 0 for ETR (Reel to Reel Printing).")
+
+		if not self.etr_jumbo_width or self.etr_jumbo_width <= 0:
+			frappe.throw("Jumbo Roll Width (mm) must be greater than 0 for ETR.")
+
+		if not self.etr_output_type:
+			frappe.throw("Output Type is required for ETR (Reel to Reel Printing).")
+
+		if self.etr_output_type in ("ETR Plain Rolls", "ETR Printed Rolls"):
+			if not self.etr_finished_width or self.etr_finished_width <= 0:
+				frappe.throw("Finished Width (mm) must be greater than 0 for roll output.")
+			if not self.etr_finished_diameter or self.etr_finished_diameter <= 0:
+				frappe.throw("Finished Diameter (mm) must be greater than 0 for roll output.")
+
+		if self.etr_output_type == "Printed Reel":
+			if not self.etr_finished_reel_length or self.etr_finished_reel_length <= 0:
+				frappe.throw("Finished Reel Length (m) must be greater than 0 for Printed Reel output.")
 
 	def validate_exercise_books(self):
 		if self.product_type != "Exercise Books":

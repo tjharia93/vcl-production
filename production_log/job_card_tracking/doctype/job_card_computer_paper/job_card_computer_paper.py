@@ -10,6 +10,22 @@ class JobCardComputerPaper(Document):
 		self.validate_plate()
 		self.validate_quantity()
 		self.set_sales_rep_info()
+		self.set_status()
+
+	def on_submit(self):
+		self.set_status()
+
+	def on_cancel(self):
+		self.set_status()
+
+	def set_status(self):
+		if self.docstatus == 0:
+			self.status = "Draft"
+		elif self.docstatus == 1:
+			if self.status not in ("In Progress", "Completed"):
+				self.status = "In Progress"
+		elif self.docstatus == 2:
+			self.status = "Cancelled"
 
 	def validate_spec_fields(self):
 		if self.customer_product_spec and not self.job_size:

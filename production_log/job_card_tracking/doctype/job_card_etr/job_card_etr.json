@@ -1,0 +1,865 @@
+{
+ "actions": [],
+ "autoname": "naming_series:",
+ "creation": "2026-04-22 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "amended_from",
+  "naming_series",
+  "job_date",
+  "customer",
+  "customer_name",
+  "customer_product_spec",
+  "specification_name",
+  "sales_order",
+  "delivery_date",
+  "col_break_header",
+  "order_qty",
+  "order_qty_uom",
+  "lpo_number",
+  "printing_required",
+  "slitting_required",
+  "status",
+  "notes",
+  "spec_section",
+  "substrate",
+  "substrate_other",
+  "gsm",
+  "core_id",
+  "output_type",
+  "col_break_spec",
+  "jumbo_width",
+  "finished_width",
+  "finished_diameter",
+  "finished_reel_length",
+  "print_colours_section",
+  "ink_type",
+  "uses_c",
+  "uses_m",
+  "uses_y",
+  "uses_k",
+  "column_break_print_colours",
+  "number_of_colours",
+  "print_type",
+  "spot_colours_section",
+  "spot_colours",
+  "colour_notes",
+  "rm_section",
+  "jumbo_roll_id",
+  "jumbo_weight_in",
+  "jumbo_width_actual",
+  "col_break_rm",
+  "rm_issued_by",
+  "rm_issue_time",
+  "print_section",
+  "press_name",
+  "print_operator",
+  "print_start_datetime",
+  "print_end_datetime",
+  "print_speed_mpm",
+  "col_break_print_1",
+  "print_waste_metres",
+  "print_waste_kg",
+  "print_total_metres_out",
+  "print_total_reels_out",
+  "print_downtime_notes",
+  "plate_details",
+  "print_reel_output",
+  "print_operator_signoff",
+  "print_supervisor_signoff",
+  "print_signoff_time",
+  "slit_section",
+  "slitter_name",
+  "slit_operator",
+  "slit_start_datetime",
+  "slit_end_datetime",
+  "col_break_slit_1",
+  "slit_input_source",
+  "slit_input_reel_id",
+  "slit_input_weight",
+  "slit_output_section",
+  "slit_output_width",
+  "slit_output_diameter",
+  "slit_rolls_produced",
+  "slit_total_weight_out",
+  "col_break_slit_2",
+  "slit_cartons_packed",
+  "slit_rolls_per_carton",
+  "slit_waste_metres",
+  "slit_waste_kg",
+  "slit_downtime_notes",
+  "slit_operator_signoff",
+  "slit_supervisor_signoff",
+  "slit_signoff_time",
+  "qc_section",
+  "qc_print_result",
+  "qc_print_notes",
+  "col_break_qc",
+  "qc_slit_result",
+  "qc_slit_notes",
+  "qc_inspector",
+  "qc_datetime",
+  "final_section",
+  "final_operator",
+  "final_supervisor",
+  "col_break_final",
+  "final_signoff_date",
+  "final_remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Job Card ETR",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "default": "JC-ETR-.YYYY.-.#####",
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "no_copy": 1,
+   "options": "JC-ETR-.YYYY.-.#####",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "job_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Job Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Customer",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "customer.customer_name",
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "label": "Customer Name",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.customer",
+   "description": "Select an ETR specification for this customer. If none exists, create a Customer Product Specification with Product Type = ETR (Reel to Reel Printing) first.",
+   "fieldname": "customer_product_spec",
+   "fieldtype": "Link",
+   "get_query": "production_log.job_card_tracking.doctype.job_card_etr.job_card_etr.get_etr_customer_product_spec_query",
+   "in_list_view": 1,
+   "label": "Customer Product Specification",
+   "options": "Customer Product Specification",
+   "reqd": 1
+  },
+  {
+   "fieldname": "specification_name",
+   "fieldtype": "Data",
+   "label": "Specification Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "label": "Sales Order",
+   "options": "Sales Order"
+  },
+  {
+   "fieldname": "delivery_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Required Delivery Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_break_header",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "order_qty",
+   "fieldtype": "Float",
+   "label": "Order Quantity",
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "fieldname": "order_qty_uom",
+   "fieldtype": "Select",
+   "label": "UOM",
+   "options": "\nRolls\nReels\nKg",
+   "reqd": 1
+  },
+  {
+   "fieldname": "lpo_number",
+   "fieldtype": "Data",
+   "label": "LPO / PO Number"
+  },
+  {
+   "default": "0",
+   "fieldname": "printing_required",
+   "fieldtype": "Check",
+   "label": "Printing Required"
+  },
+  {
+   "default": "0",
+   "fieldname": "slitting_required",
+   "fieldtype": "Check",
+   "label": "Slitting Required"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "no_copy": 1,
+   "options": "Draft\nIn Progress\nCompleted\nCancelled",
+   "read_only": 1
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "spec_section",
+   "fieldtype": "Section Break",
+   "label": "Product Specification"
+  },
+  {
+   "fieldname": "substrate",
+   "fieldtype": "Select",
+   "label": "Substrate",
+   "options": "\nThermal Paper\nBond Paper\nOther",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.substrate=='Other'",
+   "fieldname": "substrate_other",
+   "fieldtype": "Data",
+   "label": "Substrate (Other)"
+  },
+  {
+   "fieldname": "gsm",
+   "fieldtype": "Float",
+   "label": "GSM",
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "fieldname": "core_id",
+   "fieldtype": "Float",
+   "label": "Core ID (mm)",
+   "precision": "2"
+  },
+  {
+   "fieldname": "output_type",
+   "fieldtype": "Select",
+   "label": "Output Type",
+   "options": "\nETR Plain Rolls\nETR Printed Rolls\nPrinted Reel",
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_break_spec",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "jumbo_width",
+   "fieldtype": "Float",
+   "label": "Jumbo Roll Width (mm)",
+   "precision": "2",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.output_type!='Printed Reel'",
+   "fieldname": "finished_width",
+   "fieldtype": "Float",
+   "label": "Finished Width (mm)",
+   "precision": "2"
+  },
+  {
+   "depends_on": "eval:doc.output_type!='Printed Reel'",
+   "fieldname": "finished_diameter",
+   "fieldtype": "Float",
+   "label": "Finished Diameter (mm)",
+   "precision": "2"
+  },
+  {
+   "depends_on": "eval:doc.output_type=='Printed Reel'",
+   "fieldname": "finished_reel_length",
+   "fieldtype": "Float",
+   "label": "Finished Reel Length (m)",
+   "precision": "2"
+  },
+  {
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "print_colours_section",
+   "fieldtype": "Section Break",
+   "label": "Print Colours"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "ink_type",
+   "fieldtype": "Data",
+   "label": "Ink Type"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "uses_c",
+   "fieldtype": "Check",
+   "label": "C — Cyan"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "uses_m",
+   "fieldtype": "Check",
+   "label": "M — Magenta"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "uses_y",
+   "fieldtype": "Check",
+   "label": "Y — Yellow"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "uses_k",
+   "fieldtype": "Check",
+   "label": "K — Black"
+  },
+  {
+   "fieldname": "column_break_print_colours",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "number_of_colours",
+   "fieldtype": "Int",
+   "label": "Number of Colours",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "print_type",
+   "fieldtype": "Select",
+   "label": "Print Type",
+   "options": "\nBack Print\nFront Print\nFront and Back"
+  },
+  {
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "spot_colours_section",
+   "fieldtype": "Section Break",
+   "label": "Spot Colours"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "spot_colours",
+   "fieldtype": "Table",
+   "label": "Spot Colours",
+   "options": "Spot Colour"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "colour_notes",
+   "fieldtype": "Small Text",
+   "label": "Colour Notes"
+  },
+  {
+   "fieldname": "rm_section",
+   "fieldtype": "Section Break",
+   "label": "Raw Material Input"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "jumbo_roll_id",
+   "fieldtype": "Data",
+   "label": "Jumbo Roll ID / Batch"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "jumbo_weight_in",
+   "fieldtype": "Float",
+   "label": "Jumbo Weight In (kg)",
+   "precision": "2"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "jumbo_width_actual",
+   "fieldtype": "Float",
+   "label": "Actual Jumbo Width (mm)",
+   "precision": "2"
+  },
+  {
+   "fieldname": "col_break_rm",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "rm_issued_by",
+   "fieldtype": "Data",
+   "label": "Issued By (Stores)"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "rm_issue_time",
+   "fieldtype": "Datetime",
+   "label": "Issue Date/Time"
+  },
+  {
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "print_section",
+   "fieldtype": "Section Break",
+   "label": "Printing"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "press_name",
+   "fieldtype": "Data",
+   "label": "Press / Machine"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "print_operator",
+   "fieldtype": "Data",
+   "label": "Operator"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "print_start_datetime",
+   "fieldtype": "Datetime",
+   "label": "Print Start"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "print_end_datetime",
+   "fieldtype": "Datetime",
+   "label": "Print End"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "print_speed_mpm",
+   "fieldtype": "Float",
+   "label": "Speed (m/min)",
+   "precision": "2"
+  },
+  {
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "col_break_print_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "print_waste_metres",
+   "fieldtype": "Float",
+   "label": "Print Waste (metres)",
+   "precision": "2"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "print_waste_kg",
+   "fieldtype": "Float",
+   "label": "Print Waste (kg)",
+   "precision": "2"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "print_total_metres_out",
+   "fieldtype": "Float",
+   "label": "Total Metres Out",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "print_total_reels_out",
+   "fieldtype": "Int",
+   "label": "Total Reels Out",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "print_downtime_notes",
+   "fieldtype": "Small Text",
+   "label": "Downtime / Remarks"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "plate_details",
+   "fieldtype": "Table",
+   "label": "Plate Details",
+   "options": "ETR Plate Detail"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "print_reel_output",
+   "fieldtype": "Table",
+   "label": "Print Output Reels",
+   "options": "ETR Print Reel Output"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "print_operator_signoff",
+   "fieldtype": "Data",
+   "label": "Operator Sign Off"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "print_supervisor_signoff",
+   "fieldtype": "Data",
+   "label": "Supervisor Sign Off"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "print_signoff_time",
+   "fieldtype": "Datetime",
+   "label": "Print Sign Off Time"
+  },
+  {
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "slit_section",
+   "fieldtype": "Section Break",
+   "label": "Slitting"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "slitter_name",
+   "fieldtype": "Data",
+   "label": "Slitter / Machine"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "slit_operator",
+   "fieldtype": "Data",
+   "label": "Operator"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "slit_start_datetime",
+   "fieldtype": "Datetime",
+   "label": "Slit Start"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "slit_end_datetime",
+   "fieldtype": "Datetime",
+   "label": "Slit End"
+  },
+  {
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "col_break_slit_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "slit_input_source",
+   "fieldtype": "Select",
+   "label": "Input Source",
+   "options": "\nJumbo Roll (direct)\nPrinted Reel (from print section)"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.slitting_required && doc.slit_input_source=='Printed Reel (from print section)'",
+   "fieldname": "slit_input_reel_id",
+   "fieldtype": "Data",
+   "label": "Input Reel ID"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "slit_input_weight",
+   "fieldtype": "Float",
+   "label": "Input Weight (kg)",
+   "precision": "2"
+  },
+  {
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "slit_output_section",
+   "fieldtype": "Section Break",
+   "label": "Slitting Output"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "slit_output_width",
+   "fieldtype": "Float",
+   "label": "Output Width (mm)",
+   "precision": "2"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "slit_output_diameter",
+   "fieldtype": "Float",
+   "label": "Output Diameter (mm)",
+   "precision": "2"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "slit_rolls_produced",
+   "fieldtype": "Int",
+   "label": "Rolls Produced"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "slit_total_weight_out",
+   "fieldtype": "Float",
+   "label": "Total Weight Out (kg)",
+   "precision": "2"
+  },
+  {
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "col_break_slit_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "slit_cartons_packed",
+   "fieldtype": "Int",
+   "label": "Cartons Packed"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "slit_rolls_per_carton",
+   "fieldtype": "Int",
+   "label": "Rolls per Carton"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "slit_waste_metres",
+   "fieldtype": "Float",
+   "label": "Slit Waste (metres)",
+   "precision": "2"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "slit_waste_kg",
+   "fieldtype": "Float",
+   "label": "Slit Waste (kg)",
+   "precision": "2"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "slit_downtime_notes",
+   "fieldtype": "Small Text",
+   "label": "Downtime / Remarks"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "slit_operator_signoff",
+   "fieldtype": "Data",
+   "label": "Operator Sign Off"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "slit_supervisor_signoff",
+   "fieldtype": "Data",
+   "label": "Supervisor Sign Off"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "slit_signoff_time",
+   "fieldtype": "Datetime",
+   "label": "Slit Sign Off Time"
+  },
+  {
+   "fieldname": "qc_section",
+   "fieldtype": "Section Break",
+   "label": "Quality Control"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "qc_print_result",
+   "fieldtype": "Select",
+   "label": "Print QC Result",
+   "options": "\nPass\nFail\nN/A"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.printing_required",
+   "fieldname": "qc_print_notes",
+   "fieldtype": "Small Text",
+   "label": "Print QC Notes"
+  },
+  {
+   "fieldname": "col_break_qc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "qc_slit_result",
+   "fieldtype": "Select",
+   "label": "Slitting QC Result",
+   "options": "\nPass\nFail\nN/A"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.slitting_required",
+   "fieldname": "qc_slit_notes",
+   "fieldtype": "Small Text",
+   "label": "Slitting QC Notes"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "qc_inspector",
+   "fieldtype": "Data",
+   "label": "QC Inspector"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "qc_datetime",
+   "fieldtype": "Datetime",
+   "label": "QC Date/Time"
+  },
+  {
+   "fieldname": "final_section",
+   "fieldtype": "Section Break",
+   "label": "Final Sign Off"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "final_operator",
+   "fieldtype": "Data",
+   "label": "Operator"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "final_supervisor",
+   "fieldtype": "Data",
+   "label": "Supervisor / Production Manager"
+  },
+  {
+   "fieldname": "col_break_final",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "final_signoff_date",
+   "fieldtype": "Date",
+   "label": "Sign Off Date"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "final_remarks",
+   "fieldtype": "Small Text",
+   "label": "Final Remarks"
+  }
+ ],
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-04-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Job Card Tracking",
+ "name": "Job Card ETR",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 0,
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 0,
+   "cancel": 0,
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing User",
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}
