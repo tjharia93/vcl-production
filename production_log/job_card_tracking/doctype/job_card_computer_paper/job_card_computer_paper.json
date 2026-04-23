@@ -10,6 +10,7 @@
   "naming_series",
   "order_date",
   "due_date",
+  "status",
   "customer",
   "lpo_number",
   "section_product_specification",
@@ -88,6 +89,17 @@
    "fieldtype": "Date",
    "label": "Due Date",
    "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Status",
+   "no_copy": 1,
+   "options": "Draft\nIn Progress\nCompleted\nCancelled",
+   "read_only": 1
   },
   {
    "fieldname": "customer",

@@ -71,6 +71,19 @@
   "ruling_type",
   "binding_type",
   "cover_type",
+  "etr_section",
+  "etr_substrate",
+  "etr_substrate_other",
+  "etr_gsm",
+  "etr_core_id",
+  "etr_col_break_1",
+  "etr_jumbo_width",
+  "etr_output_type",
+  "etr_finished_width",
+  "etr_finished_diameter",
+  "etr_finished_reel_length",
+  "etr_print_section",
+  "etr_print_type",
   "packing_section",
   "numbering_required",
   "standard_packing",
@@ -95,14 +108,14 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Product Type",
-   "options": "\nComputer Paper\nCarton\nLabel\nExercise Books",
+   "options": "\nComputer Paper\nCarton\nLabel\nExercise Books\nETR (Reel to Reel Printing)",
    "reqd": 1
   },
   {
    "fieldname": "naming_series",
    "fieldtype": "Select",
    "label": "Naming Series",
-   "options": "CPT-SPEC-.#####\nCTN-SPEC-.#####\nLBL-SPEC-.#####\nEXB-SPEC-.#####",
+   "options": "CPT-SPEC-.#####\nCTN-SPEC-.#####\nLBL-SPEC-.#####\nEXB-SPEC-.#####\nETR-SPEC-.#####",
    "reqd": 1
   },
   {
@@ -138,7 +151,7 @@
    "reqd": 1
   },
   {
-   "depends_on": "eval:['Computer Paper','Label','Carton'].includes(doc.product_type)",
+   "depends_on": "eval:['Computer Paper','Label','Carton','ETR (Reel to Reel Printing)'].includes(doc.product_type)",
    "fieldname": "print_colours_section",
    "fieldtype": "Section Break",
    "label": "Print Colours"
@@ -149,7 +162,7 @@
    "fieldname": "ink_type",
    "fieldtype": "Select",
    "label": "Ink Type",
-   "options": "Process Offset\nProcess UV",
+   "options": "Process Offset\nProcess UV\nWater Based\nSolvent Based",
    "allow_on_submit": 1
   },
   {
@@ -200,7 +213,7 @@
    "label": "Set Full CMYK"
   },
   {
-   "depends_on": "eval:['Computer Paper','Label','Carton'].includes(doc.product_type)",
+   "depends_on": "eval:['Computer Paper','Label','Carton','ETR (Reel to Reel Printing)'].includes(doc.product_type)",
    "fieldname": "spot_colours_section",
    "fieldtype": "Section Break",
    "label": "Spot Colours"
@@ -531,6 +544,92 @@
    "fieldtype": "Select",
    "label": "Cover Type",
    "options": "Same as Inner\nCard Stock\nGlossy Cover"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='ETR (Reel to Reel Printing)'",
+   "fieldname": "etr_section",
+   "fieldtype": "Section Break",
+   "label": "ETR / Reel to Reel Printing Specification"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='ETR (Reel to Reel Printing)'",
+   "fieldname": "etr_substrate",
+   "fieldtype": "Select",
+   "label": "Substrate",
+   "options": "\nThermal Paper\nBond Paper\nOther"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='ETR (Reel to Reel Printing)' && doc.etr_substrate=='Other'",
+   "fieldname": "etr_substrate_other",
+   "fieldtype": "Data",
+   "label": "Substrate (Other)"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='ETR (Reel to Reel Printing)'",
+   "fieldname": "etr_gsm",
+   "fieldtype": "Float",
+   "label": "GSM",
+   "precision": "2"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='ETR (Reel to Reel Printing)'",
+   "fieldname": "etr_core_id",
+   "fieldtype": "Float",
+   "label": "Core ID (mm)",
+   "precision": "2"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='ETR (Reel to Reel Printing)'",
+   "fieldname": "etr_col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='ETR (Reel to Reel Printing)'",
+   "fieldname": "etr_jumbo_width",
+   "fieldtype": "Float",
+   "label": "Jumbo Roll Width (mm)",
+   "precision": "2"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='ETR (Reel to Reel Printing)'",
+   "fieldname": "etr_output_type",
+   "fieldtype": "Select",
+   "label": "Output Type",
+   "options": "\nETR Plain Rolls\nETR Printed Rolls\nPrinted Reel"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='ETR (Reel to Reel Printing)' && doc.etr_output_type!='Printed Reel'",
+   "fieldname": "etr_finished_width",
+   "fieldtype": "Float",
+   "label": "Finished Width (mm)",
+   "precision": "2"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='ETR (Reel to Reel Printing)' && doc.etr_output_type!='Printed Reel'",
+   "fieldname": "etr_finished_diameter",
+   "fieldtype": "Float",
+   "label": "Finished Diameter (mm)",
+   "precision": "2"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='ETR (Reel to Reel Printing)' && doc.etr_output_type=='Printed Reel'",
+   "fieldname": "etr_finished_reel_length",
+   "fieldtype": "Float",
+   "label": "Finished Reel Length (m)",
+   "precision": "2"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='ETR (Reel to Reel Printing)' && ['ETR Printed Rolls','Printed Reel'].includes(doc.etr_output_type)",
+   "fieldname": "etr_print_section",
+   "fieldtype": "Section Break",
+   "label": "ETR Print Detail"
+  },
+  {
+   "depends_on": "eval:doc.product_type=='ETR (Reel to Reel Printing)' && ['ETR Printed Rolls','Printed Reel'].includes(doc.etr_output_type)",
+   "fieldname": "etr_print_type",
+   "fieldtype": "Select",
+   "label": "Print Type",
+   "options": "\nBack Print\nFront Print\nFront and Back"
   },
   {
    "fieldname": "packing_section",

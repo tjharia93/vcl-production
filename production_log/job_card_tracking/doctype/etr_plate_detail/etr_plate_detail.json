@@ -1,0 +1,82 @@
+{
+ "actions": [],
+ "creation": "2026-04-22 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "colour_number",
+  "colour_name",
+  "plate_code",
+  "plate_condition_before",
+  "plate_condition_after",
+  "plate_remarks"
+ ],
+ "fields": [
+  {
+   "allow_on_submit": 1,
+   "columns": 1,
+   "fieldname": "colour_number",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Clr #",
+   "options": "\n1\n2\n3\n4",
+   "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "columns": 2,
+   "fieldname": "colour_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Colour Name"
+  },
+  {
+   "allow_on_submit": 1,
+   "columns": 2,
+   "fieldname": "plate_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Plate Code",
+   "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "columns": 2,
+   "fieldname": "plate_condition_before",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Condition Before",
+   "options": "\nNew\nUsed - Good\nUsed - Fair\nDamaged",
+   "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "columns": 2,
+   "fieldname": "plate_condition_after",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Condition After",
+   "options": "\nGood\nFair\nDamaged"
+  },
+  {
+   "allow_on_submit": 1,
+   "columns": 2,
+   "fieldname": "plate_remarks",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Remarks"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-04-22 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Job Card Tracking",
+ "name": "ETR Plate Detail",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}

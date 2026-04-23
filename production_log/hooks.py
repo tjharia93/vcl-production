@@ -85,7 +85,7 @@ after_install = "production_log.install.after_install"
 # Fixtures
 # --------
 fixtures = [
-	{"dt": "Print Format", "filters": [["name", "in", ["Carton Job Card", "Label Job Traveller", "Computer Paper Job Traveller"]]]},
+	{"dt": "Print Format", "filters": [["name", "in", ["Carton Job Card", "Label Job Traveller", "Computer Paper Job Traveller", "ETR Job Traveller"]]]},
 	{
 		"dt": "Custom Field",
 		"filters": [
@@ -96,6 +96,7 @@ fixtures = [
 					"Job Card Computer Paper",
 					"Job Card Label",
 					"Job Card Carton",
+					"Job Card ETR",
 				]
 			]
 		],

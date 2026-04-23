@@ -2,16 +2,18 @@
 // For license information, please see license.txt
 
 const NAMING_SERIES_MAP = {
-	"Computer Paper": "CPT-SPEC-.#####",
-	"Carton":         "CTN-SPEC-.#####",
-	"Label":          "LBL-SPEC-.#####",
-	"Exercise Books": "EXB-SPEC-.#####",
+	"Computer Paper":               "CPT-SPEC-.#####",
+	"Carton":                       "CTN-SPEC-.#####",
+	"Label":                        "LBL-SPEC-.#####",
+	"Exercise Books":               "EXB-SPEC-.#####",
+	"ETR (Reel to Reel Printing)": "ETR-SPEC-.#####",
 };
 
 const INK_TYPE_DEFAULTS = {
-	"Computer Paper": "Process Offset",
-	"Carton":         "Process Offset",
-	"Label":          "Process UV",
+	"Computer Paper":               "Process Offset",
+	"Carton":                       "Process Offset",
+	"Label":                        "Process UV",
+	"ETR (Reel to Reel Printing)": "Water Based",
 };
 
 const PAPER_RULES = {

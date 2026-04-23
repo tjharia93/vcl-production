@@ -130,6 +130,7 @@
    "description": "Select a Label specification for this customer.",
    "fieldname": "customer_product_spec",
    "fieldtype": "Link",
+   "get_query": "production_log.job_card_tracking.doctype.job_card_label.job_card_label.get_label_customer_product_spec_query",
    "in_list_view": 1,
    "label": "Customer Product Specification",
    "options": "Customer Product Specification",
@@ -396,12 +397,14 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "default": "Draft",
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_standard_filter": 1,
    "label": "Status",
    "no_copy": 1,
-   "options": "Draft\nSubmitted\nCancelled",
+   "options": "Draft\nIn Progress\nCompleted\nSubmitted\nCancelled",
    "read_only": 1
   },
   {

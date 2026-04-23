@@ -126,9 +126,17 @@ class JobCardLabel(Document):
 		if self.docstatus == 0:
 			self.status = "Draft"
 		elif self.docstatus == 1:
-			self.status = "Submitted"
+			# On submit, default to In Progress unless user has already advanced to Completed.
+			if self.status not in ("In Progress", "Completed"):
+				self.status = "In Progress"
 		elif self.docstatus == 2:
 			self.status = "Cancelled"
+
+	def on_submit(self):
+		self.set_status()
+
+	def on_cancel(self):
+		self.set_status()
 
 
 @frappe.whitelist()

@@ -8,6 +8,22 @@ class JobCardCarton(Document):
 		self.validate_customer_product_spec()
 		self.validate_dimensions()
 		self.validate_quantity()
+		self.set_status()
+
+	def on_submit(self):
+		self.set_status()
+
+	def on_cancel(self):
+		self.set_status()
+
+	def set_status(self):
+		if self.docstatus == 0:
+			self.status = "Draft"
+		elif self.docstatus == 1:
+			if self.status not in ("In Progress", "Completed"):
+				self.status = "In Progress"
+		elif self.docstatus == 2:
+			self.status = "Cancelled"
 
 	def validate_customer_product_spec(self):
 		if not self.customer_product_spec:
