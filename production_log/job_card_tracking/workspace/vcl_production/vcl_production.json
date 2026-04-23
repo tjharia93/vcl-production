@@ -1,4 +1,5 @@
 {
+ "app": null,
  "charts": [],
  "content": "[{\"id\":\"specs-header\",\"type\":\"header\",\"data\":{\"text\":\"Customer Specifications\",\"col\":12}},{\"id\":\"customer-product-spec\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer Product Specifications\",\"col\":3}},{\"id\":\"dies-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Dies List\",\"col\":3}},{\"id\":\"job-cards-header\",\"type\":\"header\",\"data\":{\"text\":\"Job Card Tracking\",\"col\":12}},{\"id\":\"new-computer-paper\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Computer Paper Job Card\",\"col\":3}},{\"id\":\"computer-paper-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Computer Paper Job Cards\",\"col\":3}},{\"id\":\"new-label\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Label Job Card\",\"col\":3}},{\"id\":\"label-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Label Job Cards\",\"col\":3}},{\"id\":\"new-carton\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Carton Job Card\",\"col\":3}},{\"id\":\"carton-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Carton Job Cards\",\"col\":3}},{\"id\":\"planning-header\",\"type\":\"header\",\"data\":{\"text\":\"Production Planning\",\"col\":12}},{\"id\":\"production-planner\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Production Planner\",\"col\":3}},{\"id\":\"schedule-line-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Production Schedule Lines\",\"col\":3}},{\"id\":\"production-entry-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Production Entries\",\"col\":3}}]",
  "creation": "2026-04-15 00:00:00.000000",
@@ -85,5 +86,6 @@
    "type": "DocType"
   }
  ],
- "title": "VCL Production"
+ "title": "VCL Production",
+ "type": "Workspace"
 }

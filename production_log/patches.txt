@@ -14,3 +14,4 @@ production_log.patches.patch_v5_0
 production_log.patches.patch_v5_1
 production_log.patches.patch_v5_2
 production_log.patches.patch_v5_3
+production_log.patches.patch_v5_4
