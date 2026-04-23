@@ -264,7 +264,8 @@ def get_workstation_columns(product_line=None):
 def get_schedule_entries(date_from, date_to, product_line=None):
     """
     Returns all PSL and PE records in the date range,
-    optionally filtered by product_line.
+    optionally filtered by product_line. Excludes entries whose
+    linked job card has job_status in ('Completed', 'Closed').
     """
     filters = [['date', 'between', [date_from, date_to]]]
     if product_line:
@@ -272,10 +273,42 @@ def get_schedule_entries(date_from, date_to, product_line=None):
 
     psl = frappe.db.get_all('Production Schedule Line', filters=filters, fields='*')
     pe  = frappe.db.get_all('Production Entry',         filters=filters, fields='*')
+
+    # Drop entries whose job card has been closed or completed.
+    # `job_status` is a Select field on all three Job Card DocTypes
+    # with options: Open, In Progress, Completed, Closed (default Open).
+    # Maintained via the Close / Reopen buttons on the job card form
+    # (whitelisted helper: production_log.job_card_tracking.utils.set_job_status).
+    psl = _filter_out_closed_jobs(psl)
+    pe  = _filter_out_closed_jobs(pe)
+
     return {'schedule': psl, 'actuals': pe}
+
+
+def _filter_out_closed_jobs(rows):
+    """Return rows whose linked job card is not Completed/Closed."""
+    HIDDEN = ('Completed', 'Closed')
+    JOB_DOCTYPES = (
+        'Job Card Computer Paper',
+        'Job Card Label',
+        'Job Card Carton',
+    )
+    out = []
+    for r in rows:
+        jc_doctype = r.get('job_card_doctype')
+        jc_name    = r.get('job_card')
+        if not (jc_doctype in JOB_DOCTYPES and jc_name):
+            out.append(r)
+            continue
+        status = frappe.db.get_value(jc_doctype, jc_name, 'job_status') or 'Open'
+        if status not in HIDDEN:
+            out.append(r)
+    return out
 ```
 
 Call this on page load and on every week change. Merge the results into the client-side `entries` object keyed by `name` (the Frappe document name, e.g. `PSL-0001`).
+
+**Note:** The job card `job_status` field already exists in the data layer (added 2026-04-23 — see `Job Card Computer Paper`, `Job Card Label`, `Job Card Carton` DocType definitions). The Close / Reopen buttons on the job card form set it via `production_log.job_card_tracking.utils.set_job_status`. The planner just needs to honour the filter shown above.
 
 ---
 
