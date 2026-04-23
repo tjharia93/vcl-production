@@ -13,3 +13,4 @@ production_log.patches.v4_1.init_job_card_status
 production_log.patches.patch_v5_0
 production_log.patches.patch_v5_1
 production_log.patches.patch_v5_2
+production_log.patches.patch_v5_3
