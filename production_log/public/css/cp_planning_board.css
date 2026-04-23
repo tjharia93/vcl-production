@@ -1,0 +1,410 @@
+/*
+ * Production Planner — ported verbatim from the v3 prototype
+ * (docs/vcl_production_planner_v3.html).
+ *
+ * All styles are scoped under #cp-planner-root so they don't leak into
+ * the rest of the Frappe desk. Do not edit unless you're updating the
+ * prototype as well — keep the two in sync so UX reviews match what
+ * gets shipped.
+ */
+
+#cp-planner-root { box-sizing: border-box; margin: 0; padding: 0; }
+#cp-planner-root *,
+#cp-planner-root *::before,
+#cp-planner-root *::after { box-sizing: border-box; }
+
+#cp-planner-root {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  background: #f0f2f8;
+  color: #1e2235;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 60px);
+  overflow: hidden;
+
+  --blue: #2B3990;
+  --blue-lt: #3d54cc;
+  --blue-bg: #eef0fa;
+  --red: #ED1C24;
+  --red-bg: #fdecea;
+  --green: #0e9e5a;
+  --green-bg: #e6f7ef;
+  --amber: #c07800;
+  --amber-bg: #fff3dc;
+  --purple: #7c3aed;
+  --purple-bg: #f3eeff;
+  --grey: #6b7280;
+  --border: #dde0ed;
+  --panel: #ffffff;
+  --surface: #f7f8fc;
+  --text: #1e2235;
+  --text-dim: #6b7090;
+  --text-faint: #b0b4cc;
+  --mono: 'IBM Plex Mono', monospace;
+}
+
+/* ── HEADER ── */
+#cp-planner-root .header {
+  min-height: 54px; background: var(--blue); display: flex; align-items: center;
+  justify-content: space-between; padding: 8px 20px; flex-shrink: 0;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(43,57,144,.25);
+}
+#cp-planner-root .logo { display: flex; align-items: center; gap: 10px; }
+#cp-planner-root .logo-box {
+  width: 32px; height: 32px; background: #fff; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 9px; font-weight: 700; color: var(--blue);
+}
+#cp-planner-root .logo-text { color: #fff; }
+#cp-planner-root .logo-name { font-size: 13px; font-weight: 700; letter-spacing: .5px; }
+#cp-planner-root .logo-sub  { font-size: 10px; opacity: .7; }
+/* Wraps so the 6 dept tabs + view buttons + week nav + Print Daily
+ * all still fit on narrow viewports. Header `min-height` lets the bar
+ * grow vertically when content wraps. */
+#cp-planner-root .h-controls {
+  display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap; row-gap: 8px; justify-content: flex-end;
+}
+#cp-planner-root .dept-btn {
+  padding: 5px 14px; border-radius: 20px; border: 1.5px solid rgba(255,255,255,.3);
+  background: transparent; color: rgba(255,255,255,.75); cursor: pointer;
+  font-size: 12px; font-weight: 500; transition: all .15s;
+}
+#cp-planner-root .dept-btn:hover { background: rgba(255,255,255,.12); }
+#cp-planner-root .dept-btn.active { background: #fff; color: var(--blue); border-color: #fff; font-weight: 600; }
+#cp-planner-root .hdiv { width: 1px; height: 22px; background: rgba(255,255,255,.2); }
+#cp-planner-root .view-btn {
+  padding: 4px 12px; border-radius: 4px; border: none;
+  background: rgba(255,255,255,.15); color: rgba(255,255,255,.7);
+  cursor: pointer; font-size: 11px; font-weight: 500; transition: all .15s;
+}
+#cp-planner-root .view-btn.active { background: #fff; color: var(--blue); font-weight: 600; }
+#cp-planner-root .view-btn:hover:not(.active) { background: rgba(255,255,255,.25); color: #fff; }
+#cp-planner-root .week-input {
+  border: 1.5px solid rgba(255,255,255,.3); background: rgba(255,255,255,.1);
+  color: #fff; border-radius: 5px; padding: 4px 9px;
+  font-family: var(--mono); font-size: 11px; outline: none;
+}
+#cp-planner-root .week-input:focus { border-color: #fff; }
+#cp-planner-root .print-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 14px; border-radius: 5px;
+  border: 1.5px solid rgba(255,255,255,.4); background: rgba(255,255,255,.12);
+  color: #fff; cursor: pointer; font-size: 12px; font-weight: 600; transition: all .15s;
+}
+#cp-planner-root .print-btn:hover { background: rgba(255,255,255,.25); border-color: rgba(255,255,255,.7); }
+#cp-planner-root .print-btn svg { flex-shrink: 0; }
+
+/* Conflict indicators */
+#cp-planner-root .grid-cell.conflict { background: #fffbeb; }
+#cp-planner-root .conflict-chip {
+  display: flex; align-items: center; gap: 4px; margin-top: 3px;
+  background: #fff3dc; border: 1px solid #f0c060; border-radius: 4px;
+  padding: 3px 6px; font-size: 10px; font-weight: 600; color: #c07800;
+  word-break: break-word;
+}
+#cp-planner-root .conflict-chip svg { flex-shrink: 0; }
+#cp-planner-root .entry-block.conflicted { outline: 2px solid #f0c060; outline-offset: -1px; }
+#cp-planner-root .conflict-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: #fff3dc; border: 1px solid #f0c060; border-radius: 10px;
+  padding: 1px 7px; font-size: 9px; font-weight: 700; color: #c07800;
+  margin-left: 6px; vertical-align: middle;
+}
+
+/* Day picker modal */
+#cp-planner-root .day-picker-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 4px; }
+#cp-planner-root .day-pick-btn {
+  border: 1.5px solid var(--border); border-radius: 7px; padding: 12px 8px;
+  background: var(--surface); cursor: pointer; text-align: center; transition: all .15s;
+}
+#cp-planner-root .day-pick-btn:hover { border-color: var(--blue); background: var(--blue-bg); }
+#cp-planner-root .day-pick-btn.today { border-color: var(--blue); background: var(--blue-bg); }
+#cp-planner-root .dpb-day  { font-size: 12px; font-weight: 600; color: var(--text); }
+#cp-planner-root .dpb-date { font-size: 10px; color: var(--text-dim); margin-top: 2px; font-family: var(--mono); }
+#cp-planner-root .dpb-dot  { width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin: 5px auto 0; display: none; }
+#cp-planner-root .day-pick-btn.has-entries .dpb-dot { display: block; }
+
+/* ── BODY ── */
+#cp-planner-root .body { display: flex; flex: 1; overflow: hidden; }
+
+/* ── LEFT PANEL ── */
+#cp-planner-root .left {
+  width: 260px; flex-shrink: 0; background: var(--panel);
+  border-right: 1px solid var(--border); display: flex; flex-direction: column;
+}
+#cp-planner-root .lp-head {
+  padding: 12px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+#cp-planner-root .lp-label { font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text-faint); margin-bottom: 8px; }
+#cp-planner-root .lp-search {
+  width: 100%; padding: 6px 10px; border: 1.5px solid var(--border); border-radius: 6px;
+  font-size: 12px; color: var(--text); background: var(--surface); outline: none;
+}
+#cp-planner-root .lp-search:focus { border-color: var(--blue); }
+#cp-planner-root .lp-list { flex: 1; overflow-y: auto; padding: 8px; }
+#cp-planner-root .job-card {
+  border: 1.5px solid var(--border); border-radius: 7px; padding: 9px 10px;
+  margin-bottom: 6px; cursor: pointer; background: var(--panel);
+  transition: all .12s; position: relative;
+}
+#cp-planner-root .job-card:hover { border-color: var(--blue); background: var(--blue-bg); }
+#cp-planner-root .job-card.selected { border-color: var(--blue); background: var(--blue-bg); }
+#cp-planner-root .job-card.s-hold { border-left: 3px solid var(--red); }
+#cp-planner-root .job-card.s-active { border-left: 3px solid var(--green); }
+#cp-planner-root .job-card.s-open { border-left: 3px solid var(--amber); }
+#cp-planner-root .job-card.s-scheduled { border-left: 3px solid var(--blue); }
+#cp-planner-root .jc-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
+#cp-planner-root .jc-id { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--text); }
+#cp-planner-root .jc-badge {
+  font-size: 9px; font-weight: 600; padding: 2px 6px; border-radius: 10px;
+  text-transform: uppercase; letter-spacing: .5px;
+}
+#cp-planner-root .badge-open      { background: var(--amber-bg); color: var(--amber); }
+#cp-planner-root .badge-active    { background: var(--green-bg);  color: var(--green); }
+#cp-planner-root .badge-hold      { background: var(--red-bg);    color: var(--red); }
+#cp-planner-root .badge-scheduled { background: var(--blue-bg);   color: var(--blue); }
+#cp-planner-root .jc-cust { font-size: 11px; color: var(--text-dim); margin-bottom: 2px; }
+#cp-planner-root .jc-prod { font-size: 10px; color: var(--text-faint); margin-bottom: 6px; }
+#cp-planner-root .jc-meta { display: flex; gap: 12px; }
+#cp-planner-root .jc-meta-item { font-size: 10px; }
+#cp-planner-root .jc-meta-label { color: var(--text-faint); }
+#cp-planner-root .jc-meta-val   { color: var(--text-dim); font-weight: 500; }
+#cp-planner-root .progress-bar { height: 3px; background: #e8eaf2; border-radius: 2px; margin-top: 7px; }
+#cp-planner-root .progress-fill { height: 100%; background: var(--green); border-radius: 2px; }
+#cp-planner-root .hold-btn {
+  position: absolute; top: 8px; right: 38px;
+  background: none; border: none; font-size: 12px; cursor: pointer; opacity: .4;
+  padding: 2px 4px; border-radius: 3px; transition: opacity .12s;
+}
+#cp-planner-root .hold-btn:hover { opacity: 1; background: var(--red-bg); }
+#cp-planner-root .lp-foot {
+  padding: 10px 12px; border-top: 1px solid var(--border); flex-shrink: 0;
+  display: flex; justify-content: space-between; align-items: center;
+}
+#cp-planner-root .lp-count { font-size: 11px; color: var(--text-dim); }
+#cp-planner-root .btn-add-job {
+  background: var(--blue); color: #fff; border: none; border-radius: 5px;
+  padding: 6px 12px; font-size: 11px; font-weight: 600; cursor: pointer;
+  transition: background .15s;
+}
+#cp-planner-root .btn-add-job:hover { background: var(--blue-lt); }
+
+/* ── RIGHT PANEL ── */
+#cp-planner-root .right { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Stage header */
+#cp-planner-root .stage-header {
+  background: var(--panel); border-bottom: 2px solid var(--border);
+  display: flex; flex-shrink: 0; overflow-x: auto; overflow-y: hidden;
+  height: 52px;
+}
+#cp-planner-root .stage-header::-webkit-scrollbar { height: 0; }
+#cp-planner-root .sh-corner {
+  width: 190px; min-width: 190px; flex-shrink: 0; border-right: 2px solid var(--border);
+  display: flex; align-items: center; padding: 0 14px;
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint);
+}
+#cp-planner-root .stage-group {
+  border-right: 1px solid var(--border); flex-shrink: 0; display: flex; flex-direction: column;
+}
+#cp-planner-root .stage-group.disabled { opacity: .3; pointer-events: none; background: #fafafa; }
+#cp-planner-root .sg-top {
+  padding: 5px 8px 3px; display: flex; align-items: center; justify-content: center; gap: 6px;
+  border-bottom: 1px solid var(--border); white-space: nowrap; text-align: center;
+}
+#cp-planner-root .sg-name { font-size: 11px; font-weight: 600; color: var(--text-dim); }
+#cp-planner-root .sg-tag {
+  font-size: 9px; padding: 1px 5px; border-radius: 3px;
+  font-weight: 600; letter-spacing: .5px;
+}
+#cp-planner-root .tag-design                 { background: var(--purple-bg); color: var(--purple); }
+#cp-planner-root .tag-reel_to_reel_printing  { background: var(--blue-bg);   color: var(--blue); }
+#cp-planner-root .tag-ruling                 { background: #e0f1f7;          color: #0d6e9b; }
+#cp-planner-root .tag-sheeting               { background: #fdefec;          color: #c84e2e; }
+#cp-planner-root .tag-collation              { background: var(--green-bg);  color: var(--green); }
+#cp-planner-root .tag-slitting               { background: var(--amber-bg);  color: var(--amber); }
+#cp-planner-root .tag-na                     { background: #f3f4f8; color: var(--text-faint); }
+#cp-planner-root .sg-bottom    { display: flex; flex: 1; }
+#cp-planner-root .sg-machine {
+  min-width: 110px; flex: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--text-dim); border-right: 1px solid var(--border);
+  font-family: var(--mono); padding: 0 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#cp-planner-root .sg-machine:last-child { border-right: none; }
+#cp-planner-root .sg-single {
+  flex: 1; min-width: 110px; display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--text-faint); font-family: var(--mono);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 4px;
+}
+
+/* Grid */
+#cp-planner-root .grid-wrap { flex: 1; overflow: auto; }
+#cp-planner-root .grid-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
+#cp-planner-root .grid-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+#cp-planner-root .grid { border-collapse: collapse; min-width: 100%; }
+#cp-planner-root .grid tr { border-bottom: 1px solid var(--border); }
+#cp-planner-root .grid tr:hover { background: #f8f9fc; }
+#cp-planner-root .row-label {
+  position: sticky; left: 0; z-index: 10; background: var(--panel);
+  width: 190px; min-width: 190px; max-width: 190px;
+  border-right: 2px solid var(--border); vertical-align: middle; padding: 10px 14px;
+}
+#cp-planner-root .grid tr:hover .row-label { background: #f8f9fc; }
+#cp-planner-root .rl-main { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--text); }
+#cp-planner-root .rl-sub  { font-size: 10px; color: var(--text-dim); margin-top: 1px; }
+#cp-planner-root .grid-cell {
+  border-right: 1px solid var(--border); vertical-align: top;
+  padding: 5px 6px; min-height: 58px;
+  /* Must match .sg-machine / .sg-single min-width in the stage header
+   * above, or header labels drift out of alignment with the cells
+   * beneath them. Both width + min-width forces the cell to honour
+   * 110px even when its content is just the "+" button. */
+  min-width: 110px; width: 110px;
+}
+#cp-planner-root .grid-cell.col-disabled { background: repeating-linear-gradient(45deg, #f8f8fb, #f8f8fb 4px, #f3f4f8 4px, #f3f4f8 8px); }
+
+/* Entry blocks */
+#cp-planner-root .entry-block {
+  border-radius: 5px; padding: 5px 8px; margin-bottom: 4px;
+  cursor: pointer; transition: all .12s; border: 1.5px solid;
+}
+#cp-planner-root .entry-block.plan   { background: var(--blue-bg);   border-color: #c5caf0; }
+#cp-planner-root .entry-block.actual { background: var(--green-bg);  border-color: #b3e6cf; }
+#cp-planner-root .entry-block.manual { background: var(--purple-bg); border-color: #d4bfff; }
+#cp-planner-root .entry-block:hover  { filter: brightness(.96); }
+#cp-planner-root .eb-top  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+#cp-planner-root .eb-id   { font-family: var(--mono); font-size: 9px; font-weight: 600; color: var(--blue); }
+#cp-planner-root .entry-block.actual .eb-id { color: var(--green); }
+#cp-planner-root .entry-block.manual .eb-id { color: var(--purple); }
+#cp-planner-root .eb-type { font-size: 8px; font-weight: 600; letter-spacing: .5px; color: var(--text-faint); }
+#cp-planner-root .eb-qty  { font-size: 13px; font-weight: 700; color: var(--text); line-height: 1; }
+#cp-planner-root .eb-uom  { font-size: 9px; color: var(--text-dim); font-weight: 400; margin-left: 2px; }
+#cp-planner-root .eb-meta { font-size: 9px; color: var(--text-dim); margin-top: 2px; }
+#cp-planner-root .add-btn {
+  width: 100%; padding: 4px; border: 1.5px dashed var(--border); border-radius: 5px;
+  background: transparent; color: var(--text-faint); cursor: pointer; font-size: 13px;
+  transition: all .12s; display: block; text-align: center;
+}
+#cp-planner-root .add-btn:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-bg); }
+
+/* ── MODAL OVERLAY ── */
+#cp-planner-root .overlay {
+  position: fixed; inset: 0; background: rgba(30,34,53,.45);
+  z-index: 100; display: none; align-items: center; justify-content: center;
+}
+#cp-planner-root .overlay.open { display: flex; }
+/* Renamed from `.modal` to `.vcl-modal` — Frappe desk ships Bootstrap,
+ * which has `.modal { display: none; }`. Our rule didn't set `display`
+ * so Bootstrap won and the dialog stayed invisible even when the
+ * overlay was `.open`. Renaming is the bulletproof fix; leaving the
+ * child classes (`.modal-head`, `.modal-body`, `.modal-foot`,
+ * `.modal-close`, `.modal-title`, `.modal-sub`) untouched because
+ * Bootstrap's `.modal-header` / `.modal-footer` don't collide with
+ * our `-head` / `-foot`, and `.modal-body` / `.modal-title` only
+ * inherit mild styling which our rules already override. */
+#cp-planner-root .vcl-modal {
+  display: block;
+  background: #fff; border-radius: 10px; width: 520px; max-width: 95vw;
+  box-shadow: 0 10px 40px rgba(30,34,53,.2); animation: cpPlannerPopIn .18s ease-out;
+  max-height: 90vh; overflow-y: auto;
+}
+@keyframes cpPlannerPopIn { from { opacity:0; transform:translateY(12px) scale(.98); } to { opacity:1; transform:none; } }
+#cp-planner-root .modal-head {
+  padding: 16px 20px 12px; border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: flex-start; position: sticky; top: 0; background: #fff; z-index:1;
+}
+#cp-planner-root .modal-title { font-size: 15px; font-weight: 700; color: var(--text); }
+#cp-planner-root .modal-sub   { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+#cp-planner-root .modal-close {
+  background: none; border: none; font-size: 20px; cursor: pointer;
+  color: var(--text-dim); line-height: 1; padding: 0 4px;
+}
+#cp-planner-root .modal-close:hover { color: var(--text); }
+#cp-planner-root .modal-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+#cp-planner-root .field-row   { display: grid; gap: 12px; }
+#cp-planner-root .field-row.cols-2 { grid-template-columns: 1fr 1fr; }
+#cp-planner-root .field-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+#cp-planner-root .field { display: flex; flex-direction: column; gap: 5px; }
+#cp-planner-root .field label {
+  font-size: 11px; font-weight: 600; color: var(--text-dim);
+  text-transform: uppercase; letter-spacing: .6px;
+}
+#cp-planner-root .field label .uom { font-size: 10px; font-weight: 400; color: var(--text-faint); text-transform: none; letter-spacing: 0; margin-left: 4px; }
+#cp-planner-root .field input,
+#cp-planner-root .field select,
+#cp-planner-root .field textarea {
+  border: 1.5px solid var(--border); border-radius: 6px; padding: 8px 10px;
+  font-size: 13px; color: var(--text); background: var(--surface); outline: none;
+  font-family: inherit; transition: border-color .15s; width: 100%;
+}
+#cp-planner-root .field input:focus,
+#cp-planner-root .field select:focus,
+#cp-planner-root .field textarea:focus {
+  border-color: var(--blue); background: #fff; box-shadow: 0 0 0 3px rgba(43,57,144,.08);
+}
+#cp-planner-root .field input[readonly],
+#cp-planner-root .field input.readonly {
+  background: #f3f4f8; color: var(--text-dim); cursor: default;
+}
+#cp-planner-root .field input[readonly]:focus,
+#cp-planner-root .field input.readonly:focus {
+  border-color: var(--border); box-shadow: none;
+}
+#cp-planner-root .divider { height: 1px; background: var(--border); }
+#cp-planner-root .section-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--text-faint);
+}
+#cp-planner-root .toggle-row { display: flex; align-items: center; gap: 10px; }
+#cp-planner-root .toggle-track {
+  width: 36px; height: 20px; border-radius: 10px; background: var(--border);
+  cursor: pointer; position: relative; transition: background .2s; flex-shrink: 0;
+}
+#cp-planner-root .toggle-track.on { background: var(--green); }
+#cp-planner-root .toggle-thumb {
+  position: absolute; width: 14px; height: 14px; border-radius: 50%;
+  background: #fff; top: 3px; left: 3px; transition: left .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+#cp-planner-root .toggle-track.on .toggle-thumb { left: 19px; }
+#cp-planner-root .toggle-label { font-size: 12px; color: var(--text-dim); }
+#cp-planner-root .manual-note {
+  background: var(--purple-bg); border: 1.5px solid #d4bfff; border-radius: 6px;
+  padding: 8px 12px; font-size: 11px; color: var(--purple); display: none;
+}
+#cp-planner-root .manual-note.show { display: block; }
+#cp-planner-root .modal-foot {
+  padding: 12px 20px 16px; border-top: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+  position: sticky; bottom: 0; background: #fff;
+}
+#cp-planner-root .foot-left  { display: flex; gap: 8px; }
+#cp-planner-root .foot-right { display: flex; gap: 8px; }
+#cp-planner-root .btn {
+  padding: 8px 18px; border-radius: 6px; font-size: 12px; font-weight: 600;
+  cursor: pointer; border: 1.5px solid transparent; transition: all .15s;
+}
+#cp-planner-root .btn-primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+#cp-planner-root .btn-primary:hover { background: var(--blue-lt); border-color: var(--blue-lt); }
+#cp-planner-root .btn-ghost { background: #fff; color: var(--text-dim); border-color: var(--border); }
+#cp-planner-root .btn-ghost:hover { background: var(--surface); color: var(--text); }
+#cp-planner-root .btn-danger { background: #fff; color: var(--red); border-color: #fcc; }
+#cp-planner-root .btn-danger:hover { background: var(--red-bg); border-color: var(--red); }
+
+/* Add Job Modal */
+#cp-planner-root .add-job-modal { width: 440px; }
+
+/* Toast */
+#cp-planner-root .toast {
+  position: fixed; bottom: 24px; right: 24px; background: var(--text);
+  color: #fff; border-radius: 6px; padding: 10px 16px; font-size: 12px;
+  font-weight: 500; z-index: 999; opacity: 0; transform: translateY(8px);
+  transition: all .25s ease; pointer-events: none;
+}
+#cp-planner-root .toast.show { opacity: 1; transform: none; }
+#cp-planner-root .toast.ok   { background: var(--green); }
+#cp-planner-root .toast.err  { background: var(--red); }

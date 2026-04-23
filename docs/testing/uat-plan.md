@@ -22,6 +22,75 @@ deployed. It is the last check before we merge to `main`.
 > entry at the top. Older entries stay so we can see the trail of what was
 > tested when.
 
+### 2026-04-21 — Production Planner (cp_planning_board) first cut
+
+**What changed since the previous deploy:**
+
+* New `cp_planning_board` Frappe page under the VCL Production
+  workspace, with a scoped shell (header + left panel + right panel
+  + modals).
+* Three server-driven view modes — Week (default), Job Card, Station
+  — all powered by six whitelisted methods on the page:
+  * `get_workstation_columns(product_line)` — stage/machine columns
+    filtered by dept tag on Workstation.
+  * `get_schedule_entries(date_from, date_to, product_line)` — PSL +
+    PE rows for the visible week.
+  * `save_schedule_entry(entry)` / `save_production_entry(entry)` —
+    create / update PSL and PE.
+  * `get_machine_conflicts(date_from, date_to)` — cross-dept double
+    bookings on shared presses (Printing, module constant
+    `SHARED_WORKSTATION_TYPES`).
+  * `get_daily_schedule(date, depts)` — rows for the printed
+    schedule.
+* Dept tabs — six in total (`Computer Paper`, `ETR`, `Label`,
+  `General Stationery and Exercise Book`, `Mono Boxes`,
+  `Corrugation and Carton Department`) — switch the column set +
+  entry list; prev/next arrows + `<input type="week">` navigate
+  the Mon–Sat window. Tagging lives on Workstation Type
+  (`custom_product_line_tags`), so a workstation inherits its
+  parent WT's product-line coverage; there is no per-workstation
+  override.
+* Entry modal (add / edit / delete) with stage-specific qty fields
+  (Design → days, Printing → reels + sheets planned / sheets
+  actual, Collation → sets, Slitting → rolls). Status dropdown
+  (`Draft` / `Confirmed` / `Cancelled`). Actual toggle creates a
+  PE linked to the PSL via `schedule_line`. Manual-entry path (no
+  job card) shows the ⚡ banner and requires a Description.
+* Conflict highlighting on shared presses: amber cell bg,
+  `.conflict-chip` reading "Double-booked · Computer Paper + ETR",
+  `.entry-block.conflicted` outline on each involved
+  tile, header pill "⚠ N conflict(s)". Saving into a conflict
+  triggers a red toast — the save itself still succeeds (warn +
+  allow, matches FINAL handover §F5).
+* Print Daily: day-picker modal → `get_daily_schedule` → A4
+  landscape HTML blob → `window.open` with `<a download>` fallback
+  when popups are blocked. Self-contained HTML (no external
+  assets), signature lines at the foot.
+* New DocTypes: `Workstation Product Line Tag` (child), `Production
+  Schedule Line` (non-submittable, `PSL-YYYY-#####` naming),
+  `Production Entry` (submittable, `PE-YYYY-#####` naming).
+* Patch `patch_v5_0`:
+  * Extends `custom_product_line` Select options on Workstation
+    Type and Workstation to include `ETR` (`Label` /
+    `Carton` kept).
+  * Adds `custom_product_line_tags` Table field on Workstation.
+  * Seeds `Design` Workstation Type + `Design Desk` Workstation
+    (tagged `All`).
+  * Migrates each Workstation's legacy single-Select value into a
+    matching child-table row. Idempotent.
+* VCL Production workspace gets a `Production Planning` header
+  with three shortcuts: Production Planner, Production Schedule
+  Lines, Production Entries.
+
+**Scenarios below that specifically cover this deployment:**
+
+* Scenario J — Planner loads + dept/column fetch per product line
+* Scenario K — Entry modal: add, edit, delete, manual-entry path
+* Scenario L — Status flow + Actual toggle → PE creation
+* Scenario M — Cross-dept conflict on shared press
+* Scenario N — Print Daily (A4 landscape, all dept / current dept)
+* Scenario O — Views: Week, Job Card, Station
+
 ### 2026-04-16 — Live SVG die-cut visualization in Carton Job Card
 
 **What changed since the previous deploy:**
@@ -341,6 +410,176 @@ Starting from a fresh new Carton Job Card:
   - [ ] After selecting a product type again, confirm the SVG resizes
         and dimension labels update to match the new values.
 - [ ] **Discard the form.** Do not Save.
+
+---
+
+## Scenario J — Production Planner loads + dept / column fetch
+
+**Prerequisite:** `patch_v5_0` has run (check the Patch Log shows it
+executed once) and `Design Desk` exists as a Workstation under the
+`Design` Workstation Type, tagged `All`. The Phase 1 Workstation
+tagging table (FINAL §A2) has been applied manually.
+
+- [ ] Open VCL Production workspace. The new **Production Planning**
+      header appears with three shortcuts: **Production Planner**,
+      **Production Schedule Lines**, **Production Entries**.
+- [ ] Click **Production Planner**. The page at `/app/cp_planning_board`
+      loads with the scoped shell (blue header, left job-card panel,
+      right stage/grid area). Browser console shows no JS errors.
+- [ ] The Week view is active by default. Today's ISO week is shown in
+      the week input. The **Computer Paper** dept tab is active.
+- [ ] Stage header shows at least these columns, in order: **Design**
+      (Design Desk), **Printing** (Miyakoshi 01, Miyakoshi 02, Hamada
+      01), **Collation** (Collator 1, Collator 2).
+- [ ] Switch to **ETR**. Columns change to **Design** (Design
+      Desk), **Printing** (Miyakoshi 01, Miyakoshi 02 only), **Slitting**
+      (Slitter 1, Slitter 2). No Hamada 01, no Collators.
+- [ ] Switch back to **Computer Paper**. Columns return to CP set.
+- [ ] Click the left arrow once; week input decrements by 1 week.
+      Click the right arrow twice; week advances 1 week past today.
+- [ ] Type a future week directly into the week input. Grid reloads to
+      that week (empty if no entries).
+
+## Scenario K — Entry modal (add, edit, delete, manual path)
+
+**Prerequisite:** Scenario J completed. At least one open `Job Card
+Computer Paper` exists on the site for linking.
+
+- [ ] In Week view on CP dept, click the `+` in a cell under **Printing
+      · Miyakoshi 01** for today.
+- [ ] Modal opens titled **Add Entry**. Stage reads `Printing`,
+      Workstation defaults to `Miyakoshi 01`, Date is today, Shift is
+      `Day Shift`, Status is `Draft`. Quantities section shows
+      **Planned Reels** and **Planned Sheets** inputs.
+- [ ] Select `Job Card Computer Paper` as Job Card Type, type an
+      existing Job Card name into the Job Card field, fill Planned
+      Reels = 5, Planned Sheets = 10000, Operator = "TEST UAT-K1".
+      Save.
+- [ ] Toast shows "Entry saved ✓". Modal closes. A blue `.entry-block`
+      tile appears in the cell with the job card tail as `.eb-id`,
+      "PLAN · Draft" as type, "5 reels" as qty, "Day · TEST UAT-K1"
+      as meta.
+- [ ] Click the tile. Modal re-opens in **Edit Entry** mode with every
+      field pre-filled and the **Delete Entry** button visible.
+- [ ] Change Planned Reels to 7, Save. Tile updates to "7 reels",
+      toast "Entry updated ✓".
+- [ ] Click the tile again, click **Delete Entry**, confirm. Toast
+      "Deleted". Tile disappears from the grid.
+- [ ] Click `+` in a Printing cell again. Clear the Job Card Type
+      dropdown → ⚡ purple "Manual entry — no job card linked" banner
+      appears, Description field reveals, Job Card input disables.
+- [ ] Leave Description blank, click Save. Red toast "Description is
+      required for manual entries." No entry saved.
+- [ ] Fill Description = "Plate change test", Planned Reels = 0,
+      Operator = "TEST UAT-K2", Save. Purple `.entry-block.manual` tile
+      appears, eb-id reads "MANUAL".
+- [ ] Delete the manual tile via its modal.
+
+## Scenario L — Status flow + Actual toggle → PE creation
+
+**Prerequisite:** Scenario K completed; create a PSL the same way as
+K1 with Planned Reels = 4, Status = `Draft`, Operator = "TEST UAT-L".
+
+- [ ] Tile shows "PLAN · Draft". Open the tile. Change Status to
+      `Confirmed`. Save. Tile now reads "PLAN · Confirmed". PSL list
+      view (`/app/production-schedule-line`) confirms the status
+      change.
+- [ ] Open the tile again. Toggle **Actual recorded** on. Qty section
+      now shows **Planned Reels**, **Planned Sheets**, **Actual
+      Sheets** (all three in one row).
+- [ ] Fill Actual Sheets = 4300. Save. Toast "Entry updated ✓". The
+      grid now shows two tiles in that cell: the blue plan tile (still
+      shows "4 reels") **and** a green `.entry-block.actual` tile
+      ("ACTUAL · Draft", "4,300 sheets").
+- [ ] Open Production Entry list view. The new PE has `schedule_line`
+      set to the PSL's name. Open the PE form — `schedule_line` field
+      is visible and populated.
+- [ ] Click the green actual tile. Modal re-opens with the toggle
+      already on, Actual Sheets pre-filled.
+- [ ] Delete the PE via the modal's Delete button. Green tile
+      disappears; blue plan tile remains.
+- [ ] Delete the blue plan tile. Both list views confirm the rows are
+      gone.
+
+## Scenario M — Cross-dept machine conflict
+
+- [ ] On **Computer Paper**, add a PSL on **Printing · Miyakoshi 01**
+      for a test day (e.g. Wednesday of this week). Status Draft,
+      planned reels 3, operator "TEST UAT-M-CP".
+- [ ] Switch to **ETR**. Verify the conflict badge in the
+      header is NOT showing yet.
+- [ ] Still on ETR, add a PSL on **Printing · Miyakoshi 01** for the
+      same Wednesday. Status Draft, planned reels 2, operator
+      "TEST UAT-M-ETR".
+- [ ] Save triggers a red toast "⚠ Machine conflict: Miyakoshi 01 is
+      also booked for Computer Paper on <date>."
+- [ ] The Wednesday Printing·Miyakoshi 01 cell shows amber background,
+      an orange "⚠ Double-booked · Computer Paper + ETR"
+      chip, and the two tiles each have an amber outline
+      (`.entry-block.conflicted`).
+- [ ] Header shows "⚠ 1 conflict" pill.
+- [ ] Switch back to **Computer Paper**. The same cell on the same day
+      is also highlighted (amber bg + chip + outline on the CP tile).
+      Header shows "⚠ 1 conflict".
+- [ ] Delete the ETR entry. Reload the page. Conflict visuals and
+      badge disappear.
+- [ ] Delete the CP entry.
+
+## Scenario N — Print Daily
+
+- [ ] Create one CP PSL and one ETR PSL on the same day (today) — any
+      stage/machine is fine. Use Operator "TEST UAT-N".
+- [ ] From either dept tab, click **Print Daily** in the header.
+- [ ] Day picker modal opens. Today's button shows a green dot and the
+      `today` highlight. Print Schedule button is disabled.
+- [ ] Select today. Print Schedule button enables.
+- [ ] Radio **Current dept only** is checked by default. Click **Print
+      Schedule**.
+- [ ] A new browser tab/window opens with an A4-landscape styled HTML
+      page titled "Production Schedule — <day> <date>". The browser's
+      print dialog fires automatically.
+- [ ] Page header: logo box "VCL" + "Vimit Converters Ltd · Production
+      Schedule" + day name + date + timestamp.
+- [ ] Only one dept section appears (the one that was active). The
+      TEST UAT-N row is in the table with its Stage · Machine, Job
+      Card, Planned Qty (reels / sheets or `<qty> <uom>`), Shift,
+      Operator, Type ("PLAN" or "MANUAL"), Notes, and an empty
+      Sign-off box.
+- [ ] Three signature lines at the foot: "Production Manager
+      Sign-off", "Floor Supervisor Sign-off", "Date & Time".
+- [ ] Close the print tab. Open the day picker again, tick **All
+      departments**, select today, Print. Two dept sections now appear
+      ("Computer Paper" then "ETR"), each with their own
+      title bar and table.
+- [ ] Block popups in the browser settings, repeat the print flow. An
+      HTML file is downloaded instead; a toast says "Popup blocked —
+      schedule downloaded. Open + print manually."
+- [ ] Re-enable popups. Delete the two test PSLs.
+
+## Scenario O — Views: Week / Job Card / Station
+
+- [ ] Set up two PSLs on CP: one on Printing · Miyakoshi 01 (today),
+      one on Collation · Collator 1 (tomorrow), both linked to the
+      same Job Card. Use Operator "TEST UAT-O".
+- [ ] **Week view** (default). Rows are Mon–Sat. Both PSLs appear in
+      their (day, stage, workstation) cells. Clicking `+` on any cell
+      opens the modal with date pre-filled.
+- [ ] Click **Job Card**. Rows are now job cards; columns are still
+      stage × machine. One row labelled with the test Job Card
+      appears. Both PSL tiles are on that row — in Printing·Miyakoshi
+      01 and Collation·Collator 1 cells. No `+` button is shown in
+      Job Card view cells (expected — date context missing).
+- [ ] Add a manual PSL on any day (via Week view). Switch to Job Card
+      view. A `MANUAL` row appears at the bottom with the ad-hoc
+      entry.
+- [ ] Click **Station**. Header changes to Mon–Sat day columns. Rows
+      are now each workstation (one per row: Design Desk, Miyakoshi
+      01, Miyakoshi 02, Hamada 01, Collator 1, Collator 2). The test
+      PSLs appear on their respective (workstation, day) cells. `+`
+      buttons are present and work — clicking opens the modal with
+      date + stage + workstation pre-filled.
+- [ ] Click **Week**. View reverts without refetching.
+- [ ] Delete the test PSLs.
 
 ---
 

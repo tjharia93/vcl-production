@@ -1,0 +1,263 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "format:PE-{YYYY}-{#####}",
+ "creation": "2026-04-21 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_job",
+  "job_card_doctype",
+  "job_card",
+  "is_manual",
+  "description",
+  "column_break_job",
+  "product_line",
+  "status",
+  "schedule_line",
+  "section_stage",
+  "workstation_type",
+  "workstation",
+  "column_break_stage",
+  "date",
+  "shift",
+  "operator",
+  "section_plan",
+  "planned_reels",
+  "planned_sheets",
+  "column_break_plan",
+  "planned_qty",
+  "section_actual",
+  "actual_sheets",
+  "column_break_actual",
+  "actual_qty",
+  "section_notes",
+  "notes",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_job",
+   "fieldtype": "Section Break",
+   "label": "Job"
+  },
+  {
+   "fieldname": "job_card_doctype",
+   "fieldtype": "Select",
+   "label": "Job Card Type",
+   "options": "\nJob Card Computer Paper\nJob Card Label\nJob Card Carton"
+  },
+  {
+   "fieldname": "job_card",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "label": "Job Card",
+   "options": "job_card_doctype"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_manual",
+   "fieldtype": "Check",
+   "label": "Manual Entry (no job card)"
+  },
+  {
+   "depends_on": "eval:doc.is_manual",
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "column_break_job",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "product_line",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Product Line",
+   "options": "\nComputer Paper\nETR\nLabel\nGeneral Stationery and Exercise Book\nMono Boxes\nCorrugation and Carton Department",
+   "reqd": 1
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nConfirmed\nCancelled",
+   "reqd": 1
+  },
+  {
+   "allow_on_submit": 0,
+   "description": "Plan this actual fulfils (optional).",
+   "fieldname": "schedule_line",
+   "fieldtype": "Link",
+   "label": "Schedule Line",
+   "options": "Production Schedule Line",
+   "read_only_on_submit": 1
+  },
+  {
+   "fieldname": "section_stage",
+   "fieldtype": "Section Break",
+   "label": "Stage & Schedule"
+  },
+  {
+   "fieldname": "workstation_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Workstation Type",
+   "options": "Workstation Type",
+   "reqd": 1
+  },
+  {
+   "fieldname": "workstation",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Workstation",
+   "options": "Workstation",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_stage",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "shift",
+   "fieldtype": "Select",
+   "label": "Shift",
+   "options": "\nDay Shift\nEvening Shift\nNight Shift"
+  },
+  {
+   "fieldname": "operator",
+   "fieldtype": "Data",
+   "label": "Operator / Assigned To"
+  },
+  {
+   "fieldname": "section_plan",
+   "fieldtype": "Section Break",
+   "label": "Planned"
+  },
+  {
+   "description": "Printing stage only.",
+   "fieldname": "planned_reels",
+   "fieldtype": "Float",
+   "label": "Planned Reels"
+  },
+  {
+   "description": "Printing stage only.",
+   "fieldname": "planned_sheets",
+   "fieldtype": "Float",
+   "label": "Planned Sheets"
+  },
+  {
+   "fieldname": "column_break_plan",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Design (days) / Collation (sets) / Slitting (rolls).",
+   "fieldname": "planned_qty",
+   "fieldtype": "Float",
+   "label": "Planned Qty"
+  },
+  {
+   "fieldname": "section_actual",
+   "fieldtype": "Section Break",
+   "label": "Actual"
+  },
+  {
+   "description": "Printing stage only. Sheets actually produced.",
+   "fieldname": "actual_sheets",
+   "fieldtype": "Float",
+   "label": "Actual Sheets"
+  },
+  {
+   "fieldname": "column_break_actual",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Design (days) / Collation (sets) / Slitting (rolls).",
+   "fieldname": "actual_qty",
+   "fieldtype": "Float",
+   "label": "Actual Qty"
+  },
+  {
+   "fieldname": "section_notes",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes / Issues"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Production Entry",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-04-21 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Production Log",
+ "name": "Production Entry",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Production User",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1
+  }
+ ],
+ "sort_field": "date",
+ "sort_order": "DESC",
+ "title_field": "job_card",
+ "track_changes": 1
+}
