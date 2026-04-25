@@ -246,7 +246,7 @@
 #cp-planner-root .grid-wrap { flex: 1; overflow: auto; }
 #cp-planner-root .grid-wrap::-webkit-scrollbar { width: 6px; height: 6px; }
 #cp-planner-root .grid-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-#cp-planner-root .grid { border-collapse: collapse; min-width: 100%; }
+#cp-planner-root .grid { border-collapse: collapse; }
 #cp-planner-root .grid tr { border-bottom: 1px solid var(--border); }
 #cp-planner-root .grid tr:hover { background: #f8f9fc; }
 #cp-planner-root .row-label {

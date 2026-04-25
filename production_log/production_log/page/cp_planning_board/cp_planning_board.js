@@ -131,7 +131,7 @@ const PLANNER_DEPTS = [
 // cache or Frappe Cloud rebuild hasn't picked up the newest push yet.
 // Also rendered in the header so a field report can confirm which
 // build they're on without opening DevTools.
-const PLANNER_BUNDLE = "2026-04-25-v5_5-stage-position-print-v2";
+const PLANNER_BUNDLE = "2026-04-25-v5_5-stage-position-print-v2-header-align";
 
 
 frappe.pages["cp_planning_board"].on_page_load = function (wrapper) {
@@ -546,6 +546,11 @@ class ProductionPlanner {
 		$wrap.on("scroll", () => {
 			$header.scrollLeft($wrap.scrollLeft());
 		});
+
+		// Window resize → re-measure the freshly-laid-out grid and
+		// copy widths back to the header strip. Bound once at
+		// _bindEvents time so it lives for the page lifetime.
+		window.addEventListener("resize", () => this._syncPlannerHeader());
 	}
 
 	_onDeptChange() {
@@ -777,6 +782,82 @@ class ProductionPlanner {
 		if (this.view === "jobcard") this._renderJobCardGrid();
 		else if (this.view === "station") this._renderStationGrid();
 		else this._renderWeekGrid();
+		// Header strip widths come from CSS-fixed cells (.sh-corner /
+		// .stage-group), but the table beneath it sizes off content.
+		// Re-measure rendered cell widths and copy them up to the
+		// header so columns line up exactly. rAF defers measurement to
+		// the next frame so layout has settled.
+		requestAnimationFrame(() => this._syncPlannerHeader());
+	}
+
+	// ─────────────────────────────────────────────────────────────
+	// Header / grid alignment
+	// ─────────────────────────────────────────────────────────────
+	_syncPlannerHeader() {
+		// Read actual rendered cell widths off the first body row of
+		// the grid, then mirror them onto the header strip. Without
+		// this the table sizes itself to content (since CSS no longer
+		// has `min-width: 100%`), which leaves the fixed-width header
+		// cells out of step with their columns.
+		const firstRow = this.$root.find(".grid-wrap tbody tr").first()[0];
+		if (!firstRow) return;
+
+		const cells = [...firstRow.children];
+		const rowLabelW = cells[0].getBoundingClientRect().width;
+		const gridCellWidths = cells
+			.slice(1)
+			.map((c) => c.getBoundingClientRect().width);
+
+		const $shCorner = this.$root.find(".sh-corner");
+		if ($shCorner.length) {
+			$shCorner.css({
+				width: rowLabelW + "px",
+				minWidth: rowLabelW + "px",
+			});
+		}
+
+		// Each .stage-group spans one or more machine sub-headers.
+		// Walk the columns array in lockstep with the machine count
+		// per group so the totals line up with the grid cells below.
+		let colIdx = 0;
+		this.$root.find(".stage-group").each(function () {
+			const sg = this;
+			const machines = [
+				...sg.querySelectorAll(".sg-machine, .sg-single"),
+			];
+			const slice = gridCellWidths.slice(
+				colIdx,
+				colIdx + machines.length,
+			);
+			const totalW = slice.reduce((s, w) => s + w, 0);
+			sg.style.flex = "0 0 " + totalW + "px";
+			sg.style.width = totalW + "px";
+			sg.style.minWidth = totalW + "px";
+			machines.forEach((m, i) => {
+				const w = slice[i] || 0;
+				m.style.flex = "0 0 " + w + "px";
+				m.style.width = w + "px";
+				m.style.minWidth = w + "px";
+			});
+			colIdx += machines.length;
+		});
+
+		// Bidirectional scroll sync — wired once per .grid-wrap
+		// element (guarded via a flag to keep the listener count
+		// bounded across re-renders). The existing one-way sync in
+		// _bindEvents stays in place; this adds the header→grid
+		// direction so users can pan from either strip.
+		const stageHeader = this.$root.find(".stage-header")[0];
+		const gridWrap = this.$root.find(".grid-wrap")[0];
+		if (stageHeader && gridWrap && !gridWrap._scrollSynced) {
+			gridWrap.addEventListener("scroll", () => {
+				stageHeader.scrollLeft = gridWrap.scrollLeft;
+			});
+			stageHeader.addEventListener("scroll", () => {
+				gridWrap.scrollLeft = stageHeader.scrollLeft;
+			});
+			gridWrap._scrollSynced = true;
+		}
 	}
 
 	_indexConflicts(rows) {
