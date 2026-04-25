@@ -77,7 +77,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Product Line",
-   "options": "\nComputer Paper\nETR\nLabel\nGeneral Stationery and Exercise Book\nMono Boxes\nCorrugation and Carton Department",
+   "options": "\nComputer Paper\nETR\nSelf Adhesive Label\nGeneral Stationery and Exercise Book\nMono Boxes\nCorrugation and Carton Department\nTrading\nR2R",
    "reqd": 1
   },
   {

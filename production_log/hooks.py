@@ -67,6 +67,11 @@ after_install = "production_log.install.after_install"
 # Document Events
 # ---------------
 # Hook on document methods and events
+doc_events = {
+	"Workstation Type": {
+		"validate": "production_log.api.workstation_type.validate_stage_position",
+	},
+}
 
 # Scheduled Tasks
 # ---------------
