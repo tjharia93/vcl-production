@@ -12,27 +12,30 @@ from frappe import _
 # shorthand "Printing" from the handover/prototype.
 SHARED_WORKSTATION_TYPES = ["Reel to Reel Printing"]
 
-# Product lines that appear in the planner UI. `All` is a passthrough
-# tag — any Workstation Type tagged `All` is reachable from every dept.
-# Order here is the dept-tab order the client renders.
+# Product lines that appear in the planner UI. After patch_v5_5 the
+# `All` synthetic tag is gone — every WT carries explicit per-PL rows.
+# Order here is the dept-tab order the client renders. `Trading` is in
+# the Select option list but skipped here because it has no operations
+# stages; admins can add it back if a Trading-bound WT shows up.
 PLANNER_PRODUCT_LINES = [
 	"Computer Paper",
 	"ETR",
-	"Label",
+	"Self Adhesive Label",
 	"General Stationery and Exercise Book",
 	"Mono Boxes",
 	"Corrugation and Carton Department",
+	"R2R",
 ]
 
 # Left-panel Job Card doctype per planner dept. Only product lines with
 # a dedicated Job Card doctype appear here — everything else falls
 # through `.get()` → None → `get_job_cards` returns [] → the left panel
-# renders its empty state. General Stationery / Mono Boxes / Corrugation
-# don't have doctypes yet; they'll be added once designed.
+# renders its empty state. The `Job Card Label` doctype keeps its name
+# under the rename — only the product-line key changes.
 JOB_CARD_DOCTYPE_BY_PRODUCT_LINE = {
 	"Computer Paper": "Job Card Computer Paper",
 	"ETR": "Job Card ETR",
-	"Label": "Job Card Label",
+	"Self Adhesive Label": "Job Card Label",
 }
 
 
@@ -48,7 +51,7 @@ def get_workstation_columns(product_line=None):
 	Each row:
 	    {
 	        "workstation_type": "Printing",
-	        "product_line_on_type": "All",
+	        "stage_position": 20,
 	        "workstation": "Miyakoshi 01",
 	        "is_shared": 1
 	    }
@@ -56,9 +59,11 @@ def get_workstation_columns(product_line=None):
 	`product_line` may be None (returns all lines) or one of the values
 	in `PLANNER_PRODUCT_LINES`. A workstation matches when its
 	Workstation Type carries a `custom_product_line_tags` row for that
-	product_line, or for `All`. Tagging moved from Workstation to
-	Workstation Type in patch_v5_2 — this query joins against the
-	Workstation Type's tag rows.
+	product_line, or for the synthetic `All` tag. Tagging moved from
+	Workstation to Workstation Type in patch_v5_2; v5_5 keeps the
+	`All` match in place so admins can migrate WTs from `All` to
+	explicit per-PL rows manually without losing planner coverage in
+	the meantime.
 	"""
 	conditions = []
 	values = {}
@@ -73,7 +78,7 @@ def get_workstation_columns(product_line=None):
 		f"""
 		SELECT DISTINCT
 			ws.workstation_type AS workstation_type,
-			wt.custom_product_line AS product_line_on_type,
+			wt.custom_stage_position AS stage_position,
 			ws.name AS workstation
 		FROM `tabWorkstation` ws
 		INNER JOIN `tabWorkstation Type` wt
@@ -83,7 +88,7 @@ def get_workstation_columns(product_line=None):
 			AND tag.parenttype = 'Workstation Type'
 			AND tag.parentfield = 'custom_product_line_tags'
 		{where_clause}
-		ORDER BY wt.name, ws.name
+		ORDER BY wt.custom_stage_position ASC, wt.name ASC, ws.name ASC
 		""",
 		values,
 		as_dict=True,
@@ -392,6 +397,132 @@ def _enrich_job_card_details(rows):
 			}
 		row["customer"] = cache[key]["customer"]
 		row["customer_product_spec"] = cache[key]["customer_product_spec"]
+
+
+# ---------------------------------------------------------------------------
+# Plan vs Actuals (for the Print v2 flow)
+# ---------------------------------------------------------------------------
+@frappe.whitelist()
+def get_plan_vs_actuals(date, depts=None):
+	"""Return PSL plan rows for `date` joined with submitted PE actuals.
+
+	One row per PSL (the spine). Submitted Production Entries pointing
+	at the same `(workstation_type, workstation, job_card, date)` as
+	the PSL are summed into `actual_qty_total` / `actual_sheets_total`,
+	and a `variance_pct` is computed against the planned qty so the
+	print template can colour-code without re-doing the math.
+
+	`depts` is an optional JSON list (same shape as `get_daily_schedule`).
+	"""
+	if isinstance(depts, str):
+		try:
+			depts = json.loads(depts)
+		except ValueError:
+			depts = [d.strip() for d in depts.split(",") if d.strip()]
+
+	if not depts:
+		depts = PLANNER_PRODUCT_LINES
+
+	psl_fields = [
+		"name",
+		"job_card_doctype",
+		"job_card",
+		"is_manual",
+		"description",
+		"product_line",
+		"status",
+		"workstation_type",
+		"workstation",
+		"shift",
+		"operator",
+		"planned_reels",
+		"planned_sheets",
+		"planned_qty",
+		"notes",
+	]
+
+	# Aggregate submitted PE rows up-front, keyed on the same tuple the
+	# PSL identifies. `is_manual` PSLs match on description+stage rather
+	# than job_card.
+	pe_rows = frappe.db.sql(
+		"""
+		SELECT
+			workstation_type,
+			workstation,
+			COALESCE(job_card, '') AS job_card,
+			COALESCE(description, '') AS description,
+			COALESCE(is_manual, 0) AS is_manual,
+			SUM(COALESCE(actual_qty, 0))    AS actual_qty_total,
+			SUM(COALESCE(actual_sheets, 0)) AS actual_sheets_total
+		FROM `tabProduction Entry`
+		WHERE date = %(date)s
+		  AND docstatus = 1
+		  AND product_line IN %(depts)s
+		GROUP BY workstation_type, workstation, job_card, description, is_manual
+		""",
+		{"date": date, "depts": tuple(depts) or ("",)},
+		as_dict=True,
+	)
+
+	pe_index = {}
+	for row in pe_rows:
+		key = (
+			row["workstation_type"] or "",
+			row["workstation"] or "",
+			row["job_card"] or "",
+			row["description"] or "" if row["is_manual"] else "",
+		)
+		pe_index[key] = row
+
+	result = {}
+	for dept in depts:
+		psls = frappe.get_all(
+			"Production Schedule Line",
+			fields=psl_fields,
+			filters={"date": date, "product_line": dept, "status": ["!=", "Cancelled"]},
+			order_by="workstation_type, workstation, shift",
+		)
+		_enrich_job_card_details(psls)
+
+		for psl in psls:
+			key = (
+				psl.get("workstation_type") or "",
+				psl.get("workstation") or "",
+				psl.get("job_card") or "",
+				psl.get("description") or "" if psl.get("is_manual") else "",
+			)
+			actual = pe_index.get(key, {})
+			actual_qty = float(actual.get("actual_qty_total") or 0)
+			actual_sheets = float(actual.get("actual_sheets_total") or 0)
+
+			# Planned baseline: prefer planned_sheets when the WT tracks
+			# sheets (R2R press, Ruling, Sheeting), else fall back to
+			# planned_qty. The client's UOM map decides which actual
+			# value to display, but we expose both totals.
+			planned_sheets = float(psl.get("planned_sheets") or 0)
+			planned_qty = float(psl.get("planned_qty") or 0)
+			if planned_sheets > 0 and actual_sheets > 0:
+				baseline_planned, baseline_actual = planned_sheets, actual_sheets
+			elif planned_qty > 0 and actual_qty > 0:
+				baseline_planned, baseline_actual = planned_qty, actual_qty
+			elif planned_sheets > 0:
+				baseline_planned, baseline_actual = planned_sheets, actual_sheets
+			else:
+				baseline_planned, baseline_actual = planned_qty, actual_qty
+
+			variance_pct = None
+			if baseline_planned > 0:
+				variance_pct = round(
+					(baseline_actual - baseline_planned) / baseline_planned * 100.0, 1
+				)
+
+			psl["actual_qty_total"] = actual_qty
+			psl["actual_sheets_total"] = actual_sheets
+			psl["variance_pct"] = variance_pct
+
+		result[dept] = psls
+
+	return result
 
 
 # ---------------------------------------------------------------------------

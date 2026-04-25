@@ -10,20 +10,12 @@
 // Module constants
 // ─────────────────────────────────────────────────────────────────────
 
-// Canonical stage ordering on the board. Matched against raw
-// Workstation Type names (`row.workstation_type`). Any WT not in this
-// list still renders but gets appended at the end — keeps the flow
-// predictable without preventing Tanuj from spinning up new WTs.
-// Names are verbatim — `Reel to Reel Printing` is how VCL's ERPNext
-// stores the press WT, not the prototype shorthand `Printing`.
-const STAGE_ORDER = [
-	"Design",
-	"Reel to Reel Printing",
-	"Ruling",
-	"Sheeting",
-	"Collation",
-	"Slitting",
-];
+// Stage ordering is now driven by `Workstation Type.custom_stage_position`
+// (Int field, seeded by patch_v5_5). The server returns it on every row
+// from `get_workstation_columns` as `stage_position`. WTs without a
+// position fall back to the sentinel 999 — they still render, just at
+// the right edge until the admin assigns one. Duplicate positions are
+// blocked at save time by `validate_stage_position` on the server.
 
 // 3-letter chip label next to each stage name. Keys are the stage
 // ids that `_stageIdFromWT` produces (lowercase + space→underscore).
@@ -108,26 +100,30 @@ const STATUS_OPTIONS = ["Draft", "Confirmed", "Cancelled"];
 const SHIFT_OPTIONS = ["Day Shift", "Evening Shift", "Night Shift"];
 
 // Left-panel Job Card doctype per planner dept. Mirrors the server's
-// JOB_CARD_DOCTYPE_BY_PRODUCT_LINE. ETR / General Stationery /
-// Mono Boxes / Corrugation and Carton Department don't have a Job
-// Card doctype yet — those tabs render the empty state in the left
-// panel, and `+ Add Job` disables itself via _onAddJobClick.
+// JOB_CARD_DOCTYPE_BY_PRODUCT_LINE. The remaining tabs render the empty
+// state in the left panel, and `+ Add Job` disables itself via
+// `_onAddJobClick`. Note the doctype is still `Job Card Label` even
+// though the dept renamed to `Self Adhesive Label` in patch_v5_5 —
+// renaming a doctype is a separate, larger change.
 const JOB_CARD_DOCTYPE_BY_DEPT = {
 	"Computer Paper": "Job Card Computer Paper",
-	"Label": "Job Card Label",
+	"ETR": "Job Card ETR",
+	"Self Adhesive Label": "Job Card Label",
 };
 
 // Dept tabs rendered in the header, in order. Values are the exact
 // product_line strings — the client sends them verbatim to the server
 // in every get_workstation_columns / get_schedule_entries /
-// get_job_cards / get_machine_conflicts call.
+// get_job_cards / get_machine_conflicts call. `Trading` is in the
+// taxonomy but has no operations stages so isn't rendered as a tab.
 const PLANNER_DEPTS = [
 	"Computer Paper",
 	"ETR",
-	"Label",
+	"Self Adhesive Label",
 	"General Stationery and Exercise Book",
 	"Mono Boxes",
 	"Corrugation and Carton Department",
+	"R2R",
 ];
 
 // Bundle version marker. Change every commit — when the planner loads
@@ -135,7 +131,7 @@ const PLANNER_DEPTS = [
 // cache or Frappe Cloud rebuild hasn't picked up the newest push yet.
 // Also rendered in the header so a field report can confirm which
 // build they're on without opening DevTools.
-const PLANNER_BUNDLE = "2026-04-26-phase7-wt-tagging";
+const PLANNER_BUNDLE = "2026-04-25-v5_5-stage-position-print-v2";
 
 
 frappe.pages["cp_planning_board"].on_page_load = function (wrapper) {
@@ -384,13 +380,25 @@ class ProductionPlanner {
 					<div class="vcl-modal" style="width:380px;">
 						<div class="modal-head">
 							<div>
-								<div class="modal-title">Print Daily Schedule</div>
+								<div class="modal-title">Print Daily Sheet</div>
 								<div class="modal-sub">Pick a day from this week</div>
 							</div>
 							<button class="modal-close" type="button" data-role="day-picker-close" aria-label="Close">×</button>
 						</div>
 						<div class="modal-body">
 							<div class="day-picker-grid" data-role="day-grid"></div>
+							<div class="divider"></div>
+							<div class="section-label">Sheet type</div>
+							<div class="toggle-row" style="gap:16px;font-size:12px;color:var(--text-dim);">
+								<label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
+									<input type="radio" name="print-variant" value="blank" checked />
+									Blank Actuals Sheet
+								</label>
+								<label style="display:flex;gap:6px;align-items:center;cursor:pointer;">
+									<input type="radio" name="print-variant" value="pva" />
+									Plan vs Actuals
+								</label>
+							</div>
 							<div class="divider"></div>
 							<div class="section-label">Include</div>
 							<div class="toggle-row" style="gap:16px;font-size:12px;color:var(--text-dim);">
@@ -408,7 +416,7 @@ class ProductionPlanner {
 							<div class="foot-left"></div>
 							<div class="foot-right">
 								<button class="btn btn-ghost" type="button" data-role="day-picker-cancel">Cancel</button>
-								<button class="btn btn-primary" type="button" data-role="print-confirm" disabled>Print Schedule</button>
+								<button class="btn btn-primary" type="button" data-role="print-confirm" disabled>Print</button>
 							</div>
 						</div>
 					</div>
@@ -912,19 +920,25 @@ class ProductionPlanner {
 					name: wt,
 					workstations: [],
 					is_shared: row.is_shared ? 1 : 0,
+					// `stage_position` is the Int field on Workstation
+					// Type seeded by patch_v5_5. Server falls back to
+					// 999 for unset rows; we mirror that on a missing
+					// payload so the column still renders, just last.
+					position: Number.isFinite(Number(row.stage_position))
+						? Number(row.stage_position)
+						: 999,
 				};
 			}
 			if (!byWT[wt].workstations.includes(row.workstation)) {
 				byWT[wt].workstations.push(row.workstation);
 			}
 		}
-		const keys = Object.keys(byWT);
-		keys.sort((a, b) => {
-			const ia = STAGE_ORDER.indexOf(a);
-			const ib = STAGE_ORDER.indexOf(b);
-			return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+		const stages = Object.values(byWT);
+		stages.sort((a, b) => {
+			if (a.position !== b.position) return a.position - b.position;
+			return String(a.name).localeCompare(String(b.name));
 		});
-		this.stages = keys.map((k) => byWT[k]);
+		this.stages = stages;
 	}
 
 	// ─────────────────────────────────────────────────────────────
@@ -1595,6 +1609,7 @@ class ProductionPlanner {
 		// Reset state.
 		this.$root.find('[data-role="print-confirm"]').prop("disabled", true);
 		this.$root.find('input[name="print-scope"][value="current"]').prop("checked", true);
+		this.$root.find('input[name="print-variant"][value="blank"]').prop("checked", true);
 
 		$overlay.addClass("open");
 	}
@@ -1613,31 +1628,42 @@ class ProductionPlanner {
 		const scope = this.$root
 			.find('input[name="print-scope"]:checked')
 			.val();
+		const variant = this.$root
+			.find('input[name="print-variant"]:checked')
+			.val() || "blank";
 		const depts = scope === "all" ? PLANNER_DEPTS.slice() : [this.dept];
 
 		const $btn = this.$root.find('[data-role="print-confirm"]');
 		$btn.prop("disabled", true).text(__("Loading…"));
 
 		try {
-			const data = await this.call("get_daily_schedule", {
-				date: iso,
-				depts: JSON.stringify(depts),
-			});
+			let html;
+			if (variant === "pva") {
+				const data = await this.call("get_plan_vs_actuals", {
+					date: iso,
+					depts: JSON.stringify(depts),
+				});
+				html = this._buildPlanVsActualsHTML(iso, depts, data || {});
+			} else {
+				const data = await this.call("get_daily_schedule", {
+					date: iso,
+					depts: JSON.stringify(depts),
+				});
+				html = this._buildBlankActualsHTML(iso, depts, data || {});
+			}
 			this._closeDayPicker();
-			this._openPrintWindow(iso, depts, data || {});
+			this._openPrintWindow(iso, html);
 		} catch (err) {
 			// call() already toasted.
 		} finally {
-			$btn.prop("disabled", false).text(__("Print Schedule"));
+			$btn.prop("disabled", false).text(__("Print"));
 		}
 	}
 
 	// ─────────────────────────────────────────────────────────────
 	// Print — HTML generator + window opener
 	// ─────────────────────────────────────────────────────────────
-	_openPrintWindow(iso, depts, dataByDept) {
-		const html = this._buildPrintHTML(iso, depts, dataByDept);
-
+	_openPrintWindow(iso, html) {
 		// Use document.write directly on a blank popup rather than a
 		// blob: URL. Frappe Cloud's CSP used to kill blob: navigation
 		// and some browsers silently swallow blob: popups. Writing
@@ -1690,7 +1716,10 @@ class ProductionPlanner {
 		}
 	}
 
-	_buildPrintHTML(iso, depts, dataByDept) {
+	// Shared print shell. Returns a fully-formed HTML document with
+	// VCL header, footer sign-off block, and inlined styles. The
+	// Blank Actuals and Plan vs Actuals builders both call into this.
+	_buildPrintShell({ iso, title, subtitle, sections }) {
 		const esc = frappe.utils.escape_html;
 		const dateObj = new Date(iso + "T00:00:00");
 		const dayName = dateObj.toLocaleString("en-GB", { weekday: "long" });
@@ -1700,47 +1729,115 @@ class ProductionPlanner {
 			month: "long",
 			year: "numeric",
 		});
-		const now = new Date();
-		const timestamp = now.toLocaleString("en-GB");
+		const timestamp = new Date().toLocaleString("en-GB");
+
+		return (
+			"<!doctype html>" +
+			'<html lang="en"><head>' +
+			'<meta charset="utf-8" />' +
+			`<title>${esc(title)} — ${dateDisplay}</title>` +
+			"<style>" +
+			"@page { size: A4 landscape; margin: 10mm; }" +
+			"* { box-sizing: border-box; }" +
+			"body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #000; margin: 0; padding: 0; }" +
+			".hdr { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2B3990; padding-bottom: 6pt; margin-bottom: 10pt; }" +
+			".hdr-left { display: flex; gap: 10pt; align-items: center; }" +
+			".logo-box { width: 44pt; height: 30pt; background: #2B3990; color: #fff; font-weight: 700; font-size: 10pt; display: flex; align-items: center; justify-content: center; border-radius: 3pt; }" +
+			".hdr-title { font-size: 14pt; font-weight: 700; color: #2B3990; }" +
+			".hdr-sub { font-size: 10pt; color: #333; }" +
+			".hdr-right { text-align: right; font-size: 9pt; color: #555; }" +
+			".dept-title { background: #eef0fa; border-left: 4pt solid #2B3990; padding: 5pt 10pt; margin: 10pt 0 4pt; font-weight: 700; font-size: 12pt; color: #2B3990; }" +
+			".sched-table { width: 100%; border-collapse: collapse; margin-bottom: 8pt; }" +
+			".sched-table th, .sched-table td { border: 0.5pt solid #888; padding: 4pt 6pt; text-align: left; vertical-align: top; font-size: 9pt; }" +
+			".sched-table th { background: #f3f4f8; font-weight: 700; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.5pt; color: #444; }" +
+			".blank-cell { min-height: 18pt; }" +
+			".signoff-cell { width: 60pt; min-height: 22pt; }" +
+			".jc-id { font-weight: 600; }" +
+			".jc-sub { font-size: 8pt; color: #555; margin-top: 1pt; }" +
+			".variance-cell { font-weight: 700; text-align: right; }" +
+			".variance-good   { background: #e6f7ef; color: #0e9e5a; }" +
+			".variance-warn   { background: #fff5e0; color: #b97300; }" +
+			".variance-bad    { background: #fde7e7; color: #b8211d; }" +
+			".variance-na     { color: #888; }" +
+			".signoff-block { display: flex; justify-content: space-between; gap: 20pt; margin-top: 18pt; padding-top: 8pt; border-top: 1pt solid #888; }" +
+			".signoff-line { flex: 1; }" +
+			".signoff-line .label { font-size: 9pt; color: #444; margin-bottom: 18pt; }" +
+			".signoff-line .rule { border-bottom: 0.5pt solid #000; }" +
+			".footer-note { margin-top: 10pt; font-size: 8pt; color: #888; text-align: center; }" +
+			"</style>" +
+			"</head><body>" +
+			'<div class="hdr">' +
+			'<div class="hdr-left">' +
+			'<div class="logo-box">VCL</div>' +
+			"<div>" +
+			`<div class="hdr-title">Vimit Converters Ltd · ${esc(title)}</div>` +
+			`<div class="hdr-sub">${esc(dayName)} · ${esc(dateDisplay)}</div>` +
+			"</div>" +
+			"</div>" +
+			'<div class="hdr-right">' +
+			`<div><strong>${esc(subtitle)}</strong></div>` +
+			`<div>Printed ${esc(timestamp)}</div>` +
+			"</div>" +
+			"</div>" +
+			sections +
+			'<div class="signoff-block">' +
+			'<div class="signoff-line"><div class="label">Production Manager Sign-off</div><div class="rule"></div></div>' +
+			'<div class="signoff-line"><div class="label">Floor Supervisor Sign-off</div><div class="rule"></div></div>' +
+			'<div class="signoff-line"><div class="label">Date &amp; Time</div><div class="rule"></div></div>' +
+			"</div>" +
+			'<div class="footer-note">Vimit Converters Ltd · Production Planner</div>' +
+			"</body></html>"
+		);
+	}
+
+	// Renders the Job Card cell (id + customer / spec, or MANUAL +
+	// description) — shared between both print variants.
+	_renderJobCardCell(row) {
+		const esc = frappe.utils.escape_html;
+		if (row.is_manual) {
+			return `<em>MANUAL: ${esc(row.description || "")}</em>`;
+		}
+		const id = esc(row.job_card || "");
+		const bits = [];
+		if (row.customer) bits.push(esc(row.customer));
+		if (row.customer_product_spec) bits.push(esc(row.customer_product_spec));
+		const sub = bits.length
+			? `<div class="jc-sub">${bits.join(" · ")}</div>`
+			: "";
+		return `<div class="jc-id">${id}</div>${sub}`;
+	}
+
+	// Format a planned-qty cell respecting per-stage UOM. Used by both
+	// print variants.
+	_formatPlannedQty(row) {
+		const stageId = this._stageIdFromWT(row.workstation_type);
+		const uomMap = UOM_BY_STAGE[stageId] || { planned: "" };
+		if (stageId === "reel_to_reel_printing") {
+			return `${Number(row.planned_reels || 0)} reels / ${Number(row.planned_sheets || 0)} sheets`;
+		}
+		return `${Number(row.planned_qty || 0)} ${uomMap.planned}`;
+	}
+
+	// Variant 1: Blank Actuals Sheet. Same per-day data as the legacy
+	// print path, but the cells the floor fills in (Actual Qty,
+	// Operator, Notes, Sign-off) come out blank.
+	_buildBlankActualsHTML(iso, depts, dataByDept) {
+		const esc = frappe.utils.escape_html;
 
 		const renderRow = (row) => {
 			const stage = `${esc(row.workstation_type || "")} · ${esc(row.workstation || "")}`;
-			let jc;
-			if (row.is_manual) {
-				jc = `<em>MANUAL: ${esc(row.description || "")}</em>`;
-			} else {
-				// Server attaches customer + customer_product_spec via
-				// _enrich_job_card_details. Render the id on top and the
-				// customer / spec on a second muted line so the floor
-				// sees who it's for at a glance.
-				const id = esc(row.job_card || "");
-				const bits = [];
-				if (row.customer) bits.push(esc(row.customer));
-				if (row.customer_product_spec) bits.push(esc(row.customer_product_spec));
-				const sub = bits.length
-					? `<div class="jc-sub">${bits.join(" · ")}</div>`
-					: "";
-				jc = `<div class="jc-id">${id}</div>${sub}`;
-			}
-			const stageId = this._stageIdFromWT(row.workstation_type);
-			const uomMap = UOM_BY_STAGE[stageId] || { planned: "" };
-			const qty =
-				stageId === "reel_to_reel_printing"
-					? `${Number(row.planned_reels || 0)} reels / ${Number(row.planned_sheets || 0)} sheets`
-					: `${Number(row.planned_qty || 0)} ${uomMap.planned}`;
+			const jc = this._renderJobCardCell(row);
+			const planned = this._formatPlannedQty(row);
 			const shift = esc(row.shift || "");
-			const op = esc(row.operator || "");
-			const type = row.is_manual ? "MANUAL" : "PLAN";
-			const notes = esc(row.notes || "");
 			return (
 				"<tr>" +
 				`<td>${stage}</td>` +
 				`<td>${jc}</td>` +
-				`<td>${qty}</td>` +
+				`<td>${planned}</td>` +
 				`<td>${shift}</td>` +
-				`<td>${op}</td>` +
-				`<td class="type-tag type-${type.toLowerCase()}">${type}</td>` +
-				`<td>${notes}</td>` +
+				'<td class="blank-cell"></td>' +  // Actual Qty (blank)
+				'<td class="blank-cell"></td>' +  // Operator (blank)
+				'<td class="blank-cell"></td>' +  // Notes (blank)
 				'<td class="signoff-cell"></td>' +
 				"</tr>"
 			);
@@ -1759,8 +1856,8 @@ class ProductionPlanner {
 				"<th>Job Card</th>" +
 				"<th>Planned Qty</th>" +
 				"<th>Shift</th>" +
+				"<th>Actual Qty</th>" +
 				"<th>Operator</th>" +
-				"<th>Type</th>" +
 				"<th>Notes</th>" +
 				"<th>Sign-off</th>" +
 				"</tr></thead>" +
@@ -1769,64 +1866,95 @@ class ProductionPlanner {
 			);
 		};
 
-		const sections = depts.map(renderDeptSection).join("");
+		return this._buildPrintShell({
+			iso,
+			title: "Blank Actuals Sheet",
+			subtitle: "Daily Floor Sheet (Blank Actuals)",
+			sections: depts.map(renderDeptSection).join(""),
+		});
+	}
 
-		// Self-contained HTML — no external assets. Inline everything.
-		return (
-			"<!doctype html>" +
-			'<html lang="en"><head>' +
-			'<meta charset="utf-8" />' +
-			`<title>Production Schedule — ${dateDisplay}</title>` +
-			"<style>" +
-			"@page { size: A4 landscape; margin: 10mm; }" +
-			"* { box-sizing: border-box; }" +
-			"body { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; color: #000; margin: 0; padding: 0; }" +
-			".hdr { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2B3990; padding-bottom: 6pt; margin-bottom: 10pt; }" +
-			".hdr-left { display: flex; gap: 10pt; align-items: center; }" +
-			".logo-box { width: 44pt; height: 30pt; background: #2B3990; color: #fff; font-weight: 700; font-size: 10pt; display: flex; align-items: center; justify-content: center; border-radius: 3pt; }" +
-			".hdr-title { font-size: 14pt; font-weight: 700; color: #2B3990; }" +
-			".hdr-sub { font-size: 10pt; color: #333; }" +
-			".hdr-right { text-align: right; font-size: 9pt; color: #555; }" +
-			".dept-title { background: #eef0fa; border-left: 4pt solid #2B3990; padding: 5pt 10pt; margin: 10pt 0 4pt; font-weight: 700; font-size: 12pt; color: #2B3990; }" +
-			".sched-table { width: 100%; border-collapse: collapse; margin-bottom: 8pt; }" +
-			".sched-table th, .sched-table td { border: 0.5pt solid #888; padding: 4pt 6pt; text-align: left; vertical-align: top; font-size: 9pt; }" +
-			".sched-table th { background: #f3f4f8; font-weight: 700; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.5pt; color: #444; }" +
-			".signoff-cell { width: 60pt; min-height: 22pt; }" +
-			".jc-id { font-weight: 600; }" +
-			".jc-sub { font-size: 8pt; color: #555; margin-top: 1pt; }" +
-			".type-tag { font-weight: 700; text-align: center; letter-spacing: 0.5pt; }" +
-			".type-plan { background: #eef0fa; color: #2B3990; }" +
-			".type-actual { background: #e6f7ef; color: #0e9e5a; }" +
-			".type-manual { background: #f3eeff; color: #7c3aed; }" +
-			".signoff-block { display: flex; justify-content: space-between; gap: 20pt; margin-top: 18pt; padding-top: 8pt; border-top: 1pt solid #888; }" +
-			".signoff-line { flex: 1; }" +
-			".signoff-line .label { font-size: 9pt; color: #444; margin-bottom: 18pt; }" +
-			".signoff-line .rule { border-bottom: 0.5pt solid #000; }" +
-			".footer-note { margin-top: 10pt; font-size: 8pt; color: #888; text-align: center; }" +
-			"</style>" +
-			"</head><body>" +
-			'<div class="hdr">' +
-			'<div class="hdr-left">' +
-			'<div class="logo-box">VCL</div>' +
-			"<div>" +
-			'<div class="hdr-title">Vimit Converters Ltd · Production Schedule</div>' +
-			`<div class="hdr-sub">${esc(dayName)} · ${esc(dateDisplay)}</div>` +
-			"</div>" +
-			"</div>" +
-			'<div class="hdr-right">' +
-			"<div><strong>Daily Production Schedule</strong></div>" +
-			`<div>Printed ${esc(timestamp)}</div>` +
-			"</div>" +
-			"</div>" +
-			sections +
-			'<div class="signoff-block">' +
-			'<div class="signoff-line"><div class="label">Production Manager Sign-off</div><div class="rule"></div></div>' +
-			'<div class="signoff-line"><div class="label">Floor Supervisor Sign-off</div><div class="rule"></div></div>' +
-			'<div class="signoff-line"><div class="label">Date &amp; Time</div><div class="rule"></div></div>' +
-			"</div>" +
-			'<div class="footer-note">Vimit Converters Ltd · Production Planner</div>' +
-			"</body></html>"
-		);
+	// Variant 2: Plan vs Actuals. Server-aggregated PE rows are joined
+	// onto the PSL spine; the Variance column is colour-coded.
+	_buildPlanVsActualsHTML(iso, depts, dataByDept) {
+		const esc = frappe.utils.escape_html;
+
+		// Decide which actual total to show against which planned
+		// baseline. Mirrors the server's baseline-picking logic in
+		// `get_plan_vs_actuals`.
+		const formatActual = (row) => {
+			const planned_sheets = Number(row.planned_sheets || 0);
+			const actual_sheets = Number(row.actual_sheets_total || 0);
+			const actual_qty = Number(row.actual_qty_total || 0);
+			const stageId = this._stageIdFromWT(row.workstation_type);
+			const uomMap = UOM_BY_STAGE[stageId] || { actual: "" };
+			if (planned_sheets > 0) {
+				return `${actual_sheets} sheets`;
+			}
+			return `${actual_qty} ${uomMap.actual || ""}`.trim();
+		};
+
+		const varianceCell = (row) => {
+			const v = row.variance_pct;
+			if (v === null || v === undefined) {
+				return '<td class="variance-cell variance-na">—</td>';
+			}
+			const abs = Math.abs(v);
+			let cls = "variance-good";
+			if (abs > 15) cls = "variance-bad";
+			else if (abs > 5) cls = "variance-warn";
+			const sign = v > 0 ? "+" : "";
+			return `<td class="variance-cell ${cls}">${sign}${v.toFixed(1)}%</td>`;
+		};
+
+		const renderRow = (row) => {
+			const stage = `${esc(row.workstation_type || "")} · ${esc(row.workstation || "")}`;
+			const jc = this._renderJobCardCell(row);
+			const planned = this._formatPlannedQty(row);
+			const actual = esc(formatActual(row));
+			const operator = esc(row.operator || "");
+			const notes = esc(row.notes || "");
+			return (
+				"<tr>" +
+				`<td>${stage}</td>` +
+				`<td>${jc}</td>` +
+				`<td>${planned}</td>` +
+				`<td>${actual}</td>` +
+				varianceCell(row) +
+				`<td>${operator}</td>` +
+				`<td>${notes}</td>` +
+				"</tr>"
+			);
+		};
+
+		const renderDeptSection = (dept) => {
+			const rows = dataByDept[dept] || [];
+			const body = rows.length
+				? rows.map(renderRow).join("")
+				: '<tr><td colspan="7" style="text-align:center;color:#888;padding:12pt;">No scheduled entries.</td></tr>';
+			return (
+				`<div class="dept-title">${esc(dept)}</div>` +
+				'<table class="sched-table">' +
+				"<thead><tr>" +
+				"<th>Stage / Machine</th>" +
+				"<th>Job Card</th>" +
+				"<th>Planned</th>" +
+				"<th>Actual</th>" +
+				"<th>Variance</th>" +
+				"<th>Operator</th>" +
+				"<th>Notes</th>" +
+				"</tr></thead>" +
+				`<tbody>${body}</tbody>` +
+				"</table>"
+			);
+		};
+
+		return this._buildPrintShell({
+			iso,
+			title: "Plan vs Actuals",
+			subtitle: "Daily Plan vs Actuals",
+			sections: depts.map(renderDeptSection).join(""),
+		});
 	}
 
 	// ─────────────────────────────────────────────────────────────
