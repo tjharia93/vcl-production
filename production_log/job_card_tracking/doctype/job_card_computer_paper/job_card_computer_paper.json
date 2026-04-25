@@ -6,6 +6,7 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "job_card_creation_tab",
   "amended_from",
   "naming_series",
   "order_date",
@@ -55,9 +56,37 @@
   "sales_rep_comments",
   "management_approver",
   "management_approval_date",
-  "management_comments"
+  "management_comments",
+  "production_data_tab",
+  "section_production_status",
+  "job_status",
+  "production_started_date",
+  "column_break_production_status",
+  "production_completed_date",
+  "section_production_output",
+  "actual_quantity_produced",
+  "good_quantity",
+  "column_break_production_output",
+  "waste_quantity",
+  "section_stage_progress",
+  "printed_quantity",
+  "printing_completed_date",
+  "collated_quantity",
+  "collation_completed_date",
+  "column_break_stage_progress",
+  "numbered_quantity",
+  "numbering_completed_date",
+  "packed_cartons",
+  "packing_completed_date",
+  "section_production_notes",
+  "production_notes"
  ],
  "fields": [
+  {
+   "fieldname": "job_card_creation_tab",
+   "fieldtype": "Tab Break",
+   "label": "Job Card Creation"
+  },
   {
    "fieldname": "amended_from",
    "fieldtype": "Link",
@@ -160,7 +189,7 @@
    "read_only": 1
   },
   {
-   "description": "Pre-tinted paper per ply. Copied from the spec \u2014 separate from print inks.",
+   "description": "Pre-tinted paper per ply. Copied from the spec — separate from print inks.",
    "fieldname": "section_colour_of_parts",
    "fieldtype": "Section Break",
    "label": "Colour of Parts"
@@ -188,28 +217,28 @@
    "default": "0",
    "fieldname": "uses_c",
    "fieldtype": "Check",
-   "label": "C \u2014 Cyan",
+   "label": "C — Cyan",
    "read_only": 1
   },
   {
    "default": "0",
    "fieldname": "uses_m",
    "fieldtype": "Check",
-   "label": "M \u2014 Magenta",
+   "label": "M — Magenta",
    "read_only": 1
   },
   {
    "default": "0",
    "fieldname": "uses_y",
    "fieldtype": "Check",
-   "label": "Y \u2014 Yellow",
+   "label": "Y — Yellow",
    "read_only": 1
   },
   {
    "default": "0",
    "fieldname": "uses_k",
    "fieldtype": "Check",
-   "label": "K \u2014 Black",
+   "label": "K — Black",
    "read_only": 1
   },
   {
@@ -371,11 +400,162 @@
    "fieldname": "management_comments",
    "fieldtype": "Small Text",
    "label": "Management Comments"
+  },
+  {
+   "fieldname": "production_data_tab",
+   "fieldtype": "Tab Break",
+   "label": "Production Data"
+  },
+  {
+   "fieldname": "section_production_status",
+   "fieldtype": "Section Break",
+   "label": "Status"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Open",
+   "description": "Set to Closed (or Completed) to remove this job from the Production Planner.",
+   "fieldname": "job_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Job Status",
+   "no_copy": 1,
+   "options": "Open\nIn Progress\nCompleted\nClosed",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "production_started_date",
+   "fieldtype": "Date",
+   "label": "Production Started",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_production_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "production_completed_date",
+   "fieldtype": "Date",
+   "label": "Production Completed",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "section_production_output",
+   "fieldtype": "Section Break",
+   "label": "Output"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "actual_quantity_produced",
+   "fieldtype": "Int",
+   "label": "Actual Quantity Produced",
+   "no_copy": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "good_quantity",
+   "fieldtype": "Int",
+   "label": "Good Quantity",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_production_output",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "waste_quantity",
+   "fieldtype": "Int",
+   "label": "Waste Quantity",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "section_stage_progress",
+   "fieldtype": "Section Break",
+   "label": "Stage Progress"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "printed_quantity",
+   "fieldtype": "Int",
+   "label": "Printed Quantity",
+   "no_copy": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "printing_completed_date",
+   "fieldtype": "Date",
+   "label": "Printing Completed",
+   "no_copy": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "collated_quantity",
+   "fieldtype": "Int",
+   "label": "Collated Quantity",
+   "no_copy": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "collation_completed_date",
+   "fieldtype": "Date",
+   "label": "Collation Completed",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "column_break_stage_progress",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.numbering_required==1",
+   "fieldname": "numbered_quantity",
+   "fieldtype": "Int",
+   "label": "Numbered Quantity",
+   "no_copy": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "depends_on": "eval:doc.numbering_required==1",
+   "fieldname": "numbering_completed_date",
+   "fieldtype": "Date",
+   "label": "Numbering Completed",
+   "no_copy": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "packed_cartons",
+   "fieldtype": "Int",
+   "label": "Packed Cartons",
+   "no_copy": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "packing_completed_date",
+   "fieldtype": "Date",
+   "label": "Packing Completed",
+   "no_copy": 1
+  },
+  {
+   "fieldname": "section_production_notes",
+   "fieldtype": "Section Break",
+   "label": "Production Notes"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "production_notes",
+   "fieldtype": "Small Text",
+   "label": "Production Notes",
+   "no_copy": 1
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-18 00:00:00.000000",
+ "modified": "2026-04-23 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Job Card Tracking",
  "name": "Job Card Computer Paper",

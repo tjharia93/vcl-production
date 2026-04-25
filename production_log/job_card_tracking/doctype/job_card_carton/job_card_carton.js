@@ -44,6 +44,7 @@ frappe.ui.form.on("Job Card Carton", {
 		}
 
 		vcl_run_calc_pipeline(frm);
+		_carton_add_job_status_buttons(frm);
 	},
 
 	onload(frm) {
@@ -893,4 +894,41 @@ function vcl_legend_tray() {
 		+ '<span><span style="display:inline-block;width:14px;height:14px;background:' + VCL_COLORS.trayWall + '50;border:1px solid #999;margin-right:4px;vertical-align:middle;"></span> Walls</span>'
 		+ '<span><span style="display:inline-block;width:14px;height:14px;background:#E0E0E0;border:1px solid #999;margin-right:4px;vertical-align:middle;"></span> Corner tabs</span>'
 		+ "</div>";
+}
+
+// ── Job status (Close / Reopen) ─────────────────────────────────────────────
+
+function _carton_add_job_status_buttons(frm) {
+	if (frm.doc.docstatus !== 1) return;
+	const status = frm.doc.job_status || "Open";
+	const closed = status === "Closed" || status === "Completed";
+
+	if (closed) {
+		frm.add_custom_button(__("Reopen Job"), () => _carton_set_job_status(frm, "Open"));
+	} else {
+		frm.add_custom_button(__("Close Job"), () => _carton_set_job_status(frm, "Closed"));
+		if (status === "Open") {
+			frm.add_custom_button(__("Mark In Progress"), () => _carton_set_job_status(frm, "In Progress"));
+		}
+		if (status !== "Completed") {
+			frm.add_custom_button(__("Mark Completed"), () => _carton_set_job_status(frm, "Completed"));
+		}
+	}
+}
+
+function _carton_set_job_status(frm, status) {
+	const messages = {
+		"Closed":      __("Close this job card? It will no longer appear on the Production Planner."),
+		"Completed":   __("Mark this job as Completed? It will no longer appear on the Production Planner."),
+		"In Progress": __("Mark this job as In Progress?"),
+		"Open":        __("Reopen this job card? It will appear on the Production Planner again."),
+	};
+	frappe.confirm(messages[status], () => {
+		frappe.call({
+			method: "production_log.job_card_tracking.utils.set_job_status",
+			args: { doctype: frm.doctype, name: frm.doc.name, status: status },
+			freeze: true,
+			callback: () => frm.reload_doc(),
+		});
+	});
 }

@@ -9,6 +9,7 @@ frappe.ui.form.on("Job Card Label", {
 				filters: { customer: frm.doc.customer },
 			};
 		});
+		_label_add_job_status_buttons(frm);
 	},
 
 	onload(frm) {
@@ -86,6 +87,41 @@ frappe.ui.form.on("Job Card Label", {
 		});
 	},
 });
+
+function _label_add_job_status_buttons(frm) {
+	if (frm.doc.docstatus !== 1) return;
+	const status = frm.doc.job_status || "Open";
+	const closed = status === "Closed" || status === "Completed";
+
+	if (closed) {
+		frm.add_custom_button(__("Reopen Job"), () => _label_set_job_status(frm, "Open"));
+	} else {
+		frm.add_custom_button(__("Close Job"), () => _label_set_job_status(frm, "Closed"));
+		if (status === "Open") {
+			frm.add_custom_button(__("Mark In Progress"), () => _label_set_job_status(frm, "In Progress"));
+		}
+		if (status !== "Completed") {
+			frm.add_custom_button(__("Mark Completed"), () => _label_set_job_status(frm, "Completed"));
+		}
+	}
+}
+
+function _label_set_job_status(frm, status) {
+	const messages = {
+		"Closed":      __("Close this job card? It will no longer appear on the Production Planner."),
+		"Completed":   __("Mark this job as Completed? It will no longer appear on the Production Planner."),
+		"In Progress": __("Mark this job as In Progress?"),
+		"Open":        __("Reopen this job card? It will appear on the Production Planner again."),
+	};
+	frappe.confirm(messages[status], () => {
+		frappe.call({
+			method: "production_log.job_card_tracking.utils.set_job_status",
+			args: { doctype: frm.doctype, name: frm.doc.name, status: status },
+			freeze: true,
+			callback: () => frm.reload_doc(),
+		});
+	});
+}
 
 function _clear_label_spec_fields(frm) {
 	["specification_name", "job_size", "dies", "material_type", "standard_packing",

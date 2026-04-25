@@ -9,6 +9,7 @@ frappe.ui.form.on("Job Card Computer Paper", {
 				filters: { customer: frm.doc.customer },
 			};
 		});
+		_add_job_status_buttons(frm);
 	},
 
 	onload(frm) {
@@ -94,6 +95,41 @@ frappe.ui.form.on("Job Card Computer Paper", {
 		});
 	},
 });
+
+function _add_job_status_buttons(frm) {
+	if (frm.doc.docstatus !== 1) return;
+	const status = frm.doc.job_status || "Open";
+	const closed = status === "Closed" || status === "Completed";
+
+	if (closed) {
+		frm.add_custom_button(__("Reopen Job"), () => _set_job_status(frm, "Open"));
+	} else {
+		frm.add_custom_button(__("Close Job"), () => _set_job_status(frm, "Closed"));
+		if (status === "Open") {
+			frm.add_custom_button(__("Mark In Progress"), () => _set_job_status(frm, "In Progress"));
+		}
+		if (status !== "Completed") {
+			frm.add_custom_button(__("Mark Completed"), () => _set_job_status(frm, "Completed"));
+		}
+	}
+}
+
+function _set_job_status(frm, status) {
+	const messages = {
+		"Closed":      __("Close this job card? It will no longer appear on the Production Planner."),
+		"Completed":   __("Mark this job as Completed? It will no longer appear on the Production Planner."),
+		"In Progress": __("Mark this job as In Progress?"),
+		"Open":        __("Reopen this job card? It will appear on the Production Planner again."),
+	};
+	frappe.confirm(messages[status], () => {
+		frappe.call({
+			method: "production_log.job_card_tracking.utils.set_job_status",
+			args: { doctype: frm.doctype, name: frm.doc.name, status: status },
+			freeze: true,
+			callback: () => frm.reload_doc(),
+		});
+	});
+}
 
 function _clear_spec_fields(frm) {
 	["specification_name", "job_size", "pay_slip_size", "ink_type", "colour_notes"].forEach(f => frm.set_value(f, ""));
