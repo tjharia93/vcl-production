@@ -13,7 +13,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Product Line",
-   "options": "Computer Paper\nETR\nSelf Adhesive Label\nGeneral Stationery and Exercise Book\nMono Boxes\nCorrugation and Carton Department\nTrading\nR2R",
+   "options": "All\nComputer Paper\nETR\nSelf Adhesive Label\nGeneral Stationery and Exercise Book\nMono Boxes\nCorrugation and Carton Department\nTrading\nR2R",
    "reqd": 1
   }
  ],

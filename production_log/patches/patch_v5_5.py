@@ -14,17 +14,20 @@ Type custom-field stack and the planner's product-line plumbing:
    Product Line Tag / Workstation.custom_product_line:
        - Rename `Label` → `Self Adhesive Label` (data + Select options).
        - Add `Trading` and `R2R` (no data to migrate, options only).
-       - Drop `All`. Every WT row carrying `All` is expanded to the
-         seven concrete product lines that have planner tabs (i.e. the
-         full 8-name list minus `Trading`, which doesn't have a tab).
-   Note: `R2R` is the product-line abbreviation deliberately — the
-   `Reel to Reel Printing` Workstation Type keeps its name.
+   `All` is kept in the option list — admins requested manual control
+   over migrating WTs from `All` to explicit per-PL rows, so the
+   planner SQL still matches `All` until those rows are re-tagged by
+   hand. Note: `R2R` is the product-line abbreviation deliberately —
+   the `Reel to Reel Printing` Workstation Type keeps its name.
 
-3. Re-install `custom_product_line_tags` on Workstation Type (the
-   child-table field has gone missing on at least one site — admin
-   hand-delete or migrate skip) and remove the legacy single-Select
-   `custom_product_line` from Workstation Type entirely. The planner
-   only reads the child table.
+3. Re-install `custom_product_line_tags` on Workstation Type. The
+   field has gone missing on at least one site — could be a
+   hand-deleted Custom Field row OR a row that's still there but
+   `hidden=1` from a stale fixtures import. The spec below pins the
+   visibility flags explicitly so `create_custom_fields(update=True)`
+   resets a hidden row back to visible, AND remove the legacy
+   single-Select `custom_product_line` from Workstation Type entirely.
+   The planner only reads the child table.
 
 Idempotent. A second `bench migrate` is a no-op on every phase.
 """
@@ -34,8 +37,9 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 
 # Authoritative product-line list as of v5_5. PSL / PE / WPLTag Selects
-# carry these (PSL / PE prepend a blank option). Order matches what the
-# planner client renders as dept tabs.
+# carry these (PSL / PE prepend a blank option; WPLTag keeps `All` at
+# the top of its own list). Order matches what the planner client
+# renders as dept tabs, with `Trading` and `R2R` appended.
 PRODUCT_LINE_OPTIONS = (
 	"Computer Paper\n"
 	"ETR\n"
@@ -46,14 +50,6 @@ PRODUCT_LINE_OPTIONS = (
 	"Trading\n"
 	"R2R"
 )
-PRODUCT_LINE_LIST = PRODUCT_LINE_OPTIONS.split("\n")
-
-# `All` rows on WT tag tables expand into these. Trading has no
-# planner tab and no operations stages; expanding `All` into Trading
-# would silently put every shared WT under Trading too. Drop it from
-# the expansion set — admins can add it explicitly if a Trading-bound
-# WT shows up later.
-ALL_EXPANSION = [pl for pl in PRODUCT_LINE_LIST if pl != "Trading"]
 
 # Default stage positions for the six known WTs. Spaced by 10 so admins
 # can insert a new stage between two existing ones without renumbering.
@@ -75,7 +71,7 @@ def execute():
 	frappe.reload_doc("production_log", "doctype", "workstation_product_line_tag")
 
 	# Phase 2 — install / refresh custom fields:
-	#   - Workstation Type.custom_product_line_tags (re-install if missing)
+	#   - Workstation Type.custom_product_line_tags (re-install + un-hide)
 	#   - Workstation Type.custom_stage_position    (new)
 	#   - Workstation.custom_product_line           (option refresh only)
 	_install_custom_fields()
@@ -84,16 +80,12 @@ def execute():
 	# lives as data.
 	_rename_label()
 
-	# Phase 4 — expand `All` tag rows into explicit per-PL rows on
-	# Workstation Type, then strip residual `All` rows.
-	_expand_all_tags()
-
-	# Phase 5 — drop the legacy single-Select `custom_product_line` on
+	# Phase 4 — drop the legacy single-Select `custom_product_line` on
 	# Workstation Type. The data was already mirrored to the tag table
 	# in patch_v5_0/v5_1; nothing to migrate here.
 	_drop_wt_single_select()
 
-	# Phase 6 — seed `custom_stage_position` for the six known WTs.
+	# Phase 5 — seed `custom_stage_position` for the six known WTs.
 	# Skips any WT whose admin has already set a non-default value.
 	_seed_stage_positions()
 
@@ -101,17 +93,32 @@ def execute():
 
 
 def _install_custom_fields():
+	# Visibility flags are pinned (rather than left default) so that a
+	# pre-existing Custom Field row that's somehow flipped to hidden /
+	# read-only / depends_on=<expr> gets reset back to a visible,
+	# editable Table field.
+	visibility_pins = {
+		"hidden": 0,
+		"read_only": 0,
+		"depends_on": "",
+		"mandatory_depends_on": "",
+		"read_only_depends_on": "",
+		"permlevel": 0,
+	}
+
 	custom_fields = {
 		"Workstation Type": [
-			# Re-install. `create_custom_fields(..., update=True)` is a
-			# no-op when the row already matches; this is the recovery
-			# path for sites where the field row was hand-deleted.
+			# Re-install + un-hide. `create_custom_fields(..., update=True)`
+			# merges these props into any existing row with the same
+			# fieldname; a missing row gets created from scratch. Either
+			# way the form picks the field back up after a desk reload.
 			{
 				"fieldname": "custom_product_line_tags",
 				"fieldtype": "Table",
 				"label": "Product Line Tags",
 				"options": "Workstation Product Line Tag",
 				"insert_after": "description",
+				**visibility_pins,
 			},
 			{
 				"fieldname": "custom_stage_position",
@@ -123,6 +130,7 @@ def _install_custom_fields():
 					"Lower numbers render earlier in the planner. "
 					"Must be unique across Workstation Types."
 				),
+				**visibility_pins,
 			},
 		],
 		# Legacy back-compat field on Workstation. Refresh options to
@@ -165,53 +173,6 @@ def _rename_label():
 		SET product_line = 'Self Adhesive Label'
 		WHERE product_line = 'Label'
 		"""
-	)
-
-
-def _expand_all_tags():
-	# Every WT carrying an `All` tag row.
-	rows = frappe.db.sql(
-		"""
-		SELECT DISTINCT parent
-		FROM `tabWorkstation Product Line Tag`
-		WHERE parenttype = 'Workstation Type'
-		  AND parentfield = 'custom_product_line_tags'
-		  AND product_line = 'All'
-		""",
-		as_dict=True,
-	)
-
-	for row in rows:
-		wt_name = row.parent
-		if not frappe.db.exists("Workstation Type", wt_name):
-			continue
-		wt = frappe.get_doc("Workstation Type", wt_name)
-
-		existing = {
-			r.product_line for r in wt.get("custom_product_line_tags", [])
-		}
-
-		# Drop `All` rows in-place by filtering the list.
-		wt.set(
-			"custom_product_line_tags",
-			[
-				r for r in wt.get("custom_product_line_tags", [])
-				if (r.product_line or "") != "All"
-			],
-		)
-
-		for pl in ALL_EXPANSION:
-			if pl in existing and pl != "All":
-				continue
-			wt.append("custom_product_line_tags", {"product_line": pl})
-
-		wt.save(ignore_permissions=True)
-
-	# Belt-and-braces: any orphan `All` rows that didn't go through the
-	# get_doc path above (e.g. residual WS-parent rows from before v5_2's
-	# rollup phase) are deleted here.
-	frappe.db.sql(
-		"DELETE FROM `tabWorkstation Product Line Tag` WHERE product_line = 'All'"
 	)
 
 

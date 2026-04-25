@@ -59,16 +59,17 @@ def get_workstation_columns(product_line=None):
 	`product_line` may be None (returns all lines) or one of the values
 	in `PLANNER_PRODUCT_LINES`. A workstation matches when its
 	Workstation Type carries a `custom_product_line_tags` row for that
-	product_line. Patch v5_5 expanded the legacy `All` synthetic tag
-	into explicit per-PL rows, so the query no longer needs an `All`
-	OR-clause — every shared WT now carries one tag row per PL.
-	Tagging moved from Workstation to Workstation Type in patch_v5_2.
+	product_line, or for the synthetic `All` tag. Tagging moved from
+	Workstation to Workstation Type in patch_v5_2; v5_5 keeps the
+	`All` match in place so admins can migrate WTs from `All` to
+	explicit per-PL rows manually without losing planner coverage in
+	the meantime.
 	"""
 	conditions = []
 	values = {}
 
 	if product_line:
-		conditions.append("tag.product_line = %(pl)s")
+		conditions.append("(tag.product_line = %(pl)s OR tag.product_line = 'All')")
 		values["pl"] = product_line
 
 	where_clause = ("WHERE " + " AND ".join(conditions)) if conditions else ""
