@@ -1,0 +1,23 @@
+{
+ "content": null,
+ "creation": "2026-05-02 00:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Page",
+ "icon": "calendar",
+ "idx": 0,
+ "modified": "2026-05-02 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "PPC",
+ "name": "ppc_computer_paper_board",
+ "owner": "Administrator",
+ "page_name": "ppc_computer_paper_board",
+ "roles": [
+  {"role": "PPC Planner"},
+  {"role": "Production Manager"},
+  {"role": "Production Supervisor"},
+  {"role": "System Manager"}
+ ],
+ "standard": "Yes",
+ "system_page": 0,
+ "title": "PPC Computer Paper Board"
+}
