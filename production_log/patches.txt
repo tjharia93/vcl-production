@@ -17,3 +17,5 @@ production_log.patches.patch_v5_2
 production_log.patches.patch_v5_3
 production_log.patches.patch_v5_4
 production_log.patches.patch_v5_5
+production_log.patches.v6_0.setup_ppc_v2_roles
+production_log.patches.v6_0.setup_ppc_jc_custom_fields

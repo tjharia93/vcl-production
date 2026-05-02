@@ -1,0 +1,208 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-05-02 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "sequence",
+  "source_doctype",
+  "source_job_card",
+  "customer",
+  "specification_name",
+  "job_size",
+  "number_of_parts",
+  "quantity_ordered_cartons",
+  "packing_sets_per_carton",
+  "section_stage",
+  "stage",
+  "workstation",
+  "planned_qty",
+  "planned_uom",
+  "remaining_balance",
+  "section_priority",
+  "priority",
+  "due_date",
+  "line_status",
+  "section_carry",
+  "carry_forward_from",
+  "carry_forward_to",
+  "carry_forward_pending",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "sequence",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Seq"
+  },
+  {
+   "default": "Job Card Computer Paper",
+   "fieldname": "source_doctype",
+   "fieldtype": "Link",
+   "label": "Source DocType",
+   "options": "DocType",
+   "reqd": 1
+  },
+  {
+   "fieldname": "source_job_card",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "label": "Job Card",
+   "options": "source_doctype",
+   "reqd": 1
+  },
+  {
+   "fetch_from": "source_job_card.customer",
+   "fieldname": "customer",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Customer",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "source_job_card.specification_name",
+   "fieldname": "specification_name",
+   "fieldtype": "Data",
+   "label": "Specification",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "source_job_card.job_size",
+   "fieldname": "job_size",
+   "fieldtype": "Data",
+   "label": "Job Size",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "source_job_card.number_of_parts",
+   "fieldname": "number_of_parts",
+   "fieldtype": "Int",
+   "label": "Parts",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "source_job_card.quantity_ordered",
+   "fieldname": "quantity_ordered_cartons",
+   "fieldtype": "Float",
+   "label": "Cartons Ordered",
+   "read_only": 1
+  },
+  {
+   "fetch_from": "source_job_card.packing",
+   "fieldname": "packing_sets_per_carton",
+   "fieldtype": "Float",
+   "label": "Sets/Carton",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_stage",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "stage",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Stage",
+   "options": "Printing by Part\nCollation + Numbering\nPacking",
+   "reqd": 1
+  },
+  {
+   "fieldname": "workstation",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Workstation",
+   "options": "Workstation"
+  },
+  {
+   "fieldname": "planned_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Planned Qty",
+   "reqd": 1
+  },
+  {
+   "fieldname": "planned_uom",
+   "fieldtype": "Select",
+   "label": "UOM",
+   "options": "Cartons\nSets\nSheets",
+   "default": "Cartons"
+  },
+  {
+   "fieldname": "remaining_balance",
+   "fieldtype": "Float",
+   "label": "Remaining Balance",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_priority",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "priority",
+   "fieldtype": "Select",
+   "label": "Priority",
+   "options": "Normal\nHigh\nUrgent\nCritical",
+   "default": "Normal"
+  },
+  {
+   "fetch_from": "source_job_card.due_date",
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "label": "Due Date",
+   "read_only": 1
+  },
+  {
+   "default": "Planned",
+   "fieldname": "line_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Planned\nIn Progress\nCompleted\nPartially Completed\nCarry Forward\nCarry Forward Pending\nCancelled\nOn Hold"
+  },
+  {
+   "fieldname": "section_carry",
+   "fieldtype": "Section Break",
+   "label": "Carry Forward",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "carry_forward_from",
+   "fieldtype": "Link",
+   "label": "Carry Forward From",
+   "options": "PPC Daily Plan Item",
+   "read_only": 1
+  },
+  {
+   "fieldname": "carry_forward_to",
+   "fieldtype": "Link",
+   "label": "Carry Forward To",
+   "options": "PPC Daily Plan Item",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "carry_forward_pending",
+   "fieldtype": "Check",
+   "label": "Carry Forward Pending"
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-05-02 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "PPC",
+ "name": "PPC Daily Plan Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 0
+}

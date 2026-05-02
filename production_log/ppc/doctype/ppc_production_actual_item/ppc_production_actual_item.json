@@ -1,0 +1,298 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-05-02 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "daily_plan_item",
+  "source_doctype",
+  "source_job_card",
+  "stage",
+  "workstation",
+  "section_people",
+  "operator",
+  "helpers",
+  "start_time",
+  "end_time",
+  "section_print_part",
+  "part_label",
+  "section_qty",
+  "good_quantity",
+  "good_uom",
+  "rejected_quantity",
+  "rejection_reason",
+  "section_waste",
+  "waste_quantity",
+  "waste_uom",
+  "waste_reason",
+  "section_downtime",
+  "downtime_minutes",
+  "downtime_reason",
+  "section_qc",
+  "qc_status",
+  "qc_comments",
+  "section_print_extras",
+  "side_strip_removed",
+  "side_strip_remarks",
+  "section_numbering",
+  "numbered_cartons",
+  "number_from",
+  "number_to",
+  "section_packing",
+  "packed_cartons",
+  "loose_balance_sets",
+  "remarks"
+ ],
+ "fields": [
+  {
+   "fieldname": "daily_plan_item",
+   "fieldtype": "Data",
+   "label": "Daily Plan Item Name",
+   "read_only": 1
+  },
+  {
+   "default": "Job Card Computer Paper",
+   "fieldname": "source_doctype",
+   "fieldtype": "Link",
+   "label": "Source DocType",
+   "options": "DocType",
+   "reqd": 1
+  },
+  {
+   "fieldname": "source_job_card",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "label": "Job Card",
+   "options": "source_doctype",
+   "reqd": 1
+  },
+  {
+   "fieldname": "stage",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Stage",
+   "options": "Printing by Part\nCollation + Numbering\nPacking",
+   "reqd": 1
+  },
+  {
+   "fieldname": "workstation",
+   "fieldtype": "Link",
+   "label": "Workstation",
+   "options": "Workstation"
+  },
+  {
+   "fieldname": "section_people",
+   "fieldtype": "Section Break",
+   "label": "Operator & Helpers"
+  },
+  {
+   "fieldname": "operator",
+   "fieldtype": "Data",
+   "label": "Operator",
+   "reqd": 1
+  },
+  {
+   "fieldname": "helpers",
+   "fieldtype": "Small Text",
+   "label": "Helpers",
+   "description": "Comma-separated names."
+  },
+  {
+   "fieldname": "start_time",
+   "fieldtype": "Datetime",
+   "label": "Start Time"
+  },
+  {
+   "fieldname": "end_time",
+   "fieldtype": "Datetime",
+   "label": "End Time"
+  },
+  {
+   "fieldname": "section_print_part",
+   "fieldtype": "Section Break",
+   "label": "Printing — Part",
+   "depends_on": "eval:doc.stage=='Printing by Part'"
+  },
+  {
+   "fieldname": "part_label",
+   "fieldtype": "Data",
+   "label": "Part",
+   "description": "e.g. Part 1, Part 2 — references CPS colour_of_parts.",
+   "depends_on": "eval:doc.stage=='Printing by Part'"
+  },
+  {
+   "fieldname": "section_qty",
+   "fieldtype": "Section Break",
+   "label": "Output"
+  },
+  {
+   "fieldname": "good_quantity",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Good Qty",
+   "reqd": 1
+  },
+  {
+   "fieldname": "good_uom",
+   "fieldtype": "Select",
+   "label": "Good UOM",
+   "options": "Cartons\nSets\nSheets",
+   "default": "Cartons"
+  },
+  {
+   "fieldname": "rejected_quantity",
+   "fieldtype": "Float",
+   "label": "Rejected Qty",
+   "default": 0
+  },
+  {
+   "fieldname": "rejection_reason",
+   "fieldtype": "Small Text",
+   "label": "Rejection Reason",
+   "mandatory_depends_on": "eval:doc.rejected_quantity>0"
+  },
+  {
+   "fieldname": "section_waste",
+   "fieldtype": "Section Break",
+   "label": "Waste"
+  },
+  {
+   "fieldname": "waste_quantity",
+   "fieldtype": "Float",
+   "label": "Waste Qty",
+   "default": 0,
+   "description": "Mandatory at every stage even if zero."
+  },
+  {
+   "fieldname": "waste_uom",
+   "fieldtype": "Select",
+   "label": "Waste UOM",
+   "options": "Sheets/Parts\nCartons\nSets",
+   "description": "Printing by Part: sheets/parts. Collation+Numbering: cartons (sets calc). Packing: cartons."
+  },
+  {
+   "fieldname": "waste_reason",
+   "fieldtype": "Small Text",
+   "label": "Waste Reason",
+   "mandatory_depends_on": "eval:doc.waste_quantity>0"
+  },
+  {
+   "fieldname": "section_downtime",
+   "fieldtype": "Section Break",
+   "label": "Downtime"
+  },
+  {
+   "fieldname": "downtime_minutes",
+   "fieldtype": "Int",
+   "label": "Downtime (min)",
+   "default": 0
+  },
+  {
+   "fieldname": "downtime_reason",
+   "fieldtype": "Select",
+   "label": "Downtime Reason",
+   "options": "\nMachine Breakdown\nMaterial Shortage\nQuality Issue\nPlate Change\nShift Change\nPower Outage\nCylinder / Tooling\nOther",
+   "mandatory_depends_on": "eval:doc.downtime_minutes>0"
+  },
+  {
+   "fieldname": "section_qc",
+   "fieldtype": "Section Break",
+   "label": "QC"
+  },
+  {
+   "fieldname": "qc_status",
+   "fieldtype": "Select",
+   "label": "QC Status",
+   "options": "\nPassed\nHold\nRejected"
+  },
+  {
+   "fieldname": "qc_comments",
+   "fieldtype": "Small Text",
+   "label": "QC Comments",
+   "mandatory_depends_on": "eval:['Hold','Rejected'].includes(doc.qc_status)"
+  },
+  {
+   "fieldname": "section_print_extras",
+   "fieldtype": "Section Break",
+   "label": "Side Strip",
+   "depends_on": "eval:doc.stage=='Printing by Part'",
+   "collapsible": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "side_strip_removed",
+   "fieldtype": "Check",
+   "label": "Side Strip Removed",
+   "depends_on": "eval:doc.stage=='Printing by Part'"
+  },
+  {
+   "fieldname": "side_strip_remarks",
+   "fieldtype": "Small Text",
+   "label": "Side Strip Remarks",
+   "depends_on": "eval:doc.stage=='Printing by Part'"
+  },
+  {
+   "fieldname": "section_numbering",
+   "fieldtype": "Section Break",
+   "label": "Numbering",
+   "depends_on": "eval:doc.stage=='Collation + Numbering'",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "numbered_cartons",
+   "fieldtype": "Float",
+   "label": "Numbered Cartons",
+   "depends_on": "eval:doc.stage=='Collation + Numbering'"
+  },
+  {
+   "fieldname": "number_from",
+   "fieldtype": "Int",
+   "label": "Number From",
+   "depends_on": "eval:doc.stage=='Collation + Numbering'"
+  },
+  {
+   "fieldname": "number_to",
+   "fieldtype": "Int",
+   "label": "Number To",
+   "depends_on": "eval:doc.stage=='Collation + Numbering'"
+  },
+  {
+   "fieldname": "section_packing",
+   "fieldtype": "Section Break",
+   "label": "Packing",
+   "depends_on": "eval:doc.stage=='Packing'",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "packed_cartons",
+   "fieldtype": "Int",
+   "label": "Packed Cartons",
+   "depends_on": "eval:doc.stage=='Packing'"
+  },
+  {
+   "fieldname": "loose_balance_sets",
+   "fieldtype": "Float",
+   "label": "Loose Balance Sets",
+   "depends_on": "eval:doc.stage=='Packing'",
+   "description": "Sets produced but not yet packed into a good carton."
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-05-02 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "PPC",
+ "name": "PPC Production Actual Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 0
+}
