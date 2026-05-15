@@ -154,7 +154,87 @@
             </tr>
         </table>
 
-        <div class="sec-head alt">4. Panel & Flap Dimensions (Creasing Layout)</div>
+        {#- ── UPS FORECAST (server-rendered) ───────────────────── -#}
+        {%- set trim_w = doc.get("trim_allowance_width_mm") | int if doc.get("trim_allowance_width_mm") else 0 -%}
+        {%- set knife = doc.get("knife_gap_mm") | int if doc.get("knife_gap_mm") else 0 -%}
+        {%- set max_reel = doc.get("max_reel_width") | int if doc.get("max_reel_width") else 1500 -%}
+        {%- set tab_width = 40 if joint_type == "Stitched" else 30 -%}
+        {%- if product_type == "Tray" -%}
+            {%- set bw = W + (2 * H) -%}
+            {%- set bl = L + (2 * H) -%}
+        {%- elif product_type == "1 Flap RSC" -%}
+            {%- set bw = H + flap -%}
+            {%- set bl = (2 * L) + (2 * W) + tab_width -%}
+        {%- else -%}
+            {%- set bw = flap + H + flap -%}
+            {%- set bl = (2 * L) + (2 * W) + tab_width -%}
+        {%- endif -%}
+        {%- set ns = namespace(a_max_n=0, a_max_reel=0, b_max_n=0, b_max_reel=0) -%}
+        {%- for n in range(1, 9) -%}
+            {%- set a_reel = (n * bw) + (knife * (n - 1)) + trim_w -%}
+            {%- if a_reel <= max_reel and n > ns.a_max_n -%}
+                {%- set ns.a_max_n = n -%}{%- set ns.a_max_reel = a_reel -%}
+            {%- endif -%}
+            {%- set b_reel = (n * bl) + (knife * (n - 1)) + trim_w -%}
+            {%- if b_reel <= max_reel and n > ns.b_max_n -%}
+                {%- set ns.b_max_n = n -%}{%- set ns.b_max_reel = b_reel -%}
+            {%- endif -%}
+        {%- endfor -%}
+
+        {%- if ply != "SFK" and product_type != "Die Cut" and L > 0 and W > 0 -%}
+        <div class="sec-head">4. UPS Forecast — Reel Layout Planning</div>
+        <table class="dense-table">
+            <tr>
+                <td colspan="3" style="background:#f4f4f4;font-size:9px;">
+                    <b>Reel limit:</b> {{ max_reel }} mm &nbsp;|&nbsp;
+                    <b>Trim (outer edges only):</b> {{ trim_w }} mm &nbsp;|&nbsp;
+                    <b>Knife gap:</b> {{ knife }} mm &nbsp;|&nbsp;
+                    <b>Blank (1-UP):</b> {{ bw }} &times; {{ bl }} mm
+                </td>
+            </tr>
+        </table>
+        <table class="dense-table">
+            <tr>
+                <th width="11%" style="text-align:center;">UPS Across</th>
+                <th>Orientation A — Blank Width ({{ bw }} mm) across reel</th>
+                <th>Orientation B — Blank Length ({{ bl }} mm) across reel</th>
+            </tr>
+            {%- set max_show = [ns.a_max_n, ns.b_max_n] | max + 1 -%}
+            {%- for n in range(1, max_show + 1) -%}
+                {%- set a_reel = (n * bw) + (knife * (n - 1)) + trim_w -%}
+                {%- set b_reel = (n * bl) + (knife * (n - 1)) + trim_w -%}
+                {%- set a_fits = a_reel <= max_reel -%}
+                {%- set b_fits = b_reel <= max_reel -%}
+                {%- set a_opt = a_fits and n == ns.a_max_n and ns.a_max_n >= ns.b_max_n -%}
+                {%- set b_opt = b_fits and n == ns.b_max_n and ns.b_max_n > ns.a_max_n -%}
+            <tr {% if a_opt or b_opt %}style="background:#E8F5E9;"{% endif %}>
+                <td style="text-align:center;font-weight:900;font-size:11px;">{{ n }}</td>
+                <td>
+                    {% if a_fits %}<span style="color:#2E7D32;font-weight:900;">&#10003; {{ a_reel }} mm</span>{% else %}<span style="color:#C62828;">&#10007; {{ a_reel }} mm (over by {{ a_reel - max_reel }})</span>{% endif %}
+                    {% if a_opt %}<span style="background:#2E7D32;color:#fff;padding:1px 6px;border-radius:2px;font-size:8px;margin-left:6px;">OPTIMAL</span>{% endif %}
+                </td>
+                <td>
+                    {% if b_fits %}<span style="color:#2E7D32;font-weight:900;">&#10003; {{ b_reel }} mm</span>{% else %}<span style="color:#C62828;">&#10007; {{ b_reel }} mm (over by {{ b_reel - max_reel }})</span>{% endif %}
+                    {% if b_opt %}<span style="background:#2E7D32;color:#fff;padding:1px 6px;border-radius:2px;font-size:8px;margin-left:6px;">OPTIMAL</span>{% endif %}
+                </td>
+            </tr>
+            {%- endfor %}
+        </table>
+        <div style="margin-top:5px;padding:6px 10px;background:#F1F8E9;border-left:3px solid #2E7D32;font-size:9.5px;">
+            {%- if ns.a_max_n >= ns.b_max_n and ns.a_max_n > 0 -%}
+                <b>Recommended:</b> {{ ns.a_max_n }}-UP @ Orientation A &mdash; reel width <b>{{ ns.a_max_reel }} mm</b>
+                ({{ "%.1f"|format((ns.a_max_reel / max_reel) * 100) }}% utilization, {{ max_reel - ns.a_max_reel }} mm headroom).
+            {%- elif ns.b_max_n > 0 -%}
+                <b>Recommended:</b> {{ ns.b_max_n }}-UP @ Orientation B (rotated) &mdash; reel width <b>{{ ns.b_max_reel }} mm</b>
+                ({{ "%.1f"|format((ns.b_max_reel / max_reel) * 100) }}% utilization).
+            {%- else -%}
+                <b style="color:#C62828;">No layout fits within {{ max_reel }} mm. Reduce dimensions or raise Max Reel Width.</b>
+            {%- endif -%}
+            <div style="margin-top:3px;font-size:8px;color:#666;font-style:italic;">Formula: reel_width = (blank &times; n_ups) + knife_gap &times; (n_ups &minus; 1) + trim_allowance_width</div>
+        </div>
+        {%- endif %}
+
+        <div class="sec-head alt">5. Panel & Flap Dimensions (Creasing Layout)</div>
         <table class="dense-table">
             <tr><th width="15%">TYPE</th><th>PART 1</th><th>PART 2</th><th>PART 3</th><th>PART 4</th><th>TAB</th><th>TOTAL</th></tr>
             <tr>

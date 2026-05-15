@@ -80,8 +80,6 @@
   "trim_allowance_length_mm",
   "section_ups_forecast",
   "html_ups_forecast",
-  "section_break_4",
-  "carton_ups_selection",
   "section_job_status",
   "job_status"
  ],
@@ -500,7 +498,6 @@
    "label": "Trim Allowance Length (mm)"
   },
   {
-   "collapsible": 1,
    "fieldname": "section_ups_forecast",
    "fieldtype": "Section Break",
    "label": "UPS Forecast"
@@ -510,16 +507,6 @@
    "fieldname": "html_ups_forecast",
    "fieldtype": "HTML",
    "label": ""
-  },
-  {
-   "fieldname": "section_break_4",
-   "fieldtype": "Section Break"
-  },
-  {
-   "fieldname": "carton_ups_selection",
-   "fieldtype": "Table",
-   "label": "Carton UPS Selection",
-   "options": "Carton Job Type UPS"
   },
   {
    "fieldname": "section_job_status",
