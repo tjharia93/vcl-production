@@ -253,6 +253,7 @@ function vcl_run_calc_pipeline(frm) {
 		() => vcl_calc_board_sizes_serial(frm),
 		() => vcl_calc_approx_weight_serial(frm),
 		() => vcl_render_board_visualization(frm),
+		() => vcl_render_ups_forecast(frm),
 		() => {
 			_pipeline_running = false;
 			if (_pipeline_queued) {
@@ -523,6 +524,153 @@ function vcl_render_board_visualization(frm) {
 		+ legendHtml
 		+ "</div>"
 	);
+}
+
+// ═══════════════════════════════════════════════════════════
+// Step 7: UPS Forecast — reel-width planner across UPS counts
+// Reel layout model:
+//   reel_width(n) = blank × n + knife_gap × (n − 1) + trim_w_total
+// Trim is outer web edges only (not between blanks). Two orientations
+// evaluated: A = blank_width across reel (default), B = blank_length
+// across reel (rotated). Optimal = highest UPS that still fits max_reel.
+// Read-only widget; nothing stored on the doc.
+// ═══════════════════════════════════════════════════════════
+
+function vcl_render_ups_forecast(frm) {
+	const $w = frm.fields_dict["html_ups_forecast"]
+		? frm.fields_dict["html_ups_forecast"].$wrapper
+		: null;
+	if (!$w) return;
+
+	const productType = frm.doc.product_type || "";
+	const ply = frm.doc.ply;
+
+	if (ply === "SFK") {
+		$w.html('<div style="padding:12px 16px;color:#888;font-size:13px;font-style:italic;">UPS forecast not applicable for SFK ply (web is run un-glued).</div>');
+		return;
+	}
+	if (productType === "Die Cut") {
+		$w.html('<div style="padding:12px 16px;background:#FFF8E1;border-left:3px solid #FFA000;border-radius:4px;font-size:13px;color:#555;margin:6px 0;"><b style="color:#E65100;">Die Cut</b> — UPS forecast not available. Layout depends on the custom die shape; set UPS manually below.</div>');
+		return;
+	}
+
+	const L = frm.doc.ctn_length_mm || 0;
+	const W = frm.doc.ctn_width_mm || 0;
+	const H = frm.doc.ctn_height_mm || 0;
+	const flap = frm.doc.ctn_flap_mm || 0;
+	const trim_w = frm.doc.trim_allowance_width_mm || 0;
+	const knife = frm.doc.knife_gap_mm || 0;
+	const max_reel = frm.doc.max_reel_width || 1500;
+	const jointType = frm.doc.joint_type || "Stitched";
+	const joint = VCL_JOINT_CONFIG[jointType] || VCL_JOINT_CONFIG["Stitched"];
+	const tabWidth = joint.tabWidth;
+
+	const needsHFlap = productType !== "Tray";
+	if (L <= 0 || W <= 0 || (needsHFlap && (H <= 0 || flap <= 0))) {
+		$w.html('<div style="padding:12px 16px;color:#888;font-size:13px;font-style:italic;">Enter carton dimensions to see the UPS forecast.</div>');
+		return;
+	}
+
+	// Blank dimensions per product type (no trim, no knife)
+	let blank_w = 0;
+	let blank_l = 0;
+	if (productType === "Tray") {
+		blank_w = W + 2 * H;
+		blank_l = L + 2 * H;
+	} else if (productType === "1 Flap RSC") {
+		blank_w = H + flap;
+		blank_l = (2 * L) + (2 * W) + tabWidth;
+	} else {
+		blank_w = flap + H + flap;
+		blank_l = (2 * L) + (2 * W) + tabWidth;
+	}
+
+	function compute_orientation(blank_dim) {
+		const rows = [];
+		let n = 1;
+		let firstMiss = false;
+		while (n <= 12) {
+			const reel = (n * blank_dim) + (knife * Math.max(0, n - 1)) + trim_w;
+			const fits = reel <= max_reel;
+			rows.push({ n, reel, fits });
+			if (!fits) {
+				if (firstMiss) break;
+				firstMiss = true;
+			}
+			n += 1;
+		}
+		const maxFit = rows.reduce(
+			(best, r) => (r.fits && r.n > best.n ? { n: r.n, reel: r.reel } : best),
+			{ n: 0, reel: 0 }
+		);
+		return { rows, maxFit, blank: blank_dim };
+	}
+
+	const A = compute_orientation(blank_w); // default: width across reel
+	const B = compute_orientation(blank_l); // rotated: length across reel
+
+	const maxRows = Math.max(A.rows.length, B.rows.length);
+	let html = '';
+	html += '<div style="font-family:Inter,Arial,sans-serif;font-size:13px;color:#333;margin:6px 0 4px;">';
+	html += '<div style="margin-bottom:8px;color:#555;font-size:12px;">'
+		+ '<b>Reel limit:</b> ' + max_reel + ' mm &nbsp;|&nbsp; '
+		+ '<b>Trim (outer edges only):</b> ' + trim_w + ' mm &nbsp;|&nbsp; '
+		+ '<b>Knife gap between blanks:</b> ' + knife + ' mm'
+		+ '</div>';
+
+	html += '<table style="width:100%;max-width:820px;border-collapse:collapse;font-size:12.5px;background:#fff;border:1px solid #ddd;">';
+	html += '<thead style="background:#2B3990;color:#fff;">';
+	html += '<tr>'
+		+ '<th style="padding:6px 8px;text-align:center;width:9%;">UPS<br>Across</th>'
+		+ '<th style="padding:6px 8px;text-align:left;">Orientation A — Blank Width (<b>' + blank_w + '</b> mm) across reel</th>'
+		+ '<th style="padding:6px 8px;text-align:left;">Orientation B — Blank Length (<b>' + blank_l + '</b> mm) across reel</th>'
+		+ '</tr></thead><tbody>';
+
+	function cell(r, isOptimal) {
+		if (!r) return '<td style="padding:6px 8px;color:#bbb;">—</td>';
+		const status = r.fits
+			? '<span style="color:#2E7D32;font-weight:600;">✓ ' + r.reel + ' mm</span>'
+			: '<span style="color:#C62828;">✗ ' + r.reel + ' mm <span style="font-size:11px;color:#888;">(over by ' + (r.reel - max_reel) + ')</span></span>';
+		const tag = isOptimal
+			? ' <span style="background:#2E7D32;color:#fff;padding:1px 6px;border-radius:3px;font-size:10.5px;margin-left:6px;font-weight:600;">OPTIMAL</span>'
+			: '';
+		return '<td style="padding:6px 8px;">' + status + tag + '</td>';
+	}
+
+	for (let i = 0; i < maxRows; i++) {
+		const a = A.rows[i];
+		const b = B.rows[i];
+		const aOpt = a && a.fits && A.maxFit.n === a.n && A.maxFit.n >= B.maxFit.n;
+		const bOpt = b && b.fits && B.maxFit.n === b.n && B.maxFit.n > A.maxFit.n;
+		const rowBg = (aOpt || bOpt) ? '#E8F5E9' : (i % 2 === 0 ? '#FAFAFA' : '#FFFFFF');
+		const nLabel = (a && a.n) || (b && b.n) || '';
+		html += '<tr style="background:' + rowBg + ';border-top:1px solid #eee;">';
+		html += '<td style="padding:6px 8px;text-align:center;font-weight:600;">' + nLabel + '</td>';
+		html += cell(a, aOpt);
+		html += cell(b, bOpt);
+		html += '</tr>';
+	}
+	html += '</tbody></table>';
+
+	let summary;
+	const aBetter = A.maxFit.n >= B.maxFit.n && A.maxFit.n > 0;
+	const bBetter = B.maxFit.n > A.maxFit.n;
+	if (aBetter) {
+		const util = ((A.maxFit.reel / max_reel) * 100).toFixed(1);
+		summary = '<b>Recommended:</b> ' + A.maxFit.n + '-UP @ Orientation A — reel width <b>' + A.maxFit.reel + ' mm</b> ('
+			+ util + '% utilization, ' + (max_reel - A.maxFit.reel) + ' mm headroom).';
+	} else if (bBetter) {
+		const util = ((B.maxFit.reel / max_reel) * 100).toFixed(1);
+		summary = '<b>Recommended:</b> ' + B.maxFit.n + '-UP @ Orientation B (rotated) — reel width <b>' + B.maxFit.reel + ' mm</b> ('
+			+ util + '% utilization, ' + (max_reel - B.maxFit.reel) + ' mm headroom).';
+	} else {
+		summary = '<b style="color:#C62828;">No layout fits within ' + max_reel + ' mm.</b> Reduce carton dimensions or raise Max Reel Width.';
+	}
+	html += '<div style="margin-top:10px;padding:8px 12px;background:#F1F8E9;border-left:3px solid #2E7D32;border-radius:3px;font-size:13px;">' + summary + '</div>';
+	html += '<div style="margin-top:6px;font-size:11px;color:#888;font-style:italic;">Formula: reel_width = (blank × n_ups) + knife_gap × (n_ups − 1) + trim_allowance_width &nbsp; · &nbsp; ups_along (machine direction) is a separate setting bounded by the corrugator cutoff, not shown here.</div>';
+	html += '</div>';
+
+	$w.html(html);
 }
 
 // --- 2-Flap RSC (also used for 3-Flap RSC) ---
