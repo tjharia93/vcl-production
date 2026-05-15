@@ -333,7 +333,7 @@
    "fieldname": "product_type_carton",
    "fieldtype": "Select",
    "label": "Carton Product Type",
-   "options": "\nTray\nDie Cut\n2 Flap RSC\n3 Flap RSC"
+   "options": "\nTray\nDie Cut\n1 Flap RSC\n2 Flap RSC\n3 Flap RSC"
   },
   {
    "depends_on": "eval:doc.product_type=='Carton'",
