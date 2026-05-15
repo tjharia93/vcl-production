@@ -401,9 +401,9 @@ function vcl_calc_board_sizes_serial(frm) {
 		blank_length = (2 * L) + (2 * W) + tabWidth;
 	}
 
-	// Planned = blank + trim (for 1-UP; UPS multiplier applied in child table rows)
-	const planned_width = blank_width + trim_w;
-	const planned_length = blank_length + trim_l;
+	// Planned = blank + 2 × per-edge trim (trim fields are PER outer edge, applied to both)
+	const planned_width = blank_width + (2 * trim_w);
+	const planned_length = blank_length + (2 * trim_l);
 
 	frm.set_value("board_width_planned_mm", planned_width);
 	frm.set_value("board_length_planned_mm", planned_length);
@@ -589,8 +589,9 @@ function vcl_render_ups_forecast(frm) {
 		const rows = [];
 		let n = 1;
 		let firstMiss = false;
+		const trim_total = 2 * trim_w; // trim is per outer edge, applied to both
 		while (n <= 12) {
-			const reel = (n * blank_dim) + (knife * Math.max(0, n - 1)) + trim_w;
+			const reel = (n * blank_dim) + (knife * Math.max(0, n - 1)) + trim_total;
 			const fits = reel <= max_reel;
 			rows.push({ n, reel, fits });
 			if (!fits) {
@@ -614,7 +615,7 @@ function vcl_render_ups_forecast(frm) {
 	html += '<div style="font-family:Inter,Arial,sans-serif;font-size:13px;color:#333;margin:6px 0 4px;">';
 	html += '<div style="margin-bottom:8px;color:#555;font-size:12px;">'
 		+ '<b>Reel limit:</b> ' + max_reel + ' mm &nbsp;|&nbsp; '
-		+ '<b>Trim (outer edges only):</b> ' + trim_w + ' mm &nbsp;|&nbsp; '
+		+ '<b>Trim per edge:</b> ' + trim_w + ' mm (total ' + (2 * trim_w) + ' mm, both outer edges) &nbsp;|&nbsp; '
 		+ '<b>Knife gap between blanks:</b> ' + knife + ' mm'
 		+ '</div>';
 
@@ -667,7 +668,7 @@ function vcl_render_ups_forecast(frm) {
 		summary = '<b style="color:#C62828;">No layout fits within ' + max_reel + ' mm.</b> Reduce carton dimensions or raise Max Reel Width.';
 	}
 	html += '<div style="margin-top:10px;padding:8px 12px;background:#F1F8E9;border-left:3px solid #2E7D32;border-radius:3px;font-size:13px;">' + summary + '</div>';
-	html += '<div style="margin-top:6px;font-size:11px;color:#888;font-style:italic;">Formula: reel_width = (blank × n_ups) + knife_gap × (n_ups − 1) + trim_allowance_width &nbsp; · &nbsp; ups_along (machine direction) is a separate setting bounded by the corrugator cutoff, not shown here.</div>';
+	html += '<div style="margin-top:6px;font-size:11px;color:#888;font-style:italic;">Formula: reel_width = (blank × n_ups) + knife_gap × (n_ups − 1) + 2 × trim_per_edge &nbsp; · &nbsp; ups_along (machine direction) is a separate setting bounded by the corrugator cutoff.</div>';
 	html += '</div>';
 
 	$w.html(html);

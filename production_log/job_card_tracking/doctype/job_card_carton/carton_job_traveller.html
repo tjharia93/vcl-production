@@ -169,13 +169,14 @@
             {%- set bw = flap + H + flap -%}
             {%- set bl = (2 * L) + (2 * W) + tab_width -%}
         {%- endif -%}
+        {%- set trim_total = 2 * trim_w -%}
         {%- set ns = namespace(a_max_n=0, a_max_reel=0, b_max_n=0, b_max_reel=0) -%}
         {%- for n in range(1, 9) -%}
-            {%- set a_reel = (n * bw) + (knife * (n - 1)) + trim_w -%}
+            {%- set a_reel = (n * bw) + (knife * (n - 1)) + trim_total -%}
             {%- if a_reel <= max_reel and n > ns.a_max_n -%}
                 {%- set ns.a_max_n = n -%}{%- set ns.a_max_reel = a_reel -%}
             {%- endif -%}
-            {%- set b_reel = (n * bl) + (knife * (n - 1)) + trim_w -%}
+            {%- set b_reel = (n * bl) + (knife * (n - 1)) + trim_total -%}
             {%- if b_reel <= max_reel and n > ns.b_max_n -%}
                 {%- set ns.b_max_n = n -%}{%- set ns.b_max_reel = b_reel -%}
             {%- endif -%}
@@ -187,7 +188,7 @@
             <tr>
                 <td colspan="3" style="background:#f4f4f4;font-size:9px;">
                     <b>Reel limit:</b> {{ max_reel }} mm &nbsp;|&nbsp;
-                    <b>Trim (outer edges only):</b> {{ trim_w }} mm &nbsp;|&nbsp;
+                    <b>Trim per edge:</b> {{ trim_w }} mm (total {{ trim_total }} mm, both outer edges) &nbsp;|&nbsp;
                     <b>Knife gap:</b> {{ knife }} mm &nbsp;|&nbsp;
                     <b>Blank (1-UP):</b> {{ bw }} &times; {{ bl }} mm
                 </td>
@@ -201,8 +202,8 @@
             </tr>
             {%- set max_show = [ns.a_max_n, ns.b_max_n] | max + 1 -%}
             {%- for n in range(1, max_show + 1) -%}
-                {%- set a_reel = (n * bw) + (knife * (n - 1)) + trim_w -%}
-                {%- set b_reel = (n * bl) + (knife * (n - 1)) + trim_w -%}
+                {%- set a_reel = (n * bw) + (knife * (n - 1)) + trim_total -%}
+                {%- set b_reel = (n * bl) + (knife * (n - 1)) + trim_total -%}
                 {%- set a_fits = a_reel <= max_reel -%}
                 {%- set b_fits = b_reel <= max_reel -%}
                 {%- set a_opt = a_fits and n == ns.a_max_n and ns.a_max_n >= ns.b_max_n -%}
@@ -230,7 +231,7 @@
             {%- else -%}
                 <b style="color:#C62828;">No layout fits within {{ max_reel }} mm. Reduce dimensions or raise Max Reel Width.</b>
             {%- endif -%}
-            <div style="margin-top:3px;font-size:8px;color:#666;font-style:italic;">Formula: reel_width = (blank &times; n_ups) + knife_gap &times; (n_ups &minus; 1) + trim_allowance_width</div>
+            <div style="margin-top:3px;font-size:8px;color:#666;font-style:italic;">Formula: reel_width = (blank &times; n_ups) + knife_gap &times; (n_ups &minus; 1) + 2 &times; trim_per_edge</div>
         </div>
         {%- endif %}
 
