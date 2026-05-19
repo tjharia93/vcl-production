@@ -312,14 +312,18 @@
 
     {%- set _print_type = doc.get("print_type") or doc.get("printing_or_plain") or "Printed" -%}
     {%- set _is_plain = (_print_type == "Plain") -%}
+    {#- Station names match live Workstation Type registry on Frappe Cloud (per
+        post-deploy check 2026-05-20). "Carton Stitching / Gluing" is a combined
+        display row — at JTRun-row entry the operator picks the actual WT
+        (Carton Stitching or Carton Gluing). -#}
     {%- set STATION_LIST = [
-        ("Corrugation (SFK)", false),
+        ("Corrugation", false),
         ("Sheeting", false),
-        ("Pasting", false),
+        ("Carton Pasting", false),
         ("Creasing", false),
-        ("Printing", true),
+        ("Carton Printing", true),
         ("Slotting", false),
-        ("Stitching / Gluing", false),
+        ("Carton Stitching / Gluing", false),
         ("Bundling", false),
     ] -%}
 
