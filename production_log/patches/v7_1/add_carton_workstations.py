@@ -87,8 +87,10 @@ def _create_or_update_workstation_type(name, stage_position):
 		_ensure_product_line_tag(name, PRODUCT_LINE)
 		return
 
+	# Workstation Type uses autoname = "field:workstation_type" — set that
+	# field to drive the record name (NOT doc.name directly).
 	doc = frappe.new_doc("Workstation Type")
-	doc.name = name
+	doc.workstation_type = name
 	if hasattr(doc, "custom_product_line"):
 		doc.custom_product_line = PRODUCT_LINE
 	if hasattr(doc, "custom_stage_position"):
