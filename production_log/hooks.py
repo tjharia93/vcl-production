@@ -75,7 +75,15 @@ doc_events = {
 
 # Scheduled Tasks
 # ---------------
-# scheduler_events = {}
+scheduler_events = {
+	# EOD Gemba PDF auto-generated at 17:00 EAT daily + pushed to Telegram.
+	# Per White Paper v4 §4.4. Cron in EAT = UTC+3.
+	"cron": {
+		"0 14 * * *": [  # 14:00 UTC = 17:00 EAT
+			"production_log.api.gemba.scheduled_eod_run",
+		],
+	},
+}
 
 # Testing
 # -------
