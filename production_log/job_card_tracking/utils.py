@@ -9,7 +9,20 @@ ALLOWED_DOCTYPES = {
 	"Job Card Carton",
 }
 
-ALLOWED_STATUSES = {"Open", "In Progress", "Completed", "Closed"}
+# Expanded in v7_0 patch (May 2026) to match the 8-value enum live on
+# JC Computer Paper since v6_0 (Property Setter). Older 4-value callers
+# remain backward compatible because the old values are a subset.
+ALLOWED_STATUSES = {
+	"Open",
+	"Planned",
+	"In Progress",       # legacy synonym retained for back-compat
+	"In Production",     # canonical mid-state per v6_0 PPC v2
+	"Packing Pending",
+	"Completed",
+	"Closed",
+	"On Hold",
+	"Cancelled",
+}
 
 
 @frappe.whitelist()
@@ -40,7 +53,7 @@ def set_job_status(doctype, name, status):
 	if status in ("Completed", "Closed") and not doc.get("production_completed_date"):
 		if hasattr(doc, "production_completed_date"):
 			doc.db_set("production_completed_date", today, update_modified=False)
-	if status == "In Progress" and not doc.get("production_started_date"):
+	if status in ("In Progress", "In Production") and not doc.get("production_started_date"):
 		if hasattr(doc, "production_started_date"):
 			doc.db_set("production_started_date", today, update_modified=False)
 
