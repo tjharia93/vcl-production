@@ -96,22 +96,18 @@ def _query_open_jobs(jcl_doctype, target_date):
 
 	Some fields (artwork_approved, plates_lead_time_clear) are added in S4
 	via Designers Tracker linkage; until then they default to None.
+	customer_name / job_description may not exist on every JCL — filter.
 	"""
-	fields = [
-		"name",
-		"customer_name",
-		"job_description",
-		"quantity_ordered",
-		"due_date",
-		"job_status",
-		"creation",
-	]
-	# Optional fields — only request if the doctype has them
 	meta = frappe.get_meta(jcl_doctype)
 	meta_fields = {f.fieldname for f in meta.fields}
-	for opt in ("print_type", "plate_ready", "material_in_stock", "customer_hold"):
-		if opt in meta_fields:
-			fields.append(opt)
+	always = {"name", "modified", "creation", "owner", "modified_by", "docstatus", "idx"}
+
+	candidates = [
+		"name", "customer_name", "job_description", "quantity_ordered",
+		"due_date", "job_status", "creation",
+		"print_type", "plate_ready", "material_in_stock", "customer_hold",
+	]
+	fields = [f for f in candidates if f in meta_fields or f in always]
 
 	return frappe.db.get_all(
 		jcl_doctype,

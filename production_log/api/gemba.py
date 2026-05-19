@@ -112,7 +112,24 @@ def _build_line_section(product_line, jcl_doctype, target_date):
 	}
 
 
+def _safe_fields(jcl_doctype, candidates):
+	"""Return only the candidate fields that actually exist on jcl_doctype's table.
+
+	Different JCLs have slightly different field sets (e.g. JC ETR may not have
+	customer_name as a denormalised column). Avoids "Unknown column" SQL errors.
+	"""
+	meta = frappe.get_meta(jcl_doctype)
+	existing = {f.fieldname for f in meta.fields}
+	# 'name' and 'modified' are always present on every doctype
+	always = {"name", "modified", "creation", "owner", "modified_by", "docstatus", "idx"}
+	return [f for f in candidates if f in existing or f in always]
+
+
 def _query_closed_today(jcl_doctype, target_date):
+	fields = _safe_fields(
+		jcl_doctype,
+		["name", "customer_name", "job_description", "quantity_ordered", "due_date", "modified"],
+	)
 	return frappe.db.get_all(
 		jcl_doctype,
 		filters={
@@ -120,27 +137,34 @@ def _query_closed_today(jcl_doctype, target_date):
 			"job_status": ("in", CLOSED_STATUSES),
 			"modified": (">=", f"{target_date} 00:00:00"),
 		},
-		fields=["name", "customer_name", "job_description", "quantity_ordered", "due_date", "modified"],
+		fields=fields,
 		order_by="modified desc",
 		limit=200,
 	)
 
 
 def _query_wip(jcl_doctype, target_date):
+	fields = _safe_fields(
+		jcl_doctype,
+		["name", "customer_name", "due_date", "job_status"],
+	)
 	return frappe.db.get_all(
 		jcl_doctype,
 		filters={
 			"docstatus": 1,
 			"job_status": ("in", OPEN_STATUSES),
-			# Heuristic for WIP: has a traveller_runs row or production_started_date is set
 		},
-		fields=["name", "customer_name", "due_date", "job_status"],
+		fields=fields,
 		order_by="due_date asc",
 		limit=200,
 	)
 
 
 def _query_overdue_backlog(jcl_doctype, target_date):
+	fields = _safe_fields(
+		jcl_doctype,
+		["name", "customer_name", "due_date", "quantity_ordered"],
+	)
 	return frappe.db.get_all(
 		jcl_doctype,
 		filters={
@@ -148,7 +172,7 @@ def _query_overdue_backlog(jcl_doctype, target_date):
 			"job_status": ("in", OPEN_STATUSES),
 			"due_date":  ("<", target_date),
 		},
-		fields=["name", "customer_name", "due_date", "quantity_ordered"],
+		fields=fields,
 		order_by="due_date asc",
 		limit=50,
 	)
