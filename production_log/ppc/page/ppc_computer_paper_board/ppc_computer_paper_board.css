@@ -1,0 +1,60 @@
+/* PPC Computer Paper Board — VCL Brand v1.0 palette
+ * navy   #1D2766   blue   #2B3990
+ * green  #1B7A45   amber  #B86B00
+ */
+.ppc-board { padding: 12px 16px; font-family: inherit; }
+.ppc-toolbar {
+	display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+	gap: 12px; margin-bottom: 12px;
+	padding: 10px 12px; background: #f6f7fb; border: 1px solid #e1e4ee; border-radius: 6px;
+}
+.ppc-tabs { display: flex; gap: 4px; }
+.ppc-tab {
+	background: transparent; border: 1px solid transparent;
+	padding: 6px 14px; border-radius: 4px; cursor: pointer; color: #1D2766;
+	font-weight: 500;
+}
+.ppc-tab:hover { background: #eef0f7; }
+.ppc-tab.is-active { background: #2B3990; color: #fff; }
+
+.ppc-toolbar-controls { display: flex; gap: 8px; align-items: center; }
+.ppc-date, .ppc-shift, .ppc-ws {
+	padding: 5px 8px; border: 1px solid #c7cbd9; border-radius: 4px; font-size: 13px;
+}
+
+.ppc-loading, .ppc-empty { padding: 24px; text-align: center; color: #6b7280; }
+
+.ppc-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+.ppc-table th, .ppc-table td { padding: 6px 8px; border-bottom: 1px solid #e1e4ee; text-align: left; }
+.ppc-table th { background: #f6f7fb; color: #1D2766; }
+.ppc-table tbody tr:hover { background: #fafbfd; }
+
+.ppc-pill {
+	display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px;
+	background: #eef0f7; color: #1D2766;
+}
+.ppc-pill--in-production, .ppc-pill--in-progress { background: #2B3990; color: #fff; }
+.ppc-pill--completed, .ppc-pill--planned { background: #1B7A45; color: #fff; }
+.ppc-pill--packing-pending { background: #B86B00; color: #fff; }
+.ppc-pill--on-hold { background: #B86B00; color: #fff; }
+.ppc-pill--cancelled, .ppc-pill--closed { background: #6b7280; color: #fff; }
+.ppc-pill--carry-forward, .ppc-pill--carry-forward-pending { background: #eef0f7; color: #B86B00; border: 1px solid #B86B00; }
+.ppc-pill--urgent, .ppc-pill--critical { background: #B86B00; color: #fff; }
+.ppc-pill--high { background: #2B3990; color: #fff; }
+
+.ppc-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.ppc-ws-section { margin-bottom: 24px; }
+.ppc-ws-title { font-size: 14px; color: #1D2766; font-weight: 600; margin-bottom: 8px; border-bottom: 2px solid #2B3990; padding-bottom: 4px; }
+.ppc-jcard { background: #fff; border: 1px solid #d8dce8; border-radius: 6px; padding: 10px 12px; }
+.ppc-jcard__header { display: flex; justify-content: space-between; gap: 6px; margin-bottom: 6px; }
+.ppc-jcard__title { font-weight: 600; color: #1D2766; }
+.ppc-jcard__meta { font-size: 12px; color: #4b5563; }
+.ppc-jcard__stage { font-size: 12px; margin-top: 6px; }
+.ppc-jcard__warn { color: #B86B00; font-size: 12px; margin-top: 4px; }
+
+.ppc-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.ppc-kpi { background: #fff; border: 1px solid #d8dce8; border-radius: 6px; padding: 14px; }
+.ppc-kpi-label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+.ppc-kpi-value { font-size: 24px; color: #1D2766; font-weight: 700; margin-top: 4px; }
+.ppc-kpi-value--good { color: #1B7A45; }
+.ppc-kpi-value--warn { color: #B86B00; }

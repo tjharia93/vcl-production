@@ -1,0 +1,31 @@
+{
+ "add_total_row": 0,
+ "creation": "2026-05-02 00:00:00.000000",
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "is_standard": "Yes",
+ "modified": "2026-05-02 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "PPC",
+ "name": "PPC On Hold Jobs Report",
+ "owner": "Administrator",
+ "ref_doctype": "Job Card Computer Paper",
+ "report_name": "PPC On Hold Jobs Report",
+ "report_type": "Query Report",
+ "roles": [
+  {
+   "role": "Production Manager"
+  },
+  {
+   "role": "Production Supervisor"
+  },
+  {
+   "role": "PPC Planner"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "query": "SELECT\n  jc.name AS `Job Card:Link/Job Card Computer Paper:160`,\n  jc.customer AS `Customer:Data:200`,\n  jc.specification_name AS `Specification:Data:200`,\n  jc.hold_reason AS `Hold Reason:Data:160`,\n  jc.hold_remarks AS `Remarks:Data:240`,\n  jc.hold_by AS `Hold By:Link/User:140`,\n  jc.hold_on AS `Hold On:Datetime:160`,\n  jc.hold_previous_status AS `Previous Status:Data:140`,\n  jc.due_date AS `Due:Date:100`\nFROM `tabJob Card Computer Paper` jc\nWHERE jc.docstatus < 2\n  AND jc.job_status = 'On Hold'\nORDER BY jc.hold_on DESC"
+}

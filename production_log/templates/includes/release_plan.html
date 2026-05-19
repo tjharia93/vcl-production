@@ -1,0 +1,140 @@
+{# Release Plan — A4 portrait Jinja template
+   Driven by production_log.api.release_plan.generate_release_plan
+   White Paper v4 §4.2 #}
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Release Plan — {{ product_line }} — {{ target_date }}</title>
+<style>
+  @page { size: A4 portrait; margin: 10mm; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1e2235; margin: 0; font-size: 9pt; line-height: 1.4; }
+
+  .brand-bar { background: #2B3990; color: #fff; padding: 6px 12px; display: flex; justify-content: space-between; align-items: center; }
+  .brand-bar .logo { font-weight: 700; letter-spacing: 2px; font-size: 13pt; }
+  .brand-bar .tag { font-size: 8pt; opacity: 0.9; }
+
+  h1 { font-size: 14pt; color: #2B3990; margin: 6px 0 4px; text-transform: uppercase; letter-spacing: 1px; }
+  .meta { display: flex; gap: 12px; font-size: 9pt; margin: 4px 0 8px; }
+  .meta .item { flex: 1; border-bottom: 1px solid #1e2235; padding-bottom: 2px; }
+  .meta .item label { font-weight: 600; color: #2B3990; margin-right: 6px; font-size: 8pt; text-transform: uppercase; }
+
+  .summary { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin: 6px 0 10px; }
+  .summary .kpi { border: 1px solid #2B3990; border-radius: 3px; padding: 5px 8px; background: #fafbff; }
+  .summary .kpi .lbl { font-size: 7pt; color: #2B3990; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+  .summary .kpi .v { font-size: 14pt; font-weight: 700; color: #1e2235; font-family: 'IBM Plex Mono', monospace; line-height: 1.1; }
+  .summary .kpi.warn .v { color: #c07800; }
+  .summary .kpi.bad .v { color: #ED1C24; }
+
+  table.jobs { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+  table.jobs th { background: #2B3990; color: #fff; padding: 5px 6px; text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.3px; }
+  table.jobs td { border: 1px solid #dde0ed; padding: 4px 6px; vertical-align: middle; }
+  table.jobs tr.b1 td { background: #fdecea; }
+  table.jobs tr.b2 td { background: #eef0fa; }
+  table.jobs tr.b3 td { background: #fafbff; }
+  table.jobs tr.b4 td { background: #fff3dc; color: #6b7280; }
+  table.jobs tr.b5 td { background: #f3f4f6; color: #ED1C24; font-style: italic; }
+  table.jobs .num { text-align: center; font-weight: 700; color: #2B3990; }
+  table.jobs .seq { width: 36px; text-align: center; border: 2px solid #2B3990; background: #fff; }
+  table.jobs .pill { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 7pt; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: #fff; }
+  table.jobs .pill.overdue { background: #ED1C24; }
+  table.jobs .pill.due { background: #2B3990; }
+  table.jobs .pill.soon { background: #0e9e5a; }
+  table.jobs .pill.pending { background: #c07800; }
+  table.jobs .pill.hold { background: #6b7280; }
+
+  .ready-flags { font-size: 7pt; white-space: nowrap; }
+  .ready-flags .f { display: inline-block; padding: 1px 4px; border-radius: 2px; margin-right: 2px; font-weight: 700; }
+  .ready-flags .f.ok { background: #e6f7ef; color: #0e9e5a; }
+  .ready-flags .f.no { background: #fdecea; color: #ED1C24; }
+
+  .footer { display: flex; justify-content: space-between; margin-top: 10px; font-size: 8pt; color: #6b7280; }
+</style>
+</head>
+<body>
+
+<div class="brand-bar">
+  <div class="logo">VCL</div>
+  <div class="tag">Daily Release Plan · {{ product_line }}</div>
+  <div class="tag" style="font-weight: 700;">Auto-generated overnight</div>
+</div>
+
+<h1>Release Plan — {{ target_date }}</h1>
+<div class="meta">
+  <div class="item"><label>Product Line:</label> {{ product_line }}</div>
+  <div class="item"><label>Open Jobs:</label> {{ summary.total }}</div>
+  <div class="item"><label>Shift:</label> 08:00–16:30 EAT</div>
+  <div class="item"><label>Planner:</label> __________________</div>
+</div>
+
+<div class="summary">
+  <div class="kpi bad"><div class="lbl">Overdue</div><div class="v">{{ summary.overdue }}</div></div>
+  <div class="kpi"><div class="lbl">Due Today</div><div class="v">{{ summary.due_today }}</div></div>
+  <div class="kpi"><div class="lbl">Due Soon</div><div class="v">{{ summary.due_soon }}</div></div>
+  <div class="kpi warn"><div class="lbl">Plate Pending</div><div class="v">{{ summary.plate_pending }}</div></div>
+  <div class="kpi"><div class="lbl">On Hold</div><div class="v">{{ summary.on_hold }}</div></div>
+  <div class="kpi"><div class="lbl">Total Backlog</div><div class="v">{{ summary.total }}</div></div>
+</div>
+
+<table class="jobs">
+  <thead>
+    <tr>
+      <th style="width: 20px; text-align: center;">#</th>
+      <th style="width: 90px;">Job Card</th>
+      <th style="width: 60px;">Status</th>
+      <th>Customer · Description</th>
+      <th style="width: 50px; text-align: right;">Ord Qty</th>
+      <th style="width: 60px;">Due</th>
+      <th style="width: 36px; text-align: center;">Age</th>
+      <th style="width: 140px;">Readiness Flags</th>
+      <th class="seq">Seq #</th>
+    </tr>
+  </thead>
+  <tbody>
+    {%- for job in jobs %}
+    <tr class="b{{ job._bucket }}">
+      <td class="num">{{ loop.index }}</td>
+      <td style="font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 7.5pt;">{{ job.name }}</td>
+      <td>
+        {%- if job._bucket == 1 -%}<span class="pill overdue">Overdue</span>
+        {%- elif job._bucket == 2 -%}<span class="pill due">Due Today</span>
+        {%- elif job._bucket == 3 -%}<span class="pill soon">Due Soon</span>
+        {%- elif job._bucket == 4 -%}<span class="pill pending">Plate ⏳</span>
+        {%- else -%}<span class="pill hold">On Hold</span>
+        {%- endif %}
+      </td>
+      <td>
+        <strong>{{ job.customer_name or "—" }}</strong>
+        {%- if job.job_description %}<br><small style="color: #6b7280;">{{ job.job_description }}</small>{%- endif %}
+      </td>
+      <td style="text-align: right; font-weight: 600;">{{ job.quantity_ordered or "—" }}</td>
+      <td>{{ job.due_date or "—" }}</td>
+      <td class="num">
+        {%- if job._age_days is not none -%}
+          {%- if job._age_days > 0 %}<span style="color: #ED1C24;">+{{ job._age_days }}d</span>
+          {%- elif job._age_days == 0 -%}today
+          {%- else -%}<span style="color: #6b7280;">{{ job._age_days }}d</span>
+          {%- endif -%}
+        {%- else -%}—{%- endif -%}
+      </td>
+      <td>
+        <span class="ready-flags">
+          <span class="f {% if job.get('plate_ready') %}ok{% else %}no{% endif %}">PLATE</span>
+          <span class="f {% if job.get('material_in_stock') %}ok{% else %}no{% endif %}">MAT</span>
+          <span class="f {% if not job.get('customer_hold') %}ok{% else %}no{% endif %}">CUST</span>
+        </span>
+      </td>
+      <td class="seq"></td>
+    </tr>
+    {%- endfor %}
+  </tbody>
+</table>
+
+<div class="footer">
+  <div>Sequencing algorithm: Overdue+Plate-Ready → Due-Today+Plate-Ready → Due-Soon → Plate-Pending → On-Hold</div>
+  <div>Print at 07:00 · Pin next to Heijunka board · Sequence # written by hand</div>
+</div>
+
+</body>
+</html>

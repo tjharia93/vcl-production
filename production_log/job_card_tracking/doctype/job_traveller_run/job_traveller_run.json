@@ -1,0 +1,149 @@
+{
+ "actions": [],
+ "creation": "2026-05-19 19:30:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "station",
+  "workstation",
+  "run_number",
+  "status",
+  "col_break_in",
+  "date_in",
+  "time_in",
+  "date_out",
+  "time_out",
+  "section_qty",
+  "qty_in",
+  "qty_good",
+  "qty_waste",
+  "col_break_op",
+  "operator",
+  "verified_by",
+  "section_notes",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "station",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Stage",
+   "options": "Workstation Type",
+   "reqd": 1
+  },
+  {
+   "fieldname": "workstation",
+   "fieldtype": "Link",
+   "label": "Machine",
+   "options": "Workstation"
+  },
+  {
+   "default": "1",
+   "fieldname": "run_number",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Run #"
+  },
+  {
+   "default": "In Progress",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "In Progress\nClosed\nSkipped"
+  },
+  {
+   "fieldname": "col_break_in",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "date_in",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Date In",
+   "reqd": 1
+  },
+  {
+   "fieldname": "time_in",
+   "fieldtype": "Time",
+   "in_list_view": 1,
+   "label": "Time In",
+   "reqd": 1
+  },
+  {
+   "fieldname": "date_out",
+   "fieldtype": "Date",
+   "label": "Date Out"
+  },
+  {
+   "fieldname": "time_out",
+   "fieldtype": "Time",
+   "label": "Time Out"
+  },
+  {
+   "fieldname": "section_qty",
+   "fieldtype": "Section Break",
+   "label": "Quantity"
+  },
+  {
+   "fieldname": "qty_in",
+   "fieldtype": "Float",
+   "label": "Qty In",
+   "precision": "2"
+  },
+  {
+   "fieldname": "qty_good",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Qty Good",
+   "precision": "2"
+  },
+  {
+   "default": "0",
+   "fieldname": "qty_waste",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Qty Waste",
+   "precision": "2"
+  },
+  {
+   "fieldname": "col_break_op",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "operator",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Operator",
+   "length": 40
+  },
+  {
+   "fieldname": "verified_by",
+   "fieldtype": "Data",
+   "label": "Verified By",
+   "length": 40
+  },
+  {
+   "fieldname": "section_notes",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-05-19 19:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Job Card Tracking",
+ "name": "Job Traveller Run",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "idx",
+ "sort_order": "ASC",
+ "track_changes": 1
+}

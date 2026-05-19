@@ -1,0 +1,31 @@
+{
+ "add_total_row": 0,
+ "creation": "2026-05-02 00:00:00.000000",
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "is_standard": "Yes",
+ "modified": "2026-05-02 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "PPC",
+ "name": "PPC Waste Report",
+ "owner": "Administrator",
+ "ref_doctype": "PPC Production Actual",
+ "report_name": "PPC Waste Report",
+ "report_type": "Query Report",
+ "roles": [
+  {
+   "role": "Production Manager"
+  },
+  {
+   "role": "Production Supervisor"
+  },
+  {
+   "role": "PPC Planner"
+  },
+  {
+   "role": "System Manager"
+  }
+ ],
+ "query": "SELECT\n  pa.posting_date AS `Date:Date:100`,\n  pa.shift AS `Shift:Data:100`,\n  pa.workstation AS `Workstation:Link/Workstation:160`,\n  pi.source_job_card AS `Job Card:Link/Job Card Computer Paper:160`,\n  pi.stage AS `Stage:Data:140`,\n  pi.operator AS `Operator:Data:140`,\n  pi.waste_quantity AS `Waste Qty:Float:110`,\n  pi.waste_uom AS `Waste UOM:Data:110`,\n  pi.waste_reason AS `Waste Reason:Data:240`\nFROM `tabPPC Production Actual` pa\nINNER JOIN `tabPPC Production Actual Item` pi ON pi.parent = pa.name\nWHERE pa.docstatus = 1\n  AND IFNULL(pi.waste_quantity, 0) > 0\nORDER BY pa.posting_date DESC"
+}

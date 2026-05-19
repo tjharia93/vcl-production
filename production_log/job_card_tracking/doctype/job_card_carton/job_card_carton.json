@@ -78,8 +78,8 @@
   "column_break_8",
   "knife_gap_mm",
   "trim_allowance_length_mm",
-  "section_break_4",
-  "carton_ups_selection",
+  "section_ups_forecast",
+  "html_ups_forecast",
   "section_job_status",
   "job_status"
  ],
@@ -423,7 +423,7 @@
    "fieldname": "html_board_plan",
    "fieldtype": "HTML",
    "label": "",
-   "options": "<div style=\"padding: 10px; background: #f5f7fa; border-radius: 4px; border-left: 3px solid #2B3990; font-size: 13px; color: #333; margin-bottom: 15px;\">\n<p style=\"margin: 0 0 8px; font-weight: 600; color: #2B3990;\">Board Plan Calculation Reference</p>\n<p style=\"margin: 0 0 4px;\"><b>Blank Width (1-UP)</b> = Flap + Carton Height + Flap</p>\n<p style=\"margin: 0 0 4px;\"><b>Blank Length (1-UP)</b> = (2 &times; Carton Length) + (2 &times; Carton Width) + Glue Tab (30mm)</p>\n<p style=\"margin: 0 0 4px;\"><b>Planned Board Width</b> = (Blank Width &times; UPS Across) + Knife Gap &times; (UPS Across &minus; 1) + Trim Allowance Width</p>\n<p style=\"margin: 0 0 4px;\"><b>Planned Board Length</b> = (Blank Length &times; UPS Along) + Knife Gap &times; (UPS Along &minus; 1) + Trim Allowance Length</p>\n<p style=\"margin: 8px 0 0; font-style: italic; color: #666;\">Approximate Weight (g) = (Planned Width &times; Planned Length / 1,000,000) &times; Total GSM</p>\n</div>"
+   "options": "<div style=\"padding: 10px; background: #f5f7fa; border-radius: 4px; border-left: 3px solid #2B3990; font-size: 13px; color: #333; margin-bottom: 15px;\">\n<p style=\"margin: 0 0 8px; font-weight: 600; color: #2B3990;\">Board Plan Calculation Reference</p>\n<p style=\"margin: 0 0 4px;\"><b>Blank Width (1-UP)</b> = Flap + Carton Height + Flap (RSC) &nbsp;|&nbsp; H + Flap (1-Flap RSC) &nbsp;|&nbsp; W + 2H (Tray)</p>\n<p style=\"margin: 0 0 4px;\"><b>Blank Length (1-UP)</b> = (2 &times; Carton Length) + (2 &times; Carton Width) + Glue Tab (30mm)</p>\n<p style=\"margin: 0 0 4px;\"><b>Planned Board Width</b> = (Blank Width &times; UPS Across) + Knife Gap &times; (UPS Across &minus; 1) + <b>2 &times;</b> Trim per Edge (Width)</p>\n<p style=\"margin: 0 0 4px;\"><b>Planned Board Length</b> = (Blank Length &times; UPS Along) + Knife Gap &times; (UPS Along &minus; 1) + <b>2 &times;</b> Trim per Edge (Length)</p>\n<p style=\"margin: 8px 0 0; font-style: italic; color: #666;\">Trim is per outer edge &mdash; standard 10 mm/edge (20 mm total). Approximate Weight (g) = (Planned Width &times; Planned Length / 1,000,000) &times; Total GSM</p>\n</div>"
   },
   {
    "fieldname": "html_board_visualization",
@@ -479,9 +479,11 @@
    "label": "Max Reel Width"
   },
   {
+   "default": "10",
+   "description": "Trim per outer web edge (mm). Applied to both edges in calculations, so effective total trim = 2 × this value. Standard = 10 mm/edge.",
    "fieldname": "trim_allowance_width_mm",
    "fieldtype": "Int",
-   "label": "Trim Allowance Width (mm)"
+   "label": "Trim per Edge - Width (mm)"
   },
   {
    "fieldname": "column_break_8",
@@ -493,19 +495,22 @@
    "label": "Gap/Knife Allowance (mm)"
   },
   {
+   "default": "10",
+   "description": "Trim per length-direction edge (mm). Applied to both ends, so effective total = 2 × this value.",
    "fieldname": "trim_allowance_length_mm",
    "fieldtype": "Int",
-   "label": "Trim Allowance Length (mm)"
+   "label": "Trim per Edge - Length (mm)"
   },
   {
-   "fieldname": "section_break_4",
-   "fieldtype": "Section Break"
+   "fieldname": "section_ups_forecast",
+   "fieldtype": "Section Break",
+   "label": "UPS Forecast"
   },
   {
-   "fieldname": "carton_ups_selection",
-   "fieldtype": "Table",
-   "label": "Carton UPS Selection",
-   "options": "Carton Job Type UPS"
+   "description": "Read-only preview. Forecasts max UPS Across that fits within Max Reel Width, in both orientations. Refreshes as you change dimensions / trim / product type. Not stored — advisory only.",
+   "fieldname": "html_ups_forecast",
+   "fieldtype": "HTML",
+   "label": ""
   },
   {
    "fieldname": "section_job_status",

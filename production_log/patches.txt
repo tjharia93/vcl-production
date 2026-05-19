@@ -17,3 +17,11 @@ production_log.patches.patch_v5_2
 production_log.patches.patch_v5_3
 production_log.patches.patch_v5_4
 production_log.patches.patch_v5_5
+production_log.patches.v6_0.setup_ppc_v2_roles
+production_log.patches.v6_0.setup_ppc_jc_custom_fields
+production_log.patches.v7_0.add_print_type
+production_log.patches.v7_0.backfill_print_type
+production_log.patches.v7_0.add_traveller_run_resource_consumption
+production_log.patches.v7_0.expand_job_status_whitelist
+production_log.patches.v7_1.add_carton_workstations
+production_log.patches.v7_2.add_readiness_status

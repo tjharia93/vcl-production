@@ -1,0 +1,145 @@
+{
+ "actions": [],
+ "creation": "2026-05-19 19:30:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "resource_type",
+  "station",
+  "identifier",
+  "batch",
+  "col_break_mat",
+  "material_name",
+  "gsm",
+  "width_mm",
+  "section_qty",
+  "planned_qty",
+  "actual_qty",
+  "uom",
+  "col_break_var",
+  "variance_pct",
+  "section_meta",
+  "operator",
+  "date_drawn",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "resource_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Resource Type",
+   "options": "Reel / Board\nAdhesive\nGlue\nInk\nPlate\nStitching Wire\nDie\nBundling Strap\nVarnish\nOther",
+   "reqd": 1
+  },
+  {
+   "fieldname": "station",
+   "fieldtype": "Link",
+   "label": "Station",
+   "options": "Workstation Type"
+  },
+  {
+   "fieldname": "identifier",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Reel ID / Identifier",
+   "length": 60
+  },
+  {
+   "fieldname": "batch",
+   "fieldtype": "Data",
+   "label": "Batch / Lot",
+   "length": 60
+  },
+  {
+   "fieldname": "col_break_mat",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "material_name",
+   "fieldtype": "Data",
+   "label": "Material",
+   "length": 120
+  },
+  {
+   "fieldname": "gsm",
+   "fieldtype": "Float",
+   "label": "GSM",
+   "precision": "0"
+  },
+  {
+   "fieldname": "width_mm",
+   "fieldtype": "Float",
+   "label": "Width (mm)",
+   "precision": "0"
+  },
+  {
+   "fieldname": "section_qty",
+   "fieldtype": "Section Break",
+   "label": "Quantity"
+  },
+  {
+   "fieldname": "planned_qty",
+   "fieldtype": "Float",
+   "label": "Planned (kg / units)",
+   "precision": "3"
+  },
+  {
+   "fieldname": "actual_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Actual (kg / units)",
+   "precision": "3"
+  },
+  {
+   "default": "kg",
+   "fieldname": "uom",
+   "fieldtype": "Select",
+   "label": "UOM",
+   "options": "kg\ng\npcs\nlitres\nm\nm²"
+  },
+  {
+   "fieldname": "col_break_var",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "variance_pct",
+   "fieldtype": "Float",
+   "label": "Variance %",
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_meta",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "operator",
+   "fieldtype": "Data",
+   "label": "Operator",
+   "length": 40
+  },
+  {
+   "fieldname": "date_drawn",
+   "fieldtype": "Date",
+   "label": "Date Drawn"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-05-19 19:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Job Card Tracking",
+ "name": "Job Resource Consumption",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "idx",
+ "sort_order": "ASC",
+ "track_changes": 1
+}
