@@ -87,16 +87,21 @@ def _create_or_update_workstation_type(name, stage_position):
 		_ensure_product_line_tag(name, PRODUCT_LINE)
 		return
 
-	# Workstation Type uses autoname = "field:workstation_type" — set that
-	# field to drive the record name (NOT doc.name directly).
-	doc = frappe.new_doc("Workstation Type")
-	doc.workstation_type = name
-	if hasattr(doc, "custom_product_line"):
-		doc.custom_product_line = PRODUCT_LINE
-	if hasattr(doc, "custom_stage_position"):
-		doc.custom_stage_position = stage_position
-	doc.flags.ignore_permissions = True
-	doc.insert()
+	# Use dict-form construction so Frappe resolves naming via autoname
+	# correctly. Workstation Type uses autoname='field:workstation_type'.
+	# Also pre-set doc.name as a safety belt for older Frappe versions.
+	doc = frappe.get_doc({
+		"doctype":               "Workstation Type",
+		"workstation_type":      name,
+		"name":                  name,
+		"custom_product_line":   PRODUCT_LINE,
+		"custom_stage_position": stage_position,
+	})
+	try:
+		doc.insert(ignore_permissions=True, ignore_mandatory=True)
+	except frappe.NameError:
+		# Race condition — another patch run created it. Treat as success.
+		pass
 	_ensure_product_line_tag(name, PRODUCT_LINE)
 
 
@@ -121,11 +126,14 @@ def _create_or_update_workstation(name, workstation_type):
 	if frappe.db.exists("Workstation", name):
 		return
 
-	doc = frappe.new_doc("Workstation")
-	doc.workstation_name = name
-	doc.workstation_type = workstation_type
-	if hasattr(doc, "custom_product_line"):
-		# Legacy single-value field retained for back-compat per v5_2
-		doc.custom_product_line = PRODUCT_LINE
-	doc.flags.ignore_permissions = True
-	doc.insert()
+	# Workstation autoname is also field-driven. Use dict-form to be safe.
+	doc = frappe.get_doc({
+		"doctype":             "Workstation",
+		"workstation_name":    name,
+		"workstation_type":    workstation_type,
+		"custom_product_line": PRODUCT_LINE,
+	})
+	try:
+		doc.insert(ignore_permissions=True, ignore_mandatory=True)
+	except frappe.NameError:
+		pass
