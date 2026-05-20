@@ -56,6 +56,7 @@ The v7_1 patch (`production_log.patches.v7_1.add_carton_workstations`) executed 
 [2026-05-19 23:26] CF · Job Card ETR · same 5 readiness Check fields
 [2026-05-19 23:26] CF · Job Card Label · same 5 readiness Check fields
 [2026-05-19 23:26] PRINT FORMAT · Carton Job Card · pages 2-3 redesigned with JTRun/JResource Jinja loops, 8 stations, plain auto-skip
+[2026-05-20 00:55] PRINT FORMAT · Carton Job Card · live record html updated to traveller v4 (23097 -> 39035 chars · v3 Reel Tracking removed · v4 Station Log + Resources added). fixtures/print_format.json also synced (commit 3b629b7).
 ```
 
 ### Follow-up TODOs
