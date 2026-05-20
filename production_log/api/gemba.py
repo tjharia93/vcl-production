@@ -9,9 +9,9 @@ Per White Paper v4 §4.4 (Gemba input data-flow).
 
 Telegram delivery (S2, 2026-05-20): the PDF is POSTed to an n8n webhook
 which forwards it to Telegram. The bot token lives in n8n, never in Frappe.
-Configuration — site_config.json keys:
+Configuration — site_config.json keys (both optional, code defaults below):
   gemba_webhook_url — n8n webhook endpoint (defaults to GEMBA_WEBHOOK_URL)
-  gemba_chat_id     — destination Telegram chat / group id (required)
+  gemba_chat_id     — destination Telegram chat id (defaults to GEMBA_CHAT_ID)
 
 Usage (manual):
   /api/method/production_log.api.gemba.generate_eod_report?date=2026-05-19
@@ -41,6 +41,10 @@ CLOSED_STATUSES = ("Completed", "Closed")
 # is held by n8n — Frappe never stores it. Overridable via site_config
 # key `gemba_webhook_url`.
 GEMBA_WEBHOOK_URL = "https://vcl-intranet.tailb2b755.ts.net/webhook/gemba-telegram"
+
+# Destination Telegram chat for the EOD report. Overridable per-site via
+# site_config key `gemba_chat_id`.
+GEMBA_CHAT_ID = "8566637123"
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -270,22 +274,16 @@ def _push_to_telegram(pdf_bytes, filename, headline, target_date):
 	The Telegram bot token is held by n8n — never by Frappe. Frappe sends
 	only the PDF, a caption and the destination chat_id; none are secret.
 
-	Config — site_config.json:
+	Config — site_config.json (both optional):
 	  gemba_webhook_url — n8n endpoint (defaults to GEMBA_WEBHOOK_URL)
-	  gemba_chat_id     — destination Telegram chat / group id (required)
+	  gemba_chat_id     — destination chat id (defaults to GEMBA_CHAT_ID)
 	"""
 	import base64
 	import requests
 
 	site = frappe.local.conf or {}
 	webhook_url = site.get("gemba_webhook_url") or GEMBA_WEBHOOK_URL
-	chat_id = site.get("gemba_chat_id")
-	if not chat_id:
-		frappe.log_error(
-			title="Gemba EOD — Telegram chat_id not configured",
-			message="Set 'gemba_chat_id' in site_config.json to enable the EOD push.",
-		)
-		return None
+	chat_id = site.get("gemba_chat_id") or GEMBA_CHAT_ID
 
 	caption = (
 		f"VCL EOD Gemba · {target_date}\n"

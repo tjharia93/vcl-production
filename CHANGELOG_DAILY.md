@@ -114,6 +114,9 @@ The n8n workflow is already live and verified (webhook receive, body parse,
 smoke tests). The `gemba.py` change deploys on the next GitHub push (morning
 2026-05-21).
 
-ACTION NEEDED — set `gemba_chat_id` in Frappe Cloud `site_config.json` to the
-destination Telegram chat/group id; otherwise the push logs an error and
-no-ops.
+Destination chat: `GEMBA_CHAT_ID` defaults to `8566637123` (Tanuj's personal
+chat) in gemba.py — site_config key `gemba_chat_id` still overrides. No
+site_config change needed.
+
+Verified live 2026-05-20 19:xx — `gemba_eod.pdf` POSTed to the webhook was
+delivered to the chat (Telegram message_id 144, n8n execution `success`).
