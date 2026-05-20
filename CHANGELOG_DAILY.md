@@ -60,7 +60,7 @@ The v7_1 patch (`production_log.patches.v7_1.add_carton_workstations`) executed 
 
 ### Follow-up TODOs
 
-- [ ] Write `v7_3_finish_carton_workstations.py` patch that idempotently ensures Slotting + Bundling + their Workstations + Plate Making/Sheeting tags exist. For fresh-install replay.
+- [x] Write `v7_3.finish_carton_workstations` patch — DONE 2026-05-20. Idempotent: no-op on current prod (records exist), creates them on fresh installs.
 - [ ] Configure `telegram_bot_token` and `gemba_channel_chat_id` in `site_config.json` on prod to enable 17:00 EAT EOD Gemba auto-push.
 - [ ] Investigate the stage_position 999 collision (Corrugation + ETR Slitting + others all at 999) — not from my work, but blocks future WT saves until fixed.
 - [ ] Hamada 01 reclassification — currently `Reel to Reel Printing`, likely should be `Sheet to Sheet Printing`.
