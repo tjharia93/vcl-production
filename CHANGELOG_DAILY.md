@@ -63,6 +63,32 @@ The v7_1 patch (`production_log.patches.v7_1.add_carton_workstations`) executed 
 
 - [x] Write `v7_3.finish_carton_workstations` patch — DONE 2026-05-20. Idempotent: no-op on current prod (records exist), creates them on fresh installs.
 - [ ] Configure `telegram_bot_token` and `gemba_channel_chat_id` in `site_config.json` on prod to enable 17:00 EAT EOD Gemba auto-push.
-- [ ] Investigate the stage_position 999 collision (Corrugation + ETR Slitting + others all at 999) — not from my work, but blocks future WT saves until fixed.
+- [x] Investigate the stage_position 999 collision — DONE 2026-05-20. Stage ladder applied (see below).
 - [ ] Hamada 01 reclassification — currently `Reel to Reel Printing`, likely should be `Sheet to Sheet Printing`.
 - [ ] Floor: rename Slotter 01 / Bundler 01 to actual equipment IDs after S3 install.
+
+### Afternoon — stage ladder + per-line production routing model
+
+The stage_position 999 collision is resolved, and the workflow position of
+each stage is now modelled as data per product line (not in a station code).
+A station's place in the flow depends on which line's job passes through it
+— Sheeting is step 1 of Trading but step 5 of Exercise Books — so the route
+position lives on the `(stage, product_line)` tag row.
+
+```
+[2026-05-20 18:24] WS  · Workstation Type · custom_stage_position ladder set on 14 types (Plate Making 15 … Carton Gluing 165) — resolves the 999 collision
+[2026-05-20 18:29] CF  · Workstation Product Line Tag · process_number (Int) — step order within a product line's route
+[2026-05-20 18:29] TAG · 26 existing tag rows numbered with process_number across the 8 line routes
+[2026-05-20 18:29] TAG · 7 new tag rows added — R2R → Reel to Reel Printing + Label Slitting; Trading → Sheeting; GSE → Collation; Mono Boxes → Lamination + Carton Gluing; Self Adhesive Label → Die Cutting
+```
+
+Codified in patch `v7_4.add_process_number_routes` (idempotent — no-op on
+this prod site, full effect on fresh installs). Deploy: next GitHub push
+(morning of 2026-05-21).
+
+Open route questions for Tanuj to confirm before the push:
+- Sheet-to-Sheet Printing keeps a `Corrugation and Carton Department` tag
+  with no process_number (offset-printed carton exception) — keep or drop?
+- Trading route is Sheeting only — any other stage?
+- R2R route = Reel to Reel Printing → Label Slitting & Re-Winding — correct?
+- Computer Paper has no punching/perforation stage — needed?
