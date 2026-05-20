@@ -120,3 +120,11 @@ site_config change needed.
 
 Verified live 2026-05-20 19:xx — `gemba_eod.pdf` POSTed to the webhook was
 delivered to the chat (Telegram message_id 144, n8n execution `success`).
+
+Follow-up fix — a live run of `generate_eod_report` crashed: it filtered
+every JCL on `job_status`, but Job Card ETR is a different schema —
+`status` / `delivery_date` / `order_qty`, status vocabulary Draft / In
+Progress / Completed / Cancelled. (CP and Label also have no
+`customer_name` — they use the `customer` link.) Added `JCL_PROFILE`, a
+per-doctype column + status-set map; the report queries alias the real
+columns to the logical names the template expects. Pushed for redeploy.

@@ -34,8 +34,46 @@ PRODUCT_LINE_JCL = {
 	"Self Adhesive Label":               "Job Card Label",
 }
 
+# Status vocabulary for the three "standard" JCLs (Carton / CP / Label).
 OPEN_STATUSES   = ("Open", "Planned", "In Progress", "In Production", "Packing Pending", "On Hold")
 CLOSED_STATUSES = ("Completed", "Closed")
+
+# Job Card ETR uses its own status field vocabulary: Draft / In Progress /
+# Completed / Cancelled. Cancelled counts as neither open nor closed.
+ETR_OPEN_STATUSES   = ("Draft", "In Progress")
+ETR_CLOSED_STATUSES = ("Completed",)
+
+# Per-JCL normalisation. Each Job Card doctype exposes the same concepts
+# under different column names — Job Card ETR uses status / delivery_date /
+# order_qty where the other three use job_status / due_date /
+# quantity_ordered, and CP / Label have no denormalised customer_name. The
+# report queries read this profile so they never assume a shared schema.
+JCL_PROFILE = {
+	"Job Card Carton": {
+		"status_field": "job_status", "due_field": "due_date",
+		"qty_field": "quantity_ordered", "customer_field": "customer_name",
+		"desc_field": "specification_name",
+		"open": OPEN_STATUSES, "closed": CLOSED_STATUSES,
+	},
+	"Job Card Computer Paper": {
+		"status_field": "job_status", "due_field": "due_date",
+		"qty_field": "quantity_ordered", "customer_field": "customer",
+		"desc_field": "specification_name",
+		"open": OPEN_STATUSES, "closed": CLOSED_STATUSES,
+	},
+	"Job Card Label": {
+		"status_field": "job_status", "due_field": "due_date",
+		"qty_field": "quantity_ordered", "customer_field": "customer",
+		"desc_field": "specification_name",
+		"open": OPEN_STATUSES, "closed": CLOSED_STATUSES,
+	},
+	"Job Card ETR": {
+		"status_field": "status", "due_field": "delivery_date",
+		"qty_field": "order_qty", "customer_field": "customer_name",
+		"desc_field": "specification_name",
+		"open": ETR_OPEN_STATUSES, "closed": ETR_CLOSED_STATUSES,
+	},
+}
 
 # n8n webhook that forwards the EOD PDF to Telegram. The Telegram bot token
 # is held by n8n — Frappe never stores it. Overridable via site_config
@@ -66,7 +104,7 @@ def generate_eod_report(date=None, push_to_telegram=False):
 
 	per_line = []
 	for product_line, jcl_doctype in PRODUCT_LINE_JCL.items():
-		if not frappe.db.exists("DocType", jcl_doctype):
+		if jcl_doctype not in JCL_PROFILE or not frappe.db.exists("DocType", jcl_doctype):
 			continue
 		per_line.append(_build_line_section(product_line, jcl_doctype, target_date))
 
@@ -102,9 +140,10 @@ def scheduled_eod_run():
 
 
 def _build_line_section(product_line, jcl_doctype, target_date):
-	closed_today = _query_closed_today(jcl_doctype, target_date)
-	wip = _query_wip(jcl_doctype, target_date)
-	backlog = _query_overdue_backlog(jcl_doctype, target_date)
+	profile = JCL_PROFILE[jcl_doctype]
+	closed_today = _query_closed_today(jcl_doctype, profile, target_date)
+	wip = _query_wip(jcl_doctype, profile, target_date)
+	backlog = _query_overdue_backlog(jcl_doctype, profile, target_date)
 
 	throughput = _throughput_by_station(jcl_doctype, target_date)
 	bottleneck = _find_bottleneck(throughput)
@@ -123,68 +162,85 @@ def _build_line_section(product_line, jcl_doctype, target_date):
 	}
 
 
-def _safe_fields(jcl_doctype, candidates):
-	"""Return only the candidate fields that actually exist on jcl_doctype's table.
+def _exists(jcl_doctype, fieldname):
+	"""True if `fieldname` is a real column on `jcl_doctype`."""
+	return any(f.fieldname == fieldname for f in frappe.get_meta(jcl_doctype).fields)
 
-	Different JCLs have slightly different field sets (e.g. JC ETR may not have
-	customer_name as a denormalised column). Avoids "Unknown column" SQL errors.
+
+def _select_fields(jcl_doctype, profile, want):
+	"""Build a get_all `fields` list for the logical names in `want`.
+
+	Each per-doctype column is aliased to the logical name the template
+	expects (e.g. ETR's `delivery_date` -> `due_date`); columns that do not
+	exist on this doctype are dropped, so a missing field never becomes an
+	"Unknown column" SQL error.
+
+	Logical names: name modified customer_name job_description
+	quantity_ordered due_date job_status
 	"""
-	meta = frappe.get_meta(jcl_doctype)
-	existing = {f.fieldname for f in meta.fields}
-	# 'name' and 'modified' are always present on every doctype
-	always = {"name", "modified", "creation", "owner", "modified_by", "docstatus", "idx"}
-	return [f for f in candidates if f in existing or f in always]
+	actual = {
+		"name":             "name",
+		"modified":         "modified",
+		"customer_name":    profile["customer_field"],
+		"job_description":  profile["desc_field"],
+		"quantity_ordered": profile["qty_field"],
+		"due_date":         profile["due_field"],
+		"job_status":       profile["status_field"],
+	}
+	out = []
+	for logical in want:
+		col = actual.get(logical, logical)
+		if col in ("name", "modified") or _exists(jcl_doctype, col):
+			out.append(col if col == logical else f"{col} as {logical}")
+	return out
 
 
-def _query_closed_today(jcl_doctype, target_date):
-	fields = _safe_fields(
-		jcl_doctype,
-		["name", "customer_name", "job_description", "quantity_ordered", "due_date", "modified"],
-	)
+def _query_closed_today(jcl_doctype, profile, target_date):
 	return frappe.db.get_all(
 		jcl_doctype,
 		filters={
 			"docstatus": 1,
-			"job_status": ("in", CLOSED_STATUSES),
+			profile["status_field"]: ("in", profile["closed"]),
 			"modified": (">=", f"{target_date} 00:00:00"),
 		},
-		fields=fields,
+		fields=_select_fields(
+			jcl_doctype, profile,
+			["name", "customer_name", "job_description", "quantity_ordered", "due_date", "modified"],
+		),
 		order_by="modified desc",
 		limit=200,
 	)
 
 
-def _query_wip(jcl_doctype, target_date):
-	fields = _safe_fields(
-		jcl_doctype,
-		["name", "customer_name", "due_date", "job_status"],
-	)
+def _query_wip(jcl_doctype, profile, target_date):
 	return frappe.db.get_all(
 		jcl_doctype,
 		filters={
 			"docstatus": 1,
-			"job_status": ("in", OPEN_STATUSES),
+			profile["status_field"]: ("in", profile["open"]),
 		},
-		fields=fields,
-		order_by="due_date asc",
+		fields=_select_fields(
+			jcl_doctype, profile,
+			["name", "customer_name", "due_date", "job_status"],
+		),
+		order_by=f"{profile['due_field']} asc",
 		limit=200,
 	)
 
 
-def _query_overdue_backlog(jcl_doctype, target_date):
-	fields = _safe_fields(
-		jcl_doctype,
-		["name", "customer_name", "due_date", "quantity_ordered"],
-	)
+def _query_overdue_backlog(jcl_doctype, profile, target_date):
 	return frappe.db.get_all(
 		jcl_doctype,
 		filters={
 			"docstatus": 1,
-			"job_status": ("in", OPEN_STATUSES),
-			"due_date":  ("<", target_date),
+			profile["status_field"]: ("in", profile["open"]),
+			profile["due_field"]: ("<", target_date),
 		},
-		fields=fields,
-		order_by="due_date asc",
+		fields=_select_fields(
+			jcl_doctype, profile,
+			["name", "customer_name", "quantity_ordered", "due_date"],
+		),
+		order_by=f"{profile['due_field']} asc",
 		limit=50,
 	)
 
