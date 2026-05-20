@@ -7,9 +7,11 @@ Telegram channel.
 
 Per White Paper v4 §4.4 (Gemba input data-flow).
 
-Configuration (via VCL Settings or env vars — falls back to /etc/vcl/telegram.env):
-  TELEGRAM_BOT_TOKEN   — bot token
-  GEMBA_CHANNEL_CHAT_ID — chat_id for the management Gemba channel
+Telegram delivery (S2, 2026-05-20): the PDF is POSTed to an n8n webhook
+which forwards it to Telegram. The bot token lives in n8n, never in Frappe.
+Configuration — site_config.json keys:
+  gemba_webhook_url — n8n webhook endpoint (defaults to GEMBA_WEBHOOK_URL)
+  gemba_chat_id     — destination Telegram chat / group id (required)
 
 Usage (manual):
   /api/method/production_log.api.gemba.generate_eod_report?date=2026-05-19
@@ -34,6 +36,11 @@ PRODUCT_LINE_JCL = {
 
 OPEN_STATUSES   = ("Open", "Planned", "In Progress", "In Production", "Packing Pending", "On Hold")
 CLOSED_STATUSES = ("Completed", "Closed")
+
+# n8n webhook that forwards the EOD PDF to Telegram. The Telegram bot token
+# is held by n8n — Frappe never stores it. Overridable via site_config
+# key `gemba_webhook_url`.
+GEMBA_WEBHOOK_URL = "https://vcl-intranet.tailb2b755.ts.net/webhook/gemba-telegram"
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -258,59 +265,52 @@ def _render_gemba_html(target_date, headline, per_line):
 
 
 def _push_to_telegram(pdf_bytes, filename, headline, target_date):
-	"""POST the PDF to the configured Telegram channel via sendDocument.
+	"""POST the EOD Gemba PDF to the n8n webhook, which forwards it to Telegram.
 
-	Token + chat_id resolution order:
-	  1. Frappe site_config keys: telegram_bot_token / gemba_channel_chat_id
-	  2. Env vars: TELEGRAM_BOT_TOKEN / GEMBA_CHANNEL_CHAT_ID
-	  3. /etc/vcl/telegram.env (KEY=VALUE format)
+	The Telegram bot token is held by n8n — never by Frappe. Frappe sends
+	only the PDF, a caption and the destination chat_id; none are secret.
+
+	Config — site_config.json:
+	  gemba_webhook_url — n8n endpoint (defaults to GEMBA_WEBHOOK_URL)
+	  gemba_chat_id     — destination Telegram chat / group id (required)
 	"""
+	import base64
 	import requests
 
-	token, chat_id = _resolve_telegram_credentials()
-	if not token or not chat_id:
+	site = frappe.local.conf or {}
+	webhook_url = site.get("gemba_webhook_url") or GEMBA_WEBHOOK_URL
+	chat_id = site.get("gemba_chat_id")
+	if not chat_id:
 		frappe.log_error(
-			title="Gemba EOD — Telegram credentials missing",
-			message="No telegram_bot_token / gemba_channel_chat_id found.",
+			title="Gemba EOD — Telegram chat_id not configured",
+			message="Set 'gemba_chat_id' in site_config.json to enable the EOD push.",
 		)
 		return None
 
 	caption = (
 		f"VCL EOD Gemba · {target_date}\n"
-		f"Closed: {headline['total_closed']} · WIP: {headline['total_wip']} · Backlog: {headline['total_backlog']}"
+		f"Closed: {headline['total_closed']} · WIP: {headline['total_wip']} · "
+		f"Backlog: {headline['total_backlog']}"
 	)
 	resp = requests.post(
-		f"https://api.telegram.org/bot{token}/sendDocument",
-		data={"chat_id": chat_id, "caption": caption},
-		files={"document": (filename, pdf_bytes, "application/pdf")},
-		timeout=30,
+		webhook_url,
+		json={
+			"pdf_base64": base64.b64encode(pdf_bytes).decode("ascii"),
+			"filename":   filename,
+			"caption":    caption,
+			"chat_id":    str(chat_id),
+		},
+		timeout=60,
 	)
 	resp.raise_for_status()
-	return resp.json().get("result", {}).get("message_id")
-
-
-def _resolve_telegram_credentials():
-	# Site config first
-	site = frappe.local.conf or {}
-	token = site.get("telegram_bot_token") or os.environ.get("TELEGRAM_BOT_TOKEN")
-	chat_id = site.get("gemba_channel_chat_id") or os.environ.get("GEMBA_CHANNEL_CHAT_ID")
-
-	if token and chat_id:
-		return token, chat_id
-
-	# Fallback: /etc/vcl/telegram.env
-	envfile = "/etc/vcl/telegram.env"
-	if os.path.exists(envfile):
-		with open(envfile) as f:
-			for line in f:
-				if "=" not in line or line.strip().startswith("#"):
-					continue
-				k, v = line.strip().split("=", 1)
-				if k == "TELEGRAM_BOT_TOKEN" and not token:
-					token = v
-				if k == "GEMBA_CHANNEL_CHAT_ID" and not chat_id:
-					chat_id = v
-	return token, chat_id
+	result = resp.json()
+	if not result.get("ok"):
+		frappe.log_error(
+			title="Gemba EOD — n8n webhook returned an error",
+			message=frappe.as_json(result),
+		)
+		return None
+	return result.get("message_id")
 
 
 def _parse_date(value):

@@ -92,3 +92,28 @@ Open route questions for Tanuj to confirm before the push:
 - Trading route is Sheeting only — any other stage?
 - R2R route = Reel to Reel Printing → Label Slitting & Re-Winding — correct?
 - Computer Paper has no punching/perforation stage — needed?
+
+Confirmed by Tanuj 2026-05-20: Trading = Sheeting only; R2R = R2R Printing →
+Label Slitting & Re-Winding; Computer Paper punching not needed. The S2S
+Printing carton-tag exception is still open.
+
+### Evening — EOD Gemba Telegram delivery via n8n webhook
+
+The 17:00 EOD Gemba PDF could not reach Telegram: `gemba.py` looked for the
+bot token in site_config / env / `/etc/vcl/telegram.env`, none of which exist
+on Frappe Cloud. Reworked so Frappe POSTs the PDF to an n8n webhook — the
+Telegram bot token stays in n8n, never in Frappe.
+
+```
+[2026-05-20 19:05] N8N  · workflow vclGembaTelegram001 (gemba_telegram.json) deployed live — Webhook → Code (multipart sendDocument) → Respond. URL https://vcl-intranet.tailb2b755.ts.net/webhook/gemba-telegram
+[2026-05-20 19:10] CODE · production_log/api/gemba.py · _push_to_telegram rewired to POST {pdf_base64, filename, caption, chat_id} to the n8n webhook; _resolve_telegram_credentials + /etc/vcl/telegram.env fallback removed
+```
+
+The n8n workflow is already live and verified (webhook receive, body parse,
+`$env` token read, and multipart `sendDocument` to Telegram all confirmed via
+smoke tests). The `gemba.py` change deploys on the next GitHub push (morning
+2026-05-21).
+
+ACTION NEEDED — set `gemba_chat_id` in Frappe Cloud `site_config.json` to the
+destination Telegram chat/group id; otherwise the push logs an error and
+no-ops.
