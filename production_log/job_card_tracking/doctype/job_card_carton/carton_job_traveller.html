@@ -295,7 +295,6 @@
         </table>
     </div>
 
-    <div class="page-break"></div>
 
     {#- ============================================================
         PAGE 2 — CARTON LAYOUT (dedicated LANDSCAPE page)
@@ -303,7 +302,7 @@
         page; box diagram extended to fill the page; full planned +
         actual board width & length shown.
        ============================================================ -#}
-    <div class="page-container layout-page">
+    <div class="page-container layout-page page-break">
         <table class="header-table">
             <tr>
                 <td>
@@ -355,10 +354,8 @@
         {%- if carton_svg -%}
         <table class="dense-table">
             <tr>
-                <td style="text-align:center; padding:10px; background:#fff;">
-                    <div class="die-cut-container layout-svg">
-                        {{ carton_svg }}
-                    </div>
+                <td style="text-align:center; padding:12px; background:#fff;">
+                    <div class="die-cut-container layout-svg">{{ carton_svg }}</div>
                 </td>
             </tr>
         </table>
@@ -369,7 +366,6 @@
         {%- endif -%}
     </div>
 
-    <div class="page-break"></div>
 
     {#- ============================================================
         PAGE 3 — STATION-BY-STATION PRODUCTION LOG (v4 redesign)
@@ -397,7 +393,7 @@
         ("Bundling", false),
     ] -%}
 
-    <div class="page-container">
+    <div class="page-container page-break">
         <table class="header-table">
             <tr>
                 <td><div class="main-title">Station Production Log</div>
@@ -501,7 +497,6 @@
         </div>
     </div>
 
-    <div class="page-break"></div>
 
     {#- ============================================================
         PAGE 4 — RESOURCES & YIELD + QC 5-RUN GRID + CLOSE-OUT (v4)
@@ -509,7 +504,7 @@
 
     {%- set _theoretical_kg = ((board_w * board_l / 1000000.0) * unit_weight / 1000.0) if unit_weight else 0 -%}
 
-    <div class="page-container">
+    <div class="page-container page-break">
         <table class="header-table">
             <tr>
                 <td><div class="main-title">Resources, QC &amp; Close-out</div></td>

@@ -165,3 +165,19 @@ This Frappe build has no per-print-format `pdf_generator` field — switching
 is a site-wide `pdf_generator` config change. wkhtmltopdf (current engine)
 ignores named `@page` orientation and did not honour the row-height
 tightening. Recommend switching the site to the Chrome generator.
+
+Resolution 2026-05-21 — Carton Job Card print format set to
+`pdf_generator = chrome` (Print Format has a per-format field; no
+site-wide change). Findings:
+- Spurious blank pages FIXED — the empty `<div class="page-break">` divs
+  were rendered by Chrome as their own blank pages; removed, page-break
+  moved onto the `.page-container` divs. Traveller is now 6 pages
+  (4 sections; Station Log + Resources each spill slightly = density).
+- Landscape NOT achievable — Frappe forces the PDF page size from
+  site-wide Print Settings (`pdf_page_size`), overriding CSS `@page`
+  whether named or whole-document. Rotating the box 90° was tested
+  (Chrome renders the transform) but yields a narrow strip — reverted.
+  Carton layout stays portrait, box full-width, text upright.
+- Board Width/Length planned + actual table — done.
+The only route to a true landscape page is site-wide landscape Print
+Settings, which flips every print format — not done.
