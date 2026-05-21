@@ -128,3 +128,25 @@ Progress / Completed / Cancelled. (CP and Label also have no
 `customer_name` — they use the `customer` link.) Added `JCL_PROFILE`, a
 per-doctype column + status-set map; the report queries alias the real
 columns to the logical names the template expects. Pushed for redeploy.
+
+---
+
+## 2026-05-21 — Notebook 32 (Carton Job Card / CPS review)
+
+Tanuj's reMarkable "Notebook 32" — a 5-point review of the carton Customer
+Product Specification + Job Card traveller. Applied live, mirrored to git.
+
+```
+[2026-05-21 12:20] PS  · CPS · board_type hidden (point 1 — Board Type removed)
+[2026-05-21 12:20] PS  · CPS + Job Card Carton · printing_or_plain hidden (point 2 — legacy field retired; print_type kept)
+[2026-05-21 12:20] CF  · CPS · print_type moved to the form header (insert_after job_size)
+[2026-05-21 12:20] PS  · CPS + Job Card Carton · 3/4/5-ply GSM + material fields depends_on doc.ply (point 3 — GSM layers toggle by ply: 3->1-3, 5->1-5, SFK->1-2)
+[2026-05-21 12:20] PS  · CPS · packing_section hidden for Carton, kept for other product types (point 4)
+[2026-05-21 12:20] PRINT FORMAT · Carton Job Card · carton layout (die-cut SVG) moved to its own page 2; Station Log -> p3, Resources -> p4 (point 5). Live record + fixtures/print_format.json synced (39035 -> 41076 chars).
+[2026-05-21 12:20] N8N · jcl_submitted_notify (vclJclSubmittedNotify001) · buildCartonSubmitLines repointed doc.printing_or_plain -> doc.print_type (point 2 cascade)
+```
+
+16 Property Setters + the print_type reposition codified in patch
+`v7_5.notebook_32_carton_review` (idempotent). Print-format render verified
+live against JC-CORR-2026-0053 — 4-page traveller, Carton Layout on its own
+page. n8n rollback backup: `jcl_submitted_notify.json.bak.20260521`.
