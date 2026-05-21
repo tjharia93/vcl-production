@@ -181,3 +181,9 @@ site-wide change). Findings:
 - Board Width/Length planned + actual table — done.
 The only route to a true landscape page is site-wide landscape Print
 Settings, which flips every print format — not done.
+
+Carton box now full-width — the print format Jinja injects a `viewBox`
+into the `get_carton_svg` SVG (reading the SVG's own width/height out of
+the string), so `width:100%` scales the drawing. Done live in the print
+format record — no Python deploy needed. Guarded with `'viewBox' not in`
+so it co-exists with the utils.py viewBox change once that deploys.

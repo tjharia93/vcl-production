@@ -349,8 +349,14 @@
             </tr>
         </table>
 
-        {#- Carton die-cut layout — get_carton_svg, extended to fill the landscape page -#}
+        {#- Carton die-cut layout. get_carton_svg emits a fixed-size <svg>; inject a
+           viewBox (when absent) so CSS width:100% scales the drawing, not just the box. -#}
         {%- set carton_svg = get_carton_svg(doc) -%}
+        {%- if carton_svg and 'viewBox' not in carton_svg and 'width="' in carton_svg and 'height="' in carton_svg -%}
+            {%- set _sw = carton_svg.split('width="')[1].split('"')[0] -%}
+            {%- set _sh = carton_svg.split('height="')[1].split('"')[0] -%}
+            {%- set carton_svg = carton_svg.replace('<svg ', '<svg viewBox="0 0 ' ~ _sw ~ ' ' ~ _sh ~ '" preserveAspectRatio="xMidYMid meet" ', 1) -%}
+        {%- endif -%}
         {%- if carton_svg -%}
         <table class="dense-table">
             <tr>
