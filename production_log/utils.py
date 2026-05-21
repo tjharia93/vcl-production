@@ -117,7 +117,8 @@ def _svg_two_flap_rsc(L, W, H, flap, joint_type):
 
     parts = []
     parts.append(
-        f'<svg width="{svgW:.0f}" height="{svgH:.0f}" '
+        f'<svg viewBox="0 0 {svgW:.0f} {svgH:.0f}" '
+        f'preserveAspectRatio="xMidYMid meet" '
         f'style="border:1px solid #ccc;border-radius:3px;background:#FAFAFA;">'
     )
 
@@ -203,7 +204,8 @@ def _svg_one_flap_rsc(L, W, H, flap, joint_type):
 
     parts = []
     parts.append(
-        f'<svg width="{svgW:.0f}" height="{svgH:.0f}" '
+        f'<svg viewBox="0 0 {svgW:.0f} {svgH:.0f}" '
+        f'preserveAspectRatio="xMidYMid meet" '
         f'style="border:1px solid #ccc;border-radius:3px;background:#FAFAFA;">'
     )
 
@@ -288,7 +290,8 @@ def _svg_tray(L, W, H):
 
     parts = []
     parts.append(
-        f'<svg width="{svgW:.0f}" height="{svgH:.0f}" '
+        f'<svg viewBox="0 0 {svgW:.0f} {svgH:.0f}" '
+        f'preserveAspectRatio="xMidYMid meet" '
         f'style="border:1px solid #ccc;border-radius:3px;background:#FAFAFA;">'
     )
 

@@ -150,3 +150,18 @@ Product Specification + Job Card traveller. Applied live, mirrored to git.
 `v7_5.notebook_32_carton_review` (idempotent). Print-format render verified
 live against JC-CORR-2026-0053 — 4-page traveller, Carton Layout on its own
 page. n8n rollback backup: `jcl_submitted_notify.json.bak.20260521`.
+
+### Follow-up — Carton Layout page refinements
+
+Tanuj review of the new Carton Layout page:
+- Full board **Width & Length** (planned + actual) table added to the page — done, verified live (renders 540 x 1540 for JC-CORR-2026-0053).
+- `get_carton_svg` (utils.py) now emits a `viewBox` so the die-cut SVG
+  scales reliably — wkhtmltopdf collapses a no-viewBox SVG under CSS width.
+- `@page` landscape CSS + `.layout-page` added for the carton-layout page.
+
+OPEN (needs Tanuj decision) — true per-page **landscape** and removing the
+**Station-Log overflow page** both require the **Chrome PDF generator**.
+This Frappe build has no per-print-format `pdf_generator` field — switching
+is a site-wide `pdf_generator` config change. wkhtmltopdf (current engine)
+ignores named `@page` orientation and did not honour the row-height
+tightening. Recommend switching the site to the Chrome generator.
