@@ -3,7 +3,8 @@
 Codifies Tanuj's reMarkable "Notebook 32" review of the carton Customer
 Product Specification + Job Card. Five points:
 
-  1. Remove Board Type             -> hide board_type on CPS
+  1. Remove Board Type             -> board_type removed from the CPS
+     doctype JSON; this patch drops the leftover column + Property Setters
   2. printing_or_plain vs print_type -> keep print_type, retire (hide)
      printing_or_plain on CPS + Job Card Carton, move print_type to the
      form header (insert_after job_size)
@@ -28,11 +29,8 @@ GSM5 = "doc.ply=='5'"                    # layers 4 & 5 — 5-ply only
 
 # (doctype, fieldname, property, property_type, value)
 PROPERTY_SETTERS = [
-	# point 1 — remove Board Type. Hide it AND clear its conditional-mandatory
-	# rule — a hidden field that is still mandatory blocks the Carton spec from
-	# saving (the user cannot fill a field they cannot see).
-	("Customer Product Specification", "board_type", "hidden", "Check", 1),
-	("Customer Product Specification", "board_type", "mandatory_depends_on", "Code", ""),
+	# point 1 — Board Type is removed from the CPS doctype entirely (no
+	# Property Setter needed); leftover column + setters cleaned in execute().
 	# point 2 — retire legacy printing_or_plain (print_type is the keeper)
 	("Customer Product Specification", "printing_or_plain", "hidden", "Check", 1),
 	("Job Card Carton",                "printing_or_plain", "hidden", "Check", 1),
@@ -71,5 +69,20 @@ def execute():
 	cf = "Customer Product Specification-print_type"
 	if frappe.db.exists("Custom Field", cf):
 		frappe.db.set_value("Custom Field", cf, "insert_after", "job_size")
+
+	# point 1 — Board Type is removed from the CPS doctype JSON. Drop the
+	# leftover DB column and any Property Setters from the earlier "hide"
+	# step. Idempotent — no-op once already clean.
+	if frappe.db.exists("DocType", "Customer Product Specification"):
+		for ps in frappe.get_all(
+			"Property Setter",
+			filters={"doc_type": "Customer Product Specification", "field_name": "board_type"},
+			pluck="name",
+		):
+			frappe.delete_doc("Property Setter", ps, ignore_permissions=True, force=True)
+		if "board_type" in frappe.db.get_table_columns("Customer Product Specification"):
+			frappe.db.sql_ddl(
+				"ALTER TABLE `tabCustomer Product Specification` DROP COLUMN `board_type`"
+			)
 
 	frappe.clear_cache()

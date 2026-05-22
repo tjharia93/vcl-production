@@ -187,3 +187,9 @@ into the `get_carton_svg` SVG (reading the SVG's own width/height out of
 the string), so `width:100%` scales the drawing. Done live in the print
 format record — no Python deploy needed. Guarded with `'viewBox' not in`
 so it co-exists with the utils.py viewBox change once that deploys.
+
+board_type fully removed (per Tanuj) — `board_type` deleted from the
+Customer Product Specification doctype JSON (not just hidden — a standard
+field can't be deleted live, only via the doctype definition + build).
+v7_5 extended to drop the leftover DB column + the orphan board_type
+Property Setters. Lands with the next Frappe Cloud build.

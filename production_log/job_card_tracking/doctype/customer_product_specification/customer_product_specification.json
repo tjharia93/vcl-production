@@ -30,7 +30,6 @@
   "number_of_parts",
   "colour_of_parts",
   "carton_section",
-  "board_type",
   "flute_type",
   "ply",
   "ctn_length_mm",
@@ -265,14 +264,6 @@
    "fieldname": "carton_section",
    "fieldtype": "Section Break",
    "label": "Carton"
-  },
-  {
-   "depends_on": "eval:doc.product_type=='Carton'",
-   "fieldname": "board_type",
-   "fieldtype": "Select",
-   "label": "Board Type",
-   "mandatory_depends_on": "eval:doc.product_type=='Carton'",
-   "options": "\nKLB\nMF\nTest Liner"
   },
   {
    "depends_on": "eval:doc.product_type=='Carton'",
