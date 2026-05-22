@@ -13,7 +13,11 @@ SNAPSHOT_FIELDS = (
 	("etr_finished_width",      "finished_width"),
 	("etr_finished_diameter",   "finished_diameter"),
 	("etr_finished_reel_length", "finished_reel_length"),
-	("etr_print_type",          "print_type"),
+	# ('etr_print_type', 'print_type') removed 2026-05-22: the ETR redesign made
+	# `print_type` a Plain/Printed Custom Field on Job Card ETR. Snapshotting the
+	# legacy `etr_print_type` (Front/Back Print) into it injected an invalid value
+	# and blocked every printed Job Card ETR from saving. `print_type` / `print_side`
+	# are now set on the Job Card directly (vcl-etr-order skill / form entry).
 	("ink_type",                "ink_type"),
 	("uses_c",                  "uses_c"),
 	("uses_m",                  "uses_m"),
