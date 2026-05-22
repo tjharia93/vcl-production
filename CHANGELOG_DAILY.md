@@ -193,3 +193,10 @@ Customer Product Specification doctype JSON (not just hidden — a standard
 field can't be deleted live, only via the doctype definition + build).
 v7_5 extended to drop the leftover DB column + the orphan board_type
 Property Setters. Lands with the next Frappe Cloud build.
+
+allow_on_submit on `standard_packing` + `standard_weight_per_carton` (CPS)
+— Tanuj needs both editable after the spec is submitted. Customize Form
+refuses to enable allow_on_submit on a doctype's standard fields, so it's
+set in the doctype JSON (where 8 CPS fields already carry it). Applied
+live via Property Setter (the Property Setter API has no such block); the
+doctype JSON carries it permanently from the next build.

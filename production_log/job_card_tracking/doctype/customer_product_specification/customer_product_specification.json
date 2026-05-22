@@ -634,11 +634,13 @@
    "label": "Numbering Required"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "standard_packing",
    "fieldtype": "Data",
    "label": "Standard Packing"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "standard_weight_per_carton",
    "fieldtype": "Float",
    "label": "Standard Weight Per Carton",
