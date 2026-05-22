@@ -28,8 +28,11 @@ GSM5 = "doc.ply=='5'"                    # layers 4 & 5 — 5-ply only
 
 # (doctype, fieldname, property, property_type, value)
 PROPERTY_SETTERS = [
-	# point 1 — remove Board Type
+	# point 1 — remove Board Type. Hide it AND clear its conditional-mandatory
+	# rule — a hidden field that is still mandatory blocks the Carton spec from
+	# saving (the user cannot fill a field they cannot see).
 	("Customer Product Specification", "board_type", "hidden", "Check", 1),
+	("Customer Product Specification", "board_type", "mandatory_depends_on", "Code", ""),
 	# point 2 — retire legacy printing_or_plain (print_type is the keeper)
 	("Customer Product Specification", "printing_or_plain", "hidden", "Check", 1),
 	("Job Card Carton",                "printing_or_plain", "hidden", "Check", 1),
