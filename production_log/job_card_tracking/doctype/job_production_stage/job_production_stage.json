@@ -1,0 +1,85 @@
+{
+ "actions": [],
+ "creation": "2026-07-03 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "stage",
+  "stage_status",
+  "machine_asset",
+  "started_on",
+  "completed_on",
+  "quantity",
+  "sequence",
+  "notes"
+ ],
+ "fields": [
+  {
+   "allow_on_submit": 1,
+   "fieldname": "stage",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Stage",
+   "options": "Design\nPending Films\nPrinting\nCollation\nNumbering\nPack"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Not Started",
+   "fieldname": "stage_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Stage Status",
+   "options": "Not Started\nReady\nIn Progress\nDone\nBlocked\nSkipped"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "machine_asset",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Machine Asset",
+   "options": "Asset"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "started_on",
+   "fieldtype": "Datetime",
+   "label": "Started On"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "completed_on",
+   "fieldtype": "Datetime",
+   "label": "Completed On"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "quantity",
+   "fieldtype": "Float",
+   "label": "Quantity"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "sequence",
+   "fieldtype": "Int",
+   "label": "Sequence"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-07-03 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Job Card Tracking",
+ "name": "Job Production Stage",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "idx",
+ "sort_order": "ASC",
+ "track_changes": 1
+}

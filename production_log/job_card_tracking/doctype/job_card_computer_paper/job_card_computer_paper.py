@@ -1,5 +1,15 @@
 import frappe
+from frappe import _
 from frappe.model.document import Document
+
+CP_PRODUCTION_STAGE_STATUSES = {
+	"Not Started",
+	"Ready",
+	"In Progress",
+	"Done",
+	"Blocked",
+	"Skipped",
+}
 
 
 class JobCardComputerPaper(Document):
@@ -9,8 +19,12 @@ class JobCardComputerPaper(Document):
 		self.validate_numbering()
 		self.validate_plate()
 		self.validate_quantity()
+		self.validate_production_stage_assets()
 		self.set_sales_rep_info()
 		self.set_status()
+
+	def after_insert(self):
+		self.reseed_production_stages(save=True)
 
 	def on_submit(self):
 		self.set_status()
@@ -88,6 +102,59 @@ class JobCardComputerPaper(Document):
 			self.sales_rep = current_user
 			self.sales_rep_approval_date = frappe.utils.today()
 
+	def get_production_stage_route(self):
+		route = ["Design", "Pending Films", "Printing", "Collation"]
+		if self.numbering_required:
+			route.append("Numbering")
+		route.append("Pack")
+		return route
+
+	def reseed_production_stages(self, save=False):
+		"""Rebuild Computer Paper route rows without duplicating stages.
+
+		Existing matching stage rows keep their status, machine, timing, quantity,
+		and notes. Rows outside the current route are dropped from the rebuilt
+		table, for example Numbering when numbering_required is cleared.
+		"""
+		existing_by_stage = {}
+		for row in self.get("production_stages") or []:
+			if row.stage and row.stage not in existing_by_stage:
+				existing_by_stage[row.stage] = row
+
+		self.set("production_stages", [])
+		for sequence, stage in enumerate(self.get_production_stage_route(), start=1):
+			existing = existing_by_stage.get(stage)
+			row = self.append("production_stages", {})
+			row.stage = stage
+			row.stage_status = (existing.stage_status if existing else None) or "Not Started"
+			row.machine_asset = existing.machine_asset if existing else None
+			row.started_on = existing.started_on if existing else None
+			row.completed_on = existing.completed_on if existing else None
+			row.quantity = existing.quantity if existing else None
+			row.notes = existing.notes if existing else None
+			row.sequence = sequence
+
+		if save:
+			self.save()
+
+		return self.get("production_stages")
+
+	def validate_production_stage_assets(self):
+		for row in self.get("production_stages") or []:
+			if row.stage_status and row.stage_status not in CP_PRODUCTION_STAGE_STATUSES:
+				frappe.throw(_("Invalid stage status: {0}").format(row.stage_status))
+			if not row.machine_asset:
+				continue
+
+			asset_category = frappe.db.get_value("Asset", row.machine_asset, "asset_category")
+			if asset_category != "Plant & Machinery":
+				frappe.throw(
+					_("Row {0}: Machine Asset must be in Asset Category 'Plant & Machinery'.").format(
+						row.idx
+					),
+					title=_("Invalid Machine Asset"),
+				)
+
 
 @frappe.whitelist()
 def get_customer_product_spec_query(doctype, txt, searchfield, start, page_len, filters):
@@ -116,3 +183,30 @@ def get_customer_product_spec_query(doctype, txt, searchfield, start, page_len, 
 			"page_len": int(page_len),
 		},
 	)
+
+
+@frappe.whitelist()
+def get_plant_machinery_asset_query(doctype, txt, searchfield, start, page_len, filters):
+	return frappe.db.sql(
+		"""
+		SELECT name, asset_name, asset_category
+		FROM `tabAsset`
+		WHERE asset_category = 'Plant & Machinery'
+		AND (name LIKE %(txt)s OR asset_name LIKE %(txt)s)
+		ORDER BY modified DESC
+		LIMIT %(start)s, %(page_len)s
+		""",
+		{
+			"txt": "%%" + txt + "%%",
+			"start": int(start),
+			"page_len": int(page_len),
+		},
+	)
+
+
+@frappe.whitelist()
+def reseed_production_stages(name):
+	doc = frappe.get_doc("Job Card Computer Paper", name)
+	doc.check_permission("write")
+	doc.reseed_production_stages(save=True)
+	return doc.get("production_stages")

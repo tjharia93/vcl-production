@@ -28,3 +28,4 @@ production_log.patches.v7_2.add_readiness_status
 production_log.patches.v7_3.finish_carton_workstations
 production_log.patches.v7_4.add_process_number_routes
 production_log.patches.v7_5.notebook_32_carton_review
+production_log.patches.v7_6.add_cp_production_stages
