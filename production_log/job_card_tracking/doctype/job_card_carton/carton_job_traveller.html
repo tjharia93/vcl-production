@@ -1,7 +1,7 @@
 <style>
     /* GLOBAL PRINT SETTINGS */
     @page { size: A4; margin: 10mm; }
-    .vcl-wrapper { font-family: 'Inter', Arial, sans-serif; color: #000; font-size: 13px; line-height: 1.35; }
+    .vcl-wrapper { font-family: 'Inter', Arial, sans-serif; color: #000; font-size: 10.5px; line-height: 1.2; }
     .page-break { page-break-before: always; }
 
     /* CARTON LAYOUT — dedicated landscape page (Notebook 32) */
@@ -12,25 +12,25 @@
 
     /* BRANDING & HEADERS */
     .header-table { width: 100%; border-bottom: 3px solid #2B3990; margin-bottom: 8px; padding-bottom: 4px; }
-    .main-title { color: #2B3990; font-size: 24px; font-weight: 900; text-transform: uppercase; }
-    .sec-head { background: #2B3990; color: #fff; padding: 6px 10px; font-weight: 900; font-size: 13px; text-transform: uppercase; border-radius: 2px 2px 0 0; margin-top: 8px; }
+    .main-title { color: #2B3990; font-size: 20px; font-weight: 900; text-transform: uppercase; }
+    .sec-head { background: #2B3990; color: #fff; padding: 5px 8px; font-weight: 900; font-size: 10px; text-transform: uppercase; border-radius: 2px 2px 0 0; margin-top: 8px; }
     .sec-head.alt { background: #00395D; }
     .sec-head.dark { background: #333; }
 
     /* BOXED GRID SYSTEM */
     .dense-table { width: 100%; border-collapse: collapse; margin-bottom: 5px; table-layout: fixed; }
-    .dense-table td, .dense-table th { border: 1.5px solid #666; padding: 9px; vertical-align: top; word-wrap: break-word; }
-    .dense-table th { background: #eee; text-align: left; font-weight: 900; font-size: 12px; text-transform: uppercase; }
+    .dense-table td, .dense-table th { border: 1.5px solid #666; padding: 6px; vertical-align: top; word-wrap: break-word; }
+    .dense-table th { background: #eee; text-align: left; font-weight: 900; font-size: 9px; text-transform: uppercase; }
 
     /* LABELS & VALUES */
-    .lbl { font-size: 11px; color: #00395D; font-weight: 900; text-transform: uppercase; display: block; margin-bottom: 2px; }
-    .val { font-weight: 900; color: #000; font-size: 15px; }
-    .board-box { border: 2px solid #000; padding: 10px; text-align: center; font-size: 19px; font-weight: 900; background: #fff; margin-top: 4px; }
+    .lbl { font-size: 8px; color: #00395D; font-weight: 900; text-transform: uppercase; display: block; margin-bottom: 2px; }
+    .val { font-weight: 900; color: #000; font-size: 12px; }
+    .board-box { border: 2px solid #000; padding: 8px; text-align: center; font-size: 16px; font-weight: 900; background: #fff; margin-top: 4px; }
     .sig-line { border-top: 1.5px solid #000; width: 85%; margin: 20px auto 5px auto; }
 
     /* SUB-HEADER FOR PAGES 2 & 3 */
     .sub-header-grid { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-    .sub-header-grid td { border: 1px solid #ccc; padding: 6px 9px; font-size: 12px; }
+    .sub-header-grid td { border: 1px solid #ccc; padding: 4px 8px; font-size: 9px; }
     .sub-header-grid .k { background: #f4f4f4; font-weight: 900; width: 15%; text-transform: uppercase; }
 
     .qc-box { width: 15px; height: 15px; border: 1.5px solid #000; margin: 2px auto; }
@@ -43,23 +43,23 @@
     .station-cell { background: #f7f8fc !important; color: #2B3990; font-weight: 700; padding: 5px 8px; border-left: 4px solid #2B3990; vertical-align: middle; }
     .station-cell.skipped { background: #fdecea !important; color: #6b7280; text-decoration: line-through; }
     .station-cell .seq { display: inline-block; background: #2B3990; color: #fff; width: 14px; height: 14px; border-radius: 50%; text-align: center; font-size: 8px; line-height: 14px; margin-right: 5px; vertical-align: middle; font-weight: 700; }
-    .run-tag { display: inline-block; background: #eef0fa; color: #2B3990; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 6px; }
+    .run-tag { display: inline-block; background: #eef0fa; color: #2B3990; font-size: 8px; font-weight: 700; padding: 1px 5px; border-radius: 6px; }
     .run-tag.r2 { background: #fff3dc; color: #c07800; }
-    .res-pre { background: #eef0fa !important; color: #2B3990; font-weight: 700; font-size: 12px; padding: 5px 8px; }
-    .res-summary td { background: #1e2235 !important; color: #fff; font-weight: 700; padding: 6px 9px; font-size: 12px; }
+    .res-pre { background: #eef0fa !important; color: #2B3990; font-weight: 700; font-size: 9px; padding: 3px 6px; }
+    .res-summary td { background: #1e2235 !important; color: #fff; font-weight: 700; padding: 5px 8px; font-size: 9px; }
     .res-summary td.calc { background: #0e9e5a !important; font-family: 'IBM Plex Mono', monospace; }
     .yield-gauge-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 6px 0; }
     .yield-gauge-cell { border: 1.5px solid #2B3990; border-radius: 3px; padding: 6px 8px; background: #fafbff; }
-    .yield-gauge-cell .glbl { font-size: 11px; color: #2B3990; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
-    .yield-gauge-cell .gtheo { font-size: 10px; color: #6b7280; margin-top: 1px; }
-    .yield-gauge-cell .gactual { font-size: 17px; font-weight: 900; color: #1e2235; font-family: 'IBM Plex Mono', monospace; min-height: 16px; margin-top: 2px; }
-    .yield-gauge-cell .gvar { font-size: 10px; color: #0e9e5a; font-weight: 700; min-height: 10px; }
-    .cont-slip { border: 1.5px dashed #2B3990; padding: 6px 11px; margin-top: 6px; font-size: 12px; background: #fafbff; color: #1e2235; }
+    .yield-gauge-cell .glbl { font-size: 8px; color: #2B3990; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+    .yield-gauge-cell .gtheo { font-size: 8px; color: #6b7280; margin-top: 1px; }
+    .yield-gauge-cell .gactual { font-size: 14px; font-weight: 900; color: #1e2235; font-family: 'IBM Plex Mono', monospace; min-height: 16px; margin-top: 2px; }
+    .yield-gauge-cell .gvar { font-size: 8px; color: #0e9e5a; font-weight: 700; min-height: 10px; }
+    .cont-slip { border: 1.5px dashed #2B3990; padding: 5px 10px; margin-top: 6px; font-size: 9px; background: #fafbff; color: #1e2235; }
     .cont-slip strong { color: #2B3990; }
     .checkbox-cell { width: 18px; height: 18px; border: 1.5px solid #2B3990; display: inline-block; }
 
     /* tighter rows — keeps the Station Log + its QC strip on one page (no overflow page) */
-    .tight-rows td, .tight-rows th { padding-top: 4px; padding-bottom: 4px; }
+    .tight-rows td, .tight-rows th { padding-top: 2px; padding-bottom: 2px; }
     .tight-rows tbody td { height: 16px; }
 </style>
 

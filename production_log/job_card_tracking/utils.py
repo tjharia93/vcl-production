@@ -91,8 +91,7 @@ def set_stage_status(doctype, name, stage_row, status):
 
 	row = _get_stage_row(doc, stage_row)
 	previous = row.stage_status or "Not Started"
-	row.stage_status = status
-	doc.save()
+	row.db_set("stage_status", status)
 
 	doc.add_comment(
 		"Info",
@@ -121,8 +120,7 @@ def assign_stage_machine(doctype, name, stage_row, asset):
 	row = _get_stage_row(doc, stage_row)
 	# Soft affinity only: Printing -> Miyakoshi 01/02/03; Collation/Numbering
 	# -> Collator and Numbering 01. Do not hard-restrict beyond category.
-	row.machine_asset = asset
-	doc.save()
+	row.db_set("machine_asset", asset)
 
 	doc.add_comment(
 		"Info",
