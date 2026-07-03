@@ -61,6 +61,7 @@
   "column_break_commercial_1",
   "status",
   "job_status",
+  "machine",
   "section_break_notes",
   "production_remarks"
  ],
@@ -418,9 +419,16 @@
    "in_standard_filter": 1,
    "label": "Job Status",
    "no_copy": 1,
-   "options": "Open\nIn Progress\nCompleted\nClosed",
+   "options": "Open\nPlanned\nIn Production\nPacking Pending\nCompleted\nClosed\nOn Hold\nCancelled",
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "machine",
+   "fieldtype": "Link",
+   "label": "Machine",
+   "options": "Workstation",
+   "reqd": 0
   },
   {
    "fieldname": "section_break_notes",

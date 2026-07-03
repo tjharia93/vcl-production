@@ -60,6 +60,7 @@
   "production_data_tab",
   "section_production_status",
   "job_status",
+  "machine",
   "production_started_date",
   "column_break_production_status",
   "production_completed_date",
@@ -421,9 +422,16 @@
    "in_standard_filter": 1,
    "label": "Job Status",
    "no_copy": 1,
-   "options": "Open\nIn Progress\nCompleted\nClosed",
+   "options": "Open\nPlanned\nIn Production\nPacking Pending\nCompleted\nClosed\nOn Hold\nCancelled",
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "machine",
+   "fieldtype": "Link",
+   "label": "Machine",
+   "options": "Workstation",
+   "reqd": 0
   },
   {
    "allow_on_submit": 1,
