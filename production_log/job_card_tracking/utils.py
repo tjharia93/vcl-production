@@ -9,6 +9,13 @@ ALLOWED_DOCTYPES = {
 	"Job Card Carton",
 }
 
+ALLOWED_MACHINE_DOCTYPES = {
+	"Job Card Computer Paper",
+	"Job Card Label",
+	"Job Card Carton",
+	"Job Card ETR",
+}
+
 # Expanded in v7_0 patch (May 2026) to match the 8-value enum live on
 # JC Computer Paper since v6_0 (Property Setter). Older 4-value callers
 # remain backward compatible because the old values are a subset.
@@ -36,6 +43,52 @@ ALLOWED_STAGE_STATUSES = {
 STAGE_TRACKING_DOCTYPES = {
 	"Job Card Computer Paper",
 }
+
+
+@frappe.whitelist()
+def list_workstations():
+	"""Return active Workstations for machine assignment dropdowns."""
+	meta = frappe.get_meta("Workstation")
+	label_field = (
+		meta.title_field if meta.title_field and meta.has_field(meta.title_field) else None
+	)
+	fields = ["name"]
+	if label_field and label_field != "name":
+		fields.append(label_field)
+
+	filters = {}
+	if meta.has_field("disabled"):
+		filters["disabled"] = 0
+
+	rows = frappe.get_all("Workstation", filters=filters, fields=fields, order_by="name asc")
+	return [
+		{
+			"name": row.name,
+			"label": (row.get(label_field) or row.name) if label_field else row.name,
+		}
+		for row in rows
+	]
+
+
+@frappe.whitelist()
+def set_machine(doctype, name, machine=None):
+	"""Assign or clear the `machine` field on a submitted job card."""
+	if doctype not in ALLOWED_MACHINE_DOCTYPES:
+		frappe.throw(_("Machine can only be set on a job card."))
+
+	machine = machine or None
+	if machine and not frappe.db.exists("Workstation", machine):
+		frappe.throw(_("Invalid machine: {0}").format(machine))
+
+	doc = frappe.get_doc(doctype, name)
+
+	# Machine assignment is deliberately restricted to submitted job cards.
+	if doc.docstatus != 1:
+		frappe.throw(_("Machine can only be changed on submitted job cards."))
+
+	doc.check_permission("submit")
+	doc.db_set("machine", machine, update_modified=True)
+	return machine
 
 
 @frappe.whitelist()
