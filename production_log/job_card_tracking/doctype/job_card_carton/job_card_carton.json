@@ -81,7 +81,8 @@
   "section_ups_forecast",
   "html_ups_forecast",
   "section_job_status",
-  "job_status"
+  "job_status",
+  "machine"
  ],
  "fields": [
   {
@@ -527,9 +528,16 @@
    "in_standard_filter": 1,
    "label": "Job Status",
    "no_copy": 1,
-   "options": "Open\nIn Progress\nCompleted\nClosed",
+   "options": "Open\nPlanned\nIn Production\nPacking Pending\nCompleted\nClosed\nOn Hold\nCancelled",
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "machine",
+   "fieldtype": "Link",
+   "label": "Machine",
+   "options": "Workstation",
+   "reqd": 0
   }
  ],
  "is_submittable": 1,

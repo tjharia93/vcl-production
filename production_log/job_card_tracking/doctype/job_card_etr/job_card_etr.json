@@ -22,6 +22,8 @@
   "printing_required",
   "slitting_required",
   "status",
+  "job_status",
+  "machine",
   "notes",
   "spec_section",
   "substrate",
@@ -229,6 +231,27 @@
    "no_copy": 1,
    "options": "Draft\nIn Progress\nCompleted\nCancelled",
    "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Open",
+   "description": "Set to Closed (or Completed) to remove this job from the Production Planner.",
+   "fieldname": "job_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Job Status",
+   "no_copy": 1,
+   "options": "Open\nPlanned\nIn Production\nPacking Pending\nCompleted\nClosed\nOn Hold\nCancelled",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "machine",
+   "fieldtype": "Link",
+   "label": "Machine",
+   "options": "Workstation",
+   "reqd": 0
   },
   {
    "fieldname": "notes",
