@@ -9,6 +9,11 @@ frappe.ui.form.on("Job Card Computer Paper", {
 				filters: { customer: frm.doc.customer },
 			};
 		});
+		frm.set_query("machine_asset", "production_stages", function () {
+			return {
+				query: "production_log.job_card_tracking.doctype.job_card_computer_paper.job_card_computer_paper.get_plant_machinery_asset_query",
+			};
+		});
 		_add_job_status_buttons(frm);
 	},
 
