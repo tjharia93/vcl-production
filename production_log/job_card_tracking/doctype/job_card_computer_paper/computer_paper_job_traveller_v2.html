@@ -1,0 +1,551 @@
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    @media print {
+        .print-format { padding: 0px !important; margin: 0px !important; }
+        @page { size: A4; margin: 5mm; }
+    }
+
+    .print-format {
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        font-size: 8pt;
+        color: #000;
+        line-height: 1.05;
+        background: #FFF;
+    }
+
+    .page-container {
+        width: 100%;
+        display: block;
+        padding: 1mm 0mm;
+        page-break-after: always;
+    }
+
+    .vcl-header-table {
+        width: 100%;
+        border-bottom: 2pt solid #2B3990;
+        margin-bottom: 4px;
+        padding-bottom: 2px;
+    }
+
+    .company-title { font-size: 14pt; font-weight: 800; color: #2B3990; }
+    .job-badge { background-color: #2B3990; color: #FFF; padding: 3px 10px; font-weight: bold; text-align: center; border-radius: 2px; }
+
+    .section-header-compact {
+        background-color: #2B3990;
+        color: #FFF;
+        padding: 2px 8px;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-top: 5px;
+        font-size: 8pt;
+    }
+
+    .vcl-table-compact {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1px;
+        table-layout: fixed;
+    }
+
+    .vcl-table-compact td, .vcl-table-compact th {
+        border: 0.7pt solid #000;
+        padding: 2px 3px;
+        vertical-align: middle;
+        word-wrap: break-word;
+    }
+
+    .label-cell { background-color: #F4F4F4; font-weight: bold; width: 18%; }
+    .greyed-out { background-color: #E9E9E9 !important; font-weight: bold; }
+    .manual-row { height: 24px; }
+    .ink-warning { color: #D93025; font-style: italic; font-weight: bold; font-size: 7.5pt; }
+    .alert-text { color: #CC0000; font-weight: bold; }
+    .plate-badge { padding: 1px 5px; border: 0.5pt solid #000; font-weight: bold; background: #FFF3CD; font-size: 8pt; }
+
+    .guide-note {
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 100%;
+        border: 0.7pt solid #2B3990;
+        border-left: 3pt solid #2B3990;
+        background: #F7F8FC;
+        padding: 3px 14px 3px 7px;
+        margin-top: 2px;
+        font-size: 6.9pt;
+        line-height: 1.25;
+        color: #1C1E2E;
+        overflow-wrap: break-word;
+    }
+    .guide-note b { color: #2B3990; text-transform: uppercase; letter-spacing: .04em; }
+    .guide-note ol { margin: 1px 0 0 13px; padding: 0; }
+    .guide-note li { margin: 0; padding: 0; }
+
+    .band-head {
+        background: #DCE0F0;
+        color: #2B3990;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 7pt;
+        letter-spacing: .05em;
+        padding: 2px 6px;
+    }
+
+    .sig-cell { height: 65px; vertical-align: bottom !important; padding-bottom: 5px !important; }
+    .sig-line { border-top: 0.8pt solid #000; width: 90%; margin: 0 auto; font-size: 7pt; text-align: center; }
+
+    .colour-chip {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border: 0.7pt solid #555;
+        border-radius: 2px;
+        vertical-align: middle;
+        margin-right: 3px;
+    }
+    .colour-pill {
+        display: inline-block;
+        padding: 1px 5px 1px 3px;
+        margin: 1px 2px;
+        border: 0.5pt solid #999;
+        border-radius: 7px;
+        font-size: 7.6pt;
+        background: #FAFAFA;
+    }
+</style>
+
+<div class="print-format">
+
+    <!-- ============================================================
+         PAGE 1 · JOB INFORMATION + SPEC + PLATE + AUTHORISATION
+         ============================================================ -->
+    <div class="page-container">
+        <table class="vcl-header-table">
+            <tr>
+                <td>
+                    <div class="company-title">VIMIT CONVERTERS LIMITED</div>
+                    <div style="font-weight: bold; font-size: 10pt;">COMPUTER PAPER JOB CARD: {{ doc.name }}</div>
+                </td>
+                <td style="text-align: right; width: 30%;">
+                    <div class="job-badge">{{ doc.name }}</div>{% if qr_for_job is defined %}<div style="margin-top:6px;text-align:right"><img src="{{ qr_for_job(doc.name) }}" style="width:84px;height:84px"><div style="font-family:'Courier New',monospace;font-size:7pt;font-weight:bold;color:#2B3990;letter-spacing:.04em">SCAN TO CAPTURE</div></div>{% endif %}
+                    <div style="margin-top: 4px; font-size: 9pt;">
+                        Due Date: <span class="alert-text">{{ frappe.utils.formatdate(doc.due_date, "dd-MMM-yy") }}</span>
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <div class="section-header-compact">JOB INFORMATION</div>
+        <table class="vcl-table-compact">
+            <tr>
+                <td class="label-cell">Customer:</td>
+                <td style="width: 32%;"><strong>{{ doc.customer }}</strong></td>
+                <td class="label-cell">Order Date:</td>
+                <td style="width: 32%;">{{ frappe.utils.formatdate(doc.order_date, "dd-MMM-yy") }}</td>
+            </tr>
+            <tr>
+                <td class="label-cell">LPO / Ref:</td>
+                <td>{{ doc.lpo_number or "N/A" }}</td>
+                <td class="label-cell">Sales Rep:</td>
+                <td>{{ doc.sales_rep or "" }}</td>
+            </tr>
+        </table>
+
+        <div class="section-header-compact">PRODUCT SPECIFICATION</div>
+        <table class="vcl-table-compact">
+            <tr>
+                <td class="label-cell">Description:</td>
+                <td colspan="3"><strong>{{ doc.specification_name }}</strong></td>
+            </tr>
+            <tr>
+                <td class="label-cell">Form Size:</td>
+                <td>{{ doc.job_size }}</td>
+                <td class="label-cell">Pay Slip Size:</td>
+                <td>{{ doc.pay_slip_size or "N/A" }}</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Parts / Clrs:</td>
+                <td>{{ doc.number_of_parts }} Parts / {{ doc.number_of_colours or 0 }} Colour{% if (doc.number_of_colours or 0) != 1 %}s{% endif %}</td>
+                <td class="label-cell">Qty (LPO):</td>
+                <td><strong>{{ "{:,}".format(doc.quantity_ordered) if doc.quantity_ordered else 0 }}</strong></td>
+            </tr>
+            <tr>
+                <td class="label-cell">Packing:</td>
+                <td>{{ doc.packing if doc.packing else "" }}</td>
+                <td class="label-cell">Weight/Ctn:</td>
+                <td>{{ doc.weight_per_carton }} kg</td>
+            </tr>
+        </table>
+
+        <div class="section-header-compact">PRINT COLOURS</div>
+        <table class="vcl-table-compact">
+            <tr>
+                <td class="label-cell">Ink Type:</td>
+                <td style="width: 22%;"><strong>{{ doc.ink_type or "—" }}</strong></td>
+                <td class="label-cell">Count:</td>
+                <td style="width: 14%;"><strong>{{ doc.number_of_colours or 0 }}</strong></td>
+                <td class="label-cell">Process:</td>
+                <td>
+                    {% set _cmyk = [] %}
+                    {% if doc.uses_c %}{% set _ = _cmyk.append("C") %}{% endif %}
+                    {% if doc.uses_m %}{% set _ = _cmyk.append("M") %}{% endif %}
+                    {% if doc.uses_y %}{% set _ = _cmyk.append("Y") %}{% endif %}
+                    {% if doc.uses_k %}{% set _ = _cmyk.append("K") %}{% endif %}
+                    {% if _cmyk %}<strong>{{ _cmyk | join("") }}</strong>{% else %}—{% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td class="label-cell">Spot Inks:</td>
+                <td colspan="5">
+                    {% set _spots = doc.spot_colours or [] %}
+                    {% if _spots %}
+                        {% for s in _spots %}
+                            <span class="colour-pill">
+                                <span class="colour-chip" style="background: {{ s.hex_preview or '#FFF' }};"></span>
+                                <strong>{{ s.pantone_name or s.pantone_code or "—" }}</strong>
+                                {% if s.pantone_code and s.pantone_name and (s.pantone_code not in (s.pantone_name or '')) %}&middot; {{ s.pantone_code }}{% endif %}
+                                {% if s.cmyk_c or s.cmyk_m or s.cmyk_y or s.cmyk_k %}&middot; C{{ s.cmyk_c|int }} M{{ s.cmyk_m|int }} Y{{ s.cmyk_y|int }} K{{ s.cmyk_k|int }}{% endif %}
+                                {% if s.notes %}&middot; <em>{{ s.notes }}</em>{% endif %}
+                            </span>
+                        {% endfor %}
+                    {% else %}
+                        <em>No spot inks</em>
+                    {% endif %}
+                </td>
+            </tr>
+            {% if doc.colour_notes %}
+            <tr>
+                <td class="label-cell">Notes:</td>
+                <td colspan="5" style="font-size: 7.6pt; font-style: italic;">{{ doc.colour_notes }}</td>
+            </tr>
+            {% endif %}
+        </table>
+
+        <div style="margin-top: 8px; font-weight: bold; font-size: 8.5pt;">COLOUR OF PARTS CONFIGURATION (PRE-TINTED PAPER):</div>
+        <table class="vcl-table-compact">
+            <thead>
+                <tr style="background-color: #F4F4F4; font-weight: bold; text-align: center;">
+                    <td style="width: 8%;">Pt</td>
+                    <td style="width: 32%;">Paper Type</td>
+                    <td style="width: 10%;">GSM</td>
+                    <td style="width: 15%;">Colour</td>
+                    <td>Purpose</td>
+                </tr>
+            </thead>
+            <tbody>
+                {% for part in doc.colour_of_parts %}
+                <tr style="text-align: center;">
+                    <td>{{ part.part_number }}</td>
+                    <td style="text-align: left;">{{ part.paper_type }}</td>
+                    <td>{{ part.gsm }}</td>
+                    <td>{{ part.colour }}</td>
+                    <td style="text-align: left;">{{ part.purpose }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="section-header-compact">NUMBERING &amp; PLATE INFORMATION</div>
+        <table class="vcl-table-compact">
+            <tr>
+                <td class="label-cell">Numbering Req:</td>
+                <td>{{ "YES" if doc.numbering_required else "NO" }}</td>
+                <td class="label-cell">Plate Status:</td>
+                <td><span class="plate-badge">{{ doc.plate_status or "NEW" }}</span></td>
+            </tr>
+            <tr>
+                <td class="label-cell">Prefix:</td>
+                <td>{{ doc.numbering_prefix or "N/A" }}</td>
+                <td class="label-cell">Plate Code:</td>
+                <td>{{ doc.plate_code or "N/A" }}</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Start Number:</td>
+                <td><strong>{{ doc.numbering_start or "N/A" }}</strong></td>
+                <td class="label-cell">End Number:</td>
+                <td><strong>{{ doc.numbering_end or "N/A" }}</strong></td>
+            </tr>
+            <tr>
+                <td class="label-cell">Plate Notes:</td>
+                <td colspan="3">{{ doc.plate_notes or "N/A" }}</td>
+            </tr>
+        </table>
+
+        <div class="section-header-compact">AUTHORIZATIONS &amp; COMMENTS</div>
+        <table class="vcl-table-compact">
+            <tr>
+                <td class="label-cell" style="height: 65px; vertical-align: top;">Sales Rep Sign:</td>
+                <td class="sig-cell">
+                    <div class="sig-line">SIGNATURE &amp; DATE</div>
+                </td>
+                <td class="label-cell" style="height: 65px; vertical-align: top;">Management Sign:</td>
+                <td class="sig-cell">
+                    <div class="sig-line">NAME &amp; SIGNATURE</div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label-cell">Comments:</td>
+                <td colspan="3" style="min-height: 30px; vertical-align: top; padding: 5px;">{{ doc.order_comments or doc.management_comments or "" }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- ============================================================
+         PAGE 2 · PRODUCTION LOG
+         ============================================================ -->
+    <div class="page-container">
+        <table class="vcl-header-table">
+            <tr>
+                <td><div class="company-title">STORE RELEASE &amp; RETURNS (PAGE 2)</div></td>
+                <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
+            </tr>
+        </table>
+
+        <div class="section-header-compact">SECTION 1: STORE RELEASE &amp; RETURNS (EXISTING RM)</div>
+
+        <div class="guide-note">
+            <b>How to fill this section</b>
+            <ol>
+                <li>Log <b>one line per reel</b>, under its own part. Do not combine reels on a line.</li>
+                <li>Weigh the reel <b>on release</b> &rarr; write <i>Wt Out</i>. Weigh it again <b>when it comes back</b> &rarr; write <i>Remaining</i>.</li>
+                <li>A reel that is <b>not returned</b> was fully consumed &mdash; leave <i>Date Back</i> and <i>Remaining</i> blank.</li>
+                <li>Add up each part's reels and carry the figures into the <b>per-part balance</b> table above.</li>
+                <li>Inks follow the same rule: weigh out, weigh back.</li>
+                <li>The store signs on release; the receiver signs on return. <b>Both signatures are required.</b></li>
+            </ol>
+        </div>
+
+        <div class="band-head" style="margin-top:4px;">Per-part balance (kg)</div>
+        <table class="vcl-table-compact" style="text-align: center;">
+            <tr style="background:#F4F4F4; font-weight:bold;">
+                <td class="label-cell" style="text-align:left;">PART NO.</td><td>1 PT</td><td>2 PT</td><td>3 PT</td><td>4 PT</td><td>5 PT</td>
+            </tr>
+            <tr class="greyed-out">
+                <td style="text-align:left;">Colour / Type / GSM</td>{% for i in range(0,5) %}<td>{% if doc.colour_of_parts|length > i %}{{ doc.colour_of_parts[i].colour }} {{ doc.colour_of_parts[i].paper_type }} {{ doc.colour_of_parts[i].gsm }}{% endif %}</td>{% endfor %}
+            </tr>
+            <tr class="manual-row"><td style="text-align:left;">Total Issued (&Sigma;)</td><td></td><td></td><td></td><td></td><td></td></tr>
+            <tr class="manual-row"><td style="text-align:left;">Total Remaining (&Sigma;)</td><td></td><td></td><td></td><td></td><td></td></tr>
+        </table>
+
+        {% set rpp = 2 if (doc.quantity_ordered or 0) < 50 else 3 %}
+        {% set np = doc.number_of_parts or (doc.colour_of_parts|length) or 1 %}
+        <div class="band-head" style="margin-top:4px;">Reel issue / return log</div>
+        <table class="vcl-table-compact" style="text-align: center; font-size: 7.5pt;">
+            <tr style="background:#F4F4F4; font-weight:bold; font-size:7pt;">
+                <td style="width:10%;">DATE OUT</td><td style="width:6%;">PT</td><td style="width:17%;">REEL #</td><td style="width:8%;">WIDTH</td><td style="width:8%;">GSM</td><td style="width:10%;">WT OUT</td><td style="width:10%;">DATE BACK</td><td style="width:12%;">REMAINING</td><td>SIGN</td>
+            </tr>
+            {% for i in range(0, np) %}
+            {% for r in range(0, rpp) %}
+            <tr class="manual-row"><td></td><td>{{ i + 1 }}</td><td></td><td></td><td>{% if doc.colour_of_parts|length > i %}{{ doc.colour_of_parts[i].gsm }}{% endif %}</td><td></td><td></td><td></td><td></td></tr>
+            {% endfor %}
+            {% endfor %}
+        </table>
+
+        <div class="band-head" style="margin-top:6px;">Ink issue / return log</div>
+        <table class="vcl-table-compact" style="text-align: center; font-size: 7.5pt;">
+            <tr style="background:#F4F4F4; font-weight:bold; font-size:7pt;">
+                <td style="width:26%; text-align:left;">INK / COLOUR</td><td style="width:13%;">DATE OUT</td><td style="width:13%;">WT OUT</td><td style="width:13%;">DATE BACK</td><td style="width:15%;">REMAINING</td><td>SIGN</td>
+            </tr>
+            {% set inks = [] %}
+            {% if doc.uses_c %}{% set _ = inks.append("Cyan (C)") %}{% endif %}
+            {% if doc.uses_m %}{% set _ = inks.append("Magenta (M)") %}{% endif %}
+            {% if doc.uses_y %}{% set _ = inks.append("Yellow (Y)") %}{% endif %}
+            {% if doc.uses_k %}{% set _ = inks.append("Black (K)") %}{% endif %}
+            {% for s in doc.spot_colours or [] %}{% set _ = inks.append(s.pantone_name or s.pantone_code or "Spot") %}{% endfor %}
+            {% for ink in inks %}
+            <tr class="manual-row"><td style="text-align:left;">{{ ink }}</td><td></td><td></td><td></td><td></td><td></td></tr>
+            {% endfor %}
+            {% for r in range(0, (4 if inks|length == 0 else 2)) %}
+            <tr class="manual-row"><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            {% endfor %}
+        </table>
+        <table class="vcl-table-compact" style="text-align:center; font-size:7.4pt; margin-top:4px;">
+            <tr style="background:#F4F4F4; font-weight:bold; font-size:6.8pt;">
+                <td style="width:36%;">ISSUED BY (STORE) &mdash; SIGN</td>
+                <td style="width:36%;">RETURNS RECEIVED BY &mdash; SIGN</td>
+                <td>DATE</td>
+            </tr>
+            <tr style="height:44px;"><td></td><td></td><td></td></tr>
+        </table>
+
+    </div>
+
+    <!-- ============================================================
+         PAGE 3 · PRINTING & LABOUR
+         ============================================================ -->
+    <div class="page-container">
+        <table class="vcl-header-table">
+            <tr>
+                <td><div class="company-title">PRINTING &mdash; SETS &amp; WEIGHTS (PAGE 3)</div></td>
+                <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
+            </tr>
+        </table>
+
+        <div class="section-header-compact">SECTION 2: PRINTING &mdash; SETS (No. OF SHEETS &amp; WEIGHT &middot; 2000 SHEETS/SET)</div>
+        {% set _q = doc.quantity_ordered | float %}
+        {% set _p = doc.packing | float %}
+        {% set _sets = ((_q * _p / 2000) | round(0, 'ceil') | int) if (_q and _p) else 0 %}
+        {% set _ncols = 10 %}
+        {% set _maxblocks = 20 %}
+        {% set _want = (((_sets / _ncols) | round(0, 'ceil') | int) if _sets else 1) %}
+        {% set _want = _want if _want >= 1 else 1 %}
+        {% set _nblocks = _want if _want <= _maxblocks else _maxblocks %}
+        {% set _show = _nblocks * _ncols %}
+        {% set _np = doc.number_of_parts or (doc.colour_of_parts|length) or 1 %}
+
+        <div class="band-head">Production summary &mdash; per part</div>
+        <table class="vcl-table-compact" style="text-align:center; font-size:7.6pt;">
+            <tr style="background:#F4F4F4; font-weight:bold; font-size:7pt;">
+                <td class="label-cell" style="text-align:left; width:23%;">PART NO.</td>
+                {% for i in range(0, _np) %}<td>{{ i + 1 }} PT</td>{% endfor %}
+                <td style="background:#FFF8E1;">TOTAL</td>
+            </tr>
+            <tr class="greyed-out" style="font-size:7pt;">
+                <td style="text-align:left;">Colour / Type / GSM</td>
+                {% for i in range(0, _np) %}<td>{% if doc.colour_of_parts|length > i %}{{ doc.colour_of_parts[i].colour }} {{ doc.colour_of_parts[i].paper_type }} {{ doc.colour_of_parts[i].gsm }}{% endif %}</td>{% endfor %}
+                <td style="background:#FFF8E1;">&mdash;</td>
+            </tr>
+            <tr class="greyed-out">
+                <td style="text-align:left;">Planned Sets</td>
+                {% for i in range(0, _np) %}<td>{% if _sets %}{{ _sets }}{% else %}&mdash;{% endif %}</td>{% endfor %}
+                <td style="background:#FFF8E1;">{% if _sets %}{{ _sets * _np }}{% else %}&mdash;{% endif %}</td>
+            </tr>
+            <tr class="greyed-out">
+                <td style="text-align:left;">Planned Sheets</td>
+                {% for i in range(0, _np) %}<td>{% if _sets %}{{ "{:,}".format(_sets * 2000) }}{% else %}&mdash;{% endif %}</td>{% endfor %}
+                <td style="background:#FFF8E1;">{% if _sets %}{{ "{:,}".format(_sets * 2000 * _np) }}{% else %}&mdash;{% endif %}</td>
+            </tr>
+            <tr class="manual-row" style="height:26px;">
+                <td class="label-cell" style="text-align:left;">Actual Sets Produced</td>
+                {% for i in range(0, _np) %}<td></td>{% endfor %}
+                <td style="background:#FFF8E1;"></td>
+            </tr>
+            <tr class="manual-row" style="height:26px;">
+                <td class="label-cell" style="text-align:left;">Packing per Set (sheets)</td>
+                {% for i in range(0, _np) %}<td></td>{% endfor %}
+                <td style="background:#FFF8E1; color:#888;">&mdash;</td>
+            </tr>
+            <tr class="manual-row" style="height:26px;">
+                <td class="label-cell" style="text-align:left;">Actual Sheets Produced</td>
+                {% for i in range(0, _np) %}<td></td>{% endfor %}
+                <td style="background:#FFF8E1;"></td>
+            </tr>
+        </table>
+        <div class="guide-note" style="margin-top:2px;">
+            <b>How to fill this section</b>
+            <ol>
+                <li>One <b>SET / BOX</b> = 2000 sheets. The grey <i>Planned</i> rows are printed for you.</li>
+                <li>Weigh every box and write its weight in that part's matrix below.</li>
+                <li>Boxes past the planned count are <b>spares</b> &mdash; only fill them if you produced them.</li>
+                <li>Complete the <b>Actual</b> rows <u>column by column, one per part</u>, then add across into TOTAL. Each part must reconcile on its own.</li>
+            </ol>
+        </div>
+        {% if _want > _maxblocks %}
+        <div style="border:1pt solid #D93025; background:#FDECEA; color:#D93025; font-weight:bold; font-size:7.4pt; padding:3px 7px; margin-top:2px;">
+            &#9888; This job plans {{ _sets }} sets &mdash; more than the {{ _maxblocks * _ncols }} boxes this sheet can print.
+            Boxes {{ _maxblocks * _ncols + 1 }}&ndash;{{ _sets }} must be recorded on a <b>continuation sheet</b>.
+        </div>
+        {% endif %}
+
+        {% for i in range(0, _np) %}
+        <div style="background:#2B3990; color:#FFF; font-weight:bold; text-align:left; letter-spacing:.03em; font-size:7.8pt; padding:3px 6px; margin-top:6px;">PART {{ i + 1 }}{% if doc.colour_of_parts|length > i %} &middot; {{ doc.colour_of_parts[i].colour }} &middot; {{ doc.colour_of_parts[i].paper_type }} &middot; {{ doc.colour_of_parts[i].gsm }} gsm{% endif %}{% if _sets %} &nbsp;&mdash;&nbsp; {{ _sets }} set{{ 's' if _sets != 1 else '' }} &times; 2000 = {{ "{:,}".format(_sets * 2000) }} sheets{% endif %}</div>
+        {% for b in range(0, _nblocks) %}
+        {% set _lo = b * _ncols %}
+        <table class="vcl-table-compact" style="width:auto; text-align:center; font-size:7.4pt; margin-top:1px;">
+            <tr style="background:#F4F4F4; font-weight:bold;"><td style="width:108px; text-align:left;">SET #</td>{% for s in range(_lo, _lo + _ncols) %}{% if s < _show %}<td style="width:44px;">{{ s + 1 }}</td>{% endif %}{% endfor %}</tr>
+            <tr class="greyed-out"><td style="text-align:left;">No. of Sheets</td>{% for s in range(_lo, _lo + _ncols) %}{% if s < _show %}<td>{% if s < _sets %}2000{% endif %}</td>{% endif %}{% endfor %}</tr>
+            <tr class="manual-row"><td class="label-cell" style="text-align:left;">Weight (kg)</td>{% for s in range(_lo, _lo + _ncols) %}{% if s < _show %}<td></td>{% endif %}{% endfor %}</tr>
+        </table>
+        {% endfor %}
+        <table class="vcl-table-compact" style="text-align:center; font-size:7.4pt; margin-top:0;">
+            <tr style="background:#FFF8E1; font-weight:bold; font-size:6.8pt;">
+                <td style="width:19%; text-align:left; background:#FFF8E1;">PART {{ i + 1 }} TOTALS</td>
+                <td style="width:13%; background:#FFF8E1;">SHEETS</td>
+                <td style="width:14%; background:#FFF8E1;">TOTAL WEIGHT (KG)</td>
+                <td style="width:12%; background:#FFF8E1;">WASTE</td>
+                <td style="width:27%; background:#FFF8E1;">SIGNED BY</td>
+                <td style="background:#FFF8E1;">DATE</td>
+            </tr>
+            <tr style="height:32px;">
+                <td style="background:#FFF8E1;"></td>
+                <td style="background:#F4F4F4; font-weight:bold; vertical-align:middle;">{% if _sets %}{{ "{:,}".format(_sets * 2000) }}{% endif %}</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+        </table>
+        {% endfor %}
+
+    </div>
+
+    <!-- ============================================================
+         PAGE 4 · PRINTING LABOUR
+         ============================================================ -->
+    <div class="page-container">
+        <table class="vcl-header-table">
+            <tr>
+                <td><div class="company-title">PRINTING LABOUR (PAGE 4)</div></td>
+                <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
+            </tr>
+        </table>
+
+        <div class="section-header-compact">SECTION 3: PRINTING LABOUR</div>
+        <table class="vcl-table-compact" style="text-align: center; font-size: 7.8pt;">
+            <tr style="background:#F4F4F4; font-weight:bold; font-size:7.2pt;">
+                <td style="width:13%;">DATE</td><td style="width:28%;">OPERATOR NAME(S)</td><td style="width:16%;">MACHINE</td><td style="width:11%;">START</td><td style="width:11%;">END</td><td>PRINTED SHEETS</td>
+            </tr>
+            {% for r in range(0, 14) %}
+            <tr class="manual-row" style="height:28px;"><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            {% endfor %}
+        </table>
+        <table class="vcl-table-compact" style="text-align:center; font-size:7.4pt; margin-top:3px;">
+            <tr style="background:#F4F4F4; font-weight:bold; font-size:6.8pt;">
+                <td style="width:50%;">PRINTING SUPERVISOR &mdash; SIGN</td>
+                <td>DATE</td>
+            </tr>
+            <tr style="height:38px;"><td></td><td></td></tr>
+        </table>
+    </div>
+
+    <!-- ============================================================
+         PAGE 5 · COLLECTION & FINISHING
+         ============================================================ -->
+    <div class="page-container">
+        <table class="vcl-header-table">
+            <tr>
+                <td><div class="company-title">COLLECTION &amp; FINISHING (PAGE 5)</div></td>
+                <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
+            </tr>
+        </table>
+
+        <div class="section-header-compact">SECTION 4: COLLECTION &amp; PACKING</div>
+        <table class="vcl-table-compact" style="text-align: center; font-size: 7.5pt;">
+            <tr style="background:#F4F4F4; font-weight:bold;">
+                <td>DATE</td><td>SET START</td><td>SET END</td><td>ACT START</td><td>ACT END</td><td>NO. CARTONS</td><td>WASTE</td>
+            </tr>
+            {% for i in range(1, 10) %}
+            <tr class="manual-row"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+            {% endfor %}
+        </table>
+
+        <div style="margin-top: 5px; font-weight: bold;">PACKING &amp; CARTON WEIGHTS (KGS):</div>
+        <table class="vcl-table-compact" style="text-align: center;">
+            <tr style="background:#F4F4F4; font-weight:bold;"><td>CARTON #</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td></tr>
+            <tr class="manual-row"><td class="label-cell">WEIGHT</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        </table>
+
+        <div class="section-header-compact">WAREHOUSE RELEASE &amp; SIGNOFFS</div>
+        <table class="vcl-table-compact">
+            <tr style="height: 65px;">
+                <td class="label-cell" style="vertical-align: top;">QC Inspector:</td>
+                <td class="sig-cell">
+                    <div class="sig-line">SIGNATURE &amp; DATE</div>
+                </td>
+                <td class="label-cell" style="vertical-align: top;">Storekeeper:</td>
+                <td class="sig-cell">
+                    <div class="sig-line">SIGNATURE &amp; DATE</div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
