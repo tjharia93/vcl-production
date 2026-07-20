@@ -30,3 +30,4 @@ production_log.patches.v7_4.add_process_number_routes
 production_log.patches.v7_5.notebook_32_carton_review
 production_log.patches.v7_6.add_cp_production_stages
 production_log.patches.v7_6.migrate_job_status_in_progress
+production_log.patches.v8_0.add_cps_control_custom_fields

@@ -14,6 +14,17 @@
   "status",
   "customer",
   "lpo_number",
+  "section_sales_order",
+  "sales_order",
+  "sales_order_item",
+  "item_code",
+  "column_break_sales_order",
+  "rate",
+  "price_source",
+  "so_qty",
+  "section_spec_snapshot",
+  "spec_snapshot_at",
+  "spec_snapshot",
   "section_product_specification",
   "customer_product_spec",
   "specification_name",
@@ -144,6 +155,80 @@
    "fieldname": "lpo_number",
    "fieldtype": "Data",
    "label": "LPO Number"
+  },
+  {
+   "fieldname": "section_sales_order",
+   "fieldtype": "Section Break",
+   "label": "Sales Order"
+  },
+  {
+   "description": "The submitted Sales Order this job card is being run against. Set when the job card is raised from the order; historical cards created before that path existed have it blank.",
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "label": "Sales Order",
+   "options": "Sales Order",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "description": "The Sales Order line. Quantities on all job cards for a line may not exceed the line quantity.",
+   "fieldname": "sales_order_item",
+   "fieldtype": "Data",
+   "label": "Sales Order Line",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "label": "Item",
+   "options": "Item",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_sales_order",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Rate carried from the Sales Order line snapshot, not read live from the specification.",
+   "fieldname": "rate",
+   "fieldtype": "Currency",
+   "label": "Rate (net, ex-VAT)",
+   "precision": "9",
+   "read_only": 1
+  },
+  {
+   "fieldname": "price_source",
+   "fieldtype": "Select",
+   "label": "Price Source",
+   "options": "\nCPS Price\nItem Price\nManual Override",
+   "read_only": 1
+  },
+  {
+   "fieldname": "so_qty",
+   "fieldtype": "Float",
+   "label": "SO Line Quantity",
+   "precision": "3",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_spec_snapshot",
+   "fieldtype": "Section Break",
+   "label": "Specification Snapshot"
+  },
+  {
+   "fieldname": "spec_snapshot_at",
+   "fieldtype": "Datetime",
+   "label": "Snapshot Taken At",
+   "read_only": 1
+  },
+  {
+   "description": "The specification as it stood when the Sales Order was submitted, copied from the order line. Historical job cards leave this blank - a snapshot invented today would be a lie about what was known then.",
+   "fieldname": "spec_snapshot",
+   "fieldtype": "Long Text",
+   "label": "Specification Snapshot (JSON)",
+   "read_only": 1
   },
   {
    "fieldname": "section_product_specification",
@@ -601,7 +686,7 @@
    "write": 1
   },
   {
-   "create": 0,
+   "create": 1,
    "delete": 0,
    "email": 1,
    "export": 1,
@@ -610,7 +695,8 @@
    "report": 1,
    "role": "Sales User",
    "share": 1,
-   "write": 0
+   "submit": 0,
+   "write": 1
   },
   {
    "email": 1,
