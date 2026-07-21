@@ -87,6 +87,11 @@
   "numbering_required",
   "standard_packing",
   "standard_weight_per_carton",
+  "pricing_section",
+  "current_rate",
+  "current_uom",
+  "column_break_pricing",
+  "pricing",
   "notes_section",
   "internal_notes"
  ],
@@ -161,36 +166,31 @@
    "fieldname": "ink_type",
    "fieldtype": "Select",
    "label": "Ink Type",
-   "options": "Process Offset\nProcess UV\nWater Based\nSolvent Based",
-   "allow_on_submit": 1
+   "options": "Process Offset\nProcess UV\nWater Based\nSolvent Based"
   },
   {
    "default": "0",
    "fieldname": "uses_c",
    "fieldtype": "Check",
-   "label": "C \u2014 Cyan",
-   "allow_on_submit": 1
+   "label": "C \u2014 Cyan"
   },
   {
    "default": "0",
    "fieldname": "uses_m",
    "fieldtype": "Check",
-   "label": "M \u2014 Magenta",
-   "allow_on_submit": 1
+   "label": "M \u2014 Magenta"
   },
   {
    "default": "0",
    "fieldname": "uses_y",
    "fieldtype": "Check",
-   "label": "Y \u2014 Yellow",
-   "allow_on_submit": 1
+   "label": "Y \u2014 Yellow"
   },
   {
    "default": "0",
    "fieldname": "uses_k",
    "fieldtype": "Check",
-   "label": "K \u2014 Black",
-   "allow_on_submit": 1
+   "label": "K \u2014 Black"
   },
   {
    "fieldname": "column_break_print_colours",
@@ -202,8 +202,7 @@
    "fieldname": "number_of_colours",
    "fieldtype": "Int",
    "label": "Number of Colours",
-   "read_only": 1,
-   "allow_on_submit": 1
+   "read_only": 1
   },
   {
    "description": "Tick all four CMYK process inks with one click.",
@@ -222,15 +221,13 @@
    "fieldname": "spot_colours",
    "fieldtype": "Table",
    "label": "Spot Colours",
-   "options": "Spot Colour",
-   "allow_on_submit": 1
+   "options": "Spot Colour"
   },
   {
    "description": "Free-text notes for anything the structured fields don't cover (e.g. metallic finishes, customer brand requirements).",
    "fieldname": "colour_notes",
    "fieldtype": "Small Text",
-   "label": "Colour Notes",
-   "allow_on_submit": 1
+   "label": "Colour Notes"
   },
   {
    "depends_on": "eval:doc.product_type=='Computer Paper'",
@@ -634,17 +631,49 @@
    "label": "Numbering Required"
   },
   {
-   "allow_on_submit": 1,
    "fieldname": "standard_packing",
    "fieldtype": "Data",
    "label": "Standard Packing"
   },
   {
-   "allow_on_submit": 1,
    "fieldname": "standard_weight_per_carton",
    "fieldtype": "Float",
    "label": "Standard Weight Per Carton",
    "precision": "2"
+  },
+  {
+   "fieldname": "pricing_section",
+   "fieldtype": "Section Break",
+   "label": "Pricing"
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Rate from the Approved price row in effect today. Derived - add a Price row to change it.",
+   "fieldname": "current_rate",
+   "fieldtype": "Currency",
+   "label": "Current Rate (net, ex-VAT)",
+   "precision": "9",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "current_uom",
+   "fieldtype": "Link",
+   "label": "Current UOM",
+   "options": "UOM",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_pricing",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Effective-dated rates for this specification. A new price is a new row, never an amendment. Rows land Draft and must be approved by a Sales Master Manager before they can price a Sales Order.",
+   "fieldname": "pricing",
+   "fieldtype": "Table",
+   "label": "Prices",
+   "options": "CPS Price"
   },
   {
    "collapsible": 1,

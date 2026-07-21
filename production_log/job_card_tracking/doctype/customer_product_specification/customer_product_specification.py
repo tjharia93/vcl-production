@@ -1,6 +1,9 @@
 import frappe
 from frappe.model.document import Document
 
+from production_log.job_card_tracking import cps_pricing
+from production_log.job_card_tracking import cps_rules
+
 
 INK_TYPE_DEFAULTS = {
 	"Computer Paper":               "Process Offset",
@@ -29,6 +32,25 @@ class CustomerProductSpecification(Document):
 		self.validate_label()
 		self.validate_exercise_books()
 		self.validate_etr()
+		self.validate_linked_item()
+		cps_pricing.validate_pricing(self)
+
+	def validate_linked_item(self):
+		"""Require an exact Item on new or materially changed specifications."""
+		before = self.get_doc_before_save()
+		if cps_rules.item_link_required(before, self) and not self.get("linked_item"):
+			frappe.throw(
+				"Item is required for a new or materially changed Customer Product Specification."
+			)
+
+	def before_update_after_submit(self):
+		"""Prices change on submitted specs; validate() does not run for those.
+
+		A price change is a new CPS Price row on the same specification, never
+		an amendment (design §6.2 rule 3), so this is the normal write path for
+		pricing and needs the same rules as validate().
+		"""
+		cps_pricing.validate_pricing(self)
 
 	def validate_product_type(self):
 		if not self.product_type:

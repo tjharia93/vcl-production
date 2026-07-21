@@ -67,9 +67,25 @@ after_install = "production_log.install.after_install"
 # Document Events
 # ---------------
 # Hook on document methods and events
+# CPS control over Sales Order lines lives here, not in the Compass API, because
+# Compass is only one of four write paths - Desk, REST and Data Import must hit
+# the same rules. Every handler is inert until Selling Settings
+# custom_cps_control_enabled is ticked.
 doc_events = {
 	"Workstation Type": {
 		"validate": "production_log.api.workstation_type.validate_stage_position",
+	},
+	"Sales Order": {
+		"validate": "production_log.job_card_tracking.so_spec_control.validate",
+		"on_submit": "production_log.job_card_tracking.so_spec_control.on_submit",
+		"on_cancel": "production_log.job_card_tracking.so_spec_control.on_cancel",
+	},
+	"Item": {
+		"validate": "production_log.job_card_tracking.so_spec_control.derive_item_control_flag",
+	},
+	"Item Group": {
+		"validate": "production_log.job_card_tracking.so_spec_control.validate_item_group_config",
+		"on_update": "production_log.job_card_tracking.so_spec_control.enqueue_group_rederive",
 	},
 }
 
