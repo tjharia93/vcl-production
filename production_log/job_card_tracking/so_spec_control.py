@@ -22,6 +22,11 @@ CONTROL_FLAG = "custom_cps_control_enabled"
 TOLERANCE_FIELD = "custom_cps_price_tolerance_pct"
 FLOOR_FIELD = "custom_cps_price_floor_pct"
 
+# Read-only explanation of why Item.custom_requires_cps holds the value it does.
+# Written alongside the flag, because a derived read-only Check with no stated
+# reason is a value the user can neither change nor understand.
+CONTROL_SOURCE_FIELD = "custom_cps_control_source"
+
 # Job Card DocTypes that consume a Sales Order line, by CPS product type.
 # Phase 2 is Computer Paper only (DN-7); Label, Carton, Exercise Books and ETR
 # are one registry entry each in Phase 3.
@@ -104,12 +109,80 @@ def derive_item_control_flag(doc, method=None):
 	Sales Order validation runs on every line of every order; a single indexed
 	Check read beats a nested-set walk per line, and it makes "which items are
 	controlled" a filterable list view.
+
+	The Item's own control mode wins over the Item Group tree in both directions
+	(design §4.2, iteration 2), so a single Item can be piloted without turning
+	control on for the 46 Items in its group — and one sample Item inside a
+	controlled group can be released without turning the group off. The mode is
+	the input; ``custom_requires_cps`` remains read-only and derived.
 	"""
 	if not _has_field("Item", "custom_requires_cps"):
 		return
 
 	controlling_group = item_group_requires_cps(doc.get("item_group"))
-	doc.custom_requires_cps = 1 if controlling_group else 0
+	mode = doc.get(cps_rules.CONTROL_MODE_FIELD) if _has_control_mode() else None
+
+	doc.custom_requires_cps = 1 if cps_rules.item_requires_cps(mode, controlling_group) else 0
+
+	if _has_field("Item", CONTROL_SOURCE_FIELD):
+		source = cps_rules.item_control_source(mode, controlling_group)
+		doc.set(CONTROL_SOURCE_FIELD, _(source.template).format(*source.args))
+
+
+def validate_item_config(doc, method=None):
+	"""An Item that requires a specification must say which kind (``Item.validate``).
+
+	The Item Group half of this has been enforced since iteration one; without
+	the Item half, ``Require CPS`` on an Item outside any controlled group left
+	the expected product type unresolved, and a Label specification would pass on
+	a Computer Paper Item.
+
+	Enforced server-side rather than left to ``mandatory_depends_on``, which is
+	an assist on the Desk form and nothing at all to REST, Data Import or the
+	Compass API.
+	"""
+	if not _has_control_mode():
+		return
+
+	error = cps_rules.item_config_error(
+		doc.get(cps_rules.CONTROL_MODE_FIELD),
+		doc.get(cps_rules.PRODUCT_TYPE_FIELD) if _has_item_product_type() else None,
+	)
+	if error:
+		frappe.throw(
+			_(error.template).format(*error.args), title=_("CPS Product Type Required")
+		)
+
+
+def expected_product_type_for_item(item_code):
+	"""Which kind of specification this Item's order lines need, or None.
+
+	The single resolver behind both the Desk preview and submit validation, so
+	V4 cannot be previewed as clean and then thrown on — or, worse, previewed and
+	enforced against two different expected types.
+
+	Item override first, controlling Item Group second (design §4.2, iteration
+	two). Reads only the fields that have actually landed on this site, so it
+	degrades to the pure Item Group answer before the iteration-two patch runs.
+	"""
+	if not item_code:
+		return None
+
+	fields = ["item_group"]
+	if _has_control_mode():
+		fields.append(cps_rules.CONTROL_MODE_FIELD)
+	if _has_item_product_type():
+		fields.append(cps_rules.PRODUCT_TYPE_FIELD)
+
+	item = frappe.db.get_value("Item", item_code, fields, as_dict=True)
+	if not item:
+		return None
+
+	return cps_rules.expected_product_type(
+		item.get(cps_rules.CONTROL_MODE_FIELD),
+		item.get(cps_rules.PRODUCT_TYPE_FIELD),
+		item_group_requires_cps(item.get("item_group")),
+	)
 
 
 def validate_item_group_config(doc, method=None):
@@ -141,7 +214,13 @@ def enqueue_group_rederive(doc, method=None):
 
 
 def rederive_items_for_group(item_group):
-	"""Background re-derivation of ``Item.custom_requires_cps`` for a subtree."""
+	"""Background re-derivation of ``Item.custom_requires_cps`` for a subtree.
+
+	Each Item's own control mode is re-applied here, not just the group's answer.
+	Without that, ticking a parent group would quietly overwrite every explicit
+	exemption beneath it — and an exemption that a routine group edit revokes is
+	not an exemption.
+	"""
 	bounds = frappe.db.get_value("Item Group", item_group, ["lft", "rgt"], as_dict=True)
 	if not bounds:
 		return
@@ -154,11 +233,32 @@ def rederive_items_for_group(item_group):
 	if not descendants:
 		return
 
+	has_mode = _has_control_mode()
+	has_source = _has_field("Item", CONTROL_SOURCE_FIELD)
+
+	fields = ["name", "item_group"]
+	if has_mode:
+		fields.append(cps_rules.CONTROL_MODE_FIELD)
+
+	# One nested-set walk per distinct group rather than per Item: a controlled
+	# group can hold thousands of Items and the answer is identical for all of
+	# them.
+	controlling_by_group = {}
+
 	for item in frappe.get_all(
-		"Item", filters={"item_group": ["in", descendants]}, fields=["name", "item_group"]
+		"Item", filters={"item_group": ["in", descendants]}, fields=fields
 	):
-		flag = 1 if item_group_requires_cps(item.item_group) else 0
-		frappe.db.set_value("Item", item.name, "custom_requires_cps", flag, update_modified=False)
+		group = item.get("item_group")
+		if group not in controlling_by_group:
+			controlling_by_group[group] = item_group_requires_cps(group)
+		controlling = controlling_by_group[group]
+
+		mode = item.get(cps_rules.CONTROL_MODE_FIELD) if has_mode else None
+		values = {"custom_requires_cps": 1 if cps_rules.item_requires_cps(mode, controlling) else 0}
+		if has_source:
+			values[CONTROL_SOURCE_FIELD] = cps_rules.item_control_source_text(mode, controlling)
+
+		frappe.db.set_value("Item", item.name, values, update_modified=False)
 
 	frappe.db.commit()
 
@@ -261,10 +361,7 @@ def _load_and_validate_spec(doc, line):
 			),
 		)
 
-	controlling_group = item_group_requires_cps(
-		frappe.db.get_value("Item", line.item_code, "item_group")
-	)
-	expected_type = controlling_group.get("custom_cps_product_type") if controlling_group else None
+	expected_type = expected_product_type_for_item(line.item_code)
 	if expected_type and spec.product_type != expected_type:
 		_throw(
 			line,
@@ -440,6 +537,20 @@ def _has_field(doctype, fieldname):
 	must be inert on a site where the fields do not exist.
 	"""
 	return bool(frappe.get_meta(doctype).get_field(fieldname))
+
+
+def _has_control_mode():
+	"""Whether the Item-level control override has landed on this site.
+
+	The iteration-two patch may not have run yet, and an Item with no mode field
+	behaves exactly as it did before: pure Item Group inheritance.
+	"""
+	return _has_field("Item", cps_rules.CONTROL_MODE_FIELD)
+
+
+def _has_item_product_type():
+	"""Whether the Item-level expected product type has landed on this site."""
+	return _has_field("Item", cps_rules.PRODUCT_TYPE_FIELD)
 
 
 def _throw(line, message):

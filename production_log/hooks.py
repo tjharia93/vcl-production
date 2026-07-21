@@ -64,6 +64,18 @@ after_install = "production_log.install.after_install"
 # Override standard doctype classes
 # override_doctype_class = {}
 
+# Client Scripts on core DocTypes
+# -------------------------------
+# Desk-side CPS behaviour: the filtered specification list and price preview on
+# Sales Order lines, and the control explanation and specification navigation on
+# Item. Both are advisory — every value they set is re-derived server-side by
+# so_spec_control on save and submit — and both are inert on a site where the
+# custom fields have not landed yet.
+doctype_js = {
+	"Sales Order": "public/js/sales_order_cps.js",
+	"Item": "public/js/item_cps.js",
+}
+
 # Document Events
 # ---------------
 # Hook on document methods and events
@@ -81,7 +93,12 @@ doc_events = {
 		"on_cancel": "production_log.job_card_tracking.so_spec_control.on_cancel",
 	},
 	"Item": {
-		"validate": "production_log.job_card_tracking.so_spec_control.derive_item_control_flag",
+		"validate": [
+			# Config first: an Item that requires a specification without naming
+			# which kind is refused before anything is derived from it.
+			"production_log.job_card_tracking.so_spec_control.validate_item_config",
+			"production_log.job_card_tracking.so_spec_control.derive_item_control_flag",
+		],
 	},
 	"Item Group": {
 		"validate": "production_log.job_card_tracking.so_spec_control.validate_item_group_config",

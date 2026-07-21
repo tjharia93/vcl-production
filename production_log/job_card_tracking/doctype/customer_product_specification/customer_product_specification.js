@@ -33,6 +33,120 @@ const GSM_BY_PAPER_TYPE = {
 
 const CMYK_FIELDS = ["uses_c", "uses_m", "uses_y", "uses_k"];
 
+// --- Price approval (WBS-23) ------------------------------------------------
+//
+// Only an Approved CPS Price row can price a Sales Order line, and until now the
+// only way to approve one was to call the endpoint by hand. These two grid
+// actions call the same deployed endpoint.
+//
+// The role check below governs whether the buttons are *shown*. It is not the
+// control: `cps_pricing.approve_cps_price` refuses a caller without the role
+// regardless, which is what actually holds, since a hidden button is one console
+// line away from being pressed. Self-approval is permitted and logged (DN-3) —
+// blocking it would deadlock a two-person sales office.
+
+const APPROVER_ROLE = "Sales Master Manager";
+const APPROVE_METHOD = "production_log.job_card_tracking.cps_pricing.approve_cps_price";
+
+function can_approve_prices() {
+	return frappe.user.has_role(APPROVER_ROLE);
+}
+
+function selected_price_row(frm) {
+	const grid = frm.fields_dict.pricing && frm.fields_dict.pricing.grid;
+	if (!grid) return null;
+
+	const selected = grid.get_selected_children();
+	if (selected.length > 1) {
+		frappe.msgprint(__("Tick one price row at a time — each is approved on its own merits."));
+		return null;
+	}
+	if (!selected.length) {
+		frappe.msgprint(__("Tick the price row to act on first."));
+		return null;
+	}
+	return selected[0];
+}
+
+function decide_price(frm, action) {
+	if (frm.is_new() || frm.is_dirty()) {
+		// The endpoint reloads the document server-side, so an unsaved edit
+		// would be silently discarded and the approval would land on the stored
+		// rate rather than on the one on screen.
+		frappe.msgprint(__("Save the specification before approving or rejecting a price."));
+		return;
+	}
+
+	const row = selected_price_row(frm);
+	if (!row) return;
+
+	const approving = action === "approve";
+	const label = approving ? __("Approve Price") : __("Reject Price");
+
+	const d = new frappe.ui.Dialog({
+		title: label,
+		fields: [
+			{
+				fieldtype: "HTML",
+				fieldname: "summary",
+				options: `<p>${__("Row effective {0} at {1} {2}.", [
+					frappe.format(row.valid_from, { fieldtype: "Date" }),
+					format_currency(row.rate),
+					frappe.utils.escape_html(row.uom || ""),
+				])}</p>
+				<p style="color:#666;font-size:12px;">${
+					approving
+						? __("Approved rows price Sales Order lines from their effective date. Editing the rate, UOM or effective date afterwards returns the row to Draft.")
+						: __("Rejected rows are invisible to pricing and may be superseded by a corrected row carrying the same effective date.")
+				}</p>`,
+			},
+			{
+				fieldtype: "Small Text",
+				fieldname: "notes",
+				label: __("Approval Notes"),
+				reqd: approving ? 0 : 1,
+				description: approving
+					? __("Optional. Where the rate came from, or what it was checked against.")
+					: __("Required. Why this rate was rejected."),
+			},
+		],
+		primary_action_label: label,
+		primary_action(values) {
+			d.hide();
+			frappe.call({
+				method: APPROVE_METHOD,
+				args: { cps: frm.doc.name, row: row.name, action, notes: values.notes },
+				freeze: true,
+				freeze_message: __("Recording the decision…"),
+				callback(r) {
+					if (!r.message) return;
+					frappe.show_alert({
+						message: __("Price row is now {0}.", [__(r.message.approval_status)]),
+						indicator: approving ? "green" : "red",
+					});
+					// Reloaded rather than patched in place: the endpoint also
+					// re-derives current_rate and current_uom on the parent, and
+					// showing a stale headline rate next to a fresh approval is
+					// exactly the confusion this feature exists to remove.
+					frm.reload_doc();
+				},
+			});
+		},
+	});
+	d.show();
+}
+
+function add_price_approval_actions(frm) {
+	if (!frm.fields_dict.pricing || !can_approve_prices()) return;
+
+	frm.fields_dict.pricing.grid.add_custom_button(__("Approve Price"), () =>
+		decide_price(frm, "approve")
+	);
+	frm.fields_dict.pricing.grid.add_custom_button(__("Reject Price"), () =>
+		decide_price(frm, "reject")
+	);
+}
+
 function get_paper_rule(part_num, total_parts) {
 	if (total_parts === 1)        return PAPER_RULES.single;
 	if (part_num === 1)           return PAPER_RULES.first;
@@ -241,9 +355,11 @@ frappe.ui.form.on("Spot Colour", {
 	},
 });
 
-// Grid row button: "Find Pantone" — always available on each spot colour row.
+// Grid row buttons: "Find Pantone" on spot colours, approve/reject on prices.
 frappe.ui.form.on("Customer Product Specification", {
 	onload(frm) {
+		add_price_approval_actions(frm);
+
 		if (frm.fields_dict.spot_colours) {
 			frm.fields_dict.spot_colours.grid.add_custom_button(__("Find Pantone from Hex"), () => {
 				const selected = frm.fields_dict.spot_colours.grid.get_selected_children();

@@ -68,6 +68,210 @@ MATERIAL_SPEC_FIELDS = (
 	ITEM_LINK_FIELD,
 )
 
+# --- Item-level control mode (design §4.2, iteration 2) ---------------------
+#
+# Item Group inheritance answers "is this whole family controlled", which is the
+# right default and wrong for the exceptions: one sample item inside a
+# controlled group, or one bespoke item in a group nobody wants to control
+# wholesale. So an Item may state its own answer, and an explicit answer wins
+# over whatever the tree says.
+#
+# ``Item.custom_requires_cps`` stays read-only and derived — it is the indexed
+# denormalisation Sales Order validation reads per line, never an input.
+CONTROL_MODE_FIELD = "custom_cps_control_mode"
+
+# Which kind of specification a controlled Item needs. The same field name and
+# the same option list as on Item Group, because it answers the same question at
+# a more specific altitude.
+PRODUCT_TYPE_FIELD = "custom_cps_product_type"
+
+# The one definition of the valid product types. Item Group, Item and the
+# Customer Product Specification's own ``product_type`` must agree on this list,
+# or a specification could be of a kind no Item can ever ask for.
+CPS_PRODUCT_TYPES = (
+	"Computer Paper",
+	"Carton",
+	"Label",
+	"Exercise Books",
+	"ETR (Reel to Reel Printing)",
+)
+
+CONTROL_MODE_INHERIT = "Inherit from Item Group"
+CONTROL_MODE_REQUIRE = "Require CPS"
+CONTROL_MODE_EXEMPT = "Exempt from CPS"
+
+CONTROL_MODES = (CONTROL_MODE_INHERIT, CONTROL_MODE_REQUIRE, CONTROL_MODE_EXEMPT)
+
+# Blank is Inherit. An existing row has no value for a field that did not exist
+# when it was written, and "unset" must mean "behave exactly as before".
+CONTROL_MODE_DEFAULT = CONTROL_MODE_INHERIT
+
+
+def normalise_control_mode(value):
+	"""Coerce a stored control mode to one of :data:`CONTROL_MODES`.
+
+	Anything unrecognised — blank, ``None``, or a value left behind by a renamed
+	Select option — falls back to Inherit rather than to a control decision
+	nobody configured.
+	"""
+	value = (value or "").strip()
+	return value if value in CONTROL_MODES else CONTROL_MODE_DEFAULT
+
+
+def item_requires_cps(control_mode, controlling_group):
+	"""Whether an Item is specification-controlled (the precedence rule).
+
+	Explicit beats inherited, in both directions:
+
+	* ``Require CPS`` controls the Item even when no ancestor group does.
+	* ``Exempt from CPS`` releases the Item even when an ancestor group does.
+	* ``Inherit from Item Group`` (and blank) defers to the nested-set walk.
+
+	``controlling_group`` is the nearest ancestor group that turns control on,
+	or None — the return value of ``so_spec_control.item_group_requires_cps``.
+	"""
+	mode = normalise_control_mode(control_mode)
+	if mode == CONTROL_MODE_REQUIRE:
+		return True
+	if mode == CONTROL_MODE_EXEMPT:
+		return False
+	return bool(controlling_group)
+
+
+def normalise_product_type(value):
+	"""A stored product type, trimmed, or None when there is none.
+
+	Deliberately *not* filtered against :data:`CPS_PRODUCT_TYPES`. An
+	unrecognised value — a Select option renamed underneath stored data, a Data
+	Import typo — must keep blocking every specification it does not match rather
+	than quietly disabling the check; :func:`item_config_error` is what refuses
+	to let such a value be saved in the first place.
+	"""
+	value = (value or "").strip()
+	return value or None
+
+
+def expected_product_type(control_mode, item_product_type, controlling_group):
+	"""Which kind of specification this Item's order lines need, or None.
+
+	Explicit beats inherited here for the same reason it does in
+	:func:`item_requires_cps`: the Item is the more specific statement. So the
+	Item's own product type answers first, and the controlling Item Group's
+	answers only when the Item has nothing to say.
+
+	Without the Item half, ``Require CPS`` on an Item outside any controlled
+	group produced *no* expected type at all — and a Label specification would
+	pass on a Computer Paper Item, which is precisely what control is for.
+
+	An Exempt Item expects nothing: it is not controlled, so there is no
+	specification for it to need.
+	"""
+	if normalise_control_mode(control_mode) == CONTROL_MODE_EXEMPT:
+		return None
+
+	explicit = normalise_product_type(item_product_type)
+	if explicit:
+		return explicit
+
+	if controlling_group:
+		return normalise_product_type(_get(controlling_group, PRODUCT_TYPE_FIELD))
+	return None
+
+
+# Why an Item's CPS configuration cannot be saved. Same untranslated-template
+# shape as the reasons below, for the same reason: this module stays Frappe-free.
+ConfigError = namedtuple("ConfigError", ("code", "template", "args"))
+
+CONFIG_PRODUCT_TYPE_REQUIRED = "product-type-required"
+CONFIG_PRODUCT_TYPE_UNKNOWN = "product-type-unknown"
+
+
+def item_config_error(control_mode, item_product_type):
+	"""Why an Item's CPS control configuration is incomplete, or None.
+
+	``Require CPS`` is the only mode that has to name a product type. Inherit
+	takes the controlling group's, and Exempt has no lines to check — so neither
+	is an incomplete configuration, and neither becomes one by being left blank.
+
+	A value outside :data:`CPS_PRODUCT_TYPES` is reported before a missing one:
+	when someone has typed something, naming what they typed is more useful than
+	telling them they typed nothing.
+	"""
+	mode = normalise_control_mode(control_mode)
+	value = normalise_product_type(item_product_type)
+
+	if value and value not in CPS_PRODUCT_TYPES:
+		return ConfigError(
+			CONFIG_PRODUCT_TYPE_UNKNOWN,
+			"{0} is not a CPS Product Type. Choose one of: {1}.",
+			(value, ", ".join(CPS_PRODUCT_TYPES)),
+		)
+
+	if mode == CONTROL_MODE_REQUIRE and not value:
+		return ConfigError(
+			CONFIG_PRODUCT_TYPE_REQUIRED,
+			"Select a CPS Product Type - an Item cannot require a specification without naming which kind. Choose one of: {0}.",
+			(", ".join(CPS_PRODUCT_TYPES),),
+		)
+
+	return None
+
+
+# Why an Item ended up controlled or not. Carried as an untranslated template
+# plus its arguments, for the same reason :class:`SpecBlock` is: this module
+# stays Frappe-free, and the caller does ``_(source.template).format(*args)``.
+ControlSource = namedtuple("ControlSource", ("code", "template", "args"))
+
+SOURCE_EXPLICIT_REQUIRE = "explicit-require"
+SOURCE_EXPLICIT_EXEMPT = "explicit-exempt"
+SOURCE_INHERITED = "inherited"
+SOURCE_UNCONTROLLED = "uncontrolled"
+
+
+def item_control_source(control_mode, controlling_group):
+	"""Why an Item is (or is not) specification-controlled.
+
+	The derived flag is read-only, so the only way a user can tell why it holds
+	the value it does is to be told. Shown on the Item form and available to the
+	migration report.
+	"""
+	mode = normalise_control_mode(control_mode)
+	group = _get(controlling_group, "name") if controlling_group else None
+
+	if mode == CONTROL_MODE_REQUIRE:
+		return ControlSource(
+			SOURCE_EXPLICIT_REQUIRE,
+			"Required explicitly on this Item, overriding the Item Group tree.",
+			(),
+		)
+
+	if mode == CONTROL_MODE_EXEMPT:
+		if group:
+			return ControlSource(
+				SOURCE_EXPLICIT_EXEMPT,
+				"Exempted explicitly on this Item, overriding Item Group {0}.",
+				(group,),
+			)
+		return ControlSource(
+			SOURCE_EXPLICIT_EXEMPT, "Exempted explicitly on this Item.", ()
+		)
+
+	if group:
+		return ControlSource(SOURCE_INHERITED, "Inherited from Item Group {0}.", (group,))
+
+	return ControlSource(
+		SOURCE_UNCONTROLLED,
+		"Not controlled: no ancestor Item Group requires a specification.",
+		(),
+	)
+
+
+def item_control_source_text(control_mode, controlling_group):
+	"""The same explanation as one untranslated sentence."""
+	source = item_control_source(control_mode, controlling_group)
+	return source.template.format(*source.args)
+
+
 CONFIDENCE_HIGH = "high"
 CONFIDENCE_MEDIUM = "medium"
 CONFIDENCE_LOW = "low"
@@ -416,6 +620,101 @@ def spec_serves_item(spec, item_code):
 	if not linked or not item_code:
 		return False
 	return str(linked).strip() == str(item_code).strip()
+
+
+# --- Orderability of one specification against one line (design §7 V2-V5) ---
+#
+# Sales Order validation throws these; the Desk preview endpoint reports them
+# without throwing. One list of reasons in one order, so a rep never sees the
+# preview clear a line the submit then refuses.
+#
+# The message survives as an untranslated template plus its arguments rather
+# than as a finished string: the caller does ``_(block.template).format(*args)``
+# so the rules stay Frappe-free without losing translation.
+SpecBlock = namedtuple("SpecBlock", ("code", "template", "args"))
+
+BLOCK_MISSING = "missing"
+BLOCK_CUSTOMER = "wrong-customer"
+BLOCK_ITEM = "wrong-item"
+BLOCK_PRODUCT_TYPE = "wrong-product-type"
+BLOCK_DOCSTATUS = "not-submitted"
+BLOCK_STATUS = "not-active"
+BLOCK_NO_PRICE = "no-approved-price"
+
+
+def spec_block_reason(spec, item_code, customer, expected_product_type=None, requested_name=None):
+	"""Why ``spec`` cannot be ordered against on this line, or None.
+
+	Checked in the same order as ``so_spec_control._load_and_validate_spec``, so
+	when several things are wrong at once both paths name the same one.
+
+	``requested_name`` is the specification the caller asked for. It is the only
+	thing worth naming when ``spec`` is None — the record is missing, so there is
+	nothing to read the name off, and reporting the Item instead would send the
+	reader to the wrong document.
+	"""
+	if not spec:
+		return SpecBlock(
+			BLOCK_MISSING,
+			"Specification {0} was not found.",
+			(requested_name or item_code,),
+		)
+
+	name = _get(spec, "name")
+
+	if _get(spec, "customer") != customer:
+		return SpecBlock(
+			BLOCK_CUSTOMER,
+			"Specification {0} belongs to {1}, not to {2}.",
+			(name, _get(spec, "customer"), customer),
+		)
+
+	if not spec_serves_item(spec, item_code):
+		return SpecBlock(
+			BLOCK_ITEM,
+			"Specification {0} is linked to Item {1}, not to {2}.",
+			(name, _get(spec, ITEM_LINK_FIELD) or "no Item", item_code),
+		)
+
+	if expected_product_type and _get(spec, "product_type") != expected_product_type:
+		return SpecBlock(
+			BLOCK_PRODUCT_TYPE,
+			"Specification {0} is a {1} specification, but {2} needs a {3} specification.",
+			(name, _get(spec, "product_type"), item_code, expected_product_type),
+		)
+
+	docstatus = _get(spec, "docstatus")
+	if docstatus != 1:
+		return SpecBlock(
+			BLOCK_DOCSTATUS,
+			"Specification {0} is {1} and cannot be ordered against. Submit it, or select its amendment.",
+			(name, "still a draft" if docstatus == 0 else "cancelled"),
+		)
+
+	if _get(spec, "status") != "Active":
+		return SpecBlock(
+			BLOCK_STATUS,
+			"Specification {0} is {1}, not Active, and cannot be ordered against.",
+			(name, _get(spec, "status")),
+		)
+
+	return None
+
+
+def price_block_reason(price, spec_name, on_date):
+	"""Why there is no orderable price for ``spec_name`` on ``on_date``, or None.
+
+	Draft and Rejected rows are invisible to :func:`resolve_eligible_price`, so
+	"no price at all" and "a price nobody approved" report identically — from an
+	order line they are the same problem.
+	"""
+	if price is not None and _get(price, "rate") not in (None, ""):
+		return None
+	return SpecBlock(
+		BLOCK_NO_PRICE,
+		"No approved price for {0} effective {1}. Add a CPS Price row and have it approved.",
+		(spec_name, on_date),
+	)
 
 
 def item_link_required(before, after):
