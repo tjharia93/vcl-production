@@ -17,6 +17,7 @@
 // degrades to "clear the line and say why" instead of blocking the form.
 
 const PREVIEW_METHOD = "production_log.job_card_tracking.cps_desk.cps_line_preview";
+const CREATE_JOB_CARD_METHOD = "vcl_compass.api.jobcards.job_card_create";
 
 // Fields the preview drives. Kept here only as the fallback for clearing a row
 // when the server has not answered; when it has, its own `display_fields` list
@@ -247,6 +248,123 @@ function show_spec_preview(frm) {
 	});
 }
 
+// --- Sales Order -> Computer Paper Job Card ---------------------------------
+
+function snapshot_product_type(row) {
+	try {
+		return JSON.parse(row.custom_spec_snapshot || "{}").product_type || null;
+	} catch (error) {
+		return null;
+	}
+}
+
+function job_card_candidates(frm) {
+	return (frm.doc.items || []).filter((row) => row.custom_cps).map((row) => {
+		const remaining = Math.max(0, flt(row.qty) - flt(row.custom_jc_qty));
+		const product_type = snapshot_product_type(row);
+		let blocked_reason = null;
+		if (!row.custom_spec_snapshot) {
+			blocked_reason = __("Missing the frozen specification snapshot.");
+		} else if (product_type !== "Computer Paper") {
+			blocked_reason = __("Snapshot product type is {0}, not Computer Paper.", [
+				product_type || __("blank"),
+			]);
+		} else if (remaining <= 0) {
+			blocked_reason = __("The full ordered quantity is already on Job Cards.");
+		}
+		return { row, remaining, blocked_reason };
+	});
+}
+
+function job_card_line_html(candidate) {
+	const row = candidate.row;
+	const status = candidate.blocked_reason
+		? `<span class="indicator-pill red">${frappe.utils.escape_html(candidate.blocked_reason)}</span>`
+		: `<span class="indicator-pill green">${__("Ready")}</span>`;
+	return `<div style="margin:6px 0 2px;padding:8px 10px;background:var(--subtle-fg);border-radius:6px;">
+		<b>${__("Line {0}: {1}", [row.idx, frappe.utils.escape_html(row.item_code)])}</b>
+		<div class="text-muted small">${frappe.utils.escape_html(row.custom_spec_name || row.custom_cps)} · ${__(
+			"Ordered {0}, already carded {1}, remaining {2}",
+			[format_number(row.qty), format_number(row.custom_jc_qty || 0), format_number(candidate.remaining)]
+		)}</div>${status}</div>`;
+}
+
+function show_job_card_dialog(frm) {
+	const candidates = job_card_candidates(frm);
+	if (!candidates.length) {
+		frappe.msgprint(__("No Sales Order items have a Customer Product Specification."));
+		return;
+	}
+	const fields = [{
+		fieldtype: "HTML",
+		fieldname: "instructions",
+		options: `<p>${__("Confirm which Sales Order items need Computer Paper Job Cards. Each selected line creates one Draft Job Card from the frozen Sales Order snapshot.")}</p>`,
+	}];
+	candidates.forEach((candidate, index) => {
+		fields.push(
+			{ fieldtype: "HTML", fieldname: `line_${index}`, options: job_card_line_html(candidate) },
+			{
+				fieldtype: "Check",
+				fieldname: `select_${index}`,
+				label: __("Create Job Card for line {0}", [candidate.row.idx]),
+				default: candidate.blocked_reason ? 0 : 1,
+				read_only: candidate.blocked_reason ? 1 : 0,
+			},
+			{
+				fieldtype: "Float",
+				fieldname: `qty_${index}`,
+				label: __("Job Card Quantity"),
+				default: candidate.remaining,
+				read_only: candidate.blocked_reason ? 1 : 0,
+				depends_on: `eval:doc.select_${index}`,
+			}
+		);
+	});
+	fields.push(
+		{ fieldtype: "Section Break", label: __("Production details") },
+		{ fieldtype: "Select", fieldname: "plate_status", label: __("Plate Status"), options: "New\nOld", default: "New", reqd: 1 },
+		{ fieldtype: "Data", fieldname: "plate_code", label: __("Plate Code"), depends_on: "eval:doc.plate_status=='Old'", mandatory_depends_on: "eval:doc.plate_status=='Old'" },
+		{ fieldtype: "Column Break" },
+		{ fieldtype: "Date", fieldname: "due_date", label: __("Due Date"), default: frm.doc.delivery_date }
+	);
+	const dialog = new frappe.ui.Dialog({
+		title: __("Create Computer Paper Job Cards"),
+		fields,
+		primary_action_label: __("Create selected Job Cards"),
+		async primary_action(values) {
+			const selected = candidates.map((candidate, index) => ({ candidate, index }))
+				.filter(({ candidate, index }) => !candidate.blocked_reason && values[`select_${index}`]);
+			if (!selected.length) {
+				frappe.msgprint(__("Select at least one eligible Sales Order item."));
+				return;
+			}
+			dialog.disable_primary_action();
+			try {
+				const created = [];
+				for (const { candidate, index } of selected) {
+					created.push(await frappe.xcall(CREATE_JOB_CARD_METHOD, {
+						sales_order: frm.doc.name,
+						so_item: candidate.row.name,
+						qty: values[`qty_${index}`],
+						plate_status: values.plate_status,
+						plate_code: values.plate_code,
+						due_date: values.due_date,
+					}));
+				}
+				dialog.hide();
+				const links = created.map((result) =>
+					`<a href="/app/${frappe.router.slug(result.doctype)}/${encodeURIComponent(result.job_card)}">${frappe.utils.escape_html(result.job_card)}</a>`
+				);
+				frappe.msgprint({ title: __("Draft Job Cards created"), indicator: "green", message: links.join("<br>") });
+				frm.reload_doc();
+			} finally {
+				dialog.enable_primary_action();
+			}
+		},
+	});
+	dialog.show();
+}
+
 // --- Resets -----------------------------------------------------------------
 //
 // A specification is only ever valid for one customer, one Item and one order
@@ -271,6 +389,15 @@ function clear_all_lines(frm, reason, drop_cps) {
 }
 
 frappe.ui.form.on("Sales Order", {
+	refresh(frm) {
+		if (frm.doc.docstatus !== 1 || !has_cps_field()) return;
+		frm.add_custom_button(
+			__("Computer Paper Job Card"),
+			() => show_job_card_dialog(frm),
+			__("Create")
+		);
+	},
+
 	setup(frm) {
 		if (!has_cps_field()) return;
 		frm.set_query("custom_cps", "items", (doc, cdt, cdn) => cps_query(frm, cdt, cdn));
