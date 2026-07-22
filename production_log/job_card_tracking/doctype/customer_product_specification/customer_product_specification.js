@@ -62,7 +62,11 @@ function selected_price_row(frm) {
 		return null;
 	}
 	if (!selected.length) {
-		frappe.msgprint(__("Tick the price row to act on first."));
+		const draft_rows = (frm.doc.pricing || []).filter(
+			(row) => (row.approval_status || "Draft") === "Draft"
+		);
+		if (draft_rows.length === 1) return draft_rows[0];
+		frappe.msgprint(__("Tick one Draft price row to act on first."));
 		return null;
 	}
 	return selected[0];
@@ -139,12 +143,14 @@ function decide_price(frm, action) {
 function add_price_approval_actions(frm) {
 	if (!frm.fields_dict.pricing || !can_approve_prices()) return;
 
-	frm.fields_dict.pricing.grid.add_custom_button(__("Approve Price"), () =>
+	// Main-form actions remain visible on submitted/amended specifications,
+	// where Frappe may render the child grid read-only and hide grid actions.
+	frm.add_custom_button(__("Approve Price"), () =>
 		decide_price(frm, "approve")
-	);
-	frm.fields_dict.pricing.grid.add_custom_button(__("Reject Price"), () =>
+	, __("Pricing"));
+	frm.add_custom_button(__("Reject Price"), () =>
 		decide_price(frm, "reject")
-	);
+	, __("Pricing"));
 }
 
 function get_paper_rule(part_num, total_parts) {
@@ -270,6 +276,8 @@ function open_nearest_pantone_dialog(frm, cdt, cdn) {
 frappe.ui.form.on("Customer Product Specification", {
 	refresh(frm) {
 		recalculate_number_of_colours(frm);
+		add_price_approval_actions(frm);
+
 	},
 
 	product_type(frm) {
@@ -355,11 +363,9 @@ frappe.ui.form.on("Spot Colour", {
 	},
 });
 
-// Grid row buttons: "Find Pantone" on spot colours, approve/reject on prices.
+// Grid row button: "Find Pantone" on spot colours.
 frappe.ui.form.on("Customer Product Specification", {
 	onload(frm) {
-		add_price_approval_actions(frm);
-
 		if (frm.fields_dict.spot_colours) {
 			frm.fields_dict.spot_colours.grid.add_custom_button(__("Find Pantone from Hex"), () => {
 				const selected = frm.fields_dict.spot_colours.grid.get_selected_children();
