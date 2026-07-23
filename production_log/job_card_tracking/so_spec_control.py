@@ -28,9 +28,12 @@ FLOOR_FIELD = "custom_cps_price_floor_pct"
 CONTROL_SOURCE_FIELD = "custom_cps_control_source"
 
 # Job Card DocTypes that consume a Sales Order line, by CPS product type.
-# Phase 2 is Computer Paper only (DN-7); Label, Carton, Exercise Books and ETR
-# are one registry entry each in Phase 3.
-JOB_CARD_DOCTYPES = {"Computer Paper": "Job Card Computer Paper"}
+# Label, Exercise Books and ETR are one registry entry each when their cards
+# gain the order-derived field block.
+JOB_CARD_DOCTYPES = {
+	"Computer Paper": "Job Card Computer Paper",
+	"Carton": "Job Card Carton",
+}
 
 SNAPSHOT_FIELDS = (
 	"custom_cps_rate",
@@ -511,6 +514,12 @@ def on_cancel(doc, method=None):
 	blocking = []
 	for doctype in JOB_CARD_DOCTYPES.values():
 		if not frappe.db.exists("DocType", doctype):
+			continue
+		# A card type registered here before its order-derived fields have
+		# landed on this site has nothing to filter on. Querying a column that
+		# does not exist would throw on every cancel of every order, which is a
+		# far worse failure than not blocking on a card that cannot exist yet.
+		if not _has_field(doctype, "sales_order"):
 			continue
 		blocking += frappe.get_all(
 			doctype,

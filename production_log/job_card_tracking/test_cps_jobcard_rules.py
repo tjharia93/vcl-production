@@ -37,7 +37,17 @@ def line(**overrides):
 
 
 def order(**overrides):
-	values = {"name": "SAL-ORD-0001", "docstatus": 1, "customer": "CUST-0001"}
+	# ``transaction_date`` and ``po_no`` are on the fixture because they are on
+	# the read: the card's order_date and lpo_number are proved against them,
+	# and an order fixture that omitted them would make those two checks pass by
+	# comparing nothing to nothing.
+	values = {
+		"name": "SAL-ORD-0001",
+		"docstatus": 1,
+		"customer": "CUST-0001",
+		"transaction_date": "2026-07-19",
+		"po_no": "LPO-4471",
+	}
 	values.update(overrides)
 	return values
 
@@ -53,6 +63,8 @@ def card(**overrides):
 		"so_qty": 500.0,
 		"spec_snapshot": SNAPSHOT,
 		"spec_snapshot_at": "2026-07-19 11:02:07",
+		"order_date": "2026-07-19",
+		"lpo_number": "LPO-4471",
 	}
 	values.update(overrides)
 	return values
@@ -218,12 +230,35 @@ class TestForgedCard(unittest.TestCase):
 				"customer",
 				"customer_product_spec",
 				"item_code",
+				"lpo_number",
+				"order_date",
 				"price_source",
 				"rate",
 				"so_qty",
 				"spec_snapshot",
 				"spec_snapshot_at",
 			],
+		)
+
+	def test_the_order_header_fields_are_proved_too(self):
+		# Both are copied off the Sales Order header by the creation path, are
+		# read-only on the form, and were until this release the only values on
+		# an order-derived card that nothing checked.
+		self.assertEqual(
+			fields(cps_rules.jc_line_mismatches(card(order_date="2026-01-01"), order(), line())),
+			["order_date"],
+		)
+		self.assertEqual(
+			fields(cps_rules.jc_line_mismatches(card(lpo_number="LPO-9"), order(), line())),
+			["lpo_number"],
+		)
+
+	def test_an_order_with_no_lpo_expects_a_blank_one(self):
+		blank = order(po_no=None)
+
+		self.assertEqual(cps_rules.jc_line_mismatches(card(lpo_number=""), blank, line()), [])
+		self.assertEqual(
+			fields(cps_rules.jc_line_mismatches(card(), blank, line())), ["lpo_number"]
 		)
 
 	def test_every_mismatch_is_reported_not_just_the_first(self):

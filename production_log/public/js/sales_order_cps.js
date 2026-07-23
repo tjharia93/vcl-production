@@ -17,7 +17,14 @@
 // degrades to "clear the line and say why" instead of blocking the form.
 
 const PREVIEW_METHOD = "production_log.job_card_tracking.cps_desk.cps_line_preview";
-const CREATE_JOB_CARD_METHOD = "vcl_compass.api.jobcards.job_card_create";
+
+// The batch endpoint, not the single-card one. Raising several cards is one
+// call because it has to be one *transaction*: Frappe runs a whitelisted method
+// inside a transaction and rolls it back when an exception escapes, so a throw
+// on the third selection un-does the first two. Called once per card instead,
+// each insert commits on its own and a failure halfway leaves half a job on the
+// floor with nothing recording that the rest was ever asked for.
+const BATCH_JOB_CARD_METHOD = "vcl_compass.api.jobcards.job_cards_from_sales_order";
 
 // Fields the preview drives. Kept here only as the fallback for clearing a row
 // when the server has not answered; when it has, its own `display_fields` list
@@ -248,7 +255,37 @@ function show_spec_preview(frm) {
 	});
 }
 
-// --- Sales Order -> Computer Paper Job Card ---------------------------------
+// --- Sales Order -> Job Cards -----------------------------------------------
+//
+// One dialog for every kind of card a line can become. The kind is decided by
+// the product type the *order froze*, never by what the operator picks and
+// never by reading the specification as it stands now — a specification retyped
+// since the order must not reroute a job that has already been sold.
+//
+// Everything product-specific below is a property of a registry entry rather
+// than a branch, so adding Label or ETR later is a line of data. The two that
+// differ today:
+//
+//   * Computer Paper carries a plate. Carton has no plate fields at all; its
+//     analogue is `repeat` (Old / New job), which Computer Paper does not have.
+//   * The customer field differs between the two cards, but that is the
+//     server's problem, not this dialog's — nothing identifying is sent.
+//
+// Nothing identifying, pricing or specifying is passed from here. The only
+// operator inputs are quantity, due date, and the per-kind production detail.
+// Everything else the card carries is taken server-side from the frozen line.
+//
+// The whole selection goes over in one call, and it is all or nothing. The
+// dialog can therefore offer to raise several cards without offering to raise
+// some of them: either every selected line is carded or the order is left
+// exactly as it was found. What it cannot offer is a batch spanning two kinds —
+// the production details below are asked once and mean one thing, so a mixed
+// selection is refused before the call rather than half executed after it.
+
+const JOB_CARD_KINDS = {
+	"Computer Paper": { kind: "computer_paper", plate: true, repeat: false },
+	Carton: { kind: "carton", plate: false, repeat: true },
+};
 
 function snapshot_product_type(row) {
 	try {
@@ -262,17 +299,18 @@ function job_card_candidates(frm) {
 	return (frm.doc.items || []).filter((row) => row.custom_cps).map((row) => {
 		const remaining = Math.max(0, flt(row.qty) - flt(row.custom_jc_qty));
 		const product_type = snapshot_product_type(row);
+		const spec = JOB_CARD_KINDS[product_type];
 		let blocked_reason = null;
 		if (!row.custom_spec_snapshot) {
 			blocked_reason = __("Missing the frozen specification snapshot.");
-		} else if (product_type !== "Computer Paper") {
-			blocked_reason = __("Snapshot product type is {0}, not Computer Paper.", [
-				product_type || __("blank"),
+		} else if (!spec) {
+			blocked_reason = __("No Job Card type raises {0} lines yet.", [
+				product_type || __("untyped"),
 			]);
 		} else if (remaining <= 0) {
 			blocked_reason = __("The full ordered quantity is already on Job Cards.");
 		}
-		return { row, remaining, blocked_reason };
+		return { row, remaining, product_type, spec, blocked_reason };
 	});
 }
 
@@ -280,7 +318,7 @@ function job_card_line_html(candidate) {
 	const row = candidate.row;
 	const status = candidate.blocked_reason
 		? `<span class="indicator-pill red">${frappe.utils.escape_html(candidate.blocked_reason)}</span>`
-		: `<span class="indicator-pill green">${__("Ready")}</span>`;
+		: `<span class="indicator-pill green">${__("Ready — {0}", [candidate.product_type])}</span>`;
 	return `<div style="margin:6px 0 2px;padding:8px 10px;background:var(--subtle-fg);border-radius:6px;">
 		<b>${__("Line {0}: {1}", [row.idx, frappe.utils.escape_html(row.item_code)])}</b>
 		<div class="text-muted small">${frappe.utils.escape_html(row.custom_spec_name || row.custom_cps)} · ${__(
@@ -289,17 +327,33 @@ function job_card_line_html(candidate) {
 		)}</div>${status}</div>`;
 }
 
+// A dialog-level `depends_on` that is true while any line of this kind is
+// ticked. Built from the actual indices rather than from a count, so unticking
+// the last Carton line hides the Carton-only inputs immediately.
+function any_selected_expression(candidates, predicate) {
+	const clauses = candidates
+		.map((candidate, index) => ({ candidate, index }))
+		.filter(({ candidate }) => !candidate.blocked_reason && predicate(candidate))
+		.map(({ index }) => `doc.select_${index}`);
+	return clauses.length ? `eval:${clauses.join("||")}` : null;
+}
+
 function show_job_card_dialog(frm) {
 	const candidates = job_card_candidates(frm);
 	if (!candidates.length) {
 		frappe.msgprint(__("No Sales Order items have a Customer Product Specification."));
 		return;
 	}
+
+	const needs_plate = any_selected_expression(candidates, (c) => c.spec && c.spec.plate);
+	const needs_repeat = any_selected_expression(candidates, (c) => c.spec && c.spec.repeat);
+
 	const fields = [{
 		fieldtype: "HTML",
 		fieldname: "instructions",
-		options: `<p>${__("Confirm which Sales Order items need Computer Paper Job Cards. Each selected line creates one Draft Job Card from the frozen Sales Order snapshot.")}</p>`,
+		options: `<p>${__("Confirm which Sales Order items need Job Cards. Each selected line creates one Draft Job Card of the kind its frozen snapshot says it is — Computer Paper lines become Computer Paper cards, Carton lines become Carton cards.")}</p>`,
 	}];
+
 	candidates.forEach((candidate, index) => {
 		fields.push(
 			{ fieldtype: "HTML", fieldname: `line_${index}`, options: job_card_line_html(candidate) },
@@ -320,15 +374,52 @@ function show_job_card_dialog(frm) {
 			}
 		);
 	});
+
+	fields.push({ fieldtype: "Section Break", label: __("Production details") });
+
+	if (needs_plate) {
+		// Shown, and required, only while a Computer Paper line is selected.
+		// Asking for a plate on a Carton-only batch would be asking for a value
+		// the Carton card has nowhere to put.
+		fields.push(
+			{
+				fieldtype: "Select",
+				fieldname: "plate_status",
+				label: __("Plate Status (Computer Paper)"),
+				options: "New\nOld",
+				default: "New",
+				depends_on: needs_plate,
+				mandatory_depends_on: needs_plate,
+			},
+			{
+				fieldtype: "Data",
+				fieldname: "plate_code",
+				label: __("Plate Code"),
+				depends_on: `eval:(${needs_plate.slice(5)})&&doc.plate_status=='Old'`,
+				mandatory_depends_on: `eval:(${needs_plate.slice(5)})&&doc.plate_status=='Old'`,
+			}
+		);
+	}
+
+	if (needs_repeat) {
+		fields.push({
+			fieldtype: "Select",
+			fieldname: "repeat_job",
+			label: __("Old Job / New Job (Carton)"),
+			options: "New\nOld",
+			default: "New",
+			depends_on: needs_repeat,
+			mandatory_depends_on: needs_repeat,
+		});
+	}
+
 	fields.push(
-		{ fieldtype: "Section Break", label: __("Production details") },
-		{ fieldtype: "Select", fieldname: "plate_status", label: __("Plate Status"), options: "New\nOld", default: "New", reqd: 1 },
-		{ fieldtype: "Data", fieldname: "plate_code", label: __("Plate Code"), depends_on: "eval:doc.plate_status=='Old'", mandatory_depends_on: "eval:doc.plate_status=='Old'" },
 		{ fieldtype: "Column Break" },
 		{ fieldtype: "Date", fieldname: "due_date", label: __("Due Date"), default: frm.doc.delivery_date }
 	);
+
 	const dialog = new frappe.ui.Dialog({
-		title: __("Create Computer Paper Job Cards"),
+		title: __("Create Job Cards"),
 		fields,
 		primary_action_label: __("Create selected Job Cards"),
 		async primary_action(values) {
@@ -338,24 +429,43 @@ function show_job_card_dialog(frm) {
 				frappe.msgprint(__("Select at least one eligible Sales Order item."));
 				return;
 			}
+
+			// One batch raises one kind of card. The server refuses a mixed
+			// selection by name before it inserts anything, so nothing is at
+			// risk either way — but the operator is better told which lines
+			// clash, here, than told after asking that the batch was rejected.
+			const kinds = [...new Set(selected.map(({ candidate }) => candidate.spec.kind))];
+			if (kinds.length > 1) {
+				frappe.msgprint({
+					title: __("One Kind Of Job Card Per Batch"),
+					indicator: "orange",
+					message: __(
+						"The production details differ by kind — a plate belongs to a Computer Paper card and a repeat to a Carton one — so one batch raises one kind. Card each kind in its own pass. Selected: {0}.",
+						[selected_kind_summary(selected)]
+					),
+				});
+				return;
+			}
+
 			dialog.disable_primary_action();
 			try {
-				const created = [];
-				for (const { candidate, index } of selected) {
-					created.push(await frappe.xcall(CREATE_JOB_CARD_METHOD, {
-						sales_order: frm.doc.name,
+				// One call, one transaction. Frappe runs a whitelisted method
+				// inside a transaction and rolls it back when an exception
+				// escapes, so a throw on the third selection un-does the first
+				// two. Deliberately not wrapped in a try/catch: the throw must
+				// surface as itself, naming which selection failed, rather than
+				// being softened into a partial success nobody asked for.
+				const result = await frappe.xcall(BATCH_JOB_CARD_METHOD, {
+					sales_order: frm.doc.name,
+					selections: selected.map(({ candidate, index }) => ({
 						so_item: candidate.row.name,
 						qty: values[`qty_${index}`],
-						plate_status: values.plate_status,
-						plate_code: values.plate_code,
 						due_date: values.due_date,
-					}));
-				}
+						...job_card_kind_inputs(candidate, values),
+					})),
+				});
 				dialog.hide();
-				const links = created.map((result) =>
-					`<a href="/app/${frappe.router.slug(result.doctype)}/${encodeURIComponent(result.job_card)}">${frappe.utils.escape_html(result.job_card)}</a>`
-				);
-				frappe.msgprint({ title: __("Draft Job Cards created"), indicator: "green", message: links.join("<br>") });
+				show_batch_result(result, selected.length);
 				frm.reload_doc();
 			} finally {
 				dialog.enable_primary_action();
@@ -363,6 +473,71 @@ function show_job_card_dialog(frm) {
 		},
 	});
 	dialog.show();
+}
+
+// "2 × Computer Paper, 1 × Carton" — the product types as the operator sees them
+// on the lines, not the server's internal kind slugs.
+function selected_kind_summary(selected) {
+	const counts = new Map();
+	selected.forEach(({ candidate }) => {
+		const label = candidate.product_type;
+		counts.set(label, (counts.get(label) || 0) + 1);
+	});
+	return [...counts].map(([label, count]) => `${count} × ${label}`).join(", ");
+}
+
+// What the batch endpoint answered. It returns every card it raised — the whole
+// batch or, because a failure rolls the transaction back, none of it — so there
+// is no partial case to render and no per-card success to tally.
+//
+// `expected` is what was asked for. It should always equal the count returned,
+// and saying so when it does not is cheaper than discovering later that a
+// selection went missing between the dialog and the insert.
+function show_batch_result(result, expected) {
+	const created = (result && result.created) || [];
+
+	if (!created.length) {
+		frappe.msgprint({
+			title: __("No Job Cards created"),
+			indicator: "orange",
+			message: __("The server raised no Job Cards for this selection."),
+		});
+		return;
+	}
+
+	const links = created.map((card) => {
+		const url = `/app/${frappe.router.slug(card.doctype)}/${encodeURIComponent(card.job_card)}`;
+		return `<div><a href="${url}">${frappe.utils.escape_html(card.job_card)}</a>
+			<span class="text-muted small"> · ${__("qty {0}", [format_number(card.qty)])}</span></div>`;
+	});
+
+	// Only when the two disagree. A count line on every success is noise; a
+	// count line here is the one thing worth reading.
+	const shortfall = created.length === expected
+		? ""
+		: `<p class="text-muted small">${__("{0} selected, {1} created.", [expected, created.length])}</p>`;
+
+	frappe.msgprint({
+		title: __("{0} Draft Job Cards created", [created.length]),
+		indicator: "green",
+		message: links.join("") + shortfall,
+	});
+}
+
+// The per-kind half of the payload. A Carton call carries no plate keys at all
+// rather than carrying them as nulls: the server should be able to tell "this
+// kind has no plate" from "this operator left the plate blank".
+function job_card_kind_inputs(candidate, values) {
+	const spec = candidate.spec || {};
+	const inputs = {};
+	if (spec.plate) {
+		inputs.plate_status = values.plate_status;
+		inputs.plate_code = values.plate_code;
+	}
+	if (spec.repeat) {
+		inputs.repeat = values.repeat_job;
+	}
+	return inputs;
 }
 
 // --- Resets -----------------------------------------------------------------
@@ -392,7 +567,7 @@ frappe.ui.form.on("Sales Order", {
 	refresh(frm) {
 		if (frm.doc.docstatus !== 1 || !has_cps_field()) return;
 		frm.add_custom_button(
-			__("Computer Paper Job Card"),
+			__("Job Cards"),
 			() => show_job_card_dialog(frm),
 			__("Create")
 		);
