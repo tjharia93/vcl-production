@@ -356,7 +356,13 @@
 {%- set trim_w = doc.trim_allowance_width_mm | float if doc.trim_allowance_width_mm else (doc.get("trim_allowance_width_mm") | float if doc.get("trim_allowance_width_mm") else 0) -%}
 {%- set knife = doc.knife_gap_mm | float if doc.knife_gap_mm else (doc.get("knife_gap_mm") | float if doc.get("knife_gap_mm") else 0) -%}
 {%- set max_reel = doc.max_reel_width | float if doc.max_reel_width else (doc.get("max_reel_width") | float if doc.get("max_reel_width") else 1500) -%}
+{%- set trim_l = doc.trim_allowance_length_mm | float if doc.trim_allowance_length_mm else (doc.get("trim_allowance_length_mm") | float if doc.get("trim_allowance_length_mm") else 0) -%}
 {%- set trim_total = 2 * trim_w -%}
+{#- Planned = blank + trim on BOTH outer edges. The discrepancy check further down
+    must compare planned against planned. Comparing it against the blank made it
+    fire on every job card, because the two differ by the trim by definition. -#}
+{%- set calc_planned_w = calc_board_w + (2 * trim_w) -%}
+{%- set calc_planned_l = calc_board_l + (2 * trim_l) -%}
 {%- set bw = calc_board_w -%}
 {%- set bl = calc_board_l -%}
 
@@ -497,10 +503,12 @@
             </tr>
         </table>
 
-        {% if saved_board_w and saved_board_l and (saved_board_w|int != calc_board_w|int or saved_board_l|int != calc_board_l|int) %}
+        {% if saved_board_w and saved_board_l and (saved_board_w|int != calc_planned_w|int or saved_board_l|int != calc_planned_l|int) %}
             <div class="warning-note">
-                <strong>Check required:</strong> saved planned board size differs from the calculated board size.
-                Saved = {{ saved_board_w|int }} × {{ saved_board_l|int }} mm. Calculated = {{ calc_board_w|int }} × {{ calc_board_l|int }} mm.
+                <strong>Check required:</strong> the saved planned board size differs from the size
+                calculated from the carton dimensions.
+                Saved = {{ saved_board_w|int }} × {{ saved_board_l|int }} mm. Calculated = {{ calc_planned_w|int }} × {{ calc_planned_l|int }} mm
+                (blank {{ calc_board_w|int }} × {{ calc_board_l|int }} + {{ (2*trim_w)|int }} / {{ (2*trim_l)|int }} mm trim).
             </div>
         {% endif %}
 
