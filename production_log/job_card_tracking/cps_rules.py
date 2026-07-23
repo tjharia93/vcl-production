@@ -1784,6 +1784,20 @@ def legacy_order_reference_errors(stored, current):
 	return errors
 
 
+# FOLLOW-UP, deliberately not done here: `artwork` and `artwork_notes` landed on
+# the Computer Paper specification in v8_3 and are NOT frozen below.
+#
+# Adding a key to this payload is a widening and is safe on its own. Adding one
+# that consumers are expected to *act* on is a contract change across a
+# repository boundary — vcl-compass reads these snapshots and deploys on its own
+# schedule — and it needs answers this release does not have: what an artwork
+# reference frozen at order time means when the file behind it can be replaced
+# afterwards, whether the Job Card should carry the URL or a copy, whether
+# `jc_snapshot_mismatches` should prove a card's artwork against the order's the
+# way it proves every other technical value, and what a mismatch means when the
+# honest answer is "the artwork was revised". See
+# docs/computer_paper_cps_capture.md §6. Until then, artwork lives on the
+# specification and is read live from there.
 def build_spec_snapshot(spec, colour_of_parts, spot_colours, taken_at):
 	"""Build the immutable technical snapshot payload (design §8.2).
 

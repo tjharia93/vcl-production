@@ -49,3 +49,13 @@ production_log.patches.v8_0.add_cps_control_custom_fields
 production_log.patches.v8_0.add_cps_iteration_two_fields
 production_log.patches.v8_2.stamp_legacy_label_order_references
 production_log.patches.v8_2.verify_label_order_migration
+# Computer Paper specification capture: the numbering-confirmation flag, its
+# notes, and the artwork pair. Additive Custom Fields only, no backfill - every
+# existing record legitimately has numbering_confirmed unset.
+production_log.patches.v8_3.add_cps_numbering_artwork_fields
+# Computer Paper carton-weight calculation: the structured inputs (finished size,
+# sets per carton, carton tare, optional printing allowance) and the read-only
+# derived results (total GSM, per-set weight, net and gross weight per carton).
+# Additive Custom Fields only, no backfill - legacy records compute nothing until
+# their inputs are entered, and the gross mirrors into standard_weight_per_carton.
+production_log.patches.v8_3.add_cp_weight_fields
