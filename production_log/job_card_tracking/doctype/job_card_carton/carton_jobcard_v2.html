@@ -35,6 +35,7 @@
         border: 2px solid #2B3990;
         padding: 5px;
         text-align: center;
+            white-space: nowrap;   /* job card numbers were wrapping mid-token */
     }
     .sec-head {
         background: #2B3990;
@@ -853,8 +854,8 @@
         <table class="header-table">
             <tr>
                 <td>
-                    <div class="main-title">Station Production Log</div>
-                    <div class="small-brand">Vimit Converters Ltd &bull; 8-Station Operational Tracking</div>
+                    <div class="main-title">Production Stages</div>
+                    <div class="small-brand">Vimit Converters Ltd &bull; Stage Timing, Operator and Waste</div>
                 </td>
                 <td align="right" width="25%">
                     <div class="job-box">
@@ -875,107 +876,161 @@
             </tr>
         </table>
 
-        <div class="sec-head" style="margin-top:10px;">7. Station Timing Log</div>
-        <table class="dense-table tight-rows" style="font-size:8.5px;">
+        {#- Per-stage capture, replacing the old Station Timing Log and Station Production &
+    Waste Log. Each stage now records its start, finish, operator and waste in one
+    place instead of the operator hunting across two station-indexed tables.
+    Carton Printing is still struck through on a plain job. -#}
+{%- set STAGE_LIST = [
+    ("Corrugated", false),
+    ("Pasting", false),
+    ("Creasing and Slitting", false),
+    ("Printing", true),
+    ("Slotting", false),
+    ("Stitching", false),
+    ("Bundling", false)
+] -%}
+
+        {%- set _skip7 = (_is_plain and false) -%}
+        <div class="sec-head" style="margin-top:8px;">7. Corrugated{% if _skip7 %} &mdash; <span style="font-weight:400;font-size:9px;">not applicable, plain job</span>{% endif %}</div>
+        <table class="dense-table tight-rows" style="font-size:8.5px;margin-bottom:0;">
             <thead>
-                <tr style="background:#eef0fa; color:#2B3990;">
-                    <th style="width:26%;">Stage / Operation</th>
-                    <th style="width:9%;">Run</th>
-                    <th style="width:12%;">Date In</th>
-                    <th style="width:10%;">Time In</th>
-                    <th style="width:12%;">Date Out</th>
-                    <th style="width:10%;">Time Out</th>
-                    <th style="width:21%;">Operator</th>
+                <tr style="background:#eef0fa;color:#2B3990;">
+                    <th style="width:16%;">Start</th>
+                    <th style="width:16%;">Finish</th>
+                    <th style="width:30%;">Operator's Name</th>
+                    <th style="width:19%;">Waste (Sheets)</th>
+                    <th style="width:19%;">Waste (Kg)</th>
                 </tr>
             </thead>
             <tbody>
-            {%- if doc.get("traveller_runs") or doc.traveller_runs -%}
-                {%- set runs_source = doc.traveller_runs or doc.get("traveller_runs") -%}
-                {%- for row in runs_source -%}
-                <tr>
-                    <td class="station-cell">{{ row.station or "" }}</td>
-                    <td style="text-align:center;"><span class="run-tag {% if row.run_number|int > 1 %}r2{% endif %}">RUN {{ row.run_number or 1 }}</span></td>
-                    <td>{{ frappe.utils.formatdate(row.date_in, "dd-MM") if row.date_in else "" }}</td>
-                    <td>{{ row.time_in or "" }}</td>
-                    <td>{{ frappe.utils.formatdate(row.date_out, "dd-MM") if row.date_out else "" }}</td>
-                    <td>{{ row.time_out or "" }}</td>
-                    <td>{{ row.operator or "" }}</td>
+                {% if _skip7 %}
+                <tr><td colspan="5" style="text-align:center;background:#fdecea;color:#6b7280;font-style:italic;height:20px;">N/A &bull; strike line + operator initials</td></tr>
+                {% else %}
+                <tr><td style="height:26px;"></td><td></td><td></td><td></td><td></td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+        {%- set _skip8 = (_is_plain and false) -%}
+        <div class="sec-head" style="margin-top:8px;">8. Pasting{% if _skip8 %} &mdash; <span style="font-weight:400;font-size:9px;">not applicable, plain job</span>{% endif %}</div>
+        <table class="dense-table tight-rows" style="font-size:8.5px;margin-bottom:0;">
+            <thead>
+                <tr style="background:#eef0fa;color:#2B3990;">
+                    <th style="width:16%;">Start</th>
+                    <th style="width:16%;">Finish</th>
+                    <th style="width:30%;">Operator's Name</th>
+                    <th style="width:19%;">Waste (Sheets)</th>
+                    <th style="width:19%;">Waste (Kg)</th>
                 </tr>
-                {%- endfor -%}
-            {%- else -%}
-                {%- for station_name, plain_skip in STATION_LIST -%}
-                {%- set is_skipped = (_is_plain and plain_skip) -%}
-                {%- if is_skipped -%}
-                <tr>
-                    <td class="station-cell skipped"><span class="seq" style="background:#6b7280;">{{ loop.index }}</span>{{ station_name }}<br><small style="font-size:7px;color:#6b7280;">— skip (plain job)</small></td>
-                    <td colspan="6" style="text-align:center; background:#fdecea; color:#6b7280; font-style:italic; font-size:9px;">N/A &bull; Strike line + operator initials</td>
+            </thead>
+            <tbody>
+                {% if _skip8 %}
+                <tr><td colspan="5" style="text-align:center;background:#fdecea;color:#6b7280;font-style:italic;height:20px;">N/A &bull; strike line + operator initials</td></tr>
+                {% else %}
+                <tr><td style="height:26px;"></td><td></td><td></td><td></td><td></td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+        {%- set _skip9 = (_is_plain and false) -%}
+        <div class="sec-head" style="margin-top:8px;">9. Creasing and Slitting{% if _skip9 %} &mdash; <span style="font-weight:400;font-size:9px;">not applicable, plain job</span>{% endif %}</div>
+        <table class="dense-table tight-rows" style="font-size:8.5px;margin-bottom:0;">
+            <thead>
+                <tr style="background:#eef0fa;color:#2B3990;">
+                    <th style="width:16%;">Start</th>
+                    <th style="width:16%;">Finish</th>
+                    <th style="width:30%;">Operator's Name</th>
+                    <th style="width:19%;">Waste (Sheets)</th>
+                    <th style="width:19%;">Waste (Kg)</th>
                 </tr>
-                {%- else -%}
-                <tr>
-                    <td class="station-cell" rowspan="2"><span class="seq">{{ loop.index }}</span>{{ station_name }}</td>
-                    <td style="text-align:center;"><span class="run-tag">RUN 1</span></td>
-                    <td></td><td></td><td></td><td></td><td></td>
+            </thead>
+            <tbody>
+                {% if _skip9 %}
+                <tr><td colspan="5" style="text-align:center;background:#fdecea;color:#6b7280;font-style:italic;height:20px;">N/A &bull; strike line + operator initials</td></tr>
+                {% else %}
+                <tr><td style="height:26px;"></td><td></td><td></td><td></td><td></td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+        {%- set _skip10 = (_is_plain and true) -%}
+        <div class="sec-head dark" style="margin-top:8px;">10. Printing{% if _skip10 %} &mdash; <span style="font-weight:400;font-size:9px;">not applicable, plain job</span>{% endif %}</div>
+        <table class="dense-table tight-rows" style="font-size:8.5px;margin-bottom:0;">
+            <thead>
+                <tr style="background:#eef0fa;color:#2B3990;">
+                    <th style="width:16%;">Start</th>
+                    <th style="width:16%;">Finish</th>
+                    <th style="width:30%;">Operator's Name</th>
+                    <th style="width:19%;">Waste (Sheets)</th>
+                    <th style="width:19%;">Waste (Kg)</th>
                 </tr>
-                <tr>
-                    <td style="text-align:center;"><span class="run-tag r2">RUN 2</span></td>
-                    <td></td><td></td><td></td><td></td><td></td>
+            </thead>
+            <tbody>
+                {% if _skip10 %}
+                <tr><td colspan="5" style="text-align:center;background:#fdecea;color:#6b7280;font-style:italic;height:20px;">N/A &bull; strike line + operator initials</td></tr>
+                {% else %}
+                <tr><td style="height:26px;"></td><td></td><td></td><td></td><td></td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+        {%- set _skip11 = (_is_plain and false) -%}
+        <div class="sec-head" style="margin-top:8px;">11. Slotting{% if _skip11 %} &mdash; <span style="font-weight:400;font-size:9px;">not applicable, plain job</span>{% endif %}</div>
+        <table class="dense-table tight-rows" style="font-size:8.5px;margin-bottom:0;">
+            <thead>
+                <tr style="background:#eef0fa;color:#2B3990;">
+                    <th style="width:16%;">Start</th>
+                    <th style="width:16%;">Finish</th>
+                    <th style="width:30%;">Operator's Name</th>
+                    <th style="width:19%;">Waste (Sheets)</th>
+                    <th style="width:19%;">Waste (Kg)</th>
                 </tr>
-                {%- endif -%}
-                {%- endfor -%}
-            {%- endif -%}
+            </thead>
+            <tbody>
+                {% if _skip11 %}
+                <tr><td colspan="5" style="text-align:center;background:#fdecea;color:#6b7280;font-style:italic;height:20px;">N/A &bull; strike line + operator initials</td></tr>
+                {% else %}
+                <tr><td style="height:26px;"></td><td></td><td></td><td></td><td></td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+        {%- set _skip12 = (_is_plain and false) -%}
+        <div class="sec-head" style="margin-top:8px;">12. Stitching{% if _skip12 %} &mdash; <span style="font-weight:400;font-size:9px;">not applicable, plain job</span>{% endif %}</div>
+        <table class="dense-table tight-rows" style="font-size:8.5px;margin-bottom:0;">
+            <thead>
+                <tr style="background:#eef0fa;color:#2B3990;">
+                    <th style="width:16%;">Start</th>
+                    <th style="width:16%;">Finish</th>
+                    <th style="width:30%;">Operator's Name</th>
+                    <th style="width:19%;">Waste (Sheets)</th>
+                    <th style="width:19%;">Waste (Kg)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if _skip12 %}
+                <tr><td colspan="5" style="text-align:center;background:#fdecea;color:#6b7280;font-style:italic;height:20px;">N/A &bull; strike line + operator initials</td></tr>
+                {% else %}
+                <tr><td style="height:26px;"></td><td></td><td></td><td></td><td></td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+        {%- set _skip13 = (_is_plain and false) -%}
+        <div class="sec-head" style="margin-top:8px;">13. Bundling{% if _skip13 %} &mdash; <span style="font-weight:400;font-size:9px;">not applicable, plain job</span>{% endif %}</div>
+        <table class="dense-table tight-rows" style="font-size:8.5px;margin-bottom:0;">
+            <thead>
+                <tr style="background:#eef0fa;color:#2B3990;">
+                    <th style="width:16%;">Start</th>
+                    <th style="width:16%;">Finish</th>
+                    <th style="width:30%;">Operator's Name</th>
+                    <th style="width:19%;">Waste (Sheets)</th>
+                    <th style="width:19%;">Waste (Kg)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if _skip13 %}
+                <tr><td colspan="5" style="text-align:center;background:#fdecea;color:#6b7280;font-style:italic;height:20px;">N/A &bull; strike line + operator initials</td></tr>
+                {% else %}
+                <tr><td style="height:26px;"></td><td></td><td></td><td></td><td></td></tr>
+                {% endif %}
             </tbody>
         </table>
 
-        <div class="sec-head" style="margin-top:10px;">8. Station Production &amp; Waste Log</div>
-        <table class="dense-table tight-rows" style="font-size:8.5px;">
-            <thead>
-                <tr style="background:#eef0fa; color:#2B3990;">
-                    <th style="width:26%;">Stage / Operation</th>
-                    <th style="width:9%;">Run</th>
-                    <th style="width:13%;">Qty In</th>
-                    <th style="width:13%;">Qty Good</th>
-                    <th style="width:13%;">Waste</th>
-                    <th style="width:13%;">Operator</th>
-                    <th style="width:13%;">Verify</th>
-                </tr>
-            </thead>
-            <tbody>
-            {%- if doc.get("traveller_runs") or doc.traveller_runs -%}
-                {%- set runs_source = doc.traveller_runs or doc.get("traveller_runs") -%}
-                {%- for row in runs_source -%}
-                <tr>
-                    <td class="station-cell">{{ row.station or "" }}</td>
-                    <td style="text-align:center;"><span class="run-tag {% if row.run_number|int > 1 %}r2{% endif %}">RUN {{ row.run_number or 1 }}</span></td>
-                    <td>{{ row.qty_in or "" }}</td>
-                    <td><strong>{{ row.qty_good or "" }}</strong></td>
-                    <td>{{ row.qty_waste or "" }}</td>
-                    <td>{{ row.operator or "" }}</td>
-                    <td>{{ row.verified_by or "" }}</td>
-                </tr>
-                {%- endfor -%}
-            {%- else -%}
-                {%- for station_name, plain_skip in STATION_LIST -%}
-                {%- set is_skipped = (_is_plain and plain_skip) -%}
-                {%- if is_skipped -%}
-                <tr>
-                    <td class="station-cell skipped"><span class="seq" style="background:#6b7280;">{{ loop.index }}</span>{{ station_name }}<br><small style="font-size:7px;color:#6b7280;">— skip (plain job)</small></td>
-                    <td colspan="6" style="text-align:center; background:#fdecea; color:#6b7280; font-style:italic; font-size:9px;">N/A &bull; Strike line + operator initials</td>
-                </tr>
-                {%- else -%}
-                <tr>
-                    <td class="station-cell" rowspan="2"><span class="seq">{{ loop.index }}</span>{{ station_name }}</td>
-                    <td style="text-align:center;"><span class="run-tag">RUN 1</span></td>
-                    <td></td><td></td><td></td><td></td><td></td>
-                </tr>
-                <tr>
-                    <td style="text-align:center;"><span class="run-tag r2">RUN 2</span></td>
-                    <td></td><td></td><td></td><td></td><td></td>
-                </tr>
-                {%- endif -%}
-                {%- endfor -%}
-            {%- endif -%}
-            </tbody>
-        </table>
 
         <div class="cont-slip">
             <strong>Continuation Run Slip SOP:</strong> If work batches at an operation exceed a two-day duration window, attach a matching Continuation Run Slip to this traveler. All slips must be audited by the Planner upon plant lot completion.
@@ -1006,7 +1061,7 @@
             </tr>
         </table>
 
-        <div class="sec-head">9. QC Critical Checkpoints (First-Off &amp; Random Sampling Validation)</div>
+        <div class="sec-head">14. QC Critical Checkpoints (First-Off &amp; Random Sampling Validation)</div>
         <table class="dense-table" style="font-size:9px;">
             <tr style="background:#eef0fa;">
                 <th style="width:35%;">Required Checkpoint Inspection Parameters</th>
