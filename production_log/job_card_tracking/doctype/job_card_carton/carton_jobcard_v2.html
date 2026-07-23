@@ -1,0 +1,915 @@
+<style>
+    /* GLOBAL PRINT LAYOUT ENGINE */
+    @page { size: A4; margin: 10mm; }
+    @page carton-landscape { size: A4 landscape; margin: 10mm; }
+    
+    .vcl-wrapper {
+        font-family: Inter, 'Segoe UI', Arial, sans-serif;
+        color: #111827;
+        font-size: 10.5px;
+        line-height: 1.2;
+    }
+    .page-break { page-break-before: always; }
+    .layout-page { page: carton-landscape; }
+    
+    /* HEADERS & TYPOGRAPHY */
+    .header-table {
+        width: 100%;
+        border-bottom: 3px solid #2B3990;
+        margin-bottom: 8px;
+        padding-bottom: 4px;
+        border-collapse: collapse;
+    }
+    .main-title {
+        color: #2B3990;
+        font-size: 20px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: -0.2px;
+    }
+    .small-brand {
+        font-size: 10px;
+        font-weight: 900;
+        color: #00395D;
+        text-transform: uppercase;
+    }
+    .job-box {
+        border: 2px solid #2B3990;
+        padding: 5px;
+        text-align: center;
+    }
+    .sec-head {
+        background: #2B3990;
+        color: #fff;
+        padding: 5px 8px;
+        font-weight: 900;
+        font-size: 10px;
+        text-transform: uppercase;
+        border-radius: 2px 2px 0 0;
+        margin-top: 8px;
+    }
+    .sec-head.alt { background: #00395D; }
+    .sec-head.sage { background: #0E9E5A; }
+    
+    /* MATRIX GRIDS & BOX TABLES */
+    .dense-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 3px;
+        table-layout: fixed;
+    }
+    .dense-table td,
+    .dense-table th {
+        border: 1.4px solid #6B7280;
+        padding: 6px;
+        vertical-align: top;
+        word-wrap: break-word;
+    }
+    .dense-table th {
+        background: #F3F4F6;
+        text-align: left;
+        font-weight: 900;
+        font-size: 8.5px;
+        text-transform: uppercase;
+        color: #111827;
+    }
+    .tight-rows td, .tight-rows th { 
+        padding-top: 2px; 
+        padding-bottom: 2px; 
+    }
+    /* keep a row's cells together rather than splitting across a page */
+    tr { page-break-inside: avoid; }
+    /* wkhtmltopdf otherwise emits a trailing blank sheet after the last block */
+    .vcl-wrapper > .page-container:last-child { page-break-after: avoid; }
+    .vcl-wrapper > .page-container:last-child > *:last-child { margin-bottom: 0; }
+    
+    /* FIELD LABELS & VALUE DISPLAYS */
+    .lbl {
+        font-size: 8px;
+        color: #00395D;
+        font-weight: 900;
+        text-transform: uppercase;
+        display: block;
+        margin-bottom: 2px;
+        letter-spacing: 0.25px;
+    }
+    .val {
+        font-weight: 900;
+        color: #111827;
+        font-size: 12px;
+    }
+    .board-box {
+        border: 2px solid #111827;
+        padding: 8px;
+        text-align: center;
+        font-size: 16px;
+        font-weight: 900;
+        background: #fff;
+        margin-top: 4px;
+    }
+    .sig-line {
+        border-top: 1.5px solid #111827;
+        width: 85%;
+        margin: 5px auto 3px auto;
+    }
+    .sub-header-grid {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 8px;
+    }
+    .sub-header-grid td {
+        border: 1px solid #D1D5DB;
+        padding: 4px 8px;
+        font-size: 9px;
+    }
+    .sub-header-grid .k {
+        background: #F3F4F6;
+        font-weight: 900;
+        width: 12%;
+        text-transform: uppercase;
+        color: #00395D;
+    }
+    
+    /* NOTIFICATIONS & SLIPS */
+    .calc-note {
+        margin-top: 5px;
+        padding: 6px 10px;
+        background: #F0FDF4;
+        border-left: 3px solid #0E9E5A;
+        font-size: 9px;
+        color: #111827;
+    }
+    .warning-note {
+        margin-top: 5px;
+        padding: 6px 10px;
+        background: #FFF7ED;
+        border-left: 3px solid #F97316;
+        font-size: 9px;
+        color: #111827;
+    }
+    .cont-slip { 
+        border: 1.5px dashed #2B3990; 
+        padding: 4px 10px; 
+        margin-top: 4px; 
+        font-size: 9px; 
+        background: #fafbff; 
+        color: #1e2235; 
+    }
+    .cont-slip strong { color: #2B3990; }
+    
+    /* SVG BLANK GRAPHICS */
+    .layout-shell {
+        border: 1.5px solid #D1D5DB;
+        padding: 8px;
+        background: #fff;
+    }
+    .carton-svg {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+    .layout-legend {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 6px;
+        table-layout: fixed;
+    }
+    .layout-legend td {
+        border: 1px solid #D1D5DB;
+        padding: 5px;
+        font-size: 8.5px;
+        background: #F8FAFC;
+    }
+    .layout-legend strong {
+        color: #2B3990;
+        display: block;
+        font-size: 9px;
+    }
+    
+    /* VISUAL PROGRESS FLOOR LOG ARCHITECTURE */
+    .station-cell { 
+        background: #f7f8fc !important; 
+        color: #2B3990; 
+        font-weight: 700; 
+        padding: 5px 8px; 
+        border-left: 4px solid #2B3990; 
+        vertical-align: middle; 
+    }
+    .station-cell.skipped { 
+        background: #fdecea !important; 
+        color: #6b7280; 
+        text-decoration: line-through; 
+    }
+    .station-cell .seq { 
+        display: inline-block; 
+        background: #2B3990; 
+        color: #fff; 
+        width: 14px; 
+        height: 14px; 
+        border-radius: 50%; 
+        text-align: center; 
+        font-size: 8px; 
+        line-height: 14px; 
+        margin-right: 5px; 
+        vertical-align: middle; 
+        font-weight: 700; 
+    }
+    .run-tag { 
+        display: inline-block; 
+        background: #eef0fa; 
+        color: #2B3990; 
+        font-size: 8px; 
+        font-weight: 700; 
+        padding: 1px 5px; 
+        border-radius: 6px; 
+    }
+    .run-tag.r2 { 
+        background: #fff3dc; 
+        color: #c07800; 
+    }
+    
+    /* COMPONENT INSPECTION & FINANCING VIZ */
+    .qc-box { 
+        width: 14px; 
+        height: 14px; 
+        border: 1.5px solid #2B3990; 
+        margin: 1px auto; 
+    }
+    .checkbox-cell { 
+        width: 15px; 
+        height: 15px; 
+        border: 1.5px solid #2B3990; 
+        display: inline-block; 
+    }
+    .res-pre { 
+        background: #eef0fa !important; 
+        color: #2B3990; 
+        font-weight: 700; 
+        font-size: 9px; 
+        padding: 3px 6px; 
+    }
+    .yield-gauge-grid { 
+        display: grid; 
+        grid-template-columns: repeat(4, 1fr); 
+        gap: 6px; 
+        margin: 6px 0; 
+    }
+    .yield-gauge-cell { 
+        border: 1.5px solid #2B3990; 
+        border-radius: 3px; 
+        padding: 6px 8px; 
+        background: #fafbff; 
+    }
+    .yield-gauge-cell .glbl { 
+        font-size: 8px; 
+        color: #2B3990; 
+        font-weight: 700; 
+        text-transform: uppercase; 
+        letter-spacing: 0.4px; 
+    }
+    .yield-gauge-cell .gtheo { 
+        font-size: 8px; 
+        color: #6b7280; 
+        margin-top: 1px; 
+    }
+    .yield-gauge-cell .gactual { 
+        font-size: 14px; 
+        font-weight: 900; 
+        color: #1e2235; 
+        margin-top: 2px; 
+    }
+    .yield-gauge-cell .gvar { 
+        font-size: 8px; 
+        color: #0e9e5a; 
+        font-weight: 700; 
+    }
+</style>
+
+{# ============================
+   CORE JINJA PARAMETERS & FAILSAFE FALLBACKS
+   ============================ #}
+{%- set product_type = doc.product_type or doc.get("product_type") or "Standard RSC" -%}
+{%- set joint_type = doc.joint_type or doc.get("joint_type") or "" -%}
+{%- set print_type = doc.print_type or doc.get("print_type") or "Printed" -%}
+{%- set _is_plain = (print_type == "Plain") -%}
+
+{%- set L = doc.ctn_length_mm | float if doc.ctn_length_mm else (doc.get("ctn_length_mm") | float if doc.get("ctn_length_mm") else 0) -%}
+{%- set W = doc.ctn_width_mm | float if doc.ctn_width_mm else (doc.get("ctn_width_mm") | float if doc.get("ctn_width_mm") else 0) -%}
+{%- set H = doc.ctn_height_mm | float if doc.ctn_height_mm else (doc.get("ctn_height_mm") | float if doc.get("ctn_height_mm") else 0) -%}
+{%- set flap = doc.ctn_flap_mm | float if doc.ctn_flap_mm else (doc.get("ctn_flap_mm") | float if doc.get("ctn_flap_mm") else (W / 2 if W else 0)) -%}
+{#- VCL standard: 30mm tab for every joint type (stitch flap reduced from 40mm 2026-07-23). -#}
+{%- set tab_width = 30 -%}
+
+{# Compute absolute flat sheet boundaries #}
+{%- if product_type == "Tray" -%}
+    {%- set calc_board_w = W + (2 * H) -%}
+    {%- set calc_board_l = L + (2 * H) -%}
+    {%- set panel_1 = L -%}
+    {%- set panel_2 = H -%}
+    {%- set panel_3 = W -%}
+    {%- set panel_4 = H -%}
+{%- elif product_type == "1 Flap RSC" -%}
+    {%- set calc_board_w = H + flap -%}
+    {%- set calc_board_l = (2 * L) + (2 * W) + tab_width -%}
+    {%- set panel_1 = L -%}
+    {%- set panel_2 = W -%}
+    {%- set panel_3 = L -%}
+    {%- set panel_4 = W -%}
+{%- else -%}
+    {%- set calc_board_w = flap + H + flap -%}
+    {%- set calc_board_l = (2 * L) + (2 * W) + tab_width -%}
+    {%- set panel_1 = L -%}
+    {%- set panel_2 = W -%}
+    {%- set panel_3 = L -%}
+    {%- set panel_4 = W -%}
+{%- endif -%}
+
+{%- set saved_board_w = doc.board_width_planned_mm | float if doc.board_width_planned_mm else (doc.get("board_width_planned_mm") | float if doc.get("board_width_planned_mm") else 0) -%}
+{%- set saved_board_l = doc.board_length_planned_mm | float if doc.board_length_planned_mm else (doc.get("board_length_planned_mm") | float if doc.get("board_length_planned_mm") else 0) -%}
+{%- set board_w = saved_board_w if saved_board_w else calc_board_w -%}
+{%- set board_l = saved_board_l if saved_board_l else calc_board_l -%}
+{%- set area = (board_w / 1000.0) * (board_l / 1000.0) -%}
+
+{# Structural take-up calculation constraints #}
+{%- set flute_type = (doc.flute_type or doc.get("flute_type") or "").upper() -%}
+{%- set factor = 1.7 if "E" in flute_type else 1.5 -%}
+
+{%- set gsm1 = doc.ply_1_top_layer_gsm | float if doc.ply_1_top_layer_gsm else (doc.get("1_ply_top_layer_gsm") | float if doc.get("1_ply_top_layer_gsm") else 0) -%}
+{%- set gsm2 = doc.ply_2_fluting_gsm | float if doc.ply_2_fluting_gsm else (doc.get("2_ply_fluting_gsm") | float if doc.get("2_ply_fluting_gsm") else 0) -%}
+{%- set gsm3 = doc.ply_3_bottom_gsm | float if doc.ply_3_bottom_gsm else (doc.get("3_ply_bottom_gsm") | float if doc.get("3_ply_bottom_gsm") else 0) -%}
+{%- set gsm4 = doc.ply_4_fluting_gsm | float if doc.ply_4_fluting_gsm else (doc.get("4_ply_fluting_gsm") | float if doc.get("4_ply_fluting_gsm") else 0) -%}
+{%- set gsm5 = doc.ply_5_fluting_gsm | float if doc.ply_5_fluting_gsm else (doc.get("5_ply_fluting_gsm") | float if doc.get("5_ply_fluting_gsm") else 0) -%}
+{%- set ply = doc.ply or doc.get("ply") or "" -%}
+
+{%- if ply == "5" -%}
+    {%- set unit_weight = (area * gsm1) + (area * gsm2 * factor) + (area * gsm3) + (area * gsm4 * factor) + (area * gsm5) -%}
+{%- elif ply == "SFK" -%}
+    {%- set unit_weight = (area * gsm1) + (area * gsm2 * factor) -%}
+{%- else -%}
+    {%- set unit_weight = (area * gsm1) + (area * gsm2 * factor) + (area * gsm3) -%}
+{%- endif -%}
+
+{%- set mat1 = doc.ply_1_top_layer_material or doc.get("1_ply_top_layer_material") or "" -%}
+{%- set mat3 = doc.ply_3_top_layer_material or doc.get("3_ply_top_layer_material") or "" -%}
+
+{# Corrugator layout calculations #}
+{%- set trim_w = doc.trim_allowance_width_mm | float if doc.trim_allowance_width_mm else (doc.get("trim_allowance_width_mm") | float if doc.get("trim_allowance_width_mm") else 0) -%}
+{%- set knife = doc.knife_gap_mm | float if doc.knife_gap_mm else (doc.get("knife_gap_mm") | float if doc.get("knife_gap_mm") else 0) -%}
+{%- set max_reel = doc.max_reel_width | float if doc.max_reel_width else (doc.get("max_reel_width") | float if doc.get("max_reel_width") else 1500) -%}
+{%- set trim_total = 2 * trim_w -%}
+{%- set bw = calc_board_w -%}
+{%- set bl = calc_board_l -%}
+
+{%- set ns = namespace(a_max_n=0, a_max_reel=0, b_max_n=0, b_max_reel=0) -%}
+{%- for n in range(1, 13) -%}
+    {%- set a_reel = (n * bw) + (knife * (n - 1)) + trim_total -%}
+    {%- if a_reel <= max_reel and n > ns.a_max_n -%}
+        {%- set ns.a_max_n = n -%}
+        {%- set ns.a_max_reel = a_reel -%}
+    {%- endif -%}
+    {%- set b_reel = (n * bl) + (knife * (n - 1)) + trim_total -%}
+    {%- if b_reel <= max_reel and n > ns.b_max_n -%}
+        {%- set ns.b_max_n = n -%}
+        {%- set ns.b_max_reel = b_reel -%}
+    {%- endif -%}
+{%- endfor -%}
+
+{# Coordinate scaling constraints for built-in SVG render engine #}
+{%- set svg_x0, svg_y0, svg_w, svg_h = 110, 80, 680, 230 -%}
+{%- set safe_board_l = board_l if board_l else 1 -%}
+{%- set safe_board_w = board_w if board_w else 1 -%}
+{%- set sx = svg_w / safe_board_l -%}
+{%- set sy = svg_h / safe_board_w -%}
+{%- set p1w, p2w, p3w, p4w, tabw = panel_1 * sx, panel_2 * sx, panel_3 * sx, panel_4 * sx, tab_width * sx -%}
+
+{%- if product_type == "1 Flap RSC" -%}
+    {%- set top_flap_h, body_y, body_h = 0, svg_y0, H * sy -%}
+    {%- set bottom_flap_y, bottom_flap_h = body_y + body_h, flap * sy -%}
+{%- elif product_type == "Tray" -%}
+    {%- set top_flap_h = H * sy -%}
+    {%- set body_y, body_h = svg_y0 + top_flap_h, W * sy -%}
+    {%- set bottom_flap_y, bottom_flap_h = body_y + body_h, H * sy -%}
+{%- else -%}
+    {%- set top_flap_h = flap * sy -%}
+    {%- set body_y, body_h = svg_y0 + top_flap_h, H * sy -%}
+    {%- set bottom_flap_y, bottom_flap_h = body_y + body_h, flap * sy -%}
+{%- endif -%}
+{%- set x1, x2, x3, x4, x5 = svg_x0 + p1w, svg_x0 + p1w + p2w, svg_x0 + p1w + p2w + p3w, svg_x0 + p1w + p2w + p3w + p4w, svg_x0 + p1w + p2w + p3w + p4w + tabw -%}
+
+<div class="vcl-wrapper">
+    <div class="page-container">
+        <table class="header-table">
+            <tr>
+                <td>
+                    <div class="main-title">Carton Job Traveller</div>
+                    <div class="small-brand">Vimit Converters Ltd &bull; Master Authorization</div>
+                </td>
+                <td align="right" width="30%">
+                    <div class="job-box">
+                        <span class="lbl">Job Card No.</span>
+                        <div style="font-size:16px;font-weight:900;color:#2B3990;">{{ doc.name }}</div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <div class="sec-head">1. Commercial &amp; Order Details</div>
+        <table class="dense-table">
+            <tr>
+                <td colspan="3">
+                    <span class="lbl">Customer Name</span>
+                    <span class="val">{{ doc.customer_name or doc.get("customer_name") or "INTERNAL / STOCK" }}</span>
+                    <div style="margin-top:8px;border-top:1px dashed #D1D5DB;padding-top:4px;">
+                        <span class="lbl">Job Description / Specific Remarks</span>
+                        <span class="val" style="font-size:11px;color:#333;">{{ doc.job_description or doc.get("job_description") or "N/A" }}</span>
+                    </div>
+                </td>
+                <td>
+                    <span class="lbl">Order / LPO No.</span>
+                    <span class="val">{{ doc.lpo_no or doc.customer_po_no or doc.get("customer_po_no") or "________________" }}</span>
+                    <div style="margin-top:15px;">
+                        <span class="lbl">New / Repeat</span>
+                        <span class="val">{{ doc.repeat or doc.get("repeat") or "NEW" }}</span>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td><span class="lbl">Qty Ordered</span><span class="val" style="font-size:16px;">{{ doc.quantity_ordered or doc.qty or doc.get("quantity_ordered") or "0" }} PCS</span></td>
+                <td><span class="lbl">Due Date</span><span class="val">{{ frappe.utils.formatdate(doc.due_date or doc.get("due_date"), "dd.mm.yyyy") if (doc.due_date or doc.get("due_date")) else "" }}</span></td>
+                <td>
+                    <span class="lbl">Colours</span>
+                    <span class="val">
+                        {%- set _spots = doc.spot_colours or doc.get("spot_colours") or [] -%}
+                        {%- set _cmyk = [] -%}
+                        {%- if doc.uses_c or doc.cyan or doc.get("uses_c") %}{% set _ = _cmyk.append("C") %}{% endif -%}
+                        {%- if doc.uses_m or doc.magenta or doc.get("uses_m") %}{% set _ = _cmyk.append("M") %}{% endif -%}
+                        {%- if doc.uses_y or doc.yellow or doc.get("uses_y") %}{% set _ = _cmyk.append("Y") %}{% endif -%}
+                        {%- if doc.uses_k or doc.black or doc.get("uses_k") %}{% set _ = _cmyk.append("K") %}{% endif -%}
+                        {%- set _parts = [] -%}
+                        {%- if _cmyk %}{% set _ = _parts.append(_cmyk | join("")) %}{% endif -%}
+                        {%- for s in _spots -%}
+                            {%- set _ = _parts.append(s.pantone_code or s.pantone_name or s.hex_preview or s.color) -%}
+                        {%- endfor -%}
+                        {%- if _parts %}{{ _parts | join(", ") }}{% else %}PLAIN{% endif -%}
+                    </span>
+                </td>
+                <td><span class="lbl">Date Created</span><span class="val">{{ frappe.utils.formatdate(doc.creation, "dd.mm.yyyy") if doc.creation else "" }}</span></td>
+            </tr>
+        </table>
+
+        <div class="sec-head alt">2. Product Specifications</div>
+        <table class="dense-table">
+            <tr>
+                <td><span class="lbl">Length</span><span class="val">{{ L|int if L else "" }} mm</span></td>
+                <td><span class="lbl">Width</span><span class="val">{{ W|int if W else "" }} mm</span></td>
+                <td><span class="lbl">Height</span><span class="val">{{ H|int if H else "" }} mm</span></td>
+                <td><span class="lbl">Flap</span><span class="val">{{ flap|int if flap else "" }} mm</span></td>
+                <td><span class="lbl">Ply</span><span class="val" style="font-size:16px;">{{ ply or "N/A" }}</span></td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <span class="lbl">Paper Combination / GSM Detail</span>
+                    <span class="val">
+                        {%- if ply == "5" -%}
+                            {{ gsm1|int }} {{ mat1 }} / {{ gsm2|int }}F / {{ gsm3|int }} {{ mat3 }} / {{ gsm4|int }}F / {{ gsm5|int }}
+                        {%- elif ply == "3" -%}
+                            {{ gsm1|int }} {{ mat1 }} / {{ gsm2|int }}F / {{ gsm3|int }} {{ mat3 }}
+                        {%- elif ply == "SFK" -%}
+                            {{ gsm1|int }} {{ mat1 }} / {{ gsm2|int }}F
+                        {%- else -%}
+                            N/A
+                        {%- endif -%}
+                    </span>
+                </td>
+                <td><span class="lbl">Flute Type</span><span class="val">{{ flute_type or "N/A" }}</span></td>
+                <td><span class="lbl">Joint Type</span><span class="val">{{ joint_type or "N/A" }}</span></td>
+                <td><span class="lbl">Product Type</span><span class="val">{{ product_type or "N/A" }}</span></td>
+            </tr>
+        </table>
+
+        <div class="sec-head">3. Board Production &amp; Calculated Weight</div>
+        <table class="dense-table">
+            <tr>
+                <td><span class="lbl">Planned Board Size (W × L)</span><div class="board-box">{{ board_w|int }} × {{ board_l|int }}</div></td>
+                <td><span class="lbl">System Calculated Blank</span><div class="board-box" style="background:#F8FAFC;color:#2B3990;">{{ calc_board_w|int }} × {{ calc_board_l|int }}</div></td>
+                <td><span class="lbl">Calc. Unit Weight</span><div class="board-box" style="background:#F8FAFC;color:#2B3990;">{{ "%.2f" % unit_weight }} g</div></td>
+                <td><span class="lbl">Actual Board Size</span><div class="board-box" style="border-color:#9CA3AF;color:#6B7280;">____ × ____</div></td>
+            </tr>
+        </table>
+
+        {% if saved_board_w and saved_board_l and (saved_board_w|int != calc_board_w|int or saved_board_l|int != calc_board_l|int) %}
+            <div class="warning-note">
+                <strong>Check required:</strong> saved planned board size differs from the calculated board size.
+                Saved = {{ saved_board_w|int }} × {{ saved_board_l|int }} mm. Calculated = {{ calc_board_w|int }} × {{ calc_board_l|int }} mm.
+            </div>
+        {% endif %}
+
+        <div class="sec-head alt">Actual Production Output — Finished Cartons Packed</div>
+        <table class="dense-table">
+            <tr>
+                <td><span class="lbl">Actual Bundles Packed</span><div class="board-box" style="border-color:#9CA3AF;height:38px;padding:5px;margin-top:3px;"></div></td>
+                <td><span class="lbl">Loose Cartons (Sheets)</span><div class="board-box" style="border-color:#9CA3AF;height:38px;padding:5px;margin-top:3px;"></div></td>
+                <td><span class="lbl">Total Cartons Packed</span><div class="board-box" style="border-color:#9CA3AF;height:38px;padding:5px;margin-top:3px;"></div></td>
+                <td><span class="lbl">Packed By / Date</span><div class="board-box" style="border-color:#9CA3AF;height:38px;padding:5px;margin-top:3px;"></div></td>
+            </tr>
+        </table>
+
+        {% if ply != "SFK" and product_type != "Die Cut" and L > 0 and W > 0 %}
+            <div class="sec-head sage">4. UPS Forecast — Reel Layout Planning</div>
+            <table class="dense-table">
+                <tr>
+                    <td colspan="3" style="background:#F3F4F6;font-size:9px;">
+                        <b>Reel limit:</b> {{ max_reel|int }} mm &nbsp;|&nbsp;
+                        <b>Trim per edge:</b> {{ trim_w|int }} mm &nbsp;|&nbsp;
+                        <b>Knife gap:</b> {{ knife|int }} mm &nbsp;|&nbsp;
+                        <b>Blank:</b> {{ bw|int }} × {{ bl|int }} mm
+                    </td>
+                </tr>
+            </table>
+            <table class="dense-table">
+                <tr>
+                    <th width="11%" style="text-align:center;">UPS</th>
+                    <th>Orientation A — {{ bw|int }} mm across reel</th>
+                    <th>Orientation B — {{ bl|int }} mm across reel</th>
+                </tr>
+                {%- set max_show = ([ns.a_max_n, ns.b_max_n] | max) + 1 -%}
+                {%- for n in range(1, max_show + 1) -%}
+                    {%- set a_reel = (n * bw) + (knife * (n - 1)) + trim_total -%}
+                    {%- set b_reel = (n * bl) + (knife * (n - 1)) + trim_total -%}
+                    {%- set a_fits = a_reel <= max_reel -%}
+                    {%- set b_fits = b_reel <= max_reel -%}
+                    {%- set a_opt = a_fits and n == ns.a_max_n and ns.a_max_n >= ns.b_max_n -%}
+                    {%- set b_opt = b_fits and n == ns.b_max_n and ns.b_max_n > ns.a_max_n -%}
+                    <tr {% if a_opt or b_opt %}style="background:#ECFDF5;"{% endif %}>
+                        <td style="text-align:center;font-weight:900;font-size:11px;">{{ n }}</td>
+                        <td>
+                            {% if a_fits %}<span style="color:#0E9E5A;font-weight:900;">&#10003; {{ a_reel|int }} mm</span>{% else %}<span style="color:#C62828;">&#10007; {{ a_reel|int }} mm (over by {{ (a_reel - max_reel)|int }})</span>{% endif %}
+                            {% if a_opt %}<span style="background:#0E9E5A;color:#fff;padding:1px 6px;border-radius:2px;font-size:8px;margin-left:6px;">OPTIMAL</span>{% endif %}
+                        </td>
+                        <td>
+                            {% if b_fits %}<span style="color:#0E9E5A;font-weight:900;">&#10003; {{ b_reel|int }} mm</span>{% else %}<span style="color:#C62828;">&#10007; {{ b_reel|int }} mm (over by {{ (b_reel - max_reel)|int }})</span>{% endif %}
+                            {% if b_opt %}<span style="background:#0E9E5A;color:#fff;padding:1px 6px;border-radius:2px;font-size:8px;margin-left:6px;">OPTIMAL</span>{% endif %}
+                        </td>
+                    </tr>
+                {%- endfor %}
+            </table>
+            <div class="calc-note">
+                {% if ns.a_max_n >= ns.b_max_n and ns.a_max_n > 0 %}
+                    <b>Recommended:</b> {{ ns.a_max_n }}-UP @ Orientation A — reel width <b>{{ ns.a_max_reel|int }} mm</b> ({{ "%.1f"|format((ns.a_max_reel / max_reel) * 100) }}% efficiency).
+                {% elif ns.b_max_n > 0 %}
+                    <b>Recommended:</b> {{ ns.b_max_n }}-UP @ Orientation B — reel width <b>{{ ns.b_max_reel|int }} mm</b> ({{ "%.1f"|format((ns.b_max_reel / max_reel) * 100) }}% efficiency).
+                {% else %}
+                    <b style="color:#C62828;">No layout fits within {{ max_reel|int }} mm. Modify dimensions or raise Max Reel Width.</b>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <div class="sec-head alt">5. Panel &amp; Flap Dimensions</div>
+        <table class="dense-table">
+            <tr><th width="15%">Type</th><th>Part 1</th><th>Part 2</th><th>Part 3</th><th>Part 4</th><th>Tab</th><th>Total</th></tr>
+            <tr>
+                <td style="background:#F9FAFB;font-weight:900;">FLAP / H</td>
+                <td>{{ flap|int }}</td><td>{{ H|int }}</td><td>{{ flap|int if product_type != "1 Flap RSC" else "-" }}</td><td>-</td><td>-</td>
+                <td style="background:#F3F4F6;font-weight:900;">{{ calc_board_w|int }}</td>
+            </tr>
+            <tr>
+                <td style="background:#F9FAFB;font-weight:900;">PANEL</td>
+                <td>{{ panel_1|int }}</td><td>{{ panel_2|int }}</td><td>{{ panel_3|int }}</td><td>{{ panel_4|int }}</td><td>{{ tab_width|int }}</td>
+                <td style="background:#F3F4F6;font-weight:900;">{{ calc_board_l|int }}</td>
+            </tr>
+        </table>
+
+        <table width="100%" style="margin-top:3px;">
+            <tr>
+                <td align="center" width="33%"><div class="sig-line"></div><span class="lbl">Sales Rep</span></td>
+                <td align="center" width="34%"><div class="sig-line"></div><span class="lbl">Management</span></td>
+                <td align="center" width="33%"><div class="sig-line"></div><span class="lbl">Production Manager</span></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="page-container layout-page page-break">
+        <table class="header-table">
+            <tr>
+                <td>
+                    <div class="main-title">Carton Layout</div>
+                    <div class="small-brand">Vimit Converters Ltd &bull; Dynamic Blank Layout</div>
+                </td>
+                <td align="right" width="24%">
+                    <div class="job-box">
+                        <span class="lbl">Job Card No.</span>
+                        <span class="val" style="font-size:14px;color:#2B3990;">{{ doc.name }}</span>
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <table class="sub-header-grid">
+            <tr>
+                <td class="k">Length</td><td>{{ L|int }} mm</td>
+                <td class="k">Width</td><td>{{ W|int }} mm</td>
+                <td class="k">Height</td><td>{{ H|int }} mm</td>
+                <td class="k">Flap</td><td>{{ flap|int }} mm</td>
+                <td class="k">Tab</td><td>{{ tab_width|int }} mm</td>
+                <td class="k">Type</td><td>{{ product_type }}</td>
+            </tr>
+        </table>
+
+        <table class="dense-table" style="margin-bottom:8px;">
+            <tr>
+                <th width="18%">Board Size</th>
+                <th>Calculated Width</th>
+                <th>Calculated Length</th>
+                <th>Saved Planned Width</th>
+                <th>Saved Planned Length</th>
+                <th>Actual Width</th>
+                <th>Actual Length</th>
+            </tr>
+            <tr>
+                <td style="background:#EEF0FA;font-weight:900;">MM</td>
+                <td><span class="val">{{ calc_board_w|int }}</span></td>
+                <td><span class="val">{{ calc_board_l|int }}</span></td>
+                <td><span class="val">{{ saved_board_w|int if saved_board_w else "—" }}</span></td>
+                <td><span class="val">{{ saved_board_l|int if saved_board_l else "—" }}</span></td>
+                <td><span class="val" style="color:#6B7280;">{{ doc.board_width_actual_mm|int if doc.board_width_actual_mm else (doc.get("board_width_actual_mm")|int if doc.get("board_width_actual_mm") else "________") }}</span></td>
+                <td><span class="val" style="color:#6B7280;">{{ doc.board_length_actual_mm|int if doc.board_length_actual_mm else (doc.get("board_length_actual_mm")|int if doc.get("board_length_actual_mm") else "________") }}</span></td>
+            </tr>
+        </table>
+
+        <div class="layout-shell">
+            <svg class="carton-svg" viewBox="0 0 900 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dynamic carton blank layout">
+                <defs>
+                    <pattern id="vclgrid" width="18" height="18" patternUnits="userSpaceOnUse">
+                        <path d="M 18 0 L 0 0 0 18" fill="none" stroke="#E5E7EB" stroke-width="0.8" />
+                    </pattern>
+                    <marker id="arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto" markerUnits="strokeWidth">
+                        <path d="M0,0 L8,4 L0,8 z" fill="#2B3990" />
+                    </marker>
+                </defs>
+                <rect x="0" y="0" width="900" height="420" fill="url(#vclgrid)" />
+                
+                <rect x="{{ svg_x0 }}" y="{{ svg_y0 }}" width="{{ svg_w }}" height="{{ svg_h }}" fill="#FFFFFF" stroke="#111827" stroke-width="2.5" />
+                <line x1="{{ x1 }}" y1="{{ svg_y0 }}" x2="{{ x1 }}" y2="{{ svg_y0 + svg_h }}" stroke="#111827" stroke-width="2" />
+                <line x1="{{ x2 }}" y1="{{ svg_y0 }}" x2="{{ x2 }}" y2="{{ svg_y0 + svg_h }}" stroke="#111827" stroke-width="2" />
+                <line x1="{{ x3 }}" y1="{{ svg_y0 }}" x2="{{ x3 }}" y2="{{ svg_y0 + svg_h }}" stroke="#111827" stroke-width="2" />
+                <line x1="{{ x4 }}" y1="{{ svg_y0 }}" x2="{{ x4 }}" y2="{{ svg_y0 + svg_h }}" stroke="#111827" stroke-width="2" />
+                
+                {% if top_flap_h > 0 %}
+                    <line x1="{{ svg_x0 }}" y1="{{ body_y }}" x2="{{ svg_x0 + svg_w }}" y2="{{ body_y }}" stroke="#111827" stroke-width="2" stroke-dasharray="8 4" />
+                {% endif %}
+                <line x1="{{ svg_x0 }}" y1="{{ bottom_flap_y }}" x2="{{ svg_x0 + svg_w }}" y2="{{ bottom_flap_y }}" stroke="#111827" stroke-width="2" stroke-dasharray="8 4" />
+                
+                <rect x="{{ svg_x0 }}" y="{{ body_y }}" width="{{ p1w }}" height="{{ body_h }}" fill="#EEF0FA" opacity="0.90" />
+                <rect x="{{ x1 }}" y="{{ body_y }}" width="{{ p2w }}" height="{{ body_h }}" fill="#F8FAFC" opacity="0.95" />
+                <rect x="{{ x2 }}" y="{{ body_y }}" width="{{ p3w }}" height="{{ body_h }}" fill="#EEF0FA" opacity="0.90" />
+                <rect x="{{ x3 }}" y="{{ body_y }}" width="{{ p4w }}" height="{{ body_h }}" fill="#F8FAFC" opacity="0.95" />
+                <rect x="{{ x4 }}" y="{{ body_y }}" width="{{ tabw }}" height="{{ body_h }}" fill="#ECFDF5" opacity="0.95" />
+                
+                <text x="{{ svg_x0 + (p1w / 2) }}" y="{{ body_y + (body_h / 2) - 6 }}" text-anchor="middle" font-size="18" font-weight="900" fill="#2B3990">L</text>
+                <text x="{{ svg_x0 + (p1w / 2) }}" y="{{ body_y + (body_h / 2) + 14 }}" text-anchor="middle" font-size="13" font-weight="800" fill="#111827">{{ panel_1|int }}</text>
+                <text x="{{ x1 + (p2w / 2) }}" y="{{ body_y + (body_h / 2) - 6 }}" text-anchor="middle" font-size="18" font-weight="900" fill="#2B3990">W</text>
+                <text x="{{ x1 + (p2w / 2) }}" y="{{ body_y + (body_h / 2) + 14 }}" text-anchor="middle" font-size="13" font-weight="800" fill="#111827">{{ panel_2|int }}</text>
+                <text x="{{ x2 + (p3w / 2) }}" y="{{ body_y + (body_h / 2) - 6 }}" text-anchor="middle" font-size="18" font-weight="900" fill="#2B3990">L</text>
+                <text x="{{ x2 + (p3w / 2) }}" y="{{ body_y + (body_h / 2) + 14 }}" text-anchor="middle" font-size="13" font-weight="800" fill="#111827">{{ panel_3|int }}</text>
+                <text x="{{ x3 + (p4w / 2) }}" y="{{ body_y + (body_h / 2) - 6 }}" text-anchor="middle" font-size="18" font-weight="900" fill="#2B3990">W</text>
+                <text x="{{ x3 + (p4w / 2) }}" y="{{ body_y + (body_h / 2) + 14 }}" text-anchor="middle" font-size="13" font-weight="800" fill="#111827">{{ panel_4|int }}</text>
+                
+                <text x="{{ x4 + (tabw / 2) }}" y="{{ body_y + (body_h / 2) }}" text-anchor="middle" font-size="10" font-weight="900" fill="#0E9E5A" transform="rotate(-90 {{ x4 + (tabw / 2) }} {{ body_y + (body_h / 2) }})">TAB {{ tab_width|int }}</text>
+                
+                {% if top_flap_h > 0 %}
+                    <text x="450" y="{{ svg_y0 + (top_flap_h / 2) + 5 }}" text-anchor="middle" font-size="13" font-weight="900" fill="#111827">TOP FLAP {{ flap|int if product_type != "Tray" else H|int }}</text>
+                {% endif %}
+                <text x="450" y="{{ bottom_flap_y + (bottom_flap_h / 2) + 5 }}" text-anchor="middle" font-size="13" font-weight="900" fill="#111827">BOTTOM FLAP {{ flap|int if product_type != "Tray" else H|int }}</text>
+                
+                <text x="76" y="{{ body_y + (body_h / 2) }}" text-anchor="middle" font-size="13" font-weight="900" fill="#111827" transform="rotate(-90 76 {{ body_y + (body_h / 2) }})">BODY HEIGHT {{ H|int }}</text>
+                <line x1="95" y1="{{ svg_y0 }}" x2="95" y2="{{ svg_y0 + svg_h }}" stroke="#2B3990" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+                <text x="60" y="72" font-size="12" font-weight="900" fill="#2B3990">BOARD WIDTH {{ board_w|int }}</text>
+                
+                <line x1="{{ svg_x0 }}" y1="335" x2="{{ svg_x0 + svg_w }}" y2="335" stroke="#2B3990" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)" />
+                <text x="450" y="360" text-anchor="middle" font-size="14" font-weight="900" fill="#2B3990">BOARD LENGTH {{ board_l|int }}</text>
+                
+                <text x="450" y="38" text-anchor="middle" font-size="18" font-weight="900" fill="#00395D">{{ product_type|upper }} BLANK: {{ board_w|int }} × {{ board_l|int }} mm</text>
+            </svg>
+            <table class="layout-legend">
+                <tr>
+                    <td><strong>Board Width</strong>{{ calc_board_w|int }} mm calculated from vertical flap geometry</td>
+                    <td><strong>Board Length</strong>{{ calc_board_l|int }} mm calculated from panel sequences + structural tab joint</td>
+                    <td><strong>Best UPS</strong>Orientation {% if ns.a_max_n >= ns.b_max_n and ns.a_max_n > 0 %}A ({{ ns.a_max_n }}-UP){% else %}B ({{ ns.b_max_n }}-UP){% endif %} minimizes production raw waste.</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    {%- set STATION_LIST = [
+        ("Corrugation", false),
+        ("Sheeting", false),
+        ("Carton Pasting", false),
+        ("Creasing", false),
+        ("Carton Printing", true),
+        ("Slotting", false),
+        ("Carton Stitching / Gluing", false),
+        ("Bundling", false)
+    ] -%}
+    <div class="page-container page-break">
+        <table class="header-table">
+            <tr>
+                <td>
+                    <div class="main-title">Station Production Log</div>
+                    <div class="small-brand">Vimit Converters Ltd &bull; 8-Station Operational Tracking</div>
+                </td>
+                <td align="right" width="25%">
+                    <div class="job-box">
+                        <span class="lbl">Job Card No.</span>
+                        <span class="val" style="font-size:14px;">{{ doc.name }}</span>
+                    </div>
+                </td>
+            </tr>
+        </table>
+        <table class="sub-header-grid">
+            <tr>
+                <td class="k">Customer</td><td>{{ doc.customer_name or doc.get("customer_name") or "" }}</td>
+                <td class="k">Print Type</td><td><strong>{{ print_type | upper }}</strong></td>
+                <td class="k">Order Qty</td><td>{{ doc.quantity_ordered or doc.qty or doc.get("quantity_ordered") or "0" }} PCS</td>
+            </tr>
+            <tr>
+                <td class="k">Description</td><td colspan="5">{{ doc.job_description or doc.get("job_description") or "N/A" }}</td>
+            </tr>
+        </table>
+
+        <div class="sec-head">6. Material Release — Reels Issued to Job</div>
+        <table class="dense-table tight-rows" style="font-size:8.5px;">
+            <thead>
+                <tr style="background:#eef0fa; color:#2B3990;">
+                    <th style="width:14%;">Reel ID / Trace Code</th>
+                    <th style="width:12%;">Material / Grade</th>
+                    <th style="width:7%;">GSM</th>
+                    <th style="width:11%;">Weight Out (kg)</th>
+                    <th style="width:11%;">Returned (kg)</th>
+                    <th style="width:11%;">Date / Time Out</th>
+                    <th style="width:11%;">Store Keeper</th>
+                    <th style="width:12%;">Operator Recd</th>
+                    <th style="width:11%;">Supervisor Auth</th>
+                </tr>
+            </thead>
+            <tbody>
+                {%- for _n in range(5) -%}
+                <tr style="height:19px;"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                {%- endfor -%}
+                <tr style="background:#F9FAFB;">
+                    <td colspan="3" style="font-weight:900; text-transform:uppercase; font-size:8px; color:#00395D; vertical-align:middle;">Total Released (kg)</td>
+                    <td></td>
+                    <td></td>
+                    <td colspan="4" style="font-size:7.5px; color:#6B7280; font-style:italic; vertical-align:middle;">Net board consumed = Total Weight Out &minus; Total Returned. Any reel returned to store must be weighed and logged here before the lot is closed.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="sec-head" style="margin-top:10px;">7. Station Timing Log</div>
+        <table class="dense-table tight-rows" style="font-size:8.5px;">
+            <thead>
+                <tr style="background:#eef0fa; color:#2B3990;">
+                    <th style="width:26%;">Stage / Operation</th>
+                    <th style="width:9%;">Run</th>
+                    <th style="width:12%;">Date In</th>
+                    <th style="width:10%;">Time In</th>
+                    <th style="width:12%;">Date Out</th>
+                    <th style="width:10%;">Time Out</th>
+                    <th style="width:21%;">Operator</th>
+                </tr>
+            </thead>
+            <tbody>
+            {%- if doc.get("traveller_runs") or doc.traveller_runs -%}
+                {%- set runs_source = doc.traveller_runs or doc.get("traveller_runs") -%}
+                {%- for row in runs_source -%}
+                <tr>
+                    <td class="station-cell">{{ row.station or "" }}</td>
+                    <td style="text-align:center;"><span class="run-tag {% if row.run_number|int > 1 %}r2{% endif %}">RUN {{ row.run_number or 1 }}</span></td>
+                    <td>{{ frappe.utils.formatdate(row.date_in, "dd-MM") if row.date_in else "" }}</td>
+                    <td>{{ row.time_in or "" }}</td>
+                    <td>{{ frappe.utils.formatdate(row.date_out, "dd-MM") if row.date_out else "" }}</td>
+                    <td>{{ row.time_out or "" }}</td>
+                    <td>{{ row.operator or "" }}</td>
+                </tr>
+                {%- endfor -%}
+            {%- else -%}
+                {%- for station_name, plain_skip in STATION_LIST -%}
+                {%- set is_skipped = (_is_plain and plain_skip) -%}
+                {%- if is_skipped -%}
+                <tr>
+                    <td class="station-cell skipped"><span class="seq" style="background:#6b7280;">{{ loop.index }}</span>{{ station_name }}<br><small style="font-size:7px;color:#6b7280;">— skip (plain job)</small></td>
+                    <td colspan="6" style="text-align:center; background:#fdecea; color:#6b7280; font-style:italic; font-size:9px;">N/A &bull; Strike line + operator initials</td>
+                </tr>
+                {%- else -%}
+                <tr>
+                    <td class="station-cell" rowspan="2"><span class="seq">{{ loop.index }}</span>{{ station_name }}</td>
+                    <td style="text-align:center;"><span class="run-tag">RUN 1</span></td>
+                    <td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                <tr>
+                    <td style="text-align:center;"><span class="run-tag r2">RUN 2</span></td>
+                    <td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                {%- endif -%}
+                {%- endfor -%}
+            {%- endif -%}
+            </tbody>
+        </table>
+
+        <div class="sec-head" style="margin-top:10px;">8. Station Production &amp; Waste Log</div>
+        <table class="dense-table tight-rows" style="font-size:8.5px;">
+            <thead>
+                <tr style="background:#eef0fa; color:#2B3990;">
+                    <th style="width:26%;">Stage / Operation</th>
+                    <th style="width:9%;">Run</th>
+                    <th style="width:13%;">Qty In</th>
+                    <th style="width:13%;">Qty Good</th>
+                    <th style="width:13%;">Waste</th>
+                    <th style="width:13%;">Operator</th>
+                    <th style="width:13%;">Verify</th>
+                </tr>
+            </thead>
+            <tbody>
+            {%- if doc.get("traveller_runs") or doc.traveller_runs -%}
+                {%- set runs_source = doc.traveller_runs or doc.get("traveller_runs") -%}
+                {%- for row in runs_source -%}
+                <tr>
+                    <td class="station-cell">{{ row.station or "" }}</td>
+                    <td style="text-align:center;"><span class="run-tag {% if row.run_number|int > 1 %}r2{% endif %}">RUN {{ row.run_number or 1 }}</span></td>
+                    <td>{{ row.qty_in or "" }}</td>
+                    <td><strong>{{ row.qty_good or "" }}</strong></td>
+                    <td>{{ row.qty_waste or "" }}</td>
+                    <td>{{ row.operator or "" }}</td>
+                    <td>{{ row.verified_by or "" }}</td>
+                </tr>
+                {%- endfor -%}
+            {%- else -%}
+                {%- for station_name, plain_skip in STATION_LIST -%}
+                {%- set is_skipped = (_is_plain and plain_skip) -%}
+                {%- if is_skipped -%}
+                <tr>
+                    <td class="station-cell skipped"><span class="seq" style="background:#6b7280;">{{ loop.index }}</span>{{ station_name }}<br><small style="font-size:7px;color:#6b7280;">— skip (plain job)</small></td>
+                    <td colspan="6" style="text-align:center; background:#fdecea; color:#6b7280; font-style:italic; font-size:9px;">N/A &bull; Strike line + operator initials</td>
+                </tr>
+                {%- else -%}
+                <tr>
+                    <td class="station-cell" rowspan="2"><span class="seq">{{ loop.index }}</span>{{ station_name }}</td>
+                    <td style="text-align:center;"><span class="run-tag">RUN 1</span></td>
+                    <td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                <tr>
+                    <td style="text-align:center;"><span class="run-tag r2">RUN 2</span></td>
+                    <td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                {%- endif -%}
+                {%- endfor -%}
+            {%- endif -%}
+            </tbody>
+        </table>
+
+        <div class="cont-slip">
+            <strong>Continuation Run Slip SOP:</strong> If work batches at an operation exceed a two-day duration window, attach a matching Continuation Run Slip to this traveler. All slips must be audited by the Planner upon plant lot completion.
+        </div>
+
+    </div>
+
+    <div class="page-container page-break">
+        <table class="header-table">
+            <tr>
+                <td>
+                    <div class="main-title">Quality Control Checkpoints</div>
+                    <div class="small-brand">Vimit Converters Ltd &bull; First-Off &amp; Random Sampling Validation</div>
+                </td>
+                <td align="right" width="25%">
+                    <div class="job-box">
+                        <span class="lbl">Job Card No.</span>
+                        <span class="val" style="font-size:14px;">{{ doc.name }}</span>
+                    </div>
+                </td>
+            </tr>
+        </table>
+        <table class="sub-header-grid">
+            <tr>
+                <td class="k">Customer</td><td>{{ doc.customer_name or doc.get("customer_name") or "" }}</td>
+                <td class="k">Print Type</td><td><strong>{{ print_type | upper }}</strong></td>
+                <td class="k">Order Qty</td><td>{{ doc.quantity_ordered or doc.qty or doc.get("quantity_ordered") or "0" }} PCS</td>
+            </tr>
+        </table>
+
+        <div class="sec-head">9. QC Critical Checkpoints (First-Off &amp; Random Sampling Validation)</div>
+        <table class="dense-table" style="font-size:9px;">
+            <tr style="background:#eef0fa;">
+                <th style="width:35%;">Required Checkpoint Inspection Parameters</th>
+                <th style="width:12%; text-align:center;">First-off ✓</th>
+                <th style="width:15%;">Operator Initials</th>
+                <th>Observed Defects / Floor Variance Notes</th>
+                <th style="width:15%;">QA Inspector Sign</th>
+            </tr>
+            <tr><td>Raw Board Component GSM &amp; Moisture Entry Check</td><td style="text-align:center;"><span class="checkbox-cell"></span></td><td></td><td></td><td></td></tr>
+            <tr><td>Print Color Match Alignment (Against Master Pantone Target Specs)</td><td style="text-align:center;"><span class="checkbox-cell"></span></td><td></td><td></td><td></td></tr>
+            <tr><td>Crease Depth Boundaries &amp; Joint Squaring Tolerances</td><td style="text-align:center;"><span class="checkbox-cell"></span></td><td></td><td></td><td></td></tr>
+            <tr><td>Stitch Wire Matrix / Gluing Line Bond Pull-Strength</td><td style="text-align:center;"><span class="checkbox-cell"></span></td><td></td><td></td><td></td></tr>
+            <tr><td>Bundle Pack Counter Integrity &amp; Finished External Boundaries</td><td style="text-align:center;"><span class="checkbox-cell"></span></td><td></td><td></td><td></td></tr>
+        </table>
+    </div>
+
+</div>
