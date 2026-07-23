@@ -869,33 +869,38 @@ frappe.ui.form.on("Customer Product Specification", {
 		$w.html(html);
 	}
 
+	// Remember every value we write ourselves. frm.set_value is ASYNCHRONOUS, so a
+	// "calc in progress" flag cleared in a synchronous finally block is already
+	// false by the time the field's change handler runs — which made the script's
+	// own writes look like manual overrides. Compare values instead of timing.
+	function cps_write(frm, fieldname, value, key) {
+		if (!frm.__cps_written) frm.__cps_written = {};
+		frm.__cps_written[key] = value;
+		frm.set_value(fieldname, value);
+	}
+
 	function cps_board_plan_pipeline(frm) {
 		const r = cps_compute_board_plan(frm.doc, frm.__cps_flap_override ? frm.doc.ctn_flap_mm : null);
 
-		if (frm.doc.docstatus === 0 && !frm.__cps_calc_in_progress) {
-			frm.__cps_calc_in_progress = true;
-			try {
-				if (!frm.__cps_flap_override && (frm.doc.ctn_flap_mm || 0) !== r.flap) {
-					frm.set_value("ctn_flap_mm", r.flap);
-				}
-				if ((frm.doc.board_width_planned_mm || 0) !== r.planned_width) {
-					frm.set_value("board_width_planned_mm", r.planned_width);
-				}
-				if ((frm.doc.board_length_planned_mm || 0) !== r.planned_length) {
-					frm.set_value("board_length_planned_mm", r.planned_length);
-				}
-				if (!frm.__cps_width_override && (frm.doc.board_width_actual_mm || 0) !== r.actual_width) {
-					frm.set_value("board_width_actual_mm", r.actual_width);
-				}
-				if (!frm.__cps_length_override && (frm.doc.board_length_actual_mm || 0) !== r.actual_length) {
-					frm.set_value("board_length_actual_mm", r.actual_length);
-				}
-				const wg = flt(r.weight_g, 2);
-				if (flt(frm.doc.approximate_weight_grams, 2) !== wg) {
-					frm.set_value("approximate_weight_grams", wg);
-				}
-			} finally {
-				frm.__cps_calc_in_progress = false;
+		if (frm.doc.docstatus === 0) {
+			if (!frm.__cps_flap_override && (frm.doc.ctn_flap_mm || 0) !== r.flap) {
+				cps_write(frm, "ctn_flap_mm", r.flap, "flap");
+			}
+			if ((frm.doc.board_width_planned_mm || 0) !== r.planned_width) {
+				cps_write(frm, "board_width_planned_mm", r.planned_width, "planned_width");
+			}
+			if ((frm.doc.board_length_planned_mm || 0) !== r.planned_length) {
+				cps_write(frm, "board_length_planned_mm", r.planned_length, "planned_length");
+			}
+			if (!frm.__cps_width_override && (frm.doc.board_width_actual_mm || 0) !== r.actual_width) {
+				cps_write(frm, "board_width_actual_mm", r.actual_width, "width");
+			}
+			if (!frm.__cps_length_override && (frm.doc.board_length_actual_mm || 0) !== r.actual_length) {
+				cps_write(frm, "board_length_actual_mm", r.actual_length, "length");
+			}
+			const wg = flt(r.weight_g, 2);
+			if (flt(frm.doc.approximate_weight_grams, 2) !== wg) {
+				cps_write(frm, "approximate_weight_grams", wg, "weight");
 			}
 		}
 
@@ -909,33 +914,51 @@ frappe.ui.form.on("Customer Product Specification", {
 		"4_ply_fluting_gsm", "5_ply_fluting_gsm",
 	];
 
+	function cps_reset_overrides(frm) {
+		frm.__cps_written = {};
+		const auto = cps_compute_board_plan(frm.doc, null);
+		// A stored flap that differs from ceil((W+5)/2) is a deliberate choice, so
+		// it survives a reload. The actual board sizes are fully determined by the
+		// geometry, so a stored value is NEVER treated as an override — that is what
+		// let stale Tray-formula numbers outlive a product-type change and print a
+		// Planned smaller than its own Blank (CTN-SPEC-00022).
+		frm.__cps_flap_override = !!frm.doc.ctn_flap_mm && frm.doc.ctn_flap_mm !== auto.flap;
+		frm.__cps_width_override = false;
+		frm.__cps_length_override = false;
+	}
+
 	const handlers = {
 		refresh(frm) {
-			if (!frm.doc.ctn_flap_mm) frm.__cps_flap_override = false;
-			if (!frm.doc.board_width_actual_mm) frm.__cps_width_override = false;
-			if (!frm.doc.board_length_actual_mm) frm.__cps_length_override = false;
+			cps_reset_overrides(frm);
 			setTimeout(() => cps_board_plan_pipeline(frm), 60);
 		},
 		onload_post_render(frm) {
 			setTimeout(() => cps_board_plan_pipeline(frm), 60);
 		},
 		ctn_flap_mm(frm) {
-			if (frm.__cps_calc_in_progress) return;
+			if ((frm.doc.ctn_flap_mm || 0) === (frm.__cps_written || {}).flap) return;
 			frm.__cps_flap_override = !!frm.doc.ctn_flap_mm;
 			cps_board_plan_pipeline(frm);
 		},
 		board_width_actual_mm(frm) {
-			if (frm.__cps_calc_in_progress) return;
+			if ((frm.doc.board_width_actual_mm || 0) === (frm.__cps_written || {}).width) return;
 			frm.__cps_width_override = true;
 		},
 		board_length_actual_mm(frm) {
-			if (frm.__cps_calc_in_progress) return;
+			if ((frm.doc.board_length_actual_mm || 0) === (frm.__cps_written || {}).length) return;
 			frm.__cps_length_override = true;
 		},
 	};
 	RECALC_FIELDS.forEach((f) => {
 		handlers[f] = function (frm) {
-			if (frm.__cps_calc_in_progress) return;
+			// The geometry changed, so any previously entered actual is stale by
+			// definition. Flap is derived from the width alone, so it only gets
+			// invalidated by the inputs it actually depends on.
+			frm.__cps_width_override = false;
+			frm.__cps_length_override = false;
+			if (f === "ctn_width_mm" || f === "ply" || f === "product_type_carton") {
+				frm.__cps_flap_override = false;
+			}
 			setTimeout(() => cps_board_plan_pipeline(frm), 40);
 		};
 	});
