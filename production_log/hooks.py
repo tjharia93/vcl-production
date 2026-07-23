@@ -131,7 +131,24 @@ scheduler_events = {
 # Fixtures
 # --------
 fixtures = [
-	{"dt": "Print Format", "filters": [["name", "in", ["Carton Job Card", "Label Job Traveller", "Computer Paper Job Traveller", "ETR Job Traveller"]]]},
+	{
+		"dt": "Print Format",
+		"filters": [
+			[
+				"name", "in", [
+					"Carton Job Card",
+					"Label Job Traveller",
+					"Computer Paper Job Traveller",
+					# NOTE: "ETR Job Traveller" is declared here but has never been
+					# exported into fixtures/print_format.json. Left as-is rather than
+					# silently starting to overwrite the live copy.
+					"ETR Job Traveller",
+					"Customer Product Spec",
+					"Customer Product Spec (Calculated)",
+				]
+			]
+		],
+	},
 	{
 		"dt": "Custom Field",
 		"filters": [
@@ -143,9 +160,22 @@ fixtures = [
 					"Job Card Label",
 					"Job Card Carton",
 					"Job Card ETR",
+					# CPS carried 17 Custom Fields that existed only in the database —
+					# linked_item, the unified print_type/print_side (White Paper v4
+					# §2.1), the two weight fields, revision_notes, and the Board Plan.
+					# Rebuilding the site from this app would not have reproduced them.
+					"Customer Product Specification",
 				]
 			]
 		],
+	},
+	{
+		# CPS form behaviour that lives as Client Script records rather than in the
+		# bundled JS. The Board Plan script is deliberately NOT here — it moved into
+		# customer_product_specification.js so it has a single source of truth.
+		# Being a fixture means migrate overwrites Desk edits to these two.
+		"dt": "Client Script",
+		"filters": [["dt", "in", ["Customer Product Specification"]]],
 	},
 ]
 
