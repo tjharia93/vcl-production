@@ -420,8 +420,8 @@
                     <span class="lbl">Customer Name</span>
                     <span class="val">{{ doc.customer_name or doc.get("customer_name") or "INTERNAL / STOCK" }}</span>
                     <div style="margin-top:8px;border-top:1px dashed #D1D5DB;padding-top:4px;">
-                        <span class="lbl">Job Description / Specific Remarks</span>
-                        <span class="val" style="font-size:11px;color:#333;">{{ doc.job_description or doc.get("job_description") or "N/A" }}</span>
+                        <span class="lbl">Product Specification</span>
+                        <span class="val" style="font-size:11px;color:#333;">{{ doc.specification_name or doc.customer_product_spec or doc.job_description or "N/A" }}{% if doc.customer_product_spec and doc.specification_name %} <span style="color:#6B7280;font-weight:400;">({{ doc.customer_product_spec }})</span>{% endif %}</span>
                     </div>
                 </td>
                 <td>
@@ -732,7 +732,7 @@
                 <td class="k">Order Qty</td><td>{{ doc.quantity_ordered or doc.qty or doc.get("quantity_ordered") or "0" }} PCS</td>
             </tr>
             <tr>
-                <td class="k">Description</td><td colspan="5">{{ doc.job_description or doc.get("job_description") or "N/A" }}</td>
+                <td class="k">Specification</td><td colspan="5">{{ doc.specification_name or doc.customer_product_spec or doc.job_description or "N/A" }}{% if doc.customer_product_spec and doc.specification_name %} ({{ doc.customer_product_spec }}){% endif %}</td>
             </tr>
         </table>
 
