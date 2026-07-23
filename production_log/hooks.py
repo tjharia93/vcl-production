@@ -137,6 +137,10 @@ fixtures = [
 			[
 				"name", "in", [
 					"Carton Job Card",
+					# v2 is the reworked carton traveller. Source of truth for the markup is
+					# carton_jobcard_v2.html alongside this doctype; the fixture is what a
+					# deploy actually applies.
+					"Carton Jobcard v2",
 					"Label Job Traveller",
 					"Computer Paper Job Traveller",
 					# NOTE: "ETR Job Traveller" is declared here but has never been
