@@ -222,9 +222,17 @@ class TestSpecSnapshot(unittest.TestCase):
 		snapshot = cps_rules.build_spec_snapshot(self._spec(), [], [], "2026-07-19 11:02:07")
 
 		self.assertEqual(snapshot["_cps"], "CPT-SPEC-00038-1")
-		self.assertEqual(snapshot["_snapshot_version"], 1)
+		# Version 2 added the Carton scalars. It is a widening only: a Computer
+		# Paper snapshot carries exactly the keys it always did, and version 1
+		# snapshots on live orders stay readable
+		# (``cps_rules.SUPPORTED_SNAPSHOT_VERSIONS``). Shape regression is
+		# asserted in ``test_carton_cps_rules.TestSnapshotShape``.
+		self.assertEqual(snapshot["_snapshot_version"], cps_rules.SNAPSHOT_VERSION)
 		self.assertEqual(snapshot["_taken_at"], "2026-07-19 11:02:07")
 		self.assertEqual(snapshot["job_size"], "9.5 x 8")
+
+	def test_a_version_one_snapshot_on_a_live_order_is_still_readable(self):
+		self.assertTrue(cps_rules.snapshot_version_supported({"_snapshot_version": 1}))
 
 	def test_tc051_every_child_row_and_column_is_captured(self):
 		parts = [

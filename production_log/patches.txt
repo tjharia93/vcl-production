@@ -1,3 +1,11 @@
+[pre_model_sync]
+# Runs before the schema is rewritten. The only thing that belongs here is work
+# that must happen while a column still has its old type - everything else goes
+# under [post_model_sync] below, which is where every patch in this file ran
+# before the sections were introduced, and where they all still run.
+production_log.patches.v8_1.normalise_carton_quantity_ordered
+
+[post_model_sync]
 production_log.patches.v1_0.setup_roles_and_permissions
 production_log.patches.v1_0.remove_job_card_production_entry
 production_log.patches.v1_0.rename_workspace_to_vcl_production

@@ -58,6 +58,72 @@ ITEM_LINK_FIELD = "linked_item"
 
 # Changing any of these changes what the specification *is*, so the Item it
 # names has to be stated. Notes, status and pricing are deliberately absent.
+#
+# "What the specification is" is product-type-specific. ``pay_slip_size`` and
+# ``number_of_parts`` say what a Computer Paper record is and mean nothing on a
+# Carton one; the box's dimensions, ply, style and board make-up say what a
+# Carton record is and mean nothing on a Computer Paper one. Holding one flat
+# list made the Carton half unenforced: a live Carton specification's box size
+# could be changed without the Item link being forced, and — far worse — without
+# the change counting as material anywhere else it is asked about.
+SHARED_MATERIAL_SPEC_FIELDS = (
+	"product_type",
+	"specification_name",
+	"customer",
+	"job_size",
+	ITEM_LINK_FIELD,
+)
+
+# The Carton geometry, style and board make-up. Every one of these changes what
+# will physically be produced, so each is material in exactly the way
+# ``number_of_parts`` is material to Computer Paper.
+CARTON_DIMENSION_FIELDS = (
+	"ctn_length_mm",
+	"ctn_width_mm",
+	"ctn_height_mm",
+)
+
+CARTON_STYLE_FIELDS = (
+	"ply",
+	"flute_type",
+	"printing_or_plain",
+	"joint_type",
+	# The carton *style* (Tray / Die Cut / n-Flap RSC). Note the name: on the
+	# specification ``product_type`` is the kind of specification and
+	# ``product_type_carton`` is the style. On Job Card Carton the style is
+	# called ``product_type``. The rename belongs in the snapshot -> Job Card
+	# mapping and nowhere else; see :func:`build_spec_snapshot`.
+	"product_type_carton",
+	"idod",
+)
+
+CARTON_MATERIAL_LAYER_FIELDS = (
+	"1_ply_top_layer_gsm",
+	"1_ply_top_layer_material",
+	"2_ply_fluting_gsm",
+	"2_ply_top_layer_material",
+	"3_ply_bottom_gsm",
+	"3_ply_top_layer_material",
+	"4_ply_fluting_gsm",
+	"4_ply_top_layer_material",
+	"5_ply_fluting_gsm",
+	"5_ply_top_layer_material",
+)
+
+CARTON_MATERIAL_SPEC_FIELDS = (
+	CARTON_DIMENSION_FIELDS + CARTON_STYLE_FIELDS + CARTON_MATERIAL_LAYER_FIELDS
+)
+
+COMPUTER_PAPER_MATERIAL_SPEC_FIELDS = ("pay_slip_size", "number_of_parts")
+
+PRODUCT_TYPE_MATERIAL_SPEC_FIELDS = {
+	"Computer Paper": COMPUTER_PAPER_MATERIAL_SPEC_FIELDS,
+	"Carton": CARTON_MATERIAL_SPEC_FIELDS,
+}
+
+# Kept as a module constant, and kept identical to what it has always held, so
+# nothing that imports it changes meaning. New code should call
+# :func:`material_spec_fields`.
 MATERIAL_SPEC_FIELDS = (
 	"product_type",
 	"specification_name",
@@ -67,6 +133,21 @@ MATERIAL_SPEC_FIELDS = (
 	"number_of_parts",
 	ITEM_LINK_FIELD,
 )
+
+
+def material_spec_fields(product_type=None):
+	"""Fields whose change makes this save a material change.
+
+	The shared set plus whatever the product type adds. An unrecognised or blank
+	product type gets the shared set only — a record of a kind this module does
+	not know about must still have its name, customer, job size and link
+	watched, and inventing fields for it would compare columns that do not
+	exist.
+	"""
+	extra = PRODUCT_TYPE_MATERIAL_SPEC_FIELDS.get(normalise_product_type(product_type) or "", ())
+	return SHARED_MATERIAL_SPEC_FIELDS + tuple(
+		f for f in extra if f not in SHARED_MATERIAL_SPEC_FIELDS
+	)
 
 # --- Item-level control mode (design §4.2, iteration 2) ---------------------
 #
@@ -550,6 +631,20 @@ def _stamp(value):
 	return str(value).strip()[:19]
 
 
+def _date(value):
+	"""Compare a date by its calendar day, however it was serialised.
+
+	``transaction_date`` comes back from the database as a ``datetime.date`` and
+	off a REST payload as ``"2026-07-02"``; a card saved through Desk may carry
+	either. Taking the first ten characters of the string form makes all three
+	the same value, and makes a card dated a day earlier than its order a
+	mismatch rather than a formatting difference.
+	"""
+	if value in (None, ""):
+		return None
+	return str(value).strip()[:10]
+
+
 def _same(found, expected):
 	"""Blank is blank: ``None`` and empty string are not a disagreement."""
 	if found in (None, ""):
@@ -559,7 +654,7 @@ def _same(found, expected):
 	return found == expected
 
 
-def jc_line_mismatches(card, order, line, qty_precision=3):
+def jc_line_mismatches(card, order, line, qty_precision=3, customer_field="customer"):
 	"""Every Job Card value that disagrees with its Sales Order and line.
 
 	Returns a list of :class:`JCMismatch`. An empty list means the card is a
@@ -568,10 +663,21 @@ def jc_line_mismatches(card, order, line, qty_precision=3):
 
 	``customer`` is checked against the *order*, not against the snapshot's own
 	customer key — the order is what was sold, and the snapshot is a record of
-	the specification rather than of the counterparty.
+	the specification rather than of the counterparty. ``order`` must therefore
+	carry ``customer``, ``transaction_date`` and ``po_no``: a caller that reads
+	fewer columns than that does not weaken the check, it inverts it, because a
+	column absent from the read is indistinguishable from a blank one on the
+	order and every card would be reported as disagreeing with it.
+
+	``customer_field`` names the card's own customer link. Job Card Computer
+	Paper calls it ``customer`` and Job Card Carton calls it ``customer_name``;
+	renaming a field on a live submittable DocType is not worth the risk (see
+	the discovery report §9.4), so the asymmetry is carried as a parameter
+	rather than migrated away. The mismatch is still reported against the field
+	the card actually has, so the error names something the reader can find.
 	"""
 	checks = [
-		("customer", "Customer", _get(card, "customer"), _get(order, "customer")),
+		(customer_field, "Customer", _get(card, customer_field), _get(order, "customer")),
 	]
 	for card_field, line_field, label in JC_LINE_FIELD_MAP:
 		checks.append((card_field, label, _get(card, card_field), _get(line, line_field)))
@@ -588,6 +694,27 @@ def jc_line_mismatches(card, order, line, qty_precision=3):
 			"Snapshot Taken At",
 			_stamp(_get(card, "spec_snapshot_at")),
 			_stamp(_get(line, "custom_spec_snapshot_at")),
+		),
+		# Both of these are copied off the *order header* by the creation path
+		# and were, until this release, the only values on an order-derived card
+		# that nothing checked. They are not decoration: ``order_date`` is what
+		# the due-date rule is measured against and what the shop floor reads as
+		# "when was this sold", and ``lpo_number`` is the customer's own
+		# reference — the number the delivery note is matched on and the number
+		# an invoice is queried by. A card carrying somebody else's LPO is a
+		# billing dispute, so it is proved against the order like everything
+		# else rather than trusted because a form made it read-only.
+		(
+			"order_date",
+			"Order Date",
+			_date(_get(card, "order_date")),
+			_date(_get(order, "transaction_date")),
+		),
+		(
+			"lpo_number",
+			"LPO Number",
+			_text(_get(card, "lpo_number")),
+			_text(_get(order, "po_no")),
 		),
 	]
 
@@ -732,11 +859,25 @@ def item_link_required(before, after):
 	if before is None:
 		return True
 
-	for fieldname in MATERIAL_SPEC_FIELDS:
-		if _get(before, fieldname) != _get(after, fieldname):
-			return True
+	return bool(material_spec_changes(before, after))
 
-	return False
+
+def material_spec_changes(before, after):
+	"""Material fields that differ between two versions of a specification.
+
+	The union of both versions' product types is watched, not just the new
+	one's: retyping a Carton record as Computer Paper is itself material, and
+	the fields it is abandoning have to be compared before they stop counting.
+	"""
+	if before is None or after is None:
+		return []
+
+	fields = list(material_spec_fields(_get(after, "product_type")))
+	for fieldname in material_spec_fields(_get(before, "product_type")):
+		if fieldname not in fields:
+			fields.append(fieldname)
+
+	return [f for f in fields if _get(before, f) != _get(after, f)]
 
 
 def _name_tokens(value):
@@ -843,56 +984,444 @@ def summarise_readiness(decisions):
 	return summary
 
 
+# --- The frozen technical snapshot (design §8.2) ----------------------------
+#
+# Version 2 adds the Carton half. It is a *widening* only: every key version 1
+# wrote is still written, for every product type, whatever that product type is.
+#
+# That costs a handful of blank keys on a Carton snapshot and buys the one thing
+# that matters — no reader of an existing snapshot can break. A Carton snapshot
+# that dropped ``pay_slip_size`` because Cartons have no pay slips would raise
+# KeyError in any consumer that indexes rather than ``.get()``s, and those
+# consumers live in another repository and deploy on their own schedule.
+# Additive is the only kind of change that is safe across that boundary.
+SNAPSHOT_VERSION = 2
+
+# Snapshots of an older version stay readable: a job card raised today against
+# an order submitted last month must still work. Nothing is *rewritten* — a
+# snapshot is a record of what was known then, and upgrading one in place would
+# be inventing history.
+SUPPORTED_SNAPSHOT_VERSIONS = (1, 2)
+
+# Exactly what version 1 froze, in its original order. The compatibility floor:
+# every snapshot contains at least these keys.
+SNAPSHOT_V1_SCALARS = (
+	"product_type",
+	"specification_name",
+	"customer",
+	"job_size",
+	"pay_slip_size",
+	"number_of_parts",
+	"numbering_required",
+	"standard_packing",
+	"standard_weight_per_carton",
+	"ink_type",
+	"uses_c",
+	"uses_m",
+	"uses_y",
+	"uses_k",
+	"number_of_colours",
+	"colour_notes",
+)
+
+# Everything on the specification that says what a *box* is. Version 1 froze not
+# one of them, so a Carton order captured the customer, the name, the job size,
+# the colour block — and nothing at all about the carton.
+CARTON_SNAPSHOT_SCALARS = (
+	"ply",
+	"flute_type",
+	"ctn_length_mm",
+	"ctn_width_mm",
+	"ctn_height_mm",
+	"printing_or_plain",
+	"joint_type",
+	# The carton *style*. Kept under its CPS fieldname, deliberately: the
+	# snapshot's ``product_type`` is the routing key that decides which kind of
+	# Job Card a line becomes, and writing the style into it would send Carton
+	# lines to the wrong card type. The rename to the Job Card's own
+	# ``product_type`` happens once, in :data:`CARTON_SNAPSHOT_JC_MAP`.
+	"product_type_carton",
+	"idod",
+	"special_instructions_carton",
+	"1_ply_top_layer_gsm",
+	"1_ply_top_layer_material",
+	"2_ply_fluting_gsm",
+	"2_ply_top_layer_material",
+	"3_ply_bottom_gsm",
+	"3_ply_top_layer_material",
+	"4_ply_fluting_gsm",
+	"4_ply_top_layer_material",
+	"5_ply_fluting_gsm",
+	"5_ply_top_layer_material",
+)
+
+# Computer Paper's own fields were already inside the version-1 set, so it adds
+# nothing here. Named anyway, so "which fields does this product type freeze"
+# has one answer per type rather than one answer and one silence.
+COMPUTER_PAPER_SNAPSHOT_SCALARS = ("pay_slip_size", "number_of_parts")
+
+PRODUCT_TYPE_SNAPSHOT_SCALARS = {
+	"Computer Paper": COMPUTER_PAPER_SNAPSHOT_SCALARS,
+	"Carton": CARTON_SNAPSHOT_SCALARS,
+}
+
+SNAPSHOT_PART_FIELDS = ("part_number", "paper_type", "gsm", "colour", "purpose")
+SNAPSHOT_SPOT_FIELDS = (
+	"pantone_code",
+	"pantone_name",
+	"hex_preview",
+	"cmyk_c",
+	"cmyk_m",
+	"cmyk_y",
+	"cmyk_k",
+	"notes",
+)
+
+
+def snapshot_scalar_fields(product_type=None):
+	"""CPS fieldnames frozen onto the order line for this kind of record.
+
+	The version-1 set plus whatever the product type adds, in that order and
+	without duplicates. A product type this module does not know about gets the
+	version-1 set: freezing fields that do not exist on it would record a column
+	of ``None`` and imply knowledge nobody has.
+	"""
+	fields = list(SNAPSHOT_V1_SCALARS)
+	extra = PRODUCT_TYPE_SNAPSHOT_SCALARS.get(normalise_product_type(product_type) or "", ())
+	fields += [f for f in extra if f not in fields]
+	return tuple(fields)
+
+
+def snapshot_version(snapshot):
+	"""The version a snapshot was written at, or None if it does not say.
+
+	A snapshot with no ``_snapshot_version`` is not corrupt — it is simply not
+	one of ours, and is reported as such rather than assumed to be version 1.
+	"""
+	if not isinstance(snapshot, dict):
+		return None
+	try:
+		return int(snapshot.get("_snapshot_version"))
+	except (TypeError, ValueError):
+		return None
+
+
+def snapshot_version_supported(snapshot):
+	"""Whether this code knows how to read that snapshot.
+
+	Forward-looking rather than defensive: a site rolled back to this release
+	after a later one wrote version 3 snapshots must refuse to card those lines
+	rather than read half of one and call it a job.
+	"""
+	return snapshot_version(snapshot) in SUPPORTED_SNAPSHOT_VERSIONS
+
+
+# --- Snapshot -> Job Card, for Carton ---------------------------------------
+#
+# Three-tuples of (snapshot key, Job Card Carton fieldname, human label). The
+# same table does two jobs, which is the point: it says what an order-derived
+# card must be *populated* with, and it is what that card is later *proved*
+# against. One table cannot drift from itself.
+CARTON_SNAPSHOT_JC_MAP = (
+	("specification_name", "specification_name", "Specification Name"),
+	("job_size", "job_size", "Job Size"),
+	("numbering_required", "numbering_required", "Numbering Required"),
+	("standard_packing", "packing", "Packing"),
+	("standard_weight_per_carton", "weight_per_carton", "Weight Per Carton"),
+	("ink_type", "ink_type", "Ink Type"),
+	("uses_c", "uses_c", "Cyan"),
+	("uses_m", "uses_m", "Magenta"),
+	("uses_y", "uses_y", "Yellow"),
+	("uses_k", "uses_k", "Black"),
+	("number_of_colours", "number_of_colours", "Number of Colours"),
+	("colour_notes", "colour_notes", "Colour Notes"),
+	("ply", "ply", "Ply"),
+	("flute_type", "flute_type", "Flute Type"),
+	("ctn_length_mm", "ctn_length_mm", "Carton Length (mm)"),
+	("ctn_width_mm", "ctn_width_mm", "Carton Width (mm)"),
+	("ctn_height_mm", "ctn_height_mm", "Carton Height (mm)"),
+	("printing_or_plain", "printing_or_plain", "Printing Or Plain"),
+	("joint_type", "joint_type", "Joint Type"),
+	# The one rename, and the only place it exists.
+	("product_type_carton", "product_type", "Carton Style"),
+	("idod", "idod", "ID/OD"),
+	("special_instructions_carton", "special_instructions", "Special Instructions"),
+	("1_ply_top_layer_gsm", "1_ply_top_layer_gsm", "1 Ply Top Layer"),
+	("1_ply_top_layer_material", "1_ply_top_layer_material", "1 Ply Top Layer Material"),
+	("2_ply_fluting_gsm", "2_ply_fluting_gsm", "2 Ply Fluting"),
+	("2_ply_top_layer_material", "2_ply_top_layer_material", "2 Ply Material"),
+	("3_ply_bottom_gsm", "3_ply_bottom_gsm", "3 Ply Bottom"),
+	("3_ply_top_layer_material", "3_ply_top_layer_material", "3 Ply Material"),
+	("4_ply_fluting_gsm", "4_ply_fluting_gsm", "4 Ply Fluting"),
+	("4_ply_top_layer_material", "4_ply_top_layer_material", "4 Ply Material"),
+	("5_ply_fluting_gsm", "5_ply_fluting_gsm", "5 Ply Fluting"),
+	("5_ply_top_layer_material", "5_ply_top_layer_material", "5 Ply Material"),
+)
+
+# Snapshot keys that are deliberately not carried onto a Job Card, with the
+# reason each is exempt. Named explicitly so :func:`unmapped_snapshot_keys` can
+# be an equality assertion rather than a judgement call — a key added to the
+# snapshot later and forgotten here fails a test instead of going unnoticed.
+SNAPSHOT_KEYS_NOT_ON_JOB_CARD = {
+	# The routing key. It decides which DocType the card is, and is checked as
+	# such; writing it onto the card would collide with the Carton style field.
+	"product_type": "routing key, checked not copied",
+	# The counterparty comes from the order, not from the specification.
+	"customer": "taken from the Sales Order",
+	# Version-1 compatibility keys. A Carton specification has no pay slips and
+	# no parts, so these are always blank on a Carton snapshot.
+	"pay_slip_size": "Computer Paper only",
+	"number_of_parts": "Computer Paper only",
+}
+
+
+def unmapped_snapshot_keys(product_type, field_map):
+	"""Frozen fields this map neither carries onto the card nor excuses.
+
+	The guarantee behind "the card is proved against everything the order
+	froze". An empty list is the only acceptable answer, and it is asserted in
+	the tests rather than hoped for.
+	"""
+	mapped = {snapshot_key for snapshot_key, _card_field, _label in field_map or ()}
+	return [
+		fieldname
+		for fieldname in snapshot_scalar_fields(product_type)
+		if fieldname not in mapped and fieldname not in SNAPSHOT_KEYS_NOT_ON_JOB_CARD
+	]
+
+
+# --- Snapshot child tables -> Job Card --------------------------------------
+#
+# The scalar map above proves what a box *is*. This proves what it is *printed
+# in*: the spot colours the order froze, row for row.
+#
+# Carton is the only card here that carries a snapshot table. It has a Spot
+# Colours grid and no Colour of Parts grid — a box has no parts — which is why
+# only one entry appears below rather than the pair Computer Paper's snapshot
+# carries.
+#
+# Each row field is named with its label rather than derived from the fieldname,
+# because a derived label reads "Cmyk C" and the operator is looking at a column
+# headed "CMYK C". The field half is asserted equal to
+# :data:`SNAPSHOT_SPOT_FIELDS` in the tests, so a field added to the snapshot and
+# forgotten here fails rather than goes unchecked.
+SPOT_COLOUR_ROW_FIELDS = (
+	("pantone_code", "Pantone Code"),
+	("pantone_name", "Pantone Name"),
+	("hex_preview", "Hex Preview"),
+	("cmyk_c", "CMYK C"),
+	("cmyk_m", "CMYK M"),
+	("cmyk_y", "CMYK Y"),
+	("cmyk_k", "CMYK K"),
+	("notes", "Notes"),
+)
+
+# Four-tuples of (snapshot key, Job Card table fieldname, row label, row fields).
+CARTON_SNAPSHOT_JC_TABLE_MAP = (
+	("spot_colours", "spot_colours", "Spot Colour", SPOT_COLOUR_ROW_FIELDS),
+)
+
+
+def _ordered_rows(value):
+	"""A child table read as an ordered list, however it arrived.
+
+	Order is part of the value here, not an incidental detail of storage: two
+	spot colours swapped between rows one and two is a different print order and
+	a different plate sequence, and comparing them as an unordered bag would call
+	that identical.
+
+	So the order is made stable on both sides before anything is compared. Card
+	rows are ``Document`` children and carry ``idx``, which is their real
+	position and survives a payload that lists them out of order; snapshot rows
+	are plain dicts with no ``idx`` at all, and their position in the list *is*
+	their order. Rows that state an ``idx`` sort by it, rows that do not keep the
+	order they arrived in, and the two groups never interleave — so each side is
+	sorted by the only thing it actually knows.
+	"""
+	rows = list(value) if isinstance(value, (list, tuple)) else []
+
+	numbered = []
+	for position, row in enumerate(rows):
+		try:
+			idx = float(_get(row, "idx"))
+		except (TypeError, ValueError):
+			idx = None
+		numbered.append(((1, 0.0, position) if idx is None else (0, idx, position), row))
+
+	numbered.sort(key=lambda item: item[0])
+	return [row for _key, row in numbered]
+
+
+def jc_table_mismatches(card, snapshot, table_map, precision=3):
+	"""Every Job Card child-table row that disagrees with what the order froze.
+
+	:func:`jc_snapshot_mismatches` proves the card's scalars against the
+	snapshot and stops at the grid, which is exactly where a Carton's colours
+	live. Without this a card could name the right order, the right price, the
+	right box and the right board while being printed in a Pantone nobody
+	agreed — and the spot colour table being ``read_only`` on the form stops a
+	Desk user and stops nothing else, since a REST POST or a Data Import writes
+	read-only fields perfectly happily.
+
+	A differing *row count* is reported on its own and the rows are not then
+	compared field by field: once the tables are different lengths every row
+	after the first insertion or deletion is offset, so the per-field report
+	would be a page of noise about rows that are merely shifted. The count is
+	the fact the reader can act on.
+
+	Returns an empty list when there is nothing to compare — an empty map
+	(Computer Paper) means this check does not apply to that card, which is what
+	keeps its behaviour exactly what it was.
+	"""
+	if not isinstance(snapshot, dict) or not table_map:
+		return []
+
+	mismatches = []
+	for snapshot_key, card_field, label, row_fields in table_map:
+		expected_rows = _ordered_rows(snapshot.get(snapshot_key))
+		found_rows = _ordered_rows(_get(card, card_field))
+
+		if len(found_rows) != len(expected_rows):
+			mismatches.append(
+				JCMismatch(
+					card_field,
+					"{0} Rows".format(label),
+					len(found_rows),
+					len(expected_rows),
+				)
+			)
+			continue
+
+		for position, (found_row, expected_row) in enumerate(
+			zip(found_rows, expected_rows), start=1
+		):
+			for row_field, row_label in row_fields:
+				found = _get(found_row, row_field)
+				expected = _get(expected_row, row_field)
+				if not _same_spec_value(found, expected, precision):
+					mismatches.append(
+						JCMismatch(
+							"{0}[{1}].{2}".format(card_field, position, row_field),
+							"{0} row {1} {2}".format(label, position, row_label),
+							found,
+							expected,
+						)
+					)
+
+	return mismatches
+
+
+def unmapped_jc_table_targets(table_map, has_field):
+	"""Mapped Job Card *table* fields that do not exist on the card.
+
+	The table counterpart of :func:`unmapped_jc_targets`, and separate from it
+	because the two maps have different shapes. A missing grid is worse than a
+	missing scalar, not better: the card would be proved against a table it does
+	not have, every row would read as absent, and a snapshot with colours in it
+	would refuse every card forever with a message about rows rather than about
+	the DocType being out of step.
+	"""
+	return [
+		card_field
+		for _snapshot_key, card_field, _label, _row_fields in table_map or ()
+		if not has_field(card_field)
+	]
+
+
+def unmapped_jc_targets(field_map, has_field):
+	"""Mapped Job Card fields that do not exist on the card.
+
+	``has_field`` is the caller's meta lookup, kept out here so this stays
+	Frappe-free. A missing target must be an error and never a silent skip: a
+	card quietly missing its packing, its weight and its box style looks
+	complete on screen and is not, and nobody finds out until the box is wrong.
+	"""
+	return [
+		card_field
+		for _snapshot_key, card_field, _label in field_map or ()
+		if not has_field(card_field)
+	]
+
+
+def _looks_numeric(value):
+	if isinstance(value, bool):
+		return True
+	if isinstance(value, (int, float)):
+		return True
+	if isinstance(value, str):
+		try:
+			float(value.strip())
+		except (TypeError, ValueError):
+			return False
+		return True
+	return False
+
+
+def _same_spec_value(found, expected, precision=3):
+	"""Whether two frozen-vs-card values are the same value.
+
+	Numbers are compared as numbers, so ``250`` from an Int field and ``250.0``
+	read back out of JSON are not a disagreement, and neither are a cleared
+	Check and a zero. Everything else is compared as trimmed text, where blank
+	and absent are the same absence — the same rule :func:`_same` applies to the
+	line-level fields.
+	"""
+	if _looks_numeric(found) and _looks_numeric(expected):
+		return round(float(found), precision) == round(float(expected), precision)
+	if found in (None, "", 0) and expected in (None, "", 0):
+		return True
+	return _same(_text(found), _text(expected))
+
+
+def jc_snapshot_mismatches(card, snapshot, field_map, precision=3):
+	"""Every Job Card field that disagrees with what the order froze.
+
+	The technical half of provenance. :func:`jc_line_mismatches` proves the
+	card's identity, price and quantity against the order line; this proves the
+	specification it will actually be made to against the snapshot the order
+	captured. Without it a Carton card could name the right order, the right
+	price and the right customer while being built to a box size nobody sold.
+
+	Returns an empty list when there is nothing to compare — the caller has
+	already refused a line with no snapshot, and an empty map (Computer Paper)
+	means this check does not apply to that card.
+	"""
+	if not isinstance(snapshot, dict) or not field_map:
+		return []
+
+	mismatches = []
+	for snapshot_key, card_field, label in field_map:
+		expected = snapshot.get(snapshot_key)
+		found = _get(card, card_field)
+		if not _same_spec_value(found, expected, precision):
+			mismatches.append(JCMismatch(card_field, label, found, expected))
+	return mismatches
+
+
 def build_spec_snapshot(spec, colour_of_parts, spot_colours, taken_at):
 	"""Build the immutable technical snapshot payload (design §8.2).
 
 	Keys are CPS fieldnames verbatim so the mapping onto the Job Card is an
 	identity, and values are recorded as they were — a snapshot must survive a
 	Select option being renamed later.
-	"""
-	scalar_fields = (
-		"product_type",
-		"specification_name",
-		"customer",
-		"job_size",
-		"pay_slip_size",
-		"number_of_parts",
-		"numbering_required",
-		"standard_packing",
-		"standard_weight_per_carton",
-		"ink_type",
-		"uses_c",
-		"uses_m",
-		"uses_y",
-		"uses_k",
-		"number_of_colours",
-		"colour_notes",
-	)
-	part_fields = ("part_number", "paper_type", "gsm", "colour", "purpose")
-	spot_fields = (
-		"pantone_code",
-		"pantone_name",
-		"hex_preview",
-		"cmyk_c",
-		"cmyk_m",
-		"cmyk_y",
-		"cmyk_k",
-		"notes",
-	)
 
+	The scalar set is product-type-aware (see :func:`snapshot_scalar_fields`),
+	but it is only ever *wider* than version 1 — never narrower. See
+	:data:`SNAPSHOT_V1_SCALARS` for why that matters.
+	"""
 	snapshot = {
-		"_snapshot_version": 1,
+		"_snapshot_version": SNAPSHOT_VERSION,
 		"_cps": _get(spec, "name"),
 		"_cps_modified": str(_get(spec, "modified") or ""),
 		"_taken_at": str(taken_at),
 	}
-	for fieldname in scalar_fields:
+	for fieldname in snapshot_scalar_fields(_get(spec, "product_type")):
 		snapshot[fieldname] = _get(spec, fieldname)
 
 	snapshot["colour_of_parts"] = [
-		{f: _get(row, f) for f in part_fields} for row in colour_of_parts or []
+		{f: _get(row, f) for f in SNAPSHOT_PART_FIELDS} for row in colour_of_parts or []
 	]
 	snapshot["spot_colours"] = [
-		{f: _get(row, f) for f in spot_fields} for row in spot_colours or []
+		{f: _get(row, f) for f in SNAPSHOT_SPOT_FIELDS} for row in spot_colours or []
 	]
 	return snapshot

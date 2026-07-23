@@ -24,6 +24,25 @@
   "column_break_3",
   "quantity_ordered",
   "repeat",
+  "order_date",
+  "lpo_number",
+  "section_sales_order",
+  "sales_order",
+  "sales_order_item",
+  "item_code",
+  "column_break_sales_order",
+  "rate",
+  "price_source",
+  "so_qty",
+  "section_spec_snapshot",
+  "spec_snapshot_at",
+  "spec_snapshot",
+  "section_order_specification",
+  "job_size",
+  "numbering_required",
+  "column_break_order_specification",
+  "packing",
+  "weight_per_carton",
   "product_description_section",
   "ply",
   "printing_or_plain",
@@ -187,15 +206,141 @@
    "fieldtype": "Column Break"
   },
   {
+   "description": "Numeric. Every quantity rule - remaining, carded, the Sales Order rollup - is arithmetic, and a quantity held as text cannot take part in it.",
    "fieldname": "quantity_ordered",
-   "fieldtype": "Data",
-   "label": "Quantity Ordered"
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Quantity Ordered",
+   "precision": "3"
   },
   {
    "fieldname": "repeat",
    "fieldtype": "Select",
    "label": "OLD JOB/ NEW JOB",
    "options": "Old\nNew"
+  },
+  {
+   "description": "Taken from the Sales Order on a card raised from one, and proved against it on every save.",
+   "fieldname": "order_date",
+   "fieldtype": "Date",
+   "label": "Order Date",
+   "read_only_depends_on": "eval:doc.sales_order"
+  },
+  {
+   "description": "The customer's own LPO reference. Taken from the Sales Order on a card raised from one, and proved against it on every save.",
+   "fieldname": "lpo_number",
+   "fieldtype": "Data",
+   "label": "LPO Number",
+   "read_only_depends_on": "eval:doc.sales_order"
+  },
+  {
+   "fieldname": "section_sales_order",
+   "fieldtype": "Section Break",
+   "label": "Sales Order"
+  },
+  {
+   "description": "The submitted Sales Order this job card is being run against. Set when the job card is raised from the order; historical cards created before that path existed have it blank.",
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "label": "Sales Order",
+   "options": "Sales Order",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "description": "The Sales Order line. Quantities on all job cards for a line may not exceed the line quantity.",
+   "fieldname": "sales_order_item",
+   "fieldtype": "Data",
+   "label": "Sales Order Line",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "label": "Item",
+   "options": "Item",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_sales_order",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Rate carried from the Sales Order line snapshot, not read live from the specification.",
+   "fieldname": "rate",
+   "fieldtype": "Currency",
+   "label": "Rate (net, ex-VAT)",
+   "precision": "9",
+   "read_only": 1
+  },
+  {
+   "fieldname": "price_source",
+   "fieldtype": "Select",
+   "label": "Price Source",
+   "options": "\nCPS Price\nItem Price\nManual Override",
+   "read_only": 1
+  },
+  {
+   "fieldname": "so_qty",
+   "fieldtype": "Float",
+   "label": "SO Line Quantity",
+   "precision": "3",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "section_spec_snapshot",
+   "fieldtype": "Section Break",
+   "label": "Specification Snapshot"
+  },
+  {
+   "fieldname": "spec_snapshot_at",
+   "fieldtype": "Datetime",
+   "label": "Snapshot Taken At",
+   "read_only": 1
+  },
+  {
+   "description": "The specification as it stood when the Sales Order was submitted, copied from the order line. Historical job cards leave this blank - a snapshot invented today would be a lie about what was known then.",
+   "fieldname": "spec_snapshot",
+   "fieldtype": "Long Text",
+   "label": "Specification Snapshot (JSON)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_order_specification",
+   "fieldtype": "Section Break",
+   "label": "Order Specification"
+  },
+  {
+   "fieldname": "job_size",
+   "fieldtype": "Data",
+   "label": "Job Size",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "numbering_required",
+   "fieldtype": "Check",
+   "label": "Numbering Required",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_order_specification",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "packing",
+   "fieldtype": "Data",
+   "label": "Packing",
+   "read_only": 1
+  },
+  {
+   "fieldname": "weight_per_carton",
+   "fieldtype": "Float",
+   "label": "Weight Per Carton",
+   "precision": "2",
+   "read_only": 1
   },
   {
    "fieldname": "product_description_section",
@@ -542,7 +687,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-04-14 00:00:00.000000",
+ "modified": "2026-07-23 00:00:00.000000",
  "modified_by": "Administrator",
  "module": "Job Card Tracking",
  "name": "Job Card Carton",
@@ -550,7 +695,8 @@
  "owner": "Administrator",
  "permissions": [
   {
-   "cancel": 0,
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -565,20 +711,20 @@
   },
   {
    "amend": 1,
-   "cancel": 0,
-   "create": 0,
+   "cancel": 1,
+   "create": 1,
    "delete": 0,
    "email": 1,
    "export": 1,
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "Manufacturing Manager",
-   "submit": 0,
+   "role": "Sales Manager",
+   "share": 1,
+   "submit": 1,
    "write": 1
   },
   {
-   "cancel": 1,
    "create": 1,
    "delete": 0,
    "email": 1,
@@ -588,8 +734,26 @@
    "report": 1,
    "role": "Sales User",
    "share": 1,
-   "submit": 1,
-   "write": 0
+   "submit": 0,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing Manager",
+   "write": 1
+  },
+  {
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Manufacturing User"
   }
  ],
  "sort_field": "modified",
