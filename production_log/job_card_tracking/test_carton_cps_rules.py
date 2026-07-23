@@ -315,9 +315,44 @@ class TestItemLinkRequired(unittest.TestCase):
 
 class TestSnapshotShape(unittest.TestCase):
 	def test_the_version_is_declared_and_supported(self):
-		self.assertEqual(cps_rules.SNAPSHOT_VERSION, 2)
+		# 3 is the newest version this code knows. What matters to Carton is not
+		# that number but that 2 is still readable: an order frozen under the
+		# Carton release must still raise a Carton job card under this one.
+		self.assertEqual(cps_rules.SNAPSHOT_VERSION, 3)
 		self.assertIn(1, cps_rules.SUPPORTED_SNAPSHOT_VERSIONS)
 		self.assertIn(2, cps_rules.SUPPORTED_SNAPSHOT_VERSIONS)
+		self.assertIn(3, cps_rules.SUPPORTED_SNAPSHOT_VERSIONS)
+
+	def test_a_carton_line_submitted_today_still_freezes_at_version_two(self):
+		# The deployment-order guarantee. The Label release must not change one
+		# byte of what a Carton line writes, because the reader on the other
+		# side of the repository boundary may not have shipped version 3 yet and
+		# treats an unknown version as unreadable.
+		self.assertEqual(cps_rules.snapshot_write_version("Carton"), 2)
+		self.assertEqual(carton_snapshot()["_snapshot_version"], 2)
+
+	def test_a_computer_paper_line_submitted_today_still_freezes_at_version_two(self):
+		self.assertEqual(cps_rules.snapshot_write_version("Computer Paper"), 2)
+		snapshot = cps_rules.build_spec_snapshot(cp_spec(), [], [], "2026-07-02 10:00:00")
+
+		self.assertEqual(snapshot["_snapshot_version"], 2)
+
+	def test_a_carton_snapshot_written_now_is_readable_by_the_carton_release(self):
+		# Stated as the round trip that actually matters: what this code writes
+		# for a Carton is a version the *previous* release's whitelist accepted.
+		self.assertIn(carton_snapshot()["_snapshot_version"], (1, 2))
+
+	def test_carton_has_no_minimum_snapshot_version(self):
+		# Carton has been fully frozen since version 2 and the version-3 bump
+		# adds nothing to a Carton snapshot, so a version-2 Carton line must not
+		# be retroactively refused.
+		self.assertIsNone(cps_rules.min_snapshot_version("Carton"))
+		self.assertTrue(
+			cps_rules.snapshot_describes_product_type({"_snapshot_version": 2}, "Carton")
+		)
+		self.assertTrue(
+			cps_rules.snapshot_describes_product_type({"_snapshot_version": 1}, "Computer Paper")
+		)
 
 	def test_computer_paper_freezes_exactly_the_version_one_keys(self):
 		snapshot = cps_rules.build_spec_snapshot(cp_spec(), [], [], "2026-07-02 10:00:00")
@@ -413,9 +448,10 @@ class TestSnapshotVersionGate(unittest.TestCase):
 
 	def test_version_one_orders_are_still_cardable(self):
 		self.assertTrue(cps_rules.snapshot_version_supported({"_snapshot_version": 1}))
+		self.assertTrue(cps_rules.snapshot_version_supported({"_snapshot_version": 2}))
 
 	def test_a_future_version_is_refused(self):
-		self.assertFalse(cps_rules.snapshot_version_supported({"_snapshot_version": 3}))
+		self.assertFalse(cps_rules.snapshot_version_supported({"_snapshot_version": 4}))
 		self.assertFalse(cps_rules.snapshot_version_supported({}))
 
 
