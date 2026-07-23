@@ -1,7 +1,6 @@
 <style>
     /* GLOBAL PRINT LAYOUT ENGINE */
     @page { size: A4; margin: 10mm; }
-    @page carton-landscape { size: A4 landscape; margin: 10mm; }
     
     .vcl-wrapper {
         font-family: Inter, 'Segoe UI', Arial, sans-serif;
@@ -10,7 +9,6 @@
         line-height: 1.2;
     }
     .page-break { page-break-before: always; }
-    .layout-page { page: carton-landscape; }
     
     /* HEADERS & TYPOGRAPHY */
     .header-table {
@@ -403,6 +401,180 @@
 {%- set x1, x2, x3, x4, x5 = svg_x0 + p1w, svg_x0 + p1w + p2w, svg_x0 + p1w + p2w + p3w, svg_x0 + p1w + p2w + p3w + p4w, svg_x0 + p1w + p2w + p3w + p4w + tabw -%}
 
 <div class="vcl-wrapper">
+{%- macro jc_flat_rsc(L, W, H, flap, tab, one_flap, is_stitch) -%}
+  {%- set totalW = tab + (2 * L) + (2 * W) -%}
+  {%- set totalH = (H + flap) if one_flap else (flap + H + flap) -%}
+  {#- Widths are tuned to A4 at 12mm margins (~700 CSS px of content box). -#}
+  {%- set scale  = [0.30, 330.0 / totalW, 130.0 / totalH] | min -%}
+  {%- set ox = 34 -%}{%- set oy = 30 -%}
+  {%- set body_y = 0 if one_flap else flap -%}
+  {%- set svgW = (totalW * scale) + 76 -%}
+  {%- set svgH = (totalH * scale) + 74 -%}{#- room for the dimension row + blank caption -#}
+  {%- set tab_fill = '#F7D8D8' if is_stitch else '#D2EBD3' -%}
+  {%- set tab_label = 'Stitch Flap' if is_stitch else 'Glue Tab' -%}
+<svg width="{{ svgW|round(1) }}" height="{{ svgH|round(1) }}" viewBox="0 0 {{ svgW|round(1) }} {{ svgH|round(1) }}"
+     style="background:#FAFAFA;border:1px solid #ddd;border-radius:4px;">
+  {#- Panel width L is a Front/Back face; panel width W is a Side face. -#}
+  {%- set body = [
+        (0, tab, tab_fill, tab_label),
+        (tab, L, '#E2E4F4', 'Front (' ~ L ~ ')'),
+        (tab + L, W, '#DBDEF1', 'Side (' ~ W ~ ')'),
+        (tab + L + W, L, '#E2E4F4', 'Back (' ~ L ~ ')'),
+        (tab + L + W + L, W, '#DBDEF1', 'Side (' ~ W ~ ')')
+      ] -%}
+  {%- for x, w, fill, label in body %}
+  <rect x="{{ (ox + x * scale)|round(2) }}" y="{{ (oy + body_y * scale)|round(2) }}"
+        width="{{ (w * scale)|round(2) }}" height="{{ (H * scale)|round(2) }}"
+        fill="{{ fill }}" stroke="#333333" stroke-width="1.5"/>
+  {%- if (w * scale) > 34 %}
+  <text x="{{ (ox + (x + w / 2.0) * scale)|round(2) }}" y="{{ (oy + (body_y + H / 2.0) * scale)|round(2) }}"
+        text-anchor="middle" dominant-baseline="middle" font-size="9" fill="#333" font-weight="500">{{ label }}</text>
+  {%- endif %}
+  {%- endfor %}
+  {%- set flaps = [(tab, L), (tab + L, W), (tab + L + W, L), (tab + L + W + L, W)] -%}
+  {%- for x, w in flaps %}
+  <rect x="{{ (ox + x * scale)|round(2) }}" y="{{ (oy + (body_y + H) * scale)|round(2) }}"
+        width="{{ (w * scale)|round(2) }}" height="{{ (flap * scale)|round(2) }}"
+        fill="#DDE1F2" stroke="#333333" stroke-width="1.5"/>
+  {%- if not one_flap %}
+  <rect x="{{ (ox + x * scale)|round(2) }}" y="{{ oy }}"
+        width="{{ (w * scale)|round(2) }}" height="{{ (flap * scale)|round(2) }}"
+        fill="#DDE1F2" stroke="#333333" stroke-width="1.5"/>
+  {%- endif %}
+  <line x1="{{ (ox + x * scale)|round(2) }}" y1="{{ oy }}"
+        x2="{{ (ox + x * scale)|round(2) }}" y2="{{ (oy + totalH * scale)|round(2) }}"
+        stroke="#FF6B35" stroke-width="1.4" stroke-dasharray="6,4"/>
+  {%- endfor %}
+  <line x1="{{ (ox + tab * scale)|round(2) }}" y1="{{ (oy + (body_y + H) * scale)|round(2) }}"
+        x2="{{ (ox + totalW * scale)|round(2) }}" y2="{{ (oy + (body_y + H) * scale)|round(2) }}"
+        stroke="#FF6B35" stroke-width="1" stroke-dasharray="4,3"/>
+  {%- if not one_flap %}
+  <line x1="{{ (ox + tab * scale)|round(2) }}" y1="{{ (oy + flap * scale)|round(2) }}"
+        x2="{{ (ox + totalW * scale)|round(2) }}" y2="{{ (oy + flap * scale)|round(2) }}"
+        stroke="#FF6B35" stroke-width="1" stroke-dasharray="4,3"/>
+  {%- else %}
+  <text x="{{ (ox + (totalW / 2.0) * scale)|round(2) }}" y="{{ oy - 10 }}"
+        text-anchor="middle" font-size="8" fill="#999" font-style="italic">Open end (no flap)</text>
+  {%- endif %}
+  <text x="{{ (ox + (tab + L / 2.0) * scale)|round(2) }}" y="{{ (oy + totalH * scale + 13)|round(2) }}"
+        text-anchor="middle" font-size="9" fill="#666">{{ L }}mm</text>
+  <text x="{{ (ox + (tab + L + W / 2.0) * scale)|round(2) }}" y="{{ (oy + totalH * scale + 13)|round(2) }}"
+        text-anchor="middle" font-size="9" fill="#666">{{ W }}mm</text>
+  <text x="{{ (ox + totalW * scale + 5)|round(2) }}" y="{{ (oy + (body_y + H / 2.0) * scale)|round(2) }}"
+        text-anchor="start" dominant-baseline="middle" font-size="9" fill="#666">{{ H }}mm</text>
+  <text x="{{ (ox + totalW * scale + 5)|round(2) }}" y="{{ (oy + (body_y + H + flap / 2.0) * scale)|round(2) }}"
+        text-anchor="start" dominant-baseline="middle" font-size="9" fill="#666">{{ flap }}mm</text>
+  <text x="{{ (ox + (totalW / 2.0) * scale)|round(2) }}" y="{{ (oy + totalH * scale + 32)|round(2) }}"
+        text-anchor="middle" font-size="10" fill="#2B3990" font-weight="600">Blank: {{ totalH }} (W) x {{ totalW }} (L) mm</text>
+</svg>
+{%- endmacro -%}
+
+{%- macro jc_flat_tray(L, W, H) -%}
+  {%- set totalW = H + W + H -%}
+  {%- set totalH = H + L + H -%}
+  {%- set scale  = [0.30, 300.0 / totalW, 130.0 / totalH] | min -%}
+  {%- set ox = 30 -%}{%- set oy = 30 -%}
+  {%- set svgW = (totalW * scale) + 60 -%}
+  {%- set svgH = (totalH * scale) + 74 -%}
+<svg width="{{ svgW|round(1) }}" height="{{ svgH|round(1) }}" viewBox="0 0 {{ svgW|round(1) }} {{ svgH|round(1) }}"
+     style="background:#FAFAFA;border:1px solid #ddd;border-radius:4px;">
+  {%- set panels = [
+        (H, H, W, L, '#E7E0F4', 'Base (' ~ L ~ ' x ' ~ W ~ ')'),
+        (H, 0, W, H, '#D7EDD8', 'Front'),
+        (H, H + L, W, H, '#D7EDD8', 'Back'),
+        (0, H, H, L, '#E5F3E5', 'Side'),
+        (H + W, H, H, L, '#E5F3E5', 'Side')
+      ] -%}
+  {%- for x, y, w, h, fill, label in panels %}
+  <rect x="{{ (ox + x * scale)|round(2) }}" y="{{ (oy + y * scale)|round(2) }}"
+        width="{{ (w * scale)|round(2) }}" height="{{ (h * scale)|round(2) }}"
+        fill="{{ fill }}" stroke="#333333" stroke-width="1.5"/>
+  {%- if (w * scale) > 44 and (h * scale) > 16 %}
+  <text x="{{ (ox + (x + w / 2.0) * scale)|round(2) }}" y="{{ (oy + (y + h / 2.0) * scale)|round(2) }}"
+        text-anchor="middle" dominant-baseline="middle" font-size="9" fill="#333" font-weight="500">{{ label }}</text>
+  {%- endif %}
+  {%- endfor %}
+  {%- for fx in [H, H + W] %}
+  <line x1="{{ (ox + fx * scale)|round(2) }}" y1="{{ oy }}" x2="{{ (ox + fx * scale)|round(2) }}"
+        y2="{{ (oy + totalH * scale)|round(2) }}" stroke="#FF6B35" stroke-width="1.4" stroke-dasharray="6,4"/>
+  {%- endfor %}
+  {%- for fy in [H, H + L] %}
+  <line x1="{{ ox }}" y1="{{ (oy + fy * scale)|round(2) }}" x2="{{ (ox + totalW * scale)|round(2) }}"
+        y2="{{ (oy + fy * scale)|round(2) }}" stroke="#FF6B35" stroke-width="1.4" stroke-dasharray="6,4"/>
+  {%- endfor %}
+  <text x="{{ (ox + (totalW / 2.0) * scale)|round(2) }}" y="{{ (oy + totalH * scale + 30)|round(2) }}"
+        text-anchor="middle" font-size="10" fill="#2B3990" font-weight="600">Blank: {{ totalW }} x {{ totalH }} mm</text>
+</svg>
+{%- endmacro -%}
+
+{%- macro jc_assembled(L, W, H, open_top, caption) -%}
+  {%- set DX = 0.50 -%}{%- set DY = 0.30 -%}
+  {%- set scale = [0.30, 120.0 / (L + W * DX), 100.0 / (H + W * DY)] | min -%}
+  {%- set l = L * scale -%}{%- set h = H * scale -%}
+  {%- set dx = W * scale * DX -%}{%- set dy = W * scale * DY -%}
+  {#- Left margin clears the "H 000mm" callout (anchored end), right margin the "W 000mm" -#}
+  {%- set ox = 52 -%}{%- set oy = 28 + dy -%}
+  {%- set svgW = l + dx + 110 -%}
+  {%- set svgH = h + dy + 62 -%}
+<svg width="{{ svgW|round(1) }}" height="{{ svgH|round(1) }}" viewBox="0 0 {{ svgW|round(1) }} {{ svgH|round(1) }}"
+     style="background:#FAFAFA;border:1px solid #ddd;border-radius:4px;">
+  {%- if open_top %}
+  <polygon points="{{ (ox + 3)|round(2) }},{{ (oy + 2)|round(2) }}
+                   {{ (ox + l - 3)|round(2) }},{{ (oy + 2)|round(2) }}
+                   {{ (ox + l - 3 + dx)|round(2) }},{{ (oy + 2 - dy)|round(2) }}
+                   {{ (ox + 3 + dx)|round(2) }},{{ (oy + 2 - dy)|round(2) }}"
+           fill="#C1C5E1" stroke="#333333" stroke-width="0.8"/>
+  {%- else %}
+  <polygon points="{{ ox }},{{ oy|round(2) }} {{ (ox + l)|round(2) }},{{ oy|round(2) }}
+                   {{ (ox + l + dx)|round(2) }},{{ (oy - dy)|round(2) }} {{ (ox + dx)|round(2) }},{{ (oy - dy)|round(2) }}"
+           fill="#BCC2E5" stroke="#333333" stroke-width="1.6"/>
+  {%- endif %}
+  <polygon points="{{ (ox + l)|round(2) }},{{ oy|round(2) }}
+                   {{ (ox + l + dx)|round(2) }},{{ (oy - dy)|round(2) }}
+                   {{ (ox + l + dx)|round(2) }},{{ (oy - dy + h)|round(2) }}
+                   {{ (ox + l)|round(2) }},{{ (oy + h)|round(2) }}"
+           fill="#C9CEEA" stroke="#333333" stroke-width="1.6"/>
+  <rect x="{{ ox }}" y="{{ oy|round(2) }}" width="{{ l|round(2) }}" height="{{ h|round(2) }}"
+        fill="#D1D5ED" stroke="#333333" stroke-width="1.8"/>
+  {%- if open_top %}
+  <line x1="{{ ox }}" y1="{{ oy|round(2) }}" x2="{{ (ox + dx)|round(2) }}" y2="{{ (oy - dy)|round(2) }}"
+        stroke="#333333" stroke-width="1.6"/>
+  <line x1="{{ (ox + dx)|round(2) }}" y1="{{ (oy - dy)|round(2) }}"
+        x2="{{ (ox + l + dx)|round(2) }}" y2="{{ (oy - dy)|round(2) }}" stroke="#333333" stroke-width="1.6"/>
+  <text x="{{ (ox + l / 2.0 + dx / 2.0)|round(2) }}" y="{{ (oy - dy - 7)|round(2) }}"
+        text-anchor="middle" font-size="8" fill="#999" font-style="italic">Open top</text>
+  {%- endif %}
+  <text x="{{ (ox + l / 2.0)|round(2) }}" y="{{ (oy + h / 2.0)|round(2) }}"
+        text-anchor="middle" dominant-baseline="middle" font-size="9" fill="#333" font-weight="500">{{ L }} x {{ H }}</text>
+  <text x="{{ (ox + l / 2.0)|round(2) }}" y="{{ (oy + h + 15)|round(2) }}"
+        text-anchor="middle" font-size="9" fill="#666">L {{ L }}mm</text>
+  <text x="{{ (ox - 7)|round(2) }}" y="{{ (oy + h / 2.0)|round(2) }}"
+        text-anchor="end" dominant-baseline="middle" font-size="9" fill="#666">H {{ H }}mm</text>
+  {#- W is the receding depth. Dimension it on the top-LEFT receding edge: that
+      edge is on the silhouette, so the callout sits outside the solid. Placed at
+      the right it landed beside the right face's vertical edge and read as the
+      height. Angle is constant — atan(DY/DX) = 31 degrees — so it can be hardcoded. -#}
+  {%- set nlen = ((dx * dx) + (dy * dy)) ** 0.5 -%}
+  {%- set nx = -dy / nlen -%}{%- set ny = -dx / nlen -%}
+  {%- set k = 11 -%}
+  <line x1="{{ (ox + k * nx)|round(2) }}" y1="{{ (oy + k * ny)|round(2) }}"
+        x2="{{ (ox + dx + k * nx)|round(2) }}" y2="{{ (oy - dy + k * ny)|round(2) }}"
+        stroke="#999" stroke-width="0.6"/>
+  <line x1="{{ ox }}" y1="{{ oy|round(2) }}" x2="{{ (ox + k * nx)|round(2) }}"
+        y2="{{ (oy + k * ny)|round(2) }}" stroke="#999" stroke-width="0.5"/>
+  <line x1="{{ (ox + dx)|round(2) }}" y1="{{ (oy - dy)|round(2) }}"
+        x2="{{ (ox + dx + k * nx)|round(2) }}" y2="{{ (oy - dy + k * ny)|round(2) }}"
+        stroke="#999" stroke-width="0.5"/>
+  {%- set wlx = ox + (dx / 2.0) + (k + 8) * nx -%}
+  {%- set wly = oy - (dy / 2.0) + (k + 8) * ny -%}
+  <text x="{{ wlx|round(2) }}" y="{{ wly|round(2) }}" text-anchor="middle" dominant-baseline="middle"
+        font-size="9" fill="#666"
+        transform="rotate(-31, {{ wlx|round(2) }}, {{ wly|round(2) }})">W {{ W }}mm</text>
+  <text x="{{ (ox + (l + dx) / 2.0)|round(2) }}" y="{{ (svgH - 9)|round(2) }}"
+        text-anchor="middle" font-size="10" fill="#2B3990" font-weight="600">{{ caption }}</text>
+</svg>
+{%- endmacro -%}
+
     <div class="page-container">
         <table class="header-table">
             <tr>
@@ -596,151 +768,29 @@
         </table>
     </div>
 
-    <div class="page-container layout-page page-break">
-        <table class="header-table">
-            <tr>
-                <td>
-                    <div class="main-title">Carton Layout</div>
-                    <div class="small-brand">Vimit Converters Ltd &bull; Dynamic Blank Layout</div>
-                </td>
-                <td align="right" width="24%">
-                    <div class="job-box">
-                        <span class="lbl">Job Card No.</span>
-                        <span class="val" style="font-size:14px;color:#2B3990;">{{ doc.name }}</span>
-                    </div>
-                </td>
-            </tr>
-        </table>
-
-        <table class="sub-header-grid">
-            <tr>
-                <td class="k">Length</td><td>{{ L|int }} mm</td>
-                <td class="k">Width</td><td>{{ W|int }} mm</td>
-                <td class="k">Height</td><td>{{ H|int }} mm</td>
-                <td class="k">Flap</td><td>{{ flap|int }} mm</td>
-                <td class="k">Tab</td><td>{{ tab_width|int }} mm</td>
-                <td class="k">Type</td><td>{{ product_type }}</td>
-            </tr>
-        </table>
-
-        <table class="dense-table" style="margin-bottom:8px;">
-            <tr>
-                <th width="18%">Board Size</th>
-                <th>Calculated Width</th>
-                <th>Calculated Length</th>
-                <th>Saved Planned Width</th>
-                <th>Saved Planned Length</th>
-                <th>Actual Width</th>
-                <th>Actual Length</th>
-            </tr>
-            <tr>
-                <td style="background:#EEF0FA;font-weight:900;">MM</td>
-                <td><span class="val">{{ calc_board_w|int }}</span></td>
-                <td><span class="val">{{ calc_board_l|int }}</span></td>
-                <td><span class="val">{{ saved_board_w|int if saved_board_w else "—" }}</span></td>
-                <td><span class="val">{{ saved_board_l|int if saved_board_l else "—" }}</span></td>
-                <td><span class="val" style="color:#6B7280;">{{ doc.board_width_actual_mm|int if doc.board_width_actual_mm else (doc.get("board_width_actual_mm")|int if doc.get("board_width_actual_mm") else "________") }}</span></td>
-                <td><span class="val" style="color:#6B7280;">{{ doc.board_length_actual_mm|int if doc.board_length_actual_mm else (doc.get("board_length_actual_mm")|int if doc.get("board_length_actual_mm") else "________") }}</span></td>
-            </tr>
-        </table>
-
-        <div class="layout-shell">
-            <svg class="carton-svg" viewBox="0 0 900 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dynamic carton blank layout">
-                <defs>
-                    <pattern id="vclgrid" width="18" height="18" patternUnits="userSpaceOnUse">
-                        <path d="M 18 0 L 0 0 0 18" fill="none" stroke="#E5E7EB" stroke-width="0.8" />
-                    </pattern>
-                    <marker id="arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto" markerUnits="strokeWidth">
-                        <path d="M0,0 L8,4 L0,8 z" fill="#2B3990" />
-                    </marker>
-                </defs>
-                <rect x="0" y="0" width="900" height="420" fill="url(#vclgrid)" />
-                
-                <rect x="{{ svg_x0 }}" y="{{ svg_y0 }}" width="{{ svg_w }}" height="{{ svg_h }}" fill="#FFFFFF" stroke="#111827" stroke-width="2.5" />
-                <line x1="{{ x1 }}" y1="{{ svg_y0 }}" x2="{{ x1 }}" y2="{{ svg_y0 + svg_h }}" stroke="#111827" stroke-width="2" />
-                <line x1="{{ x2 }}" y1="{{ svg_y0 }}" x2="{{ x2 }}" y2="{{ svg_y0 + svg_h }}" stroke="#111827" stroke-width="2" />
-                <line x1="{{ x3 }}" y1="{{ svg_y0 }}" x2="{{ x3 }}" y2="{{ svg_y0 + svg_h }}" stroke="#111827" stroke-width="2" />
-                <line x1="{{ x4 }}" y1="{{ svg_y0 }}" x2="{{ x4 }}" y2="{{ svg_y0 + svg_h }}" stroke="#111827" stroke-width="2" />
-                
-                {% if top_flap_h > 0 %}
-                    <line x1="{{ svg_x0 }}" y1="{{ body_y }}" x2="{{ svg_x0 + svg_w }}" y2="{{ body_y }}" stroke="#111827" stroke-width="2" stroke-dasharray="8 4" />
-                {% endif %}
-                <line x1="{{ svg_x0 }}" y1="{{ bottom_flap_y }}" x2="{{ svg_x0 + svg_w }}" y2="{{ bottom_flap_y }}" stroke="#111827" stroke-width="2" stroke-dasharray="8 4" />
-                
-                <rect x="{{ svg_x0 }}" y="{{ body_y }}" width="{{ p1w }}" height="{{ body_h }}" fill="#EEF0FA" opacity="0.90" />
-                <rect x="{{ x1 }}" y="{{ body_y }}" width="{{ p2w }}" height="{{ body_h }}" fill="#F8FAFC" opacity="0.95" />
-                <rect x="{{ x2 }}" y="{{ body_y }}" width="{{ p3w }}" height="{{ body_h }}" fill="#EEF0FA" opacity="0.90" />
-                <rect x="{{ x3 }}" y="{{ body_y }}" width="{{ p4w }}" height="{{ body_h }}" fill="#F8FAFC" opacity="0.95" />
-                <rect x="{{ x4 }}" y="{{ body_y }}" width="{{ tabw }}" height="{{ body_h }}" fill="#ECFDF5" opacity="0.95" />
-                
-                <text x="{{ svg_x0 + (p1w / 2) }}" y="{{ body_y + (body_h / 2) - 6 }}" text-anchor="middle" font-size="18" font-weight="900" fill="#2B3990">L</text>
-                <text x="{{ svg_x0 + (p1w / 2) }}" y="{{ body_y + (body_h / 2) + 14 }}" text-anchor="middle" font-size="13" font-weight="800" fill="#111827">{{ panel_1|int }}</text>
-                <text x="{{ x1 + (p2w / 2) }}" y="{{ body_y + (body_h / 2) - 6 }}" text-anchor="middle" font-size="18" font-weight="900" fill="#2B3990">W</text>
-                <text x="{{ x1 + (p2w / 2) }}" y="{{ body_y + (body_h / 2) + 14 }}" text-anchor="middle" font-size="13" font-weight="800" fill="#111827">{{ panel_2|int }}</text>
-                <text x="{{ x2 + (p3w / 2) }}" y="{{ body_y + (body_h / 2) - 6 }}" text-anchor="middle" font-size="18" font-weight="900" fill="#2B3990">L</text>
-                <text x="{{ x2 + (p3w / 2) }}" y="{{ body_y + (body_h / 2) + 14 }}" text-anchor="middle" font-size="13" font-weight="800" fill="#111827">{{ panel_3|int }}</text>
-                <text x="{{ x3 + (p4w / 2) }}" y="{{ body_y + (body_h / 2) - 6 }}" text-anchor="middle" font-size="18" font-weight="900" fill="#2B3990">W</text>
-                <text x="{{ x3 + (p4w / 2) }}" y="{{ body_y + (body_h / 2) + 14 }}" text-anchor="middle" font-size="13" font-weight="800" fill="#111827">{{ panel_4|int }}</text>
-                
-                <text x="{{ x4 + (tabw / 2) }}" y="{{ body_y + (body_h / 2) }}" text-anchor="middle" font-size="10" font-weight="900" fill="#0E9E5A" transform="rotate(-90 {{ x4 + (tabw / 2) }} {{ body_y + (body_h / 2) }})">TAB {{ tab_width|int }}</text>
-                
-                {% if top_flap_h > 0 %}
-                    <text x="450" y="{{ svg_y0 + (top_flap_h / 2) + 5 }}" text-anchor="middle" font-size="13" font-weight="900" fill="#111827">TOP FLAP {{ flap|int if product_type != "Tray" else H|int }}</text>
-                {% endif %}
-                <text x="450" y="{{ bottom_flap_y + (bottom_flap_h / 2) + 5 }}" text-anchor="middle" font-size="13" font-weight="900" fill="#111827">BOTTOM FLAP {{ flap|int if product_type != "Tray" else H|int }}</text>
-                
-                <text x="76" y="{{ body_y + (body_h / 2) }}" text-anchor="middle" font-size="13" font-weight="900" fill="#111827" transform="rotate(-90 76 {{ body_y + (body_h / 2) }})">BODY HEIGHT {{ H|int }}</text>
-                <line x1="95" y1="{{ svg_y0 }}" x2="95" y2="{{ svg_y0 + svg_h }}" stroke="#2B3990" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)" />
-                <text x="60" y="72" font-size="12" font-weight="900" fill="#2B3990">BOARD WIDTH {{ board_w|int }}</text>
-                
-                <line x1="{{ svg_x0 }}" y1="335" x2="{{ svg_x0 + svg_w }}" y2="335" stroke="#2B3990" stroke-width="2" marker-start="url(#arrow)" marker-end="url(#arrow)" />
-                <text x="450" y="360" text-anchor="middle" font-size="14" font-weight="900" fill="#2B3990">BOARD LENGTH {{ board_l|int }}</text>
-                
-                <text x="450" y="38" text-anchor="middle" font-size="18" font-weight="900" fill="#00395D">{{ product_type|upper }} BLANK: {{ board_w|int }} × {{ board_l|int }} mm</text>
-            </svg>
-            <table class="layout-legend">
-                <tr>
-                    <td><strong>Board Width</strong>{{ calc_board_w|int }} mm calculated from vertical flap geometry</td>
-                    <td><strong>Board Length</strong>{{ calc_board_l|int }} mm calculated from panel sequences + structural tab joint</td>
-                    <td><strong>Best UPS</strong>Orientation {% if ns.a_max_n >= ns.b_max_n and ns.a_max_n > 0 %}A ({{ ns.a_max_n }}-UP){% else %}B ({{ ns.b_max_n }}-UP){% endif %} minimizes production raw waste.</td>
-                </tr>
-            </table>
-        </div>
-    </div>
-
-    {%- set STATION_LIST = [
-        ("Corrugation", false),
-        ("Sheeting", false),
-        ("Carton Pasting", false),
-        ("Creasing", false),
-        ("Carton Printing", true),
-        ("Slotting", false),
-        ("Carton Stitching / Gluing", false),
-        ("Bundling", false)
-    ] -%}
     <div class="page-container page-break">
         <table class="header-table">
             <tr>
                 <td>
-                    <div class="main-title">Station Production Log</div>
-                    <div class="small-brand">Vimit Converters Ltd &bull; 8-Station Operational Tracking</div>
+                    <div class="main-title">Material Release &amp; Carton Layout</div>
+                    <div class="small-brand">Vimit Converters Ltd &bull; Reels Issued and Blank Reference</div>
                 </td>
-                <td align="right" width="25%">
+                <td align="right" width="24%">
                     <div class="job-box">
                         <span class="lbl">Job Card No.</span>
-                        <span class="val" style="font-size:14px;">{{ doc.name }}</span>
+                        <span class="val" style="font-size:13px;color:#2B3990;white-space:nowrap;">{{ doc.name }}</span>
                     </div>
                 </td>
             </tr>
         </table>
+
         <table class="sub-header-grid">
             <tr>
                 <td class="k">Customer</td><td>{{ doc.customer_name or doc.get("customer_name") or "" }}</td>
-                <td class="k">Print Type</td><td><strong>{{ print_type | upper }}</strong></td>
                 <td class="k">Order Qty</td><td>{{ doc.quantity_ordered or doc.qty or doc.get("quantity_ordered") or "0" }} PCS</td>
             </tr>
             <tr>
-                <td class="k">Specification</td><td colspan="5">{{ doc.specification_name or doc.customer_product_spec or doc.job_description or "N/A" }}{% if doc.customer_product_spec and doc.specification_name %} ({{ doc.customer_product_spec }}){% endif %}</td>
+                <td class="k">Specification</td><td colspan="3">{{ doc.specification_name or doc.customer_product_spec or doc.job_description or "N/A" }}{% if doc.customer_product_spec and doc.specification_name %} ({{ doc.customer_product_spec }}){% endif %}</td>
             </tr>
         </table>
 
@@ -770,6 +820,59 @@
                     <td colspan="4" style="font-size:7.5px; color:#6B7280; font-style:italic; vertical-align:middle;">Net board consumed = Total Weight Out &minus; Total Returned. Any reel returned to store must be weighed and logged here before the lot is closed.</td>
                 </tr>
             </tbody>
+        </table>
+
+        {#- Carton layout: two small reference drawings. Replaces the old landscape
+            "Carton Layout" page, which rendered almost blank because wkhtmltopdf
+            ignores named @page rules so the page never turned landscape. -#}
+        <div class="sec-head alt" style="margin-top:10px;">Carton Layout — Assembled and Flat Blank</div>
+        {% if ply != "SFK" and product_type != "Die Cut" and L > 0 and W > 0 %}
+        <table class="figs-table" style="width:100%;table-layout:fixed;border-collapse:collapse;margin-top:6px;">
+            <tr>
+                <td style="width:38%;vertical-align:top;padding-right:10px;">
+                    {{ jc_assembled(L|int, W|int, H|int, (product_type == "Tray" or product_type == "1 Flap RSC"),
+                        "Assembled tray" if product_type == "Tray" else ("Assembled — top open" if product_type == "1 Flap RSC" else "Assembled — closed")) }}
+                </td>
+                <td style="vertical-align:top;">
+                    {% if product_type == "Tray" %}{{ jc_flat_tray(L|int, W|int, H|int) }}{% else %}{{ jc_flat_rsc(L|int, W|int, H|int, flap|int, tab_width|int, product_type == "1 Flap RSC", joint_type == "Stitched") }}{% endif %}
+                </td>
+            </tr>
+        </table>
+        <div style="margin-top:4px;font-size:8px;color:#6B7280;">
+            Reference only — not to scale. Blank {{ calc_board_w|int }} &times; {{ calc_board_l|int }} mm
+            &bull; planned {{ (calc_board_w + 2*trim_w)|int }} &times; {{ (calc_board_l + 2*trim_l)|int }} mm including trim.
+        </div>
+        {% else %}
+        <div style="padding:10px;font-size:9px;color:#6B7280;font-style:italic;">
+            Blank layout not available for this job ({{ product_type or "no product type" }}{% if ply == "SFK" %}, SFK ply{% endif %}).
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="page-container page-break">
+        <table class="header-table">
+            <tr>
+                <td>
+                    <div class="main-title">Station Production Log</div>
+                    <div class="small-brand">Vimit Converters Ltd &bull; 8-Station Operational Tracking</div>
+                </td>
+                <td align="right" width="25%">
+                    <div class="job-box">
+                        <span class="lbl">Job Card No.</span>
+                        <span class="val" style="font-size:14px;">{{ doc.name }}</span>
+                    </div>
+                </td>
+            </tr>
+        </table>
+        <table class="sub-header-grid">
+            <tr>
+                <td class="k">Customer</td><td>{{ doc.customer_name or doc.get("customer_name") or "" }}</td>
+                <td class="k">Print Type</td><td><strong>{{ print_type | upper }}</strong></td>
+                <td class="k">Order Qty</td><td>{{ doc.quantity_ordered or doc.qty or doc.get("quantity_ordered") or "0" }} PCS</td>
+            </tr>
+            <tr>
+                <td class="k">Specification</td><td colspan="5">{{ doc.specification_name or doc.customer_product_spec or doc.job_description or "N/A" }}{% if doc.customer_product_spec and doc.specification_name %} ({{ doc.customer_product_spec }}){% endif %}</td>
+            </tr>
         </table>
 
         <div class="sec-head" style="margin-top:10px;">7. Station Timing Log</div>
