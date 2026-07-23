@@ -187,7 +187,8 @@
         {%- set trim_w = doc.get("trim_allowance_width_mm") | int if doc.get("trim_allowance_width_mm") else 0 -%}
         {%- set knife = doc.get("knife_gap_mm") | int if doc.get("knife_gap_mm") else 0 -%}
         {%- set max_reel = doc.get("max_reel_width") | int if doc.get("max_reel_width") else 1500 -%}
-        {%- set tab_width = 40 if joint_type == "Stitched" else 30 -%}
+        {#- VCL standard: 30mm tab for every joint type (stitch flap reduced from 40mm 2026-07-23). -#}
+        {%- set tab_width = 30 -%}
         {%- if product_type == "Tray" -%}
             {%- set bw = W + (2 * H) -%}
             {%- set bl = L + (2 * H) -%}
