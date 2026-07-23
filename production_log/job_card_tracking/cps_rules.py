@@ -116,9 +116,45 @@ CARTON_MATERIAL_SPEC_FIELDS = (
 
 COMPUTER_PAPER_MATERIAL_SPEC_FIELDS = ("pay_slip_size", "number_of_parts")
 
+# The label's own geometry. ``gap_between`` and ``side_trim`` sit here rather
+# than with the tooling because they are what the web is *cut* to: change either
+# and the same die produces a different label across the same reel.
+LABEL_DIMENSION_FIELDS = (
+	"label_length",
+	"label_width",
+	"gap_between",
+	"side_trim",
+)
+
+# What the job is physically made *on*. ``dies`` is carried as the Dies record's
+# name and nothing more — the die's own geometry is not dereferenced anywhere in
+# this module (discovery §6.2). A die can be reground, retired or renumbered
+# after an order is placed, and a specification that silently followed it would
+# be a different specification without anybody editing it.
+LABEL_TOOLING_FIELDS = (
+	"dies",
+	"cylinder_teeth",
+	"plate_up",
+	"plate_round",
+	"packing_up",
+)
+
+# What it is printed on.
+LABEL_SUBSTRATE_FIELDS = ("material_type",)
+
+# ``packing_pieces`` is deliberately absent: it says how many labels go in a
+# pack, which is the same kind of statement as ``standard_packing`` — and
+# ``standard_packing`` has never been material for any product type. It is still
+# *frozen* (see :data:`LABEL_SNAPSHOT_SCALARS`); freezing and materiality are
+# different questions and this is the one case where they diverge.
+LABEL_MATERIAL_SPEC_FIELDS = (
+	LABEL_DIMENSION_FIELDS + LABEL_TOOLING_FIELDS + LABEL_SUBSTRATE_FIELDS
+)
+
 PRODUCT_TYPE_MATERIAL_SPEC_FIELDS = {
 	"Computer Paper": COMPUTER_PAPER_MATERIAL_SPEC_FIELDS,
 	"Carton": CARTON_MATERIAL_SPEC_FIELDS,
+	"Label": LABEL_MATERIAL_SPEC_FIELDS,
 }
 
 # Kept as a module constant, and kept identical to what it has always held, so
@@ -986,8 +1022,9 @@ def summarise_readiness(decisions):
 
 # --- The frozen technical snapshot (design §8.2) ----------------------------
 #
-# Version 2 adds the Carton half. It is a *widening* only: every key version 1
-# wrote is still written, for every product type, whatever that product type is.
+# Version 2 adds the Carton half; version 3 adds the Label half. Each is a
+# *widening* only: every key version 1 wrote is still written, for every product
+# type, whatever that product type is.
 #
 # That costs a handful of blank keys on a Carton snapshot and buys the one thing
 # that matters — no reader of an existing snapshot can break. A Carton snapshot
@@ -995,13 +1032,45 @@ def summarise_readiness(decisions):
 # KeyError in any consumer that indexes rather than ``.get()``s, and those
 # consumers live in another repository and deploy on their own schedule.
 # Additive is the only kind of change that is safe across that boundary.
-SNAPSHOT_VERSION = 2
+#
+# Version 3 exists so that a Label line frozen by the *previous* release —
+# carrying the version-1 scalars and none of the label geometry — is
+# distinguishable from a complete one. Without it, a Label job card raised from
+# such a line would be refused with a page of "expected blank" mismatches about
+# its die, its web and its material rather than with the one sentence that is
+# actually true: the order was frozen before Label specifications were captured
+# in full. See :data:`PRODUCT_TYPE_MIN_SNAPSHOT_VERSION`.
+#
+# This is the newest version this code *knows*. It is deliberately not what
+# every snapshot is stamped with — see :data:`SNAPSHOT_BASE_WRITE_VERSION` and
+# :func:`snapshot_write_version` for why a Computer Paper or Carton line still
+# freezes at 2.
+SNAPSHOT_VERSION = 3
 
 # Snapshots of an older version stay readable: a job card raised today against
 # an order submitted last month must still work. Nothing is *rewritten* — a
 # snapshot is a record of what was known then, and upgrading one in place would
 # be inventing history.
-SUPPORTED_SNAPSHOT_VERSIONS = (1, 2)
+SUPPORTED_SNAPSHOT_VERSIONS = (1, 2, 3)
+
+# The version a snapshot is *stamped* with when nothing about its product type
+# demands a newer one — which is to say, the version this app wrote before Label
+# existed.
+#
+# A snapshot's version number is not only ours to read. It crosses a repository
+# boundary: the Compass front end reads these lines and deploys on its own
+# schedule, and a release of it that predates version 3 treats an unknown
+# version as unreadable rather than as a widening it can ignore. Stamping every
+# product type with the newest number this app knows would therefore make a
+# Computer Paper or Carton line submitted today unreadable to a Compass that
+# has not shipped yet — for a change that alters not one byte of its payload,
+# because versions 2 and 3 are identical for both of those types.
+#
+# So the number written is the oldest one that still tells the whole truth about
+# the record: 2 for Computer Paper and Carton, exactly as before this release,
+# and 3 for Label, which is the first version that describes a label at all. See
+# :func:`snapshot_write_version`.
+SNAPSHOT_BASE_WRITE_VERSION = 2
 
 # Exactly what version 1 froze, in its original order. The compatibility floor:
 # every snapshot contains at least these keys.
@@ -1060,9 +1129,49 @@ CARTON_SNAPSHOT_SCALARS = (
 # has one answer per type rather than one answer and one silence.
 COMPUTER_PAPER_SNAPSHOT_SCALARS = ("pay_slip_size", "number_of_parts")
 
+# Everything on the specification that says what a *label* is. Version 2 froze
+# not one of them, so a Label order captured the customer, the name, the job
+# size and the colour block — and nothing at all about the label.
+#
+# ``dies`` freezes the Dies record's *name*. That is the whole of the intent:
+# the name is the shop-floor instruction ("run die D-114") and it is stable,
+# whereas the die's own dimensions are live master data that can be corrected
+# after the order is sold. The label's geometry is frozen here from the
+# specification's own fields, which is why nothing needs to read the Dies record
+# at snapshot time, at job card time, or at comparison time.
+LABEL_SNAPSHOT_SCALARS = (
+	"dies",
+	"label_length",
+	"label_width",
+	"material_type",
+	"cylinder_teeth",
+	"plate_up",
+	"plate_round",
+	"packing_up",
+	"packing_pieces",
+	"gap_between",
+	"side_trim",
+)
+
 PRODUCT_TYPE_SNAPSHOT_SCALARS = {
 	"Computer Paper": COMPUTER_PAPER_SNAPSHOT_SCALARS,
 	"Carton": CARTON_SNAPSHOT_SCALARS,
+	"Label": LABEL_SNAPSHOT_SCALARS,
+}
+
+# The oldest snapshot version that can still describe this product type in full.
+#
+# A product type absent from this table has no floor: Computer Paper has been
+# fully described since version 1 and Carton since version 2, and imposing a
+# floor on either would retroactively refuse orders that are complete.
+#
+# Label appears because version 3 is the first version that freezes a label's
+# geometry, tooling and material. A version-2 Label snapshot is readable — it is
+# still one of ours, and every key it holds is still trusted — but it cannot
+# support a Label job card, and saying so once is better than reporting eleven
+# blank fields as eleven disagreements.
+PRODUCT_TYPE_MIN_SNAPSHOT_VERSION = {
+	"Label": 3,
 }
 
 SNAPSHOT_PART_FIELDS = ("part_number", "paper_type", "gsm", "colour", "purpose")
@@ -1110,10 +1219,56 @@ def snapshot_version_supported(snapshot):
 	"""Whether this code knows how to read that snapshot.
 
 	Forward-looking rather than defensive: a site rolled back to this release
-	after a later one wrote version 3 snapshots must refuse to card those lines
+	after a later one wrote version 4 snapshots must refuse to card those lines
 	rather than read half of one and call it a job.
 	"""
 	return snapshot_version(snapshot) in SUPPORTED_SNAPSHOT_VERSIONS
+
+
+def min_snapshot_version(product_type=None):
+	"""The oldest snapshot version that describes ``product_type`` in full.
+
+	``None`` when the product type has no floor — which is the answer for every
+	type that has been fully frozen since version 1.
+	"""
+	return PRODUCT_TYPE_MIN_SNAPSHOT_VERSION.get(normalise_product_type(product_type) or "")
+
+
+def snapshot_write_version(product_type=None):
+	"""The version to stamp on a snapshot being frozen for ``product_type``.
+
+	Derived from the floor rather than tabulated beside it, deliberately: a
+	second table saying "Label writes 3" next to one already saying "Label needs
+	at least 3" is the same fact written twice, and the failure mode of the two
+	disagreeing is a Label order that freezes a snapshot its own job card then
+	refuses. There is one fact — the oldest version that describes this product
+	type in full — and the write version is that, floored at
+	:data:`SNAPSHOT_BASE_WRITE_VERSION` so no product type is stamped older than
+	the number this app was already writing.
+
+	Computer Paper and Carton therefore keep writing 2, unchanged by the Label
+	release; Label writes 3; a product type this module does not know about
+	writes 2, which is the honest answer for a record whose extra fields nothing
+	here freezes.
+	"""
+	return max(SNAPSHOT_BASE_WRITE_VERSION, min_snapshot_version(product_type) or 0)
+
+
+def snapshot_describes_product_type(snapshot, product_type=None):
+	"""Whether this snapshot is new enough to describe ``product_type`` in full.
+
+	Separate from :func:`snapshot_version_supported`, and deliberately so. That
+	function answers "can this code read the file at all"; this one answers "does
+	the file contain the fields this kind of job card is proved against". A
+	version-2 Label snapshot is readable and truthful about everything it holds —
+	it simply predates the label geometry, and a job card cannot be proved
+	against fields the order never froze.
+	"""
+	minimum = min_snapshot_version(product_type)
+	if not minimum:
+		return True
+	version = snapshot_version(snapshot)
+	return version is not None and version >= minimum
 
 
 # --- Snapshot -> Job Card, for Carton ---------------------------------------
@@ -1158,6 +1313,62 @@ CARTON_SNAPSHOT_JC_MAP = (
 	("5_ply_top_layer_material", "5_ply_top_layer_material", "5 Ply Material"),
 )
 
+# --- Snapshot -> Job Card, for Label ----------------------------------------
+#
+# Same three-tuple shape and same double duty as the Carton map: it says what an
+# order-derived Job Card Label must be populated with, and it is what that card
+# is later proved against.
+#
+# Every target below exists on Job Card Label today — the card has carried the
+# full label block since it shipped, because its ``populate_specification_snapshot``
+# has always copied these values live off the specification. That is what makes
+# this a mapping change and not a schema change: the order-derived path writes
+# the same fields from a frozen source instead of a live one.
+#
+# Two mappings are worth reading twice:
+#
+# ``standard_packing`` -> ``standard_packing``
+#     An identity, unlike Carton, which calls the same value ``packing``. The
+#     temptation to "harmonise" the two is exactly the mistake: renaming a field
+#     on a live submittable DocType with 56 rows, print formats and a traveller
+#     behind it buys nothing but symmetry.
+#
+# ``standard_weight_per_carton`` -> ``weight_per_carton``
+#     The one rename, and it is the specification's name that is the odd one:
+#     labels are packed in cartons too, and the card has called it
+#     ``weight_per_carton`` since it shipped.
+LABEL_SNAPSHOT_JC_MAP = (
+	("specification_name", "specification_name", "Specification Name"),
+	("job_size", "job_size", "Job Size"),
+	("numbering_required", "numbering_required", "Numbering Required"),
+	("standard_packing", "standard_packing", "Standard Packing"),
+	("standard_weight_per_carton", "weight_per_carton", "Weight Per Carton"),
+	("ink_type", "ink_type", "Ink Type"),
+	("uses_c", "uses_c", "Cyan"),
+	("uses_m", "uses_m", "Magenta"),
+	("uses_y", "uses_y", "Yellow"),
+	("uses_k", "uses_k", "Black"),
+	("number_of_colours", "number_of_colours", "Number of Colours"),
+	("colour_notes", "colour_notes", "Colour Notes"),
+	# The Dies record's name, carried verbatim and never dereferenced.
+	("dies", "dies", "Dies"),
+	("label_length", "label_length", "Label Length (mm)"),
+	("label_width", "label_width", "Label Width (mm)"),
+	("material_type", "material_type", "Material Type"),
+	# The specification holds these four as ``Data`` and the card as numbers.
+	# ``_same_spec_value`` compares anything numeric-looking as a number, so
+	# "24" frozen against 24.0 on the card is the same value and not a
+	# disagreement. Every one of the 192 live Label specifications was audited
+	# as numeric-compatible before this mapping was written (discovery §4.3).
+	("cylinder_teeth", "cylinder_teeth", "Cylinder Teeth"),
+	("plate_up", "plate_up", "Plate Up"),
+	("plate_round", "plate_round", "Plate Round"),
+	("packing_up", "packing_up", "Packing Up"),
+	("packing_pieces", "packing_pieces", "Packing Pieces"),
+	("gap_between", "gap_between", "Gap (between)"),
+	("side_trim", "side_trim", "Side Trim (mm)"),
+)
+
 # Snapshot keys that are deliberately not carried onto a Job Card, with the
 # reason each is exempt. Named explicitly so :func:`unmapped_snapshot_keys` can
 # be an equality assertion rather than a judgement call — a key added to the
@@ -1168,8 +1379,8 @@ SNAPSHOT_KEYS_NOT_ON_JOB_CARD = {
 	"product_type": "routing key, checked not copied",
 	# The counterparty comes from the order, not from the specification.
 	"customer": "taken from the Sales Order",
-	# Version-1 compatibility keys. A Carton specification has no pay slips and
-	# no parts, so these are always blank on a Carton snapshot.
+	# Version-1 compatibility keys. Neither a Carton nor a Label specification
+	# has pay slips or parts, so these are always blank on their snapshots.
 	"pay_slip_size": "Computer Paper only",
 	"number_of_parts": "Computer Paper only",
 }
@@ -1195,10 +1406,10 @@ def unmapped_snapshot_keys(product_type, field_map):
 # The scalar map above proves what a box *is*. This proves what it is *printed
 # in*: the spot colours the order froze, row for row.
 #
-# Carton is the only card here that carries a snapshot table. It has a Spot
-# Colours grid and no Colour of Parts grid — a box has no parts — which is why
-# only one entry appears below rather than the pair Computer Paper's snapshot
-# carries.
+# Carton and Label both carry a snapshot table, and both carry the same one: a
+# Spot Colours grid and no Colour of Parts grid — a box has no parts and neither
+# does a label — which is why one entry appears in each map below rather than
+# the pair Computer Paper's snapshot carries.
 #
 # Each row field is named with its label rather than derived from the fieldname,
 # because a derived label reads "Cmyk C" and the operator is looking at a column
@@ -1218,6 +1429,18 @@ SPOT_COLOUR_ROW_FIELDS = (
 
 # Four-tuples of (snapshot key, Job Card table fieldname, row label, row fields).
 CARTON_SNAPSHOT_JC_TABLE_MAP = (
+	("spot_colours", "spot_colours", "Spot Colour", SPOT_COLOUR_ROW_FIELDS),
+)
+
+# Label carries the same one grid and for the same reason. A label has no parts,
+# so ``colour_of_parts`` is absent here exactly as it is for Carton; the pair
+# only ever appears on Computer Paper.
+#
+# The grid matters more on a label than on a box. A Pantone is frequently the
+# entire brand asset being reproduced, the card's table is ``read_only`` on the
+# form — which stops a Desk user and stops nothing else — and a REST POST or a
+# Data Import writes read-only child tables perfectly happily.
+LABEL_SNAPSHOT_JC_TABLE_MAP = (
 	("spot_colours", "spot_colours", "Spot Colour", SPOT_COLOUR_ROW_FIELDS),
 )
 
@@ -1256,12 +1479,12 @@ def jc_table_mismatches(card, snapshot, table_map, precision=3):
 	"""Every Job Card child-table row that disagrees with what the order froze.
 
 	:func:`jc_snapshot_mismatches` proves the card's scalars against the
-	snapshot and stops at the grid, which is exactly where a Carton's colours
-	live. Without this a card could name the right order, the right price, the
-	right box and the right board while being printed in a Pantone nobody
-	agreed — and the spot colour table being ``read_only`` on the form stops a
-	Desk user and stops nothing else, since a REST POST or a Data Import writes
-	read-only fields perfectly happily.
+	snapshot and stops at the grid, which is exactly where a Carton's — and a
+	Label's — colours live. Without this a card could name the right order, the
+	right price, the right box and the right board while being printed in a
+	Pantone nobody agreed — and the spot colour table being ``read_only`` on the
+	form stops a Desk user and stops nothing else, since a REST POST or a Data
+	Import writes read-only fields perfectly happily.
 
 	A differing *row count* is reported on its own and the rows are not then
 	compared field by field: once the tables are different lengths every row
@@ -1398,6 +1621,169 @@ def jc_snapshot_mismatches(card, snapshot, field_map, precision=3):
 	return mismatches
 
 
+# --- Legacy order references (discovery §5) ---------------------------------
+#
+# Job Card Label reaches this release with 20 rows already naming a Sales Order
+# and 7 naming a Sales Order line, written by hand long before order control
+# existed. Not one of them carries a frozen snapshot, because there was nothing
+# to freeze: the specification was read live at save time, which is exactly what
+# the order-derived path replaces.
+#
+# Those rows are the whole difficulty. ``is_order_derived`` — "does this card
+# name an order" — is true for all 20, so the strict path would demand a frozen
+# snapshot from every one of them and 20 historical, submitted job cards would
+# stop saving on the day this lands. And the obvious fixes are both wrong:
+# clearing the links destroys the only record of which order a job belonged to,
+# and writing a snapshot today is a lie about what was known in April.
+#
+# So order-derived-ness becomes three states rather than two, and the third one
+# is *recorded* rather than inferred. A one-off patch stamps
+# ``legacy_order_reference`` on precisely the rows that exist, name an order and
+# hold no snapshot; from that moment the flag is an output of validation and
+# never an input, on the same terms as the snapshot itself (V12). Nothing an API
+# caller posts into it is believed. A new card cannot become legacy, because
+# there is no evidence a new card could produce — except one, and it is proved
+# rather than trusted: an amendment of a card that is *itself* stamped legacy,
+# cancelled, and naming the same order and the same line.
+#
+# The result is that "partial" and "legacy" stop being the same shape. A card
+# posted today with a Sales Order and no snapshot is refused, which is what
+# makes the read-only fields on the form mean something. A card that has held
+# those values since April keeps saving, and keeps them.
+
+ORDER_REF_NONE = "none"
+ORDER_REF_FROZEN = "frozen"
+ORDER_REF_LEGACY = "legacy"
+
+LEGACY_ORDER_REF_FIELD = "legacy_order_reference"
+
+LEGACY_FLAG_NOT_EARNED = "legacy-flag-not-earned"
+LEGACY_REF_IMMUTABLE = "legacy-ref-immutable"
+LEGACY_FLAG_IMMUTABLE = "legacy-flag-immutable"
+
+
+def has_order_reference(sales_order, sales_order_item):
+	"""Whether a card claims to come from a Sales Order line at all.
+
+	Either half counts. A card naming a line and no order is as much a claim on
+	an order as one naming both, and the strict path is what refuses it — being
+	lenient here would make the incomplete shape the way around the check.
+	"""
+	return bool((sales_order or "").strip() or (sales_order_item or "").strip())
+
+
+def has_frozen_snapshot(spec_snapshot):
+	"""Whether a card carries the order's frozen specification snapshot."""
+	return bool((spec_snapshot or "").strip())
+
+
+def order_reference_state(sales_order, sales_order_item, legacy_flag=False):
+	"""Which of the three order-reference states a card is in.
+
+	:data:`ORDER_REF_LEGACY` is reachable only for a card whose flag has already
+	been earned — see :func:`legacy_flag_earned`. Everything else that names an
+	order is :data:`ORDER_REF_FROZEN` and is proved against that order in full,
+	including a card that names one and carries no snapshot: that is not a third
+	kind of card, it is a frozen card missing its snapshot, and it is refused.
+	"""
+	if not has_order_reference(sales_order, sales_order_item):
+		return ORDER_REF_NONE
+	if legacy_flag:
+		return ORDER_REF_LEGACY
+	return ORDER_REF_FROZEN
+
+
+def legacy_order_reference_qualifies(sales_order, sales_order_item, spec_snapshot):
+	"""Whether a *pre-existing* row has the shape the migration stamps.
+
+	Names an order, holds no snapshot. Used by the patch and by nothing else —
+	a row that acquires this shape later has not become legacy, it has become
+	wrong, and :func:`legacy_flag_earned` is what refuses to promote it.
+	"""
+	return has_order_reference(sales_order, sales_order_item) and not has_frozen_snapshot(
+		spec_snapshot
+	)
+
+
+def legacy_flag_earned(sales_order, sales_order_item, spec_snapshot, amended_from_row):
+	"""Whether a *new* card may carry the legacy flag, on proven evidence.
+
+	The only new document that can be legacy is the amendment of one that
+	already is. Everything is checked rather than inherited:
+
+	* the new card still has the legacy shape — an order, no snapshot;
+	* the amended-from card exists and is itself stamped legacy;
+	* it is cancelled, which is the only state a card can be amended from;
+	* and it names the same order and the same line, so an amendment cannot
+	  repoint a legacy reference at somebody else's order on the way through.
+
+	``amended_from_row`` is the stored row as a dict, or None. Reading it is the
+	caller's job; deciding on it is this function's.
+	"""
+	if not legacy_order_reference_qualifies(sales_order, sales_order_item, spec_snapshot):
+		return False
+	if not amended_from_row:
+		return False
+	if not _get(amended_from_row, LEGACY_ORDER_REF_FIELD):
+		return False
+	if _get(amended_from_row, "docstatus") != 2:
+		return False
+
+	return _same(
+		_text(_get(amended_from_row, "sales_order")), _text(sales_order)
+	) and _same(
+		_text(_get(amended_from_row, "sales_order_item")), _text(sales_order_item)
+	)
+
+
+def legacy_order_reference_errors(stored, current):
+	"""Why an *existing* legacy card's save must be refused, as a list.
+
+	Two things are immutable on a card the migration stamped, and for the same
+	reason: the flag is the only record that the card predates order control,
+	and the links are the only record of what it was for.
+
+	Returns :class:`ConfigError` values, untranslated, in the order they are
+	worth reporting. An empty list is the normal answer — a legacy card saving
+	its production remarks touches none of this.
+	"""
+	if not stored or not _get(stored, LEGACY_ORDER_REF_FIELD):
+		return []
+
+	errors = []
+
+	if not _get(current, LEGACY_ORDER_REF_FIELD):
+		errors.append(
+			ConfigError(
+				LEGACY_FLAG_IMMUTABLE,
+				"This job card predates Sales Order control and is recorded as such. The Legacy Order Reference flag cannot be cleared - it is the only record that the card was written before its order was ever frozen.",
+				(),
+			)
+		)
+
+	for fieldname, label in (("sales_order", "Sales Order"), ("sales_order_item", "Sales Order Line")):
+		before, after = _text(_get(stored, fieldname)), _text(_get(current, fieldname))
+		if not _same(before, after):
+			errors.append(
+				ConfigError(
+					LEGACY_REF_IMMUTABLE,
+					"{0} on a legacy job card cannot be changed from {1} to {2}. Raise a new job card from the order instead - repointing this one would rewrite what an already-produced job was for.",
+					(label, before or "blank", after or "blank"),
+				)
+			)
+
+	if has_frozen_snapshot(_get(current, "spec_snapshot")):
+		errors.append(
+			ConfigError(
+				LEGACY_FLAG_NOT_EARNED,
+				"A legacy job card cannot be given a specification snapshot. Its order was submitted before specifications were frozen, so any snapshot written onto it now would be a record of something that never happened.",
+				(),
+			)
+		)
+
+	return errors
+
+
 def build_spec_snapshot(spec, colour_of_parts, spot_colours, taken_at):
 	"""Build the immutable technical snapshot payload (design §8.2).
 
@@ -1408,14 +1794,19 @@ def build_spec_snapshot(spec, colour_of_parts, spot_colours, taken_at):
 	The scalar set is product-type-aware (see :func:`snapshot_scalar_fields`),
 	but it is only ever *wider* than version 1 — never narrower. See
 	:data:`SNAPSHOT_V1_SCALARS` for why that matters.
+
+	So is the version stamped on it (see :func:`snapshot_write_version`): a
+	Computer Paper or Carton line freezes at 2 exactly as it did before Label
+	existed, and only a Label line freezes at 3.
 	"""
+	product_type = _get(spec, "product_type")
 	snapshot = {
-		"_snapshot_version": SNAPSHOT_VERSION,
+		"_snapshot_version": snapshot_write_version(product_type),
 		"_cps": _get(spec, "name"),
 		"_cps_modified": str(_get(spec, "modified") or ""),
 		"_taken_at": str(taken_at),
 	}
-	for fieldname in snapshot_scalar_fields(_get(spec, "product_type")):
+	for fieldname in snapshot_scalar_fields(product_type):
 		snapshot[fieldname] = _get(spec, fieldname)
 
 	snapshot["colour_of_parts"] = [

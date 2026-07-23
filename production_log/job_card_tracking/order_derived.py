@@ -35,6 +35,14 @@ and stating four things about itself:
 ``QTY_PRECISION``
     Decimal places quantities are compared at. Three everywhere.
 
+``JC_LEGACY_ORDER_REFS``
+    Whether this card type has rows that named a Sales Order *before* order
+    control existed. Off for Computer Paper and Carton, whose order references
+    only ever came from this path; on for Label, which reaches this release with
+    20 hand-written ones. See :meth:`OrderDerivedJobCard.order_reference_state`
+    and ``cps_rules``' legacy-order-reference section for why the distinction is
+    recorded rather than inferred.
+
 Nothing in here is gated on ``Selling Settings.custom_cps_control_enabled``.
 Turning order control off later must not turn a forged job card into a valid
 one.
@@ -79,12 +87,136 @@ class OrderDerivedJobCard:
 	JC_SNAPSHOT_FIELD_MAP = ()
 	JC_SNAPSHOT_TABLE_MAP = ()
 	QTY_PRECISION = 3
+	JC_LEGACY_ORDER_REFS = False
 
 	# -- provenance ---------------------------------------------------------
 
 	def is_order_derived(self):
 		"""Whether this card claims to come from a Sales Order line."""
 		return bool(self.get("sales_order") or self.get("sales_order_item"))
+
+	def order_reference_state(self):
+		"""``none``, ``frozen`` or ``legacy`` for this card.
+
+		Card types without :data:`JC_LEGACY_ORDER_REFS` can never be ``legacy``,
+		so for Computer Paper and Carton this is exactly the two-state question
+		``is_order_derived`` has always answered, under a longer name.
+		"""
+		return cps_rules.order_reference_state(
+			self.get("sales_order"),
+			self.get("sales_order_item"),
+			self.is_legacy_order_reference(),
+		)
+
+	def is_frozen_order_derived(self):
+		"""Whether this card must be proved against a frozen Sales Order line.
+
+		The question every caller actually wants. A card in this state has its
+		specification settled by the order and must not be refreshed from the
+		live one; a card in any other state has nothing frozen to be refreshed
+		*from* and keeps the behaviour it has always had.
+		"""
+		return self.order_reference_state() == cps_rules.ORDER_REF_FROZEN
+
+	def is_legacy_order_reference(self):
+		"""Whether this card's order reference predates order control.
+
+		Reads the recorded flag and never infers it. A card type that does not
+		declare :data:`JC_LEGACY_ORDER_REFS`, or a site where the field has not
+		landed yet, answers False — which is the strict answer, and the right
+		default for a question about whether to relax a check.
+		"""
+		if not self.JC_LEGACY_ORDER_REFS:
+			return False
+		if not self.meta.get_field(cps_rules.LEGACY_ORDER_REF_FIELD):
+			return False
+		return bool(self.get(cps_rules.LEGACY_ORDER_REF_FIELD))
+
+	def sync_legacy_order_reference(self):
+		"""Re-derive the legacy flag from evidence, discarding whatever was sent.
+
+		Must run before :meth:`validate_sales_order`, because it decides which
+		of the two paths that method takes.
+
+		The flag is an output of validation and never an input, on the same
+		terms as the frozen snapshot (V12). For an existing row it is whatever
+		the database already holds — the migration stamped it, and nothing on a
+		write path may move it. For a new row it is earned or it is off, and the
+		only way to earn it is to be the amendment of a card that already has
+		it (see :func:`cps_rules.legacy_flag_earned`).
+
+		Inert on card types that do not declare :data:`JC_LEGACY_ORDER_REFS`,
+		and on a site where the field has not landed yet.
+		"""
+		if not self.JC_LEGACY_ORDER_REFS:
+			return
+		if not self.meta.get_field(cps_rules.LEGACY_ORDER_REF_FIELD):
+			return
+
+		if self.is_new():
+			earned = cps_rules.legacy_flag_earned(
+				self.get("sales_order"),
+				self.get("sales_order_item"),
+				self.get("spec_snapshot"),
+				self._amended_from_row(),
+			)
+			self.set(cps_rules.LEGACY_ORDER_REF_FIELD, 1 if earned else 0)
+			return
+
+		stored = self._stored_order_reference()
+		if stored is None:
+			# The row is not new but has no stored image — a rename, or a
+			# document being replayed. Nothing has been proved, so nothing is
+			# relaxed.
+			self.set(cps_rules.LEGACY_ORDER_REF_FIELD, 0)
+			return
+
+		errors = cps_rules.legacy_order_reference_errors(stored, self)
+		if errors:
+			frappe.throw(
+				"<br>".join(_(e.template).format(*e.args) for e in errors),
+				title=_("Legacy Order Reference"),
+			)
+
+		self.set(
+			cps_rules.LEGACY_ORDER_REF_FIELD,
+			1 if stored.get(cps_rules.LEGACY_ORDER_REF_FIELD) else 0,
+		)
+
+	def _legacy_reference_columns(self):
+		# A list, not a tuple: ``frappe.db.get_value`` branches on the argument
+		# being a string and hands everything else to the query builder, and a
+		# list is what every caller in the framework passes it.
+		return [
+			"name",
+			"docstatus",
+			"sales_order",
+			"sales_order_item",
+			"spec_snapshot",
+			cps_rules.LEGACY_ORDER_REF_FIELD,
+		]
+
+	def _stored_order_reference(self):
+		"""This card's order reference as the database currently holds it."""
+		if self.is_new() or not self.name:
+			return None
+		return frappe.db.get_value(
+			self.doctype, self.name, self._legacy_reference_columns(), as_dict=True
+		)
+
+	def _amended_from_row(self):
+		"""The cancelled card this one amends, or None.
+
+		``amended_from`` is ``read_only`` and therefore settable over REST like
+		every other read-only field, which is precisely why the row it names is
+		read and checked rather than believed.
+		"""
+		amended_from = (self.get("amended_from") or "").strip()
+		if not amended_from:
+			return None
+		return frappe.db.get_value(
+			self.doctype, amended_from, self._legacy_reference_columns(), as_dict=True
+		)
 
 	def validate_sales_order(self):
 		"""Prove this card against the order line it claims to come from.
@@ -100,8 +232,13 @@ class OrderDerivedJobCard:
 		what makes them true, so this runs on every write path and is not
 		gated on ``custom_cps_control_enabled``: turning order control off
 		later must not turn a forged job card into a valid one.
+
+		A recorded legacy reference is exempt, and only a recorded one. Those
+		rows named an order before there was anything to freeze, so there is no
+		frozen line to prove them against; ``sync_legacy_order_reference``
+		is what makes "recorded" mean something a REST caller cannot claim.
 		"""
-		if not self.is_order_derived():
+		if not self.is_frozen_order_derived():
 			return
 
 		if not self.sales_order:
@@ -207,6 +344,20 @@ class OrderDerivedJobCard:
 				title=_("Wrong Job Card Type"),
 			)
 
+		# Only now that the snapshot is known to be of this card's kind is it
+		# worth asking whether it is new enough to describe that kind in full.
+		# Asked before the type check, a Carton snapshot offered to a Label card
+		# would be refused for being old when the truth is that it is a Carton.
+		if not cps_rules.snapshot_describes_product_type(snapshot, self.JC_PRODUCT_TYPE):
+			frappe.throw(
+				_("Sales Order line {0} was frozen at snapshot version {1}, which predates the full {2} specification. Amend the order and re-submit it to freeze a current snapshot, then raise the Job Card again.").format(
+					self.sales_order_item,
+					cps_rules.snapshot_version(snapshot) or _("unstated"),
+					self.JC_PRODUCT_TYPE,
+				),
+				title=_("Specification Snapshot Too Old"),
+			)
+
 		mismatches = cps_rules.jc_line_mismatches(
 			self, order, line, self.QTY_PRECISION, self.JC_CUSTOMER_FIELD
 		)
@@ -267,8 +418,19 @@ class OrderDerivedJobCard:
 		comment-based override and no Over-Carded status. Draft job cards count
 		towards the total: a draft reserves quantity, or two people raise two
 		full-quantity job cards in the same minute and neither validation fires.
+
+		A recorded legacy reference is exempt from the *check* and never from
+		the *count*. Those cards were written against orders nobody was
+		measuring, so a rule invented today could refuse to save a job that was
+		produced and invoiced months ago — but the quantity they consumed is a
+		fact, ``_carded_qty`` reads it, and the next card raised from the order
+		is held to it. Exempting them from the arithmetic as well would let one
+		line be carded twice.
 		"""
 		if not self.sales_order_item:
+			return
+
+		if self.order_reference_state() == cps_rules.ORDER_REF_LEGACY:
 			return
 
 		line = self._lock_sales_order_line()

@@ -1,11 +1,57 @@
 import frappe
+from frappe import _
 from frappe.model.document import Document
+from frappe.utils import flt
+
+from production_log.job_card_tracking import cps_rules
+from production_log.job_card_tracking.order_derived import OrderDerivedJobCard
+
+QTY_PRECISION = 3
+
+# The only product type this Job Card can run. Read from the frozen snapshot on
+# the Sales Order line, never from the current specification.
+LABEL_PRODUCT_TYPE = "Label"
 
 
-class JobCardLabel(Document):
+class JobCardLabel(OrderDerivedJobCard, Document):
+	JC_PRODUCT_TYPE = LABEL_PRODUCT_TYPE
+
+	# This card calls its customer link ``customer``, like Computer Paper and
+	# ETR. Carton is the outlier with ``customer_name``.
+	JC_CUSTOMER_FIELD = "customer"
+
+	# Every technical value on an order-derived card is proved against the
+	# snapshot the order froze — the label's geometry, its tooling, its material
+	# and its colour block. A card may name the right order, the right price and
+	# the right customer and still be a label nobody sold.
+	JC_SNAPSHOT_FIELD_MAP = cps_rules.LABEL_SNAPSHOT_JC_MAP
+
+	# And the grid, on the same terms. On a label the Pantone frequently *is*
+	# the product, and the table being ``read_only`` on the form stops a Desk
+	# user and stops nothing else.
+	JC_SNAPSHOT_TABLE_MAP = cps_rules.LABEL_SNAPSHOT_JC_TABLE_MAP
+
+	QTY_PRECISION = QTY_PRECISION
+
+	# Unlike Computer Paper and Carton, this card type reaches order control
+	# with rows that already name a Sales Order — written by hand, years before
+	# anything was frozen onto an order line. See ``cps_rules``' legacy
+	# order-reference section, and ``stamp_legacy_label_order_references``.
+	JC_LEGACY_ORDER_REFS = True
+
 	def validate(self):
-		self.validate_customer_product_spec()
-		self.populate_specification_snapshot()
+		# The legacy flag decides which of the two paths below this card takes,
+		# so it is re-derived from evidence before anything reads it.
+		self.sync_legacy_order_reference()
+
+		# Provenance next: everything after this is allowed to assume that an
+		# order-derived card really does come from the order it names.
+		self.validate_sales_order()
+
+		if not self.is_frozen_order_derived():
+			self.validate_customer_product_spec()
+			self.populate_specification_snapshot()
+
 		self.validate_spec_fields()
 		self.validate_quantity()
 		self.validate_plate()
@@ -13,7 +59,48 @@ class JobCardLabel(Document):
 		self.set_sales_rep_info()
 		self.set_status()
 
+	def on_update(self):
+		"""Keep the Sales Order line rollup honest on every draft save.
+
+		Fires on insert, on edit and on submit, so a draft that reserves
+		quantity is counted from the moment it exists — which is what stops two
+		people carding the same line twice in the same minute.
+
+		Legacy references are rolled up too. Their quantity was genuinely
+		consumed against that line, and a rollup that ignored it would invite
+		the line to be carded a second time.
+		"""
+		self.update_sales_order_rollup()
+
+	def on_submit(self):
+		self.set_status()
+
+	def on_cancel(self):
+		self.set_status()
+		self.update_sales_order_rollup()
+
+	def on_trash(self):
+		# on_trash fires before the row is gone, so this card must not count
+		# itself towards the quantity it is about to stop reserving.
+		self.update_sales_order_rollup(exclude_self=True)
+
 	def validate_customer_product_spec(self):
+		"""Validate the *current* specification — legacy and hand-built paths only.
+
+		A frozen order-derived card is deliberately exempt, for the same reason
+		Job Card Computer Paper and Job Card Carton are: its eligibility and its
+		technical values were settled when the order was submitted and frozen
+		onto the line. Re-deriving them from the specification as it stands
+		today would mean a spec since deactivated, amended or re-priced
+		retroactively blocks production on an order already sold.
+		``validate_sales_order`` proves the card against the frozen line
+		instead, field by field, which is a stronger check and not a weaker one.
+
+		Everything else keeps the live check unchanged: the Desk form, the
+		Compass hand-built screen, history, and the 20 legacy order references,
+		which have no frozen line to be validated against and so have only the
+		current specification as evidence.
+		"""
 		if not self.customer_product_spec:
 			return
 
@@ -24,7 +111,7 @@ class JobCardLabel(Document):
 				f"Specification {self.customer_product_spec} does not belong to customer {self.customer}."
 			)
 
-		if spec.product_type != "Label":
+		if spec.product_type != LABEL_PRODUCT_TYPE:
 			frappe.throw(
 				f"Specification {self.customer_product_spec} is not a Label specification "
 				f"(found: {spec.product_type})."
@@ -37,6 +124,19 @@ class JobCardLabel(Document):
 			)
 
 	def populate_specification_snapshot(self):
+		"""Copy the *live* specification onto the card.
+
+		Never runs for a frozen order-derived card. That is the whole point of
+		the split: on those cards these same values arrived from the order's
+		frozen snapshot, and refreshing them here would silently replace what
+		was sold with what the specification happens to say today — and would
+		then fail ``validate_sales_order`` on the next save, which is a
+		confusing way to discover it.
+
+		``dies`` is copied as the Dies record's name and the Dies record is not
+		read. The label's geometry comes from the specification's own fields,
+		which is where the order freezes it from too.
+		"""
 		if not self.customer_product_spec:
 			return
 
@@ -89,8 +189,22 @@ class JobCardLabel(Document):
 				frappe.throw(f"{label} is required for Label Job Card.")
 
 	def validate_quantity(self):
-		if not self.quantity_ordered or self.quantity_ordered <= 0:
-			frappe.throw("Quantity Ordered must be greater than 0.")
+		"""A quantity, and one that does not over-card its Sales Order line.
+
+		``quantity_ordered`` was an ``Int`` until this release, which made the
+		three-decimal comparison every other quantity rule in the CPS work is
+		stated in impossible to express on this card. It is a ``Float`` with
+		precision 3 now; ``flt`` tolerates whatever a legacy row read back
+		during the migration window holds, so the check behaves as it always
+		did.
+		"""
+		if self.quantity_ordered in (None, ""):
+			frappe.throw(_("Quantity Ordered must be greater than 0."))
+
+		if flt(self.quantity_ordered) <= 0:
+			frappe.throw(_("Quantity Ordered must be greater than 0."))
+
+		self.validate_quantity_against_sales_order_line()
 
 	def validate_plate(self):
 		if not self.plate_status:
@@ -103,6 +217,14 @@ class JobCardLabel(Document):
 			frappe.throw("Plate Code must be empty when Plate Status is 'New'.")
 
 	def validate_numbering(self):
+		"""Numbering ranges, required only when the specification asks for one.
+
+		On an order-derived card ``numbering_required`` arrives from the frozen
+		snapshot and is proved against it, so this reads the order's answer and
+		not today's. Not one of the 192 live Label specifications sets it, which
+		is why the branch below is dormant in practice and enforced anyway —
+		the first specification that does set it must not find the rule missing.
+		"""
 		if not self.numbering_required:
 			return
 
@@ -131,12 +253,6 @@ class JobCardLabel(Document):
 				self.status = "In Progress"
 		elif self.docstatus == 2:
 			self.status = "Cancelled"
-
-	def on_submit(self):
-		self.set_status()
-
-	def on_cancel(self):
-		self.set_status()
 
 
 @frappe.whitelist()

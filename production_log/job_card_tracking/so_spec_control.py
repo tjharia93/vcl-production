@@ -28,11 +28,20 @@ FLOOR_FIELD = "custom_cps_price_floor_pct"
 CONTROL_SOURCE_FIELD = "custom_cps_control_source"
 
 # Job Card DocTypes that consume a Sales Order line, by CPS product type.
-# Label, Exercise Books and ETR are one registry entry each when their cards
-# gain the order-derived field block.
+# Exercise Books and ETR are one registry entry each when their cards gain the
+# order-derived field block.
+#
+# Registration is what wires ``on_cancel`` below: a Sales Order with a submitted
+# card of any registered kind cannot be cancelled out from under it (V14). Label
+# is registered here in the same release that gives Job Card Label the
+# order-derived fields, because the two are one guarantee — a registry entry for
+# a card type with no ``sales_order`` column would filter on nothing, and a card
+# type with the column and no registry entry would leave its orders cancellable
+# while production was live on them.
 JOB_CARD_DOCTYPES = {
 	"Computer Paper": "Job Card Computer Paper",
 	"Carton": "Job Card Carton",
+	"Label": "Job Card Label",
 }
 
 SNAPSHOT_FIELDS = (

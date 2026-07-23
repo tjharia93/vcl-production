@@ -4,6 +4,13 @@
 # under [post_model_sync] below, which is where every patch in this file ran
 # before the sections were introduced, and where they all still run.
 production_log.patches.v8_1.normalise_carton_quantity_ordered
+# Job Card Label gains the order-derived block. Both of these must run while the
+# old schema is still in place: one deletes the Custom Field metadata that would
+# otherwise collide with the new DocFields (without touching the columns those
+# fields own), the other censuses quantity_ordered in the last moment before it
+# stops being an Int. Their post-sync counterpart is verify_label_order_migration.
+production_log.patches.v8_2.retire_label_order_custom_fields
+production_log.patches.v8_2.audit_label_quantity_ordered
 
 [post_model_sync]
 production_log.patches.v1_0.setup_roles_and_permissions
@@ -40,3 +47,5 @@ production_log.patches.v7_6.add_cp_production_stages
 production_log.patches.v7_6.migrate_job_status_in_progress
 production_log.patches.v8_0.add_cps_control_custom_fields
 production_log.patches.v8_0.add_cps_iteration_two_fields
+production_log.patches.v8_2.stamp_legacy_label_order_references
+production_log.patches.v8_2.verify_label_order_migration
