@@ -427,7 +427,7 @@ frappe.ui.form.on("Customer Product Specification", {
 	const VCL_JOINT_CONFIG = {
 		"Gluing - Manual":  { tabWidth: 30, label: "Glue Tab",    color: "#4CAF5040", markerType: "glue" },
 		"Gluing - Machine": { tabWidth: 30, label: "Glue Tab",    color: "#4CAF5040", markerType: "glue" },
-		"Stitched":         { tabWidth: 40, label: "Stitch Flap", color: "#D32F2F30", markerType: "stitch" },
+		"Stitched":         { tabWidth: 30, label: "Stitch Flap", color: "#D32F2F30", markerType: "stitch" },
 	};
 
 	const TRIM_PER_EDGE = 10; // mm, per outer edge — 20 mm total per axis
