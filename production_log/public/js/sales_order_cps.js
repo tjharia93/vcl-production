@@ -347,6 +347,11 @@ function show_job_card_dialog(frm) {
 
 	const needs_plate = any_selected_expression(candidates, (c) => c.spec && c.spec.plate);
 	const needs_repeat = any_selected_expression(candidates, (c) => c.spec && c.spec.repeat);
+	// Read off the candidate, not off `spec`: the server lifts it out as its own
+	// boolean precisely so a branch is never keyed on a value that may arrive as
+	// 0, "0", false or null. A line the ORDER froze as numbered is the only line
+	// that gets asked — the specification as it stands today does not decide.
+	const needs_numbering = any_selected_expression(candidates, (c) => c.numbering_required);
 
 	const fields = [{
 		fieldtype: "HTML",
@@ -417,6 +422,48 @@ function show_job_card_dialog(frm) {
 		{ fieldtype: "Column Break" },
 		{ fieldtype: "Date", fieldname: "due_date", label: __("Due Date"), default: frm.doc.delivery_date }
 	);
+
+	if (needs_numbering) {
+		// Start and end are the pair the Job Card controllers throw for
+		// (`validate_numbering` on both Computer Paper and Label), so they are
+		// mandatory here rather than left to fail at insert with the dialog
+		// already dismissed and every selected line lost. Prefix and format are
+		// genuinely optional on the DocType and stay optional here.
+		fields.push(
+			{
+				fieldtype: "Section Break",
+				label: __("Numbering"),
+				depends_on: needs_numbering,
+			},
+			{
+				fieldtype: "Data",
+				fieldname: "numbering_start",
+				label: __("Numbering Start"),
+				depends_on: needs_numbering,
+				mandatory_depends_on: needs_numbering,
+			},
+			{
+				fieldtype: "Data",
+				fieldname: "numbering_end",
+				label: __("Numbering End"),
+				depends_on: needs_numbering,
+				mandatory_depends_on: needs_numbering,
+			},
+			{ fieldtype: "Column Break" },
+			{
+				fieldtype: "Data",
+				fieldname: "numbering_prefix",
+				label: __("Numbering Prefix"),
+				depends_on: needs_numbering,
+			},
+			{
+				fieldtype: "Data",
+				fieldname: "numbering_format",
+				label: __("Numbering Format"),
+				depends_on: needs_numbering,
+			}
+		);
+	}
 
 	const dialog = new frappe.ui.Dialog({
 		title: __("Create Job Cards"),
@@ -536,6 +583,17 @@ function job_card_kind_inputs(candidate, values) {
 	}
 	if (spec.repeat) {
 		inputs.repeat = values.repeat_job;
+	}
+	// Only for a line the ORDER froze as numbered. Sent on an un-numbered line
+	// the server refuses the whole batch rather than dropping the key — those
+	// four fields are `depends_on numbering_required==1` on the DocType, so a
+	// range written onto an un-numbered card would be invisible on the form and
+	// never reach the floor.
+	if (candidate.numbering_required) {
+		inputs.numbering_prefix = values.numbering_prefix;
+		inputs.numbering_start = values.numbering_start;
+		inputs.numbering_end = values.numbering_end;
+		inputs.numbering_format = values.numbering_format;
 	}
 	return inputs;
 }
