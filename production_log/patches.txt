@@ -59,3 +59,10 @@ production_log.patches.v8_3.add_cps_numbering_artwork_fields
 # Additive Custom Fields only, no backfill - legacy records compute nothing until
 # their inputs are entered, and the gross mirrors into standard_weight_per_carton.
 production_log.patches.v8_3.add_cp_weight_fields
+# The finished size is entered in inches - the unit computer paper is actually
+# ordered in - and the millimetre fields become read-only, derived (x 25.4) and
+# relabelled "Converted". The millimetre columns keep their meaning, because the
+# specs submitted since April store real millimetres in them. Backfills the inch
+# entry from every stored millimetre size, with update_modified=False so no order
+# snapshot reads as stale.
+production_log.patches.v8_4.add_cp_inch_dimensions

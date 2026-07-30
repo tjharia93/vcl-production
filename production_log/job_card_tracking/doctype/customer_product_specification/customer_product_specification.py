@@ -277,6 +277,17 @@ class CustomerProductSpecification(Document):
 		if errors:
 			frappe.throw("<br>".join(errors))
 
+		# Millimetres before weights: the finished size is entered in inches and the
+		# millimetre fields are derived from it (× 25.4), read-only on every surface
+		# for the same reason the weights are — read-only on a form stops a Desk user
+		# and stops nothing else. Derived first so the weights below are computed from
+		# the same numbers that get stored, and only when the inch fields have
+		# actually landed on the site, so the window between a deploy and its migrate
+		# behaves like every other rule here.
+		if self.meta.has_field(cps_cp_weight.WIDTH_IN_FIELD):
+			for fieldname, value in cps_cp_weight.derived_dimensions(self).items():
+				self.set(fieldname, value)
+
 		for fieldname, value in cps_cp_weight.compute_weights(self).items():
 			self.set(fieldname, value)
 
