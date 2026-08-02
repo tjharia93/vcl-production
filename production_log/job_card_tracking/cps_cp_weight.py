@@ -45,6 +45,23 @@ Item name is worse; :func:`suggest_dimensions` will parse one into an editable
 suggestion for the screen to prefill, but nothing here computes a weight from it.
 A suggestion the user has not confirmed into the structured fields is never a
 number this module will multiply.
+
+Units: entered in inches, calculated in millimetres
+---------------------------------------------------
+
+Computer paper is specified, quoted, ordered and talked about in **inches** —
+"9.5 x 8", "9.5 x 11", "14.5 x 11". Nobody on the sales side or the shop floor
+says 241.3 mm. So inches are what gets *entered* (:data:`WIDTH_IN_FIELD`,
+:data:`LENGTH_IN_FIELD`) and millimetres are *derived* from them
+(:func:`derived_dimensions`, ``× 25.4``), because the arithmetic needs mm² → m²
+in :func:`area_m2` and a second unit in the middle of a weight calculation is a
+factor-of-25.4 error waiting to happen.
+
+The millimetre fields therefore stay exactly what they were — the one thing the
+weight is computed from — and are read-only on every surface. Nothing about a
+record written before inches were captured changes: :func:`effective_dimensions`
+falls back to the stored millimetres when a record carries no inches, so the
+legacy specifications keep the size and the weight they already had.
 """
 
 from collections import namedtuple
@@ -59,11 +76,25 @@ PRINT_TYPE_PRINTED = "Printed"
 
 # --- Structured inputs ------------------------------------------------------
 #
-# The finished sheet of one set, in millimetres. Their own fields, never parsed
-# from ``job_size`` — see :func:`suggest_dimensions` for why the free-text size
-# is a suggestion and not a source.
+# The finished sheet of one set, in inches. This is the entry: computer paper is
+# ordered in inches and every quote, LPO and job size is written that way, so the
+# number a person types is the number they were given. Never parsed from
+# ``job_size`` — see :func:`suggest_dimensions` for why the free-text size is a
+# suggestion and not a source.
+WIDTH_IN_FIELD = "finished_width_in"
+LENGTH_IN_FIELD = "finished_length_in"
+
+# The same sheet in millimetres, derived from the inches above and read-only
+# everywhere. Still the ONLY thing the weight is computed from — see
+# :func:`area_m2`, which is mm² → m². Retained rather than replaced because the
+# specifications written before inches were captured store real millimetres here
+# and reading those as inches would make every one of their cartons 25.4× heavy.
 WIDTH_FIELD = "finished_width_mm"
 LENGTH_FIELD = "finished_length_mm"
+
+# The conversion. Exact by definition — an inch *is* 25.4 mm — so this is not a
+# rounded constant and the round trip in → mm → in is exact at three decimals.
+MM_PER_INCH = 25.4
 
 # How many finished sets are packed into one carton. An integer: half a set is
 # not a thing that ships.
@@ -82,7 +113,16 @@ ALLOWANCE_FIELD = "print_weight_allowance_pct"
 # Every structured input, and the subset that must be positive for a complete
 # calculation. The allowance is deliberately absent from the required set: it is
 # optional by design and defaults to zero.
+#
+# These are the millimetre fields, not the inch ones, because they are what the
+# calculation consumes — a record is complete when a size in millimetres can be
+# had, whether it was derived from inches today or stored in millimetres in April.
 WEIGHT_INPUT_FIELDS = (WIDTH_FIELD, LENGTH_FIELD, SETS_PER_CARTON_FIELD, TARE_FIELD)
+
+# What a person can type. Wider than the required set: an inch entry counts as
+# having started on the weights even before its millimetres have been derived, so
+# :func:`weight_inputs_present` sees a half-filled form as opted in.
+WEIGHT_ENTRY_FIELDS = (WIDTH_IN_FIELD, LENGTH_IN_FIELD) + WEIGHT_INPUT_FIELDS
 
 # --- Derived outputs --------------------------------------------------------
 #
@@ -121,6 +161,11 @@ KG_PRECISION = 3
 GRAMS_PRECISION = 2
 GSM_PRECISION = 1
 STANDARD_WEIGHT_PRECISION = 2
+# Millimetres and inches to three decimals each — a micron and a ten-thousandth of
+# an inch. Both far finer than anything a guillotine can hold; the point of the
+# precision is that in → mm → in comes back as the number that was typed.
+MM_PRECISION = 3
+INCH_PRECISION = 3
 
 
 # A refusal, carried as an untranslated template plus its arguments so this
@@ -197,6 +242,79 @@ def is_printed(doc):
 # ---------------------------------------------------------------------------
 # The arithmetic — each step its own function, so each is testable alone
 # ---------------------------------------------------------------------------
+
+
+def mm_from_inches(value):
+	"""Millimetres from an inch entry, or None.
+
+	None for anything not a positive number, so a blank, a zero, a negative and a
+	typo all mean "no size here" to the caller rather than a plausible-looking 0.0
+	that would multiply out to a carton weighing nothing.
+
+	Rounded to :data:`MM_PRECISION` — a thousandth of a millimetre is a micron,
+	finer than any guillotine, and it makes in → mm → in return the number that
+	was typed.
+	"""
+	inches = _num(value)
+	if inches is None or inches <= 0:
+		return None
+	return round(inches * MM_PER_INCH, MM_PRECISION)
+
+
+def inches_from_mm(value):
+	"""Inches from a stored millimetre value, or None.
+
+	The reverse of :func:`mm_from_inches`, used once per record: to give a
+	specification written in millimetres an inch entry it can be edited in. Not
+	used by the calculation — nothing here converts backwards on the way to a
+	weight.
+	"""
+	mm = _num(value)
+	if mm is None or mm <= 0:
+		return None
+	return round(mm / MM_PER_INCH, INCH_PRECISION)
+
+
+def derived_dimensions(doc):
+	"""The millimetre fields to write on save, keyed by fieldname.
+
+	Empty when neither inch field is filled: a legacy record's stored millimetres
+	are left exactly where they are rather than blanked by the conversion of
+	nothing. A record that *does* carry inches has its millimetres overwritten
+	from them on every save, so the two cannot drift and a REST caller cannot post
+	a width in millimetres that disagrees with the inches beside it.
+	"""
+	derived = {}
+	for inch_field, mm_field in (
+		(WIDTH_IN_FIELD, WIDTH_FIELD),
+		(LENGTH_IN_FIELD, LENGTH_FIELD),
+	):
+		mm = mm_from_inches(_get(doc, inch_field))
+		if mm is not None:
+			derived[mm_field] = mm
+	return derived
+
+
+def effective_dimensions(doc):
+	"""The finished size the weight is calculated from, as ``(width_mm, length_mm)``.
+
+	The inches when the record carries them, the stored millimetres when it does
+	not. Either may be None.
+
+	The fallback is what keeps this change invisible to the 46 submitted
+	specifications: they carry millimetres and no inches, and they go on being
+	measured from exactly the numbers they were submitted with. It also makes the
+	arithmetic correct *before* the controller has written the derived
+	millimetres — a Compass preview computes from a form that has only inches on
+	it, and it must get the same answer the save will.
+	"""
+	width = mm_from_inches(_get(doc, WIDTH_IN_FIELD))
+	if width is None:
+		width = _num(_get(doc, WIDTH_FIELD))
+	length = mm_from_inches(_get(doc, LENGTH_IN_FIELD))
+	if length is None:
+		length = _num(_get(doc, LENGTH_FIELD))
+	return width, length
 
 
 def total_gsm(colour_of_parts):
@@ -312,8 +430,7 @@ def compute_weights(doc):
 	the Compass preview echoes exactly what this returns, so Desk, REST and the
 	screen cannot disagree about a carton's weight.
 	"""
-	width = _get(doc, WIDTH_FIELD)
-	length = _get(doc, LENGTH_FIELD)
+	width, length = effective_dimensions(doc)
 	sets = _get(doc, SETS_PER_CARTON_FIELD)
 	tare = _get(doc, TARE_FIELD)
 	print_type = _get(doc, PRINT_TYPE_FIELD)
@@ -353,17 +470,34 @@ def standard_weight_value(doc):
 
 
 def _positive_block(value, code, template):
-	"""A reason if a *present* value is not strictly positive, else None.
+	"""A reason if a *present* value is negative or not a number, else None.
 
 	A blank value is not an error here — absence is incompleteness, reported
-	separately — but a value that is present and zero or negative is a mistake
-	that would compute a nonsensical weight, so it is refused wherever it appears,
-	on a draft as much as at submit.
+	separately. **Neither is zero**, and that is a correction rather than a
+	loosening: on a Frappe Float or Int column an untouched field loads as ``0``,
+	not as ``None``, so "nobody typed a tare" and "the tare is zero" are the same
+	stored value and cannot be told apart from in here. Refusing zero therefore
+	refused *every save* of every specification whose tare had never been typed —
+	including the legacy records this module is otherwise careful never to disturb.
+	Reproduced on CPT-SPEC-00063 (2026-07-30): a draft saved without a tare could
+	not be re-saved at all, with no way for the reader to clear the error.
+
+	Zero is left to :func:`weight_submit_block_reason`, which already refuses a
+	*submission* whose inputs are not positive and names the one that is missing.
+	That is where "a packed carton weighs more than its contents" is enforced, and
+	it is the right place: a draft may be half-known, a submitted specification may
+	not.
+
+	A negative is still refused on sight, on a draft as much as at submit — nobody
+	types −5 by accident in a way that time will fix — and so is a value that is
+	not a number at all.
 	"""
 	if value is None or value == "":
 		return None
 	number = _num(value)
-	if number is None or number <= 0:
+	if number is None:
+		return WeightBlock(code, template, (value,))
+	if number < 0:
 		return WeightBlock(code, template, (value,))
 	return None
 
@@ -382,26 +516,30 @@ def weight_field_errors(doc):
 
 	errors = []
 	for value, code, template in (
+		# The inch entry first: it is what a person typed, so it is what a person
+		# needs told about. The millimetre fields are checked too — they are derived
+		# on save, but a legacy record stores them directly and a REST caller can
+		# still post into them.
+		(_get(doc, WIDTH_IN_FIELD), BLOCK_WIDTH,
+		 "Finished width (in) cannot be negative. Got {0}."),
+		(_get(doc, LENGTH_IN_FIELD), BLOCK_LENGTH,
+		 "Finished length (in) cannot be negative. Got {0}."),
 		(_get(doc, WIDTH_FIELD), BLOCK_WIDTH,
-		 "Finished width (mm) must be greater than 0. Got {0}."),
+		 "Finished width (mm) cannot be negative. Got {0}."),
 		(_get(doc, LENGTH_FIELD), BLOCK_LENGTH,
-		 "Finished length (mm) must be greater than 0. Got {0}."),
+		 "Finished length (mm) cannot be negative. Got {0}."),
 		(_get(doc, SETS_PER_CARTON_FIELD), BLOCK_SETS,
-		 "Sets per carton must be a whole number greater than 0. Got {0}."),
+		 "Sets per carton cannot be negative. Got {0}."),
+		# A negative "tare" would make a packed carton lighter than the paper in it.
+		# A tare of zero is absence, not a claim that the carton is weightless —
+		# see :func:`_positive_block` — and is refused at submit, not on a draft.
+		(_get(doc, TARE_FIELD), BLOCK_TARE,
+		 "Packing carton tare (kg) cannot be negative - the gross weight has to "
+		 "include the carton. Got {0}."),
 	):
 		reason = _positive_block(value, code, template)
 		if reason is not None:
 			errors.append(reason)
-
-	# Tare may be zero in the arithmetic, but a packed carton that weighs the same
-	# as its contents has no carton, so a present tare is required to be positive.
-	tare_reason = _positive_block(
-		_get(doc, TARE_FIELD), BLOCK_TARE,
-		"Packing carton tare (kg) must be greater than 0 - the gross weight has to "
-		"include the carton. Got {0}.",
-	)
-	if tare_reason is not None:
-		errors.append(tare_reason)
 
 	# Sets per carton must be whole: 500.5 sets is a typo, not a pack size.
 	sets = _get(doc, SETS_PER_CARTON_FIELD)
@@ -452,7 +590,7 @@ def weight_inputs_present(doc):
 	for it; the moment somebody enters one, the record has opted in and
 	completeness starts to matter.
 	"""
-	for fieldname in WEIGHT_INPUT_FIELDS:
+	for fieldname in WEIGHT_ENTRY_FIELDS:
 		if _text(_get(doc, fieldname)) is not None:
 			return True
 	return False
@@ -501,16 +639,23 @@ def weight_submit_block_reason(doc):
 			(),
 		)
 
-	missing = [
+	# The size is asked for in the unit it is entered in — inches — but judged on
+	# whether a millimetre size can be had at all, so a legacy record submitting
+	# on its stored millimetres is not asked for inches it never had.
+	width, length = effective_dimensions(doc)
+	missing = []
+	if not (width and width > 0):
+		missing.append("finished width (in)")
+	if not (length and length > 0):
+		missing.append("finished length (in)")
+	missing.extend(
 		label
 		for fieldname, label in (
-			(WIDTH_FIELD, "finished width (mm)"),
-			(LENGTH_FIELD, "finished length (mm)"),
 			(SETS_PER_CARTON_FIELD, "sets per carton"),
 			(TARE_FIELD, "packing carton tare (kg)"),
 		)
 		if not (_num(_get(doc, fieldname)) and _num(_get(doc, fieldname)) > 0)
-	]
+	)
 	if missing:
 		return WeightBlock(
 			BLOCK_INCOMPLETE,

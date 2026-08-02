@@ -211,21 +211,27 @@ class TestWeightFieldErrors(unittest.TestCase):
 		errors = w.weight_field_errors(spec(finished_width_mm=-5))
 		self.assertEqual([e.code for e in errors], [w.BLOCK_WIDTH])
 
-	def test_zero_length(self):
-		errors = w.weight_field_errors(spec(finished_length_mm=0))
-		self.assertIn(w.BLOCK_LENGTH, [e.code for e in errors])
-
-	def test_zero_sets(self):
-		errors = w.weight_field_errors(spec(sets_per_carton=0))
-		self.assertIn(w.BLOCK_SETS, [e.code for e in errors])
+	def test_zero_is_absence_not_an_error(self):
+		# A Frappe Float or Int column loads an untouched field as 0, not as None,
+		# so a zero here cannot be told apart from "nobody typed it". Refusing it
+		# refused every save of every record whose tare had never been entered.
+		# Zero is incompleteness, and TestSubmitBlock is where it bites.
+		for field in ("finished_width_mm", "finished_length_mm",
+		              "sets_per_carton", "packing_carton_tare_kg",
+		              "finished_width_in", "finished_length_in"):
+			self.assertEqual(w.weight_field_errors(spec(**{field: 0})), [], field)
 
 	def test_negative_tare(self):
 		errors = w.weight_field_errors(spec(packing_carton_tare_kg=-1))
 		self.assertIn(w.BLOCK_TARE, [e.code for e in errors])
 
-	def test_zero_tare_is_refused_because_a_carton_weighs_something(self):
-		errors = w.weight_field_errors(spec(packing_carton_tare_kg=0))
-		self.assertIn(w.BLOCK_TARE, [e.code for e in errors])
+	def test_negative_inches_are_refused(self):
+		errors = w.weight_field_errors(spec(finished_width_in=-9.5, finished_length_in=-8))
+		self.assertEqual({e.code for e in errors}, {w.BLOCK_WIDTH, w.BLOCK_LENGTH})
+
+	def test_a_non_numeric_entry_is_refused(self):
+		errors = w.weight_field_errors(spec(finished_width_in="nine and a half"))
+		self.assertIn(w.BLOCK_WIDTH, [e.code for e in errors])
 
 	def test_fractional_sets_are_refused(self):
 		errors = w.weight_field_errors(spec(sets_per_carton=500.5))
@@ -233,7 +239,7 @@ class TestWeightFieldErrors(unittest.TestCase):
 
 	def test_every_problem_is_reported_not_only_the_first(self):
 		errors = w.weight_field_errors(
-			spec(finished_width_mm=-1, finished_length_mm=0, sets_per_carton=-2)
+			spec(finished_width_mm=-1, finished_length_mm=-3, sets_per_carton=-2)
 		)
 		codes = {e.code for e in errors}
 		self.assertEqual(codes, {w.BLOCK_WIDTH, w.BLOCK_LENGTH, w.BLOCK_SETS})
@@ -300,6 +306,89 @@ class TestSubmitBlock(unittest.TestCase):
 
 	def test_other_product_types_are_not_asked(self):
 		self.assertIsNone(w.weight_submit_block_reason(spec(product_type="Label")))
+
+
+class TestInchEntry(unittest.TestCase):
+	"""Inches are the entry; millimetres are derived and are what is multiplied."""
+
+	def test_the_sizes_the_floor_actually_orders(self):
+		self.assertEqual(w.mm_from_inches(9.5), 241.3)
+		self.assertEqual(w.mm_from_inches(8), 203.2)
+		self.assertEqual(w.mm_from_inches(11), 279.4)
+		self.assertEqual(w.mm_from_inches(14.5), 368.3)
+
+	def test_a_string_entry_converts(self):
+		self.assertEqual(w.mm_from_inches("9.5"), 241.3)
+
+	def test_nothing_positive_is_no_size(self):
+		for value in (None, "", 0, -9.5, "nine"):
+			self.assertIsNone(w.mm_from_inches(value), value)
+			self.assertIsNone(w.inches_from_mm(value), value)
+
+	def test_the_round_trip_returns_what_was_typed(self):
+		for inches in (8, 9.5, 11, 12, 14.5, 5.5):
+			self.assertEqual(w.inches_from_mm(w.mm_from_inches(inches)), float(inches))
+
+	def test_derived_dimensions_writes_only_what_was_entered(self):
+		self.assertEqual(
+			w.derived_dimensions({"finished_width_in": 9.5, "finished_length_in": 8}),
+			{"finished_width_mm": 241.3, "finished_length_mm": 203.2},
+		)
+		self.assertEqual(
+			w.derived_dimensions({"finished_width_in": 9.5}),
+			{"finished_width_mm": 241.3},
+		)
+
+	def test_no_inches_never_blanks_a_stored_millimetre(self):
+		# The legacy guarantee: a specification written in millimetres is not
+		# emptied by the conversion of an inch field nobody filled in.
+		self.assertEqual(w.derived_dimensions(spec()), {})
+
+	def test_inches_win_over_a_stored_millimetre(self):
+		self.assertEqual(
+			w.effective_dimensions(spec(finished_width_in=9.5, finished_length_in=8)),
+			(241.3, 203.2),
+		)
+
+	def test_millimetres_are_the_fallback(self):
+		self.assertEqual(w.effective_dimensions(spec()), (241.0, 279.0))
+
+	def test_neither_is_no_size(self):
+		self.assertEqual(
+			w.effective_dimensions(spec(finished_width_mm=None, finished_length_mm=None)),
+			(None, None),
+		)
+
+	def test_a_weight_from_inches_alone(self):
+		# The Gilani's 9.5 x 8 two-part: 55 CB + 55 CF = 110 GSM, 500 sets, 0.3 kg
+		# carton. Computed from inches with no millimetres stored anywhere on the
+		# record — which is the state a Compass preview is in before the save.
+		got = w.compute_weights(
+			{
+				"product_type": w.COMPUTER_PAPER,
+				"print_type": w.PRINT_TYPE_PRINTED,
+				"finished_width_in": 9.5,
+				"finished_length_in": 8,
+				"sets_per_carton": 500,
+				"packing_carton_tare_kg": 0.3,
+				"colour_of_parts": [{"gsm": 55}, {"gsm": 55}],
+			}
+		)
+		self.assertEqual(got[w.TOTAL_GSM_FIELD], 110.0)
+		self.assertEqual(got[w.PER_SET_FIELD], 5.39)
+		self.assertEqual(got[w.NET_FIELD], 2.697)
+		self.assertEqual(got[w.GROSS_FIELD], 2.997)
+
+	def test_inches_and_their_millimetres_weigh_the_same(self):
+		from_inches = w.compute_weights(spec(
+			finished_width_mm=None, finished_length_mm=None,
+			finished_width_in=9.488, finished_length_in=10.984,
+		))
+		from_mm = w.compute_weights(spec(
+			finished_width_mm=w.mm_from_inches(9.488),
+			finished_length_mm=w.mm_from_inches(10.984),
+		))
+		self.assertEqual(from_inches, from_mm)
 
 
 class TestSuggestDimensions(unittest.TestCase):
