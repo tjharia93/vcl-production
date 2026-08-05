@@ -71,3 +71,8 @@ production_log.patches.v8_4.add_cp_inch_dimensions
 # tool), the job card, and the traveller. This patch only does what a migrate
 # cannot - the default print format Property Setter and the workspace links.
 production_log.patches.v9_0.setup_monobox
+# The die register is named for the tool, not the product: the same flatbed
+# forme cuts a monobox, a die-cut carton and a 2-ply cup sleeve. Must run before
+# the model sync, which every patch in this app does - patches.txt carries no
+# [post_model_sync] header, so Frappe parses it in old format as all-pre.
+production_log.patches.v9_1.rename_monobox_die_to_flatbed

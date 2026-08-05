@@ -31,8 +31,8 @@ LINKS = [
 		"onboard": 0,
 	},
 	{
-		"label": "Monobox Die",
-		"link_to": "Monobox Die",
+		"label": "Flatbed Die",
+		"link_to": "Flatbed Die",
 		"link_type": "DocType",
 		"type": "Link",
 		"onboard": 0,

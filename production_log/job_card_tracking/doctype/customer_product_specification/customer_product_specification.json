@@ -53,6 +53,9 @@
   "4_ply_top_layer_material",
   "5_ply_fluting_gsm",
   "5_ply_top_layer_material",
+  "carton_die_section",
+  "carton_cutting_die",
+  "carton_die_notes",
   "label_section",
   "dies",
   "label_length",
@@ -871,7 +874,7 @@
    "fieldtype": "Link",
    "label": "Cutting Die",
    "depends_on": "eval:doc.product_type=='Monobox'",
-   "options": "Monobox Die",
+   "options": "Flatbed Die",
    "description": "Monobox dies only. The Dies doctype is the flexo label register and is not used here."
   },
   {
@@ -1053,6 +1056,26 @@
    "fieldtype": "Small Text",
    "label": "Packing Notes",
    "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "carton_die_section",
+   "fieldtype": "Section Break",
+   "label": "Cutting Die",
+   "depends_on": "eval:doc.product_type=='Carton' && doc.product_type_carton=='Die Cut'"
+  },
+  {
+   "fieldname": "carton_cutting_die",
+   "fieldtype": "Link",
+   "label": "Cutting Die",
+   "options": "Flatbed Die",
+   "depends_on": "eval:doc.product_type=='Carton' && doc.product_type_carton=='Die Cut'",
+   "description": "The flatbed die this blank is cut on. Die Cut cartons and 2-ply cup sleeves run on a flatbed forme, not the rotary label dies in Dies."
+  },
+  {
+   "fieldname": "carton_die_notes",
+   "fieldtype": "Small Text",
+   "label": "Die Notes",
+   "depends_on": "eval:doc.product_type=='Carton' && doc.product_type_carton=='Die Cut'"
   }
  ],
  "links": [],

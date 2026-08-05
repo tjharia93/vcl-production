@@ -81,6 +81,7 @@
   "joint_type",
   "idod",
   "product_type",
+  "cutting_die",
   "board_plan_section",
   "html_board_plan",
   "html_board_visualization",
@@ -626,7 +627,7 @@
   },
   {
    "default": "10",
-   "description": "Trim per outer web edge (mm). Applied to both edges in calculations, so effective total trim = 2 × this value. Standard = 10 mm/edge.",
+   "description": "Trim per outer web edge (mm). Applied to both edges in calculations, so effective total trim = 2 \u00d7 this value. Standard = 10 mm/edge.",
    "fieldname": "trim_allowance_width_mm",
    "fieldtype": "Int",
    "label": "Trim per Edge - Width (mm)"
@@ -642,7 +643,7 @@
   },
   {
    "default": "10",
-   "description": "Trim per length-direction edge (mm). Applied to both ends, so effective total = 2 × this value.",
+   "description": "Trim per length-direction edge (mm). Applied to both ends, so effective total = 2 \u00d7 this value.",
    "fieldname": "trim_allowance_length_mm",
    "fieldtype": "Int",
    "label": "Trim per Edge - Length (mm)"
@@ -653,7 +654,7 @@
    "label": "UPS Forecast"
   },
   {
-   "description": "Read-only preview. Forecasts max UPS Across that fits within Max Reel Width, in both orientations. Refreshes as you change dimensions / trim / product type. Not stored — advisory only.",
+   "description": "Read-only preview. Forecasts max UPS Across that fits within Max Reel Width, in both orientations. Refreshes as you change dimensions / trim / product type. Not stored \u2014 advisory only.",
    "fieldname": "html_ups_forecast",
    "fieldtype": "HTML",
    "label": ""
@@ -683,6 +684,16 @@
    "label": "Machine",
    "options": "Workstation",
    "reqd": 0
+  },
+  {
+   "fieldname": "cutting_die",
+   "fieldtype": "Link",
+   "label": "Cutting Die",
+   "options": "Flatbed Die",
+   "fetch_from": "customer_product_spec.carton_cutting_die",
+   "fetch_if_empty": 1,
+   "depends_on": "eval:doc.product_type=='Die Cut'",
+   "description": "Fetched from the specification. Die Cut cartons only."
   }
  ],
  "is_submittable": 1,

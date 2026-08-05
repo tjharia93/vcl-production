@@ -370,7 +370,7 @@
    "fieldname": "cutting_die",
    "fieldtype": "Link",
    "label": "Cutting Die",
-   "options": "Monobox Die"
+   "options": "Flatbed Die"
   },
   {
    "fieldname": "die_notes",

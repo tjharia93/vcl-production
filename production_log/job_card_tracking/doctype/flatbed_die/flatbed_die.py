@@ -2,12 +2,18 @@ import frappe
 from frappe.model.document import Document
 
 
-class MonoboxDie(Document):
-	"""A monobox cutting-and-creasing die.
+class FlatbedDie(Document):
+	"""A flatbed cutting-and-creasing die — a steel rule die, or cutting forme.
 
 	Deliberately separate from ``Dies``, which is the flexo label register —
-	its fields (across ups, round ups, teeth, PP materials) describe a rotary
-	label tool and say nothing useful about a flat-bed monobox die.
+	its fields (across ups, round ups, teeth, PP materials) describe a ROTARY
+	tool, cut into a cylinder and running against a reel. A flatbed die is
+	steel rule bent into a plywood forme and struck against a stack of sheets.
+	Different tool, different geometry, different register.
+
+	Product-neutral on purpose. The same flatbed die cuts a monobox, a die-cut
+	carton and a 2-ply cup sleeve, so the register is named for the tool rather
+	than for whichever product first needed one.
 
 	The geometry here is the planning master: a Customer Product Specification
 	links a die and inherits blank size, ups and sheet size from it, so the
