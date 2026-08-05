@@ -53,6 +53,16 @@
   "4_ply_top_layer_material",
   "5_ply_fluting_gsm",
   "5_ply_top_layer_material",
+  "carton_route_section",
+  "carton_applies_corrugated",
+  "carton_applies_pasting",
+  "carton_applies_creasing",
+  "carton_applies_printing",
+  "carton_route_col_1",
+  "carton_applies_diecut",
+  "carton_applies_slotting",
+  "carton_applies_stitching",
+  "carton_applies_bundling",
   "carton_die_section",
   "carton_cutting_die",
   "carton_die_notes",
@@ -1076,6 +1086,75 @@
    "fieldtype": "Small Text",
    "label": "Die Notes",
    "depends_on": "eval:doc.product_type=='Carton' && doc.product_type_carton=='Die Cut'"
+  },
+  {
+   "fieldname": "carton_route_section",
+   "fieldtype": "Section Break",
+   "label": "Carton Production Route",
+   "depends_on": "eval:doc.product_type=='Carton'",
+   "description": "Which stages this carton runs. A Die Cut carton or a 2-ply cup sleeve ticks Die-cutting and clears Slotting and Stitching. The job card inherits this and may override it for a one-off."
+  },
+  {
+   "fieldname": "carton_applies_corrugated",
+   "fieldtype": "Check",
+   "label": "7 Corrugated",
+   "default": "1",
+   "depends_on": "eval:doc.product_type=='Carton'"
+  },
+  {
+   "fieldname": "carton_applies_pasting",
+   "fieldtype": "Check",
+   "label": "8 Pasting",
+   "default": "1",
+   "depends_on": "eval:doc.product_type=='Carton'"
+  },
+  {
+   "fieldname": "carton_applies_creasing",
+   "fieldtype": "Check",
+   "label": "9 Creasing and Slitting",
+   "default": "1",
+   "depends_on": "eval:doc.product_type=='Carton'"
+  },
+  {
+   "fieldname": "carton_applies_printing",
+   "fieldtype": "Check",
+   "label": "10 Printing",
+   "default": "1",
+   "depends_on": "eval:doc.product_type=='Carton'"
+  },
+  {
+   "fieldname": "carton_route_col_1",
+   "fieldtype": "Column Break",
+   "label": "",
+   "depends_on": "eval:doc.product_type=='Carton'"
+  },
+  {
+   "fieldname": "carton_applies_diecut",
+   "fieldtype": "Check",
+   "label": "11 Die-cutting and Stripping",
+   "default": "0",
+   "depends_on": "eval:doc.product_type=='Carton'"
+  },
+  {
+   "fieldname": "carton_applies_slotting",
+   "fieldtype": "Check",
+   "label": "12 Slotting",
+   "default": "1",
+   "depends_on": "eval:doc.product_type=='Carton'"
+  },
+  {
+   "fieldname": "carton_applies_stitching",
+   "fieldtype": "Check",
+   "label": "13 Stitching",
+   "default": "1",
+   "depends_on": "eval:doc.product_type=='Carton'"
+  },
+  {
+   "fieldname": "carton_applies_bundling",
+   "fieldtype": "Check",
+   "label": "14 Bundling",
+   "default": "1",
+   "depends_on": "eval:doc.product_type=='Carton'"
   }
  ],
  "links": [],

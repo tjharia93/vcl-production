@@ -876,22 +876,41 @@
             </tr>
         </table>
 
-        {#- Per-stage capture, replacing the old Station Timing Log and Station Production &
-    Waste Log. Each stage now records its start, finish, operator and waste in one
-    place instead of the operator hunting across two station-indexed tables.
-    Carton Printing is still struck through on a plain job. -#}
-{%- set STAGE_LIST = [
-    ("Corrugated", false),
-    ("Pasting", false),
-    ("Creasing and Slitting", false),
-    ("Printing", true),
-    ("Slotting", false),
-    ("Stitching", false),
-    ("Bundling", false)
+        {#- Per-stage capture, driven by the route flags on the card.
+
+    A stage the job does not run prints STRUCK THROUGH rather than being
+    dropped: the floor has to be able to see that a stage was excluded on
+    purpose and not simply forgotten. Die-cutting and Stripping joins the list
+    here — a Die Cut carton and a 2-ply cup sleeve both run on a flatbed die,
+    and until now there was nowhere on this traveller to record that run.
+
+    LEGACY GUARD, and the reason this is not a straight read of the flags:
+    every card raised before the route existed carries all eight flags at 0.
+    Read literally that would strike through the whole traveller. So an
+    all-zero route means "no route recorded" and falls back to the classic
+    seven stages, with Printing struck on a plain job exactly as before. -#}
+{%- set _route = [
+    ("applies_corrugated", "Corrugated",                  true),
+    ("applies_pasting",    "Pasting",                     true),
+    ("applies_creasing",   "Creasing and Slitting",       true),
+    ("applies_printing",   "Printing",                    not _is_plain),
+    ("applies_diecut",     "Die-cutting and Stripping",   false),
+    ("applies_slotting",   "Slotting",                    true),
+    ("applies_stitching",  "Stitching",                   true),
+    ("applies_bundling",   "Bundling",                    true)
 ] -%}
+{%- set _rt = namespace(any=false, idx=6) -%}
+{%- for _f, _label, _legacy in _route -%}
+    {%- if doc.get(_f) -%}{%- set _rt.any = true -%}{%- endif -%}
+{%- endfor -%}
 
-        {%- set _skip7 = (_is_plain and false) -%}
-        <div class="sec-head" style="margin-top:8px;">7. Corrugated{% if _skip7 %} &mdash; <span style="font-weight:400;font-size:9px;">not applicable, plain job</span>{% endif %}</div>
+{%- for _f, _label, _legacy in _route -%}
+{%- set _applies = doc.get(_f) if _rt.any else _legacy -%}
+{%- set _rt.idx = _rt.idx + 1 -%}
+        <div class="sec-head{% if _label == 'Printing' %} dark{% endif %}" style="margin-top:8px;">
+            <span{% if not _applies %} style="text-decoration:line-through;"{% endif %}>{{ _rt.idx }}. {{ _label }}</span>
+            {%- if not _applies %} &mdash; <span style="font-weight:400;font-size:9px;">not run on this job</span>{% endif -%}
+        </div>
         <table class="dense-table tight-rows" style="font-size:8.5px;margin-bottom:0;">
             <thead>
                 <tr style="background:#eef0fa;color:#2B3990;">
@@ -903,134 +922,14 @@
                 </tr>
             </thead>
             <tbody>
-                {% if _skip7 %}
+                {% if not _applies %}
                 <tr><td colspan="5" style="text-align:center;background:#fdecea;color:#6b7280;font-style:italic;height:20px;">N/A &bull; strike line + operator initials</td></tr>
                 {% else %}
                 <tr><td style="height:26px;"></td><td></td><td></td><td></td><td></td></tr>
                 {% endif %}
             </tbody>
         </table>
-        {%- set _skip8 = (_is_plain and false) -%}
-        <div class="sec-head" style="margin-top:8px;">8. Pasting{% if _skip8 %} &mdash; <span style="font-weight:400;font-size:9px;">not applicable, plain job</span>{% endif %}</div>
-        <table class="dense-table tight-rows" style="font-size:8.5px;margin-bottom:0;">
-            <thead>
-                <tr style="background:#eef0fa;color:#2B3990;">
-                    <th style="width:16%;">Start</th>
-                    <th style="width:16%;">Finish</th>
-                    <th style="width:30%;">Operator's Name</th>
-                    <th style="width:19%;">Waste (Sheets)</th>
-                    <th style="width:19%;">Waste (Kg)</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if _skip8 %}
-                <tr><td colspan="5" style="text-align:center;background:#fdecea;color:#6b7280;font-style:italic;height:20px;">N/A &bull; strike line + operator initials</td></tr>
-                {% else %}
-                <tr><td style="height:26px;"></td><td></td><td></td><td></td><td></td></tr>
-                {% endif %}
-            </tbody>
-        </table>
-        {%- set _skip9 = (_is_plain and false) -%}
-        <div class="sec-head" style="margin-top:8px;">9. Creasing and Slitting{% if _skip9 %} &mdash; <span style="font-weight:400;font-size:9px;">not applicable, plain job</span>{% endif %}</div>
-        <table class="dense-table tight-rows" style="font-size:8.5px;margin-bottom:0;">
-            <thead>
-                <tr style="background:#eef0fa;color:#2B3990;">
-                    <th style="width:16%;">Start</th>
-                    <th style="width:16%;">Finish</th>
-                    <th style="width:30%;">Operator's Name</th>
-                    <th style="width:19%;">Waste (Sheets)</th>
-                    <th style="width:19%;">Waste (Kg)</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if _skip9 %}
-                <tr><td colspan="5" style="text-align:center;background:#fdecea;color:#6b7280;font-style:italic;height:20px;">N/A &bull; strike line + operator initials</td></tr>
-                {% else %}
-                <tr><td style="height:26px;"></td><td></td><td></td><td></td><td></td></tr>
-                {% endif %}
-            </tbody>
-        </table>
-        {%- set _skip10 = (_is_plain and true) -%}
-        <div class="sec-head dark" style="margin-top:8px;">10. Printing{% if _skip10 %} &mdash; <span style="font-weight:400;font-size:9px;">not applicable, plain job</span>{% endif %}</div>
-        <table class="dense-table tight-rows" style="font-size:8.5px;margin-bottom:0;">
-            <thead>
-                <tr style="background:#eef0fa;color:#2B3990;">
-                    <th style="width:16%;">Start</th>
-                    <th style="width:16%;">Finish</th>
-                    <th style="width:30%;">Operator's Name</th>
-                    <th style="width:19%;">Waste (Sheets)</th>
-                    <th style="width:19%;">Waste (Kg)</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if _skip10 %}
-                <tr><td colspan="5" style="text-align:center;background:#fdecea;color:#6b7280;font-style:italic;height:20px;">N/A &bull; strike line + operator initials</td></tr>
-                {% else %}
-                <tr><td style="height:26px;"></td><td></td><td></td><td></td><td></td></tr>
-                {% endif %}
-            </tbody>
-        </table>
-        {%- set _skip11 = (_is_plain and false) -%}
-        <div class="sec-head" style="margin-top:8px;">11. Slotting{% if _skip11 %} &mdash; <span style="font-weight:400;font-size:9px;">not applicable, plain job</span>{% endif %}</div>
-        <table class="dense-table tight-rows" style="font-size:8.5px;margin-bottom:0;">
-            <thead>
-                <tr style="background:#eef0fa;color:#2B3990;">
-                    <th style="width:16%;">Start</th>
-                    <th style="width:16%;">Finish</th>
-                    <th style="width:30%;">Operator's Name</th>
-                    <th style="width:19%;">Waste (Sheets)</th>
-                    <th style="width:19%;">Waste (Kg)</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if _skip11 %}
-                <tr><td colspan="5" style="text-align:center;background:#fdecea;color:#6b7280;font-style:italic;height:20px;">N/A &bull; strike line + operator initials</td></tr>
-                {% else %}
-                <tr><td style="height:26px;"></td><td></td><td></td><td></td><td></td></tr>
-                {% endif %}
-            </tbody>
-        </table>
-        {%- set _skip12 = (_is_plain and false) -%}
-        <div class="sec-head" style="margin-top:8px;">12. Stitching{% if _skip12 %} &mdash; <span style="font-weight:400;font-size:9px;">not applicable, plain job</span>{% endif %}</div>
-        <table class="dense-table tight-rows" style="font-size:8.5px;margin-bottom:0;">
-            <thead>
-                <tr style="background:#eef0fa;color:#2B3990;">
-                    <th style="width:16%;">Start</th>
-                    <th style="width:16%;">Finish</th>
-                    <th style="width:30%;">Operator's Name</th>
-                    <th style="width:19%;">Waste (Sheets)</th>
-                    <th style="width:19%;">Waste (Kg)</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if _skip12 %}
-                <tr><td colspan="5" style="text-align:center;background:#fdecea;color:#6b7280;font-style:italic;height:20px;">N/A &bull; strike line + operator initials</td></tr>
-                {% else %}
-                <tr><td style="height:26px;"></td><td></td><td></td><td></td><td></td></tr>
-                {% endif %}
-            </tbody>
-        </table>
-        {%- set _skip13 = (_is_plain and false) -%}
-        <div class="sec-head" style="margin-top:8px;">13. Bundling{% if _skip13 %} &mdash; <span style="font-weight:400;font-size:9px;">not applicable, plain job</span>{% endif %}</div>
-        <table class="dense-table tight-rows" style="font-size:8.5px;margin-bottom:0;">
-            <thead>
-                <tr style="background:#eef0fa;color:#2B3990;">
-                    <th style="width:16%;">Start</th>
-                    <th style="width:16%;">Finish</th>
-                    <th style="width:30%;">Operator's Name</th>
-                    <th style="width:19%;">Waste (Sheets)</th>
-                    <th style="width:19%;">Waste (Kg)</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if _skip13 %}
-                <tr><td colspan="5" style="text-align:center;background:#fdecea;color:#6b7280;font-style:italic;height:20px;">N/A &bull; strike line + operator initials</td></tr>
-                {% else %}
-                <tr><td style="height:26px;"></td><td></td><td></td><td></td><td></td></tr>
-                {% endif %}
-            </tbody>
-        </table>
-
+{%- endfor %}
 
         <div class="cont-slip">
             <strong>Continuation Run Slip SOP:</strong> If work batches at an operation exceed a two-day duration window, attach a matching Continuation Run Slip to this traveler. All slips must be audited by the Planner upon plant lot completion.
@@ -1061,7 +960,7 @@
             </tr>
         </table>
 
-        <div class="sec-head">14. QC Critical Checkpoints (First-Off &amp; Random Sampling Validation)</div>
+        <div class="sec-head">{{ 7 + _route | length }}. QC Critical Checkpoints (First-Off &amp; Random Sampling Validation)</div>
         <table class="dense-table" style="font-size:9px;">
             <tr style="background:#eef0fa;">
                 <th style="width:35%;">Required Checkpoint Inspection Parameters</th>

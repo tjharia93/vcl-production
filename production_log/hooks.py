@@ -152,7 +152,7 @@ fixtures = [
 					# silently starting to overwrite the live copy.
 					"ETR Job Traveller",
 					# Monobox: source of truth is monobox_job_traveller.html alongside
-					# the doctype, exported here by scripts/build_monobox_print_format.py.
+					# the doctype, exported here by scripts/sync_print_format_fixtures.py.
 					"Monobox Job Traveller",
 					"Customer Product Spec",
 					"Customer Product Spec (Calculated)",

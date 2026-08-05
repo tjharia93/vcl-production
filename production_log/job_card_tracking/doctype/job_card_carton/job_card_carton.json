@@ -100,6 +100,16 @@
   "trim_allowance_length_mm",
   "section_ups_forecast",
   "html_ups_forecast",
+  "section_carton_route",
+  "applies_corrugated",
+  "applies_pasting",
+  "applies_creasing",
+  "applies_printing",
+  "route_col_1",
+  "applies_diecut",
+  "applies_slotting",
+  "applies_stitching",
+  "applies_bundling",
   "section_job_status",
   "job_status",
   "machine"
@@ -694,6 +704,65 @@
    "fetch_if_empty": 1,
    "depends_on": "eval:doc.product_type=='Die Cut'",
    "description": "Fetched from the specification. Die Cut cartons only."
+  },
+  {
+   "fieldname": "section_carton_route",
+   "fieldtype": "Section Break",
+   "label": "Production Route",
+   "description": "Inherited from the specification when it is first linked, then owned by this card. A stage left off prints struck through on the traveller, never dropped."
+  },
+  {
+   "fieldname": "applies_corrugated",
+   "fieldtype": "Check",
+   "label": "7 Corrugated",
+   "default": "1"
+  },
+  {
+   "fieldname": "applies_pasting",
+   "fieldtype": "Check",
+   "label": "8 Pasting",
+   "default": "1"
+  },
+  {
+   "fieldname": "applies_creasing",
+   "fieldtype": "Check",
+   "label": "9 Creasing and Slitting",
+   "default": "1"
+  },
+  {
+   "fieldname": "applies_printing",
+   "fieldtype": "Check",
+   "label": "10 Printing",
+   "default": "1"
+  },
+  {
+   "fieldname": "route_col_1",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "applies_diecut",
+   "fieldtype": "Check",
+   "label": "11 Die-cutting and Stripping",
+   "default": "0"
+  },
+  {
+   "fieldname": "applies_slotting",
+   "fieldtype": "Check",
+   "label": "12 Slotting",
+   "default": "1"
+  },
+  {
+   "fieldname": "applies_stitching",
+   "fieldtype": "Check",
+   "label": "13 Stitching",
+   "default": "1"
+  },
+  {
+   "fieldname": "applies_bundling",
+   "fieldtype": "Check",
+   "label": "14 Bundling",
+   "default": "1"
   }
  ],
  "is_submittable": 1,

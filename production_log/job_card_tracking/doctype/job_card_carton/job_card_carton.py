@@ -12,6 +12,21 @@ QTY_PRECISION = 3
 # the Sales Order line, never from the current specification.
 CARTON_PRODUCT_TYPE = "Carton"
 
+# The production route, as (specification field, job card field). Inherited from
+# the specification when it is first linked and owned by the card afterwards —
+# a one-off (a Die Cut run that skips slotting) must not require revising a
+# specification every other job is running against.
+ROUTE_FIELDS = (
+	("carton_applies_corrugated", "applies_corrugated"),
+	("carton_applies_pasting",    "applies_pasting"),
+	("carton_applies_creasing",   "applies_creasing"),
+	("carton_applies_printing",   "applies_printing"),
+	("carton_applies_diecut",     "applies_diecut"),
+	("carton_applies_slotting",   "applies_slotting"),
+	("carton_applies_stitching",  "applies_stitching"),
+	("carton_applies_bundling",   "applies_bundling"),
+)
+
 
 class JobCardCarton(OrderDerivedJobCard, Document):
 	JC_PRODUCT_TYPE = CARTON_PRODUCT_TYPE
@@ -46,6 +61,7 @@ class JobCardCarton(OrderDerivedJobCard, Document):
 		self.validate_customer_product_spec()
 		self.validate_dimensions()
 		self.validate_quantity()
+		self.populate_route()
 		self.set_status()
 
 	def on_update(self):
@@ -149,6 +165,30 @@ class JobCardCarton(OrderDerivedJobCard, Document):
 			frappe.throw(_("Quantity Ordered must be greater than 0."))
 
 		self.validate_quantity_against_sales_order_line()
+
+	def populate_route(self):
+		"""Inherit the production route from the specification, once.
+
+		Only when the specification link changes. Deliberately not a
+		``fetch_from``: on a Check field an unticked box reads as empty, so
+		``fetch_if_empty`` would quietly restore the specification's value every
+		time the card was saved and the planner could never turn a stage off.
+
+		Legacy cards keep every flag at 0 and are never touched here — the
+		traveller reads an all-zero route as "no route recorded" and falls back
+		to the classic seven stages, which is what those cards have always
+		printed.
+		"""
+		if not self.customer_product_spec:
+			return
+
+		before = None if self.is_new() else self.get_doc_before_save()
+		if before is not None and before.customer_product_spec == self.customer_product_spec:
+			return
+
+		spec = frappe.get_doc("Customer Product Specification", self.customer_product_spec)
+		for spec_field, jc_field in ROUTE_FIELDS:
+			setattr(self, jc_field, 1 if getattr(spec, spec_field, 0) else 0)
 
 
 @frappe.whitelist()
