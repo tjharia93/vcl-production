@@ -40,6 +40,10 @@ jinja = {
 # before_install = "production_log.install.before_install"
 after_install = "production_log.install.after_install"
 
+# Fixtures sync AFTER post_model_sync patches, so anything that depends on a
+# Print Format existing cannot be done in a patch — it has to run here.
+after_migrate = "production_log.install.after_migrate"
+
 # Uninstallation
 # ------------
 # before_uninstall = "production_log.install.before_uninstall"

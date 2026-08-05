@@ -79,9 +79,11 @@ def set_default_print_format():
 		return
 
 	if not frappe.db.exists("Print Format", "Monobox Job Traveller"):
-		# Fixtures sync in the same migrate but not necessarily before this
-		# patch. Skipping is correct: the next migrate picks it up, and a
-		# missing default only costs one dropdown click in the meantime.
+		# Fixtures sync AFTER post_model_sync patches, so on the migrate that
+		# first ships the format this is always false and this function always
+		# skips — which is what happened on the 2026-08-05 deploy. The real
+		# caller is ``install.after_migrate``; leaving the call here as well is
+		# harmless and keeps a fresh install working.
 		return
 
 	make_property_setter(
