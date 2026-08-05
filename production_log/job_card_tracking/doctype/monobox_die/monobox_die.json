@@ -1,0 +1,277 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "creation": "2026-08-05 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "die_number",
+  "customer",
+  "col_break_1",
+  "status",
+  "storage_location",
+  "geometry_section",
+  "blank_length",
+  "blank_width",
+  "col_break_2",
+  "ups_per_sheet",
+  "sheet_size",
+  "sheet_length",
+  "sheet_width",
+  "window_section",
+  "has_window",
+  "window_width",
+  "window_height",
+  "col_break_3",
+  "window_offset_bottom",
+  "window_offset_left",
+  "asset_section",
+  "maker",
+  "date_made",
+  "col_break_4",
+  "cost",
+  "notes_section",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "MBX-DIE-.#####",
+   "reqd": 1,
+   "default": "MBX-DIE-.#####"
+  },
+  {
+   "fieldname": "die_number",
+   "fieldtype": "Data",
+   "label": "Die Number",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "The number stamped on the tool itself."
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "col_break_1",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Condition",
+   "options": "Active\nWorn\nRetired\nLost",
+   "default": "Active",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "storage_location",
+   "fieldtype": "Data",
+   "label": "Storage Location"
+  },
+  {
+   "fieldname": "geometry_section",
+   "fieldtype": "Section Break",
+   "label": "Planning Geometry",
+   "description": "Fixed by the tool. A monobox specification links this die and inherits these values rather than retyping them."
+  },
+  {
+   "fieldname": "blank_length",
+   "fieldtype": "Int",
+   "label": "Flat Blank Length (mm)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "blank_width",
+   "fieldtype": "Int",
+   "label": "Flat Blank Width (mm)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_break_2",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "ups_per_sheet",
+   "fieldtype": "Int",
+   "label": "Ups per Sheet",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sheet_size",
+   "fieldtype": "Select",
+   "label": "Cut for Sheet Size",
+   "options": "\n610 x 860\n914 x 1220\nOther",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sheet_length",
+   "fieldtype": "Int",
+   "label": "Sheet Length (mm)",
+   "depends_on": "eval:doc.sheet_size=='Other'"
+  },
+  {
+   "fieldname": "sheet_width",
+   "fieldtype": "Int",
+   "label": "Sheet Width (mm)",
+   "depends_on": "eval:doc.sheet_size=='Other'"
+  },
+  {
+   "fieldname": "window_section",
+   "fieldtype": "Section Break",
+   "label": "Window Aperture"
+  },
+  {
+   "fieldname": "has_window",
+   "fieldtype": "Check",
+   "label": "Has Window",
+   "default": "0"
+  },
+  {
+   "fieldname": "window_width",
+   "fieldtype": "Int",
+   "label": "Window Width (mm)",
+   "depends_on": "eval:doc.has_window"
+  },
+  {
+   "fieldname": "window_height",
+   "fieldtype": "Int",
+   "label": "Window Height (mm)",
+   "depends_on": "eval:doc.has_window"
+  },
+  {
+   "fieldname": "col_break_3",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "window_offset_bottom",
+   "fieldtype": "Int",
+   "label": "Offset from Panel Bottom (mm)",
+   "depends_on": "eval:doc.has_window"
+  },
+  {
+   "fieldname": "window_offset_left",
+   "fieldtype": "Int",
+   "label": "Offset from Panel Left (mm)",
+   "depends_on": "eval:doc.has_window"
+  },
+  {
+   "fieldname": "asset_section",
+   "fieldtype": "Section Break",
+   "label": "Tool Record"
+  },
+  {
+   "fieldname": "maker",
+   "fieldtype": "Data",
+   "label": "Die Maker / Supplier"
+  },
+  {
+   "fieldname": "date_made",
+   "fieldtype": "Date",
+   "label": "Date Made"
+  },
+  {
+   "fieldname": "col_break_4",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "cost",
+   "fieldtype": "Currency",
+   "label": "Cost"
+  },
+  {
+   "fieldname": "notes_section",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-05 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Job Card Tracking",
+ "name": "Monobox Die",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1,
+   "create": 1,
+   "write": 1,
+   "delete": 1
+  },
+  {
+   "role": "Sales Manager",
+   "read": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1,
+   "create": 1,
+   "write": 1,
+   "delete": 0
+  },
+  {
+   "role": "Sales User",
+   "read": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1,
+   "create": 1,
+   "write": 1,
+   "delete": 0
+  },
+  {
+   "role": "Manufacturing Manager",
+   "read": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1
+  },
+  {
+   "role": "Manufacturing User",
+   "read": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  }
+ ],
+ "sort_field": "die_number",
+ "sort_order": "ASC",
+ "states": [],
+ "allow_copy": 1,
+ "track_changes": 1,
+ "autoname": "naming_series:",
+ "naming_rule": "By \"Naming Series\" field",
+ "title_field": "die_number"
+}

@@ -1,0 +1,80 @@
+{
+ "actions": [],
+ "allow_import": 0,
+ "creation": "2026-08-05 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "stage",
+  "machine",
+  "total_hours",
+  "operators",
+  "output_qty",
+  "waste_sheets",
+  "stage_notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "stage",
+   "fieldtype": "Select",
+   "label": "Stage",
+   "options": "\n1 Board Prep & Printing\n2 Coating\n3 Die-cutting & Stripping\n4 Window Patching\n5 Folding & Gluing\n6 Bundling & Packing",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "machine",
+   "fieldtype": "Link",
+   "label": "Machine",
+   "options": "Workstation",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "total_hours",
+   "fieldtype": "Float",
+   "label": "Total Hours",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "operators",
+   "fieldtype": "Data",
+   "label": "Operator(s)",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "output_qty",
+   "fieldtype": "Float",
+   "label": "Output",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "waste_sheets",
+   "fieldtype": "Float",
+   "label": "Waste (Sheets)",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "stage_notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "links": [],
+ "modified": "2026-08-05 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Job Card Tracking",
+ "name": "Monobox Stage Summary",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1
+}

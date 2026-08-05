@@ -7,6 +7,7 @@ const NAMING_SERIES_MAP = {
 	"Label":                        "LBL-SPEC-.#####",
 	"Exercise Books":               "EXB-SPEC-.#####",
 	"ETR (Reel to Reel Printing)": "ETR-SPEC-.#####",
+	"Monobox":                      "MBX-SPEC-.#####",
 };
 
 const INK_TYPE_DEFAULTS = {
@@ -14,6 +15,7 @@ const INK_TYPE_DEFAULTS = {
 	"Carton":                       "Process Offset",
 	"Label":                        "Process UV",
 	"ETR (Reel to Reel Printing)": "Water Based",
+	"Monobox":                      "Process Offset",
 };
 
 const PAPER_RULES = {

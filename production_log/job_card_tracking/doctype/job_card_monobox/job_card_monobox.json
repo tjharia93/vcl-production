@@ -1,0 +1,871 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "creation": "2026-08-05 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_header",
+  "naming_series",
+  "date_created",
+  "status",
+  "col_break_h1",
+  "due_date",
+  "job_status",
+  "amended_from",
+  "section_order",
+  "customer",
+  "customer_product_spec",
+  "specification_name",
+  "col_break_o1",
+  "sales_order",
+  "so_qty",
+  "customer_lpo",
+  "col_break_o2",
+  "quantity_ordered",
+  "repeat_job",
+  "job_description",
+  "section_board",
+  "board_grade",
+  "board_gsm",
+  "print_side",
+  "col_break_b1",
+  "sheet_size",
+  "sheet_length",
+  "sheet_width",
+  "section_dims",
+  "mbx_length",
+  "mbx_width",
+  "mbx_height",
+  "col_break_d1",
+  "tuck_flap",
+  "glue_flap",
+  "dust_flap",
+  "col_break_d2",
+  "blank_length",
+  "blank_width",
+  "ups_per_sheet",
+  "section_die",
+  "cutting_die",
+  "die_notes",
+  "section_window",
+  "has_window",
+  "window_width",
+  "window_height",
+  "window_panel",
+  "col_break_w1",
+  "window_offset_bottom",
+  "window_offset_left",
+  "film_material",
+  "film_micron",
+  "film_patch_width",
+  "film_patch_height",
+  "section_print",
+  "printing_or_plain",
+  "ink_type",
+  "number_of_colours",
+  "col_break_p1",
+  "uses_c",
+  "uses_m",
+  "uses_y",
+  "uses_k",
+  "col_break_p2",
+  "coating_type",
+  "section_spot",
+  "spot_colours",
+  "colour_notes",
+  "section_route",
+  "applies_printing",
+  "applies_coating",
+  "applies_diecut",
+  "col_break_r1",
+  "applies_window_patch",
+  "applies_gluing",
+  "applies_bundling",
+  "section_production",
+  "machine",
+  "col_break_pr1",
+  "special_instructions",
+  "tab_closeout",
+  "section_closeout_a",
+  "boxes_produced",
+  "boxes_delivered",
+  "col_break_ca1",
+  "boxes_invoiced",
+  "output_difference",
+  "col_break_ca2",
+  "output_variance_reason",
+  "section_closeout_b",
+  "planned_sheets",
+  "sheets_issued",
+  "sheets_used",
+  "col_break_cb1",
+  "sheets_returned",
+  "waste_sheets",
+  "board_yield_pct",
+  "col_break_cb2",
+  "board_variance_reason",
+  "section_closeout_c",
+  "film_type_used",
+  "film_issued_kg",
+  "col_break_cc1",
+  "film_used_kg",
+  "film_returned_kg",
+  "col_break_cc2",
+  "film_consumed_kg",
+  "section_closeout_d",
+  "stage_summary",
+  "total_stage_hours",
+  "section_closeout_e",
+  "job_complete",
+  "date_completed",
+  "col_break_ce1",
+  "keyed_in_by",
+  "date_keyed"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_header",
+   "fieldtype": "Section Break",
+   "label": ""
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "JC-MBX-.YYYY.-.####.",
+   "reqd": 1,
+   "default": "JC-MBX-.YYYY.-.####."
+  },
+  {
+   "fieldname": "date_created",
+   "fieldtype": "Date",
+   "label": "Date Created",
+   "reqd": 1,
+   "default": "Today"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nIn Progress\nCompleted\nCancelled",
+   "default": "Draft",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "col_break_h1",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "due_date",
+   "fieldtype": "Date",
+   "label": "Due Date",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "job_status",
+   "fieldtype": "Select",
+   "label": "Job Status",
+   "options": "Open\nPlanned\nIn Production\nPacking Pending\nCompleted\nClosed\nOn Hold\nCancelled",
+   "default": "Open"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Job Card Monobox",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  },
+  {
+   "fieldname": "section_order",
+   "fieldtype": "Section Break",
+   "label": "Commercial & Order"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "customer_product_spec",
+   "fieldtype": "Link",
+   "label": "Customer Product Specification",
+   "options": "Customer Product Specification"
+  },
+  {
+   "fieldname": "specification_name",
+   "fieldtype": "Data",
+   "label": "Specification Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_o1",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "sales_order",
+   "fieldtype": "Link",
+   "label": "Sales Order",
+   "options": "Sales Order",
+   "description": "Optional, but strongly encouraged \u2014 without it the close-out cannot be tied back to what was sold."
+  },
+  {
+   "fieldname": "so_qty",
+   "fieldtype": "Float",
+   "label": "Sales Order Qty",
+   "read_only": 1,
+   "depends_on": "eval:doc.sales_order"
+  },
+  {
+   "fieldname": "customer_lpo",
+   "fieldtype": "Data",
+   "label": "Customer LPO / Ref"
+  },
+  {
+   "fieldname": "col_break_o2",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "quantity_ordered",
+   "fieldtype": "Float",
+   "label": "Quantity Ordered (boxes)",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "repeat_job",
+   "fieldtype": "Select",
+   "label": "Repeat",
+   "options": "New\nOld",
+   "default": "New"
+  },
+  {
+   "fieldname": "job_description",
+   "fieldtype": "Small Text",
+   "label": "Job Description"
+  },
+  {
+   "fieldname": "section_board",
+   "fieldtype": "Section Break",
+   "label": "Board"
+  },
+  {
+   "fieldname": "board_grade",
+   "fieldtype": "Data",
+   "label": "Board Grade"
+  },
+  {
+   "fieldname": "board_gsm",
+   "fieldtype": "Int",
+   "label": "Board GSM"
+  },
+  {
+   "fieldname": "print_side",
+   "fieldtype": "Select",
+   "label": "Print Side",
+   "options": "\nWhite Side\nGrey Side"
+  },
+  {
+   "fieldname": "col_break_b1",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "sheet_size",
+   "fieldtype": "Select",
+   "label": "Sheet Size",
+   "options": "\n610 x 860\n914 x 1220\nOther"
+  },
+  {
+   "fieldname": "sheet_length",
+   "fieldtype": "Int",
+   "label": "Sheet Length (mm)",
+   "depends_on": "eval:doc.sheet_size=='Other'"
+  },
+  {
+   "fieldname": "sheet_width",
+   "fieldtype": "Int",
+   "label": "Sheet Width (mm)",
+   "depends_on": "eval:doc.sheet_size=='Other'"
+  },
+  {
+   "fieldname": "section_dims",
+   "fieldtype": "Section Break",
+   "label": "Dimensions (mm)"
+  },
+  {
+   "fieldname": "mbx_length",
+   "fieldtype": "Int",
+   "label": "Length (mm)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "mbx_width",
+   "fieldtype": "Int",
+   "label": "Width (mm)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "mbx_height",
+   "fieldtype": "Int",
+   "label": "Height (mm)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_break_d1",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "tuck_flap",
+   "fieldtype": "Int",
+   "label": "Tuck Flap (mm)"
+  },
+  {
+   "fieldname": "glue_flap",
+   "fieldtype": "Int",
+   "label": "Glue Flap (mm)"
+  },
+  {
+   "fieldname": "dust_flap",
+   "fieldtype": "Int",
+   "label": "Dust Flap (mm)"
+  },
+  {
+   "fieldname": "col_break_d2",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "blank_length",
+   "fieldtype": "Int",
+   "label": "Flat Blank Length (mm)"
+  },
+  {
+   "fieldname": "blank_width",
+   "fieldtype": "Int",
+   "label": "Flat Blank Width (mm)"
+  },
+  {
+   "fieldname": "ups_per_sheet",
+   "fieldtype": "Int",
+   "label": "Ups per Sheet"
+  },
+  {
+   "fieldname": "section_die",
+   "fieldtype": "Section Break",
+   "label": "Cutting Die"
+  },
+  {
+   "fieldname": "cutting_die",
+   "fieldtype": "Link",
+   "label": "Cutting Die",
+   "options": "Monobox Die"
+  },
+  {
+   "fieldname": "die_notes",
+   "fieldtype": "Small Text",
+   "label": "Die Notes"
+  },
+  {
+   "fieldname": "section_window",
+   "fieldtype": "Section Break",
+   "label": "Window"
+  },
+  {
+   "fieldname": "has_window",
+   "fieldtype": "Check",
+   "label": "Has Window",
+   "default": "0"
+  },
+  {
+   "fieldname": "window_width",
+   "fieldtype": "Int",
+   "label": "Window Width (mm)",
+   "depends_on": "eval:doc.has_window"
+  },
+  {
+   "fieldname": "window_height",
+   "fieldtype": "Int",
+   "label": "Window Height (mm)",
+   "depends_on": "eval:doc.has_window"
+  },
+  {
+   "fieldname": "window_panel",
+   "fieldtype": "Select",
+   "label": "Window Panel",
+   "options": "\nFront\nBack\nTop\nSide\nOther",
+   "depends_on": "eval:doc.has_window"
+  },
+  {
+   "fieldname": "col_break_w1",
+   "fieldtype": "Column Break",
+   "label": "",
+   "depends_on": "eval:doc.has_window"
+  },
+  {
+   "fieldname": "window_offset_bottom",
+   "fieldtype": "Int",
+   "label": "Offset from Panel Bottom (mm)",
+   "depends_on": "eval:doc.has_window"
+  },
+  {
+   "fieldname": "window_offset_left",
+   "fieldtype": "Int",
+   "label": "Offset from Panel Left (mm)",
+   "depends_on": "eval:doc.has_window"
+  },
+  {
+   "fieldname": "film_material",
+   "fieldtype": "Data",
+   "label": "Film Material",
+   "depends_on": "eval:doc.has_window"
+  },
+  {
+   "fieldname": "film_micron",
+   "fieldtype": "Float",
+   "label": "Film Micron",
+   "depends_on": "eval:doc.has_window"
+  },
+  {
+   "fieldname": "film_patch_width",
+   "fieldtype": "Int",
+   "label": "Film Patch Width (mm)",
+   "depends_on": "eval:doc.has_window"
+  },
+  {
+   "fieldname": "film_patch_height",
+   "fieldtype": "Int",
+   "label": "Film Patch Height (mm)",
+   "depends_on": "eval:doc.has_window"
+  },
+  {
+   "fieldname": "section_print",
+   "fieldtype": "Section Break",
+   "label": "Print & Coating"
+  },
+  {
+   "fieldname": "printing_or_plain",
+   "fieldtype": "Select",
+   "label": "Printed / Plain",
+   "options": "\nPlain\nPrinted",
+   "default": "Printed"
+  },
+  {
+   "fieldname": "ink_type",
+   "fieldtype": "Data",
+   "label": "Ink Type"
+  },
+  {
+   "fieldname": "number_of_colours",
+   "fieldtype": "Int",
+   "label": "Number of Colours",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_p1",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "uses_c",
+   "fieldtype": "Check",
+   "label": "C"
+  },
+  {
+   "fieldname": "uses_m",
+   "fieldtype": "Check",
+   "label": "M"
+  },
+  {
+   "fieldname": "uses_y",
+   "fieldtype": "Check",
+   "label": "Y"
+  },
+  {
+   "fieldname": "uses_k",
+   "fieldtype": "Check",
+   "label": "K"
+  },
+  {
+   "fieldname": "col_break_p2",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "coating_type",
+   "fieldtype": "Select",
+   "label": "Coating Type",
+   "options": "None\nGloss Lamination\nMatt Lamination\nUV Varnish\nAqueous Varnish",
+   "default": "None"
+  },
+  {
+   "fieldname": "section_spot",
+   "fieldtype": "Section Break",
+   "label": "Spot Colours"
+  },
+  {
+   "fieldname": "spot_colours",
+   "fieldtype": "Table",
+   "label": "Spot Colours",
+   "options": "Spot Colour"
+  },
+  {
+   "fieldname": "colour_notes",
+   "fieldtype": "Small Text",
+   "label": "Colour Notes"
+  },
+  {
+   "fieldname": "section_route",
+   "fieldtype": "Section Break",
+   "label": "Production Route",
+   "description": "Inherited from the specification and editable here for a one-off. A stage left off prints struck through on the traveller."
+  },
+  {
+   "fieldname": "applies_printing",
+   "fieldtype": "Check",
+   "label": "1 Board Prep & Printing",
+   "default": "1"
+  },
+  {
+   "fieldname": "applies_coating",
+   "fieldtype": "Check",
+   "label": "2 Coating",
+   "default": "0"
+  },
+  {
+   "fieldname": "applies_diecut",
+   "fieldtype": "Check",
+   "label": "3 Die-cutting & Stripping",
+   "default": "1"
+  },
+  {
+   "fieldname": "col_break_r1",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "applies_window_patch",
+   "fieldtype": "Check",
+   "label": "4 Window Patching",
+   "default": "0"
+  },
+  {
+   "fieldname": "applies_gluing",
+   "fieldtype": "Check",
+   "label": "5 Folding & Gluing",
+   "default": "1"
+  },
+  {
+   "fieldname": "applies_bundling",
+   "fieldtype": "Check",
+   "label": "6 Bundling & Packing",
+   "default": "1"
+  },
+  {
+   "fieldname": "section_production",
+   "fieldtype": "Section Break",
+   "label": "Production"
+  },
+  {
+   "fieldname": "machine",
+   "fieldtype": "Link",
+   "label": "Machine",
+   "options": "Workstation"
+  },
+  {
+   "fieldname": "col_break_pr1",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "special_instructions",
+   "fieldtype": "Small Text",
+   "label": "Special Instructions"
+  },
+  {
+   "fieldname": "tab_closeout",
+   "fieldtype": "Tab Break",
+   "label": "Close-out"
+  },
+  {
+   "fieldname": "section_closeout_a",
+   "fieldtype": "Section Break",
+   "label": "A. Output vs Order",
+   "description": "Keyed in from the returned paper traveller."
+  },
+  {
+   "fieldname": "boxes_produced",
+   "fieldtype": "Float",
+   "label": "Boxes Produced"
+  },
+  {
+   "fieldname": "boxes_delivered",
+   "fieldtype": "Float",
+   "label": "Boxes Delivered"
+  },
+  {
+   "fieldname": "col_break_ca1",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "boxes_invoiced",
+   "fieldtype": "Float",
+   "label": "Boxes Invoiced"
+  },
+  {
+   "fieldname": "output_difference",
+   "fieldtype": "Float",
+   "label": "Difference (Produced \u2212 Ordered)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_ca2",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "output_variance_reason",
+   "fieldtype": "Small Text",
+   "label": "Reason for Over-run / Short-fall"
+  },
+  {
+   "fieldname": "section_closeout_b",
+   "fieldtype": "Section Break",
+   "label": "B. Board Consumed vs Planned (Sheets)"
+  },
+  {
+   "fieldname": "planned_sheets",
+   "fieldtype": "Float",
+   "label": "Planned Sheets"
+  },
+  {
+   "fieldname": "sheets_issued",
+   "fieldtype": "Float",
+   "label": "Sheets Issued"
+  },
+  {
+   "fieldname": "sheets_used",
+   "fieldtype": "Float",
+   "label": "Sheets Used"
+  },
+  {
+   "fieldname": "col_break_cb1",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "sheets_returned",
+   "fieldtype": "Float",
+   "label": "Sheets Returned to Store"
+  },
+  {
+   "fieldname": "waste_sheets",
+   "fieldtype": "Float",
+   "label": "Waste Sheets",
+   "read_only": 1,
+   "description": "Issued \u2212 Used \u2212 Returned."
+  },
+  {
+   "fieldname": "board_yield_pct",
+   "fieldtype": "Percent",
+   "label": "Yield %",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_cb2",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "board_variance_reason",
+   "fieldtype": "Small Text",
+   "label": "Explanation"
+  },
+  {
+   "fieldname": "section_closeout_c",
+   "fieldtype": "Section Break",
+   "label": "C. Window Film Consumed (Kg)",
+   "depends_on": "eval:doc.has_window"
+  },
+  {
+   "fieldname": "film_type_used",
+   "fieldtype": "Data",
+   "label": "Film Type"
+  },
+  {
+   "fieldname": "film_issued_kg",
+   "fieldtype": "Float",
+   "label": "Kg Issued"
+  },
+  {
+   "fieldname": "col_break_cc1",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "film_used_kg",
+   "fieldtype": "Float",
+   "label": "Kg Used"
+  },
+  {
+   "fieldname": "film_returned_kg",
+   "fieldtype": "Float",
+   "label": "Kg Returned"
+  },
+  {
+   "fieldname": "col_break_cc2",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "film_consumed_kg",
+   "fieldtype": "Float",
+   "label": "Kg Consumed",
+   "read_only": 1,
+   "description": "Issued \u2212 Returned."
+  },
+  {
+   "fieldname": "section_closeout_d",
+   "fieldtype": "Section Break",
+   "label": "D. Time & Labour per Stage"
+  },
+  {
+   "fieldname": "stage_summary",
+   "fieldtype": "Table",
+   "label": "Stage Summary",
+   "options": "Monobox Stage Summary"
+  },
+  {
+   "fieldname": "total_stage_hours",
+   "fieldtype": "Float",
+   "label": "Total Hours",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_closeout_e",
+   "fieldtype": "Section Break",
+   "label": "E. Sign-off"
+  },
+  {
+   "fieldname": "job_complete",
+   "fieldtype": "Check",
+   "label": "Job Complete",
+   "default": "0"
+  },
+  {
+   "fieldname": "date_completed",
+   "fieldtype": "Date",
+   "label": "Date Completed"
+  },
+  {
+   "fieldname": "col_break_ce1",
+   "fieldtype": "Column Break",
+   "label": ""
+  },
+  {
+   "fieldname": "keyed_in_by",
+   "fieldtype": "Link",
+   "label": "Keyed into ERPNext By",
+   "options": "User"
+  },
+  {
+   "fieldname": "date_keyed",
+   "fieldtype": "Date",
+   "label": "Date Keyed"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-05 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Job Card Tracking",
+ "name": "Job Card Monobox",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1,
+   "create": 1,
+   "write": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "Sales Manager",
+   "read": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1,
+   "create": 1,
+   "write": 1,
+   "delete": 0,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "Sales User",
+   "read": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1,
+   "create": 1,
+   "write": 1,
+   "delete": 0,
+   "submit": 0
+  },
+  {
+   "role": "Manufacturing Manager",
+   "read": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "amend": 1,
+   "submit": 0
+  },
+  {
+   "role": "Manufacturing User",
+   "read": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1,
+   "submit": 0
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "allow_copy": 1,
+ "track_changes": 1,
+ "autoname": "naming_series:",
+ "naming_rule": "By \"Naming Series\" field",
+ "is_submittable": 1
+}

@@ -211,6 +211,7 @@ CPS_PRODUCT_TYPES = (
 	"Label",
 	"Exercise Books",
 	"ETR (Reel to Reel Printing)",
+	"Monobox",
 )
 
 CONTROL_MODE_INHERIT = "Inherit from Item Group"

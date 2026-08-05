@@ -83,6 +83,56 @@
   "etr_finished_reel_length",
   "etr_print_section",
   "etr_print_type",
+  "monobox_section",
+  "mbx_board_grade",
+  "mbx_board_gsm",
+  "mbx_print_side",
+  "mbx_col_break_1",
+  "mbx_sheet_size",
+  "mbx_sheet_length",
+  "mbx_sheet_width",
+  "mbx_dimensions_section",
+  "mbx_length",
+  "mbx_width",
+  "mbx_height",
+  "mbx_col_break_2",
+  "mbx_tuck_flap",
+  "mbx_glue_flap",
+  "mbx_dust_flap",
+  "mbx_col_break_3",
+  "mbx_blank_length",
+  "mbx_blank_width",
+  "mbx_ups_per_sheet",
+  "mbx_die_section",
+  "mbx_cutting_die",
+  "mbx_die_notes",
+  "mbx_window_section",
+  "has_window",
+  "mbx_window_width",
+  "mbx_window_height",
+  "mbx_window_panel",
+  "mbx_col_break_4",
+  "mbx_window_offset_bottom",
+  "mbx_window_offset_left",
+  "mbx_film_material",
+  "mbx_film_micron",
+  "mbx_film_patch_width",
+  "mbx_film_patch_height",
+  "mbx_coating_section",
+  "mbx_coating_type",
+  "mbx_route_section",
+  "mbx_applies_printing",
+  "mbx_applies_coating",
+  "mbx_applies_diecut",
+  "mbx_col_break_5",
+  "mbx_applies_window_patch",
+  "mbx_applies_gluing",
+  "mbx_applies_bundling",
+  "mbx_packing_section",
+  "mbx_boxes_per_bundle",
+  "mbx_bundles_per_carton",
+  "mbx_col_break_6",
+  "mbx_packing_notes",
   "packing_section",
   "numbering_required",
   "standard_packing",
@@ -112,14 +162,14 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Product Type",
-   "options": "\nComputer Paper\nCarton\nLabel\nExercise Books\nETR (Reel to Reel Printing)",
+   "options": "\nComputer Paper\nCarton\nLabel\nExercise Books\nETR (Reel to Reel Printing)\nMonobox",
    "reqd": 1
   },
   {
    "fieldname": "naming_series",
    "fieldtype": "Select",
    "label": "Naming Series",
-   "options": "CPT-SPEC-.#####\nCTN-SPEC-.#####\nLBL-SPEC-.#####\nEXB-SPEC-.#####\nETR-SPEC-.#####",
+   "options": "CPT-SPEC-.#####\nCTN-SPEC-.#####\nLBL-SPEC-.#####\nEXB-SPEC-.#####\nETR-SPEC-.#####\nMBX-SPEC-.#####",
    "reqd": 1
   },
   {
@@ -685,6 +735,324 @@
    "fieldname": "internal_notes",
    "fieldtype": "Small Text",
    "label": "Internal Notes"
+  },
+  {
+   "fieldname": "monobox_section",
+   "fieldtype": "Section Break",
+   "label": "Monobox Specification",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_board_grade",
+   "fieldtype": "Data",
+   "label": "Board Grade",
+   "depends_on": "eval:doc.product_type=='Monobox'",
+   "description": "Free text for now, e.g. Duplex Grey Back. Tightened to a Select once real usage is visible."
+  },
+  {
+   "fieldname": "mbx_board_gsm",
+   "fieldtype": "Int",
+   "label": "Board GSM",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_print_side",
+   "fieldtype": "Select",
+   "label": "Print Side",
+   "depends_on": "eval:doc.product_type=='Monobox'",
+   "options": "\nWhite Side\nGrey Side"
+  },
+  {
+   "fieldname": "mbx_col_break_1",
+   "fieldtype": "Column Break",
+   "label": "",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_sheet_size",
+   "fieldtype": "Select",
+   "label": "Sheet Size",
+   "depends_on": "eval:doc.product_type=='Monobox'",
+   "options": "\n610 x 860\n914 x 1220\nOther"
+  },
+  {
+   "fieldname": "mbx_sheet_length",
+   "fieldtype": "Int",
+   "label": "Sheet Length (mm)",
+   "depends_on": "eval:doc.product_type=='Monobox' && doc.mbx_sheet_size=='Other'"
+  },
+  {
+   "fieldname": "mbx_sheet_width",
+   "fieldtype": "Int",
+   "label": "Sheet Width (mm)",
+   "depends_on": "eval:doc.product_type=='Monobox' && doc.mbx_sheet_size=='Other'"
+  },
+  {
+   "fieldname": "mbx_dimensions_section",
+   "fieldtype": "Section Break",
+   "label": "Monobox Dimensions (mm)",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_length",
+   "fieldtype": "Int",
+   "label": "Length (mm)",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_width",
+   "fieldtype": "Int",
+   "label": "Width (mm)",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_height",
+   "fieldtype": "Int",
+   "label": "Height (mm)",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_col_break_2",
+   "fieldtype": "Column Break",
+   "label": "",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_tuck_flap",
+   "fieldtype": "Int",
+   "label": "Tuck Flap (mm)",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_glue_flap",
+   "fieldtype": "Int",
+   "label": "Glue Flap (mm)",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_dust_flap",
+   "fieldtype": "Int",
+   "label": "Dust Flap (mm)",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_col_break_3",
+   "fieldtype": "Column Break",
+   "label": "",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_blank_length",
+   "fieldtype": "Int",
+   "label": "Flat Blank Length (mm)",
+   "depends_on": "eval:doc.product_type=='Monobox'",
+   "description": "Typed in, or defaulted from the linked die. Not derived from the box dimensions."
+  },
+  {
+   "fieldname": "mbx_blank_width",
+   "fieldtype": "Int",
+   "label": "Flat Blank Width (mm)",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_ups_per_sheet",
+   "fieldtype": "Int",
+   "label": "Ups per Sheet",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_die_section",
+   "fieldtype": "Section Break",
+   "label": "Cutting Die",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_cutting_die",
+   "fieldtype": "Link",
+   "label": "Cutting Die",
+   "depends_on": "eval:doc.product_type=='Monobox'",
+   "options": "Monobox Die",
+   "description": "Monobox dies only. The Dies doctype is the flexo label register and is not used here."
+  },
+  {
+   "fieldname": "mbx_die_notes",
+   "fieldtype": "Small Text",
+   "label": "Die Notes",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_window_section",
+   "fieldtype": "Section Break",
+   "label": "Window",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "has_window",
+   "fieldtype": "Check",
+   "label": "Has Window",
+   "depends_on": "eval:doc.product_type=='Monobox'",
+   "default": "0"
+  },
+  {
+   "fieldname": "mbx_window_width",
+   "fieldtype": "Int",
+   "label": "Window Width (mm)",
+   "depends_on": "eval:doc.product_type=='Monobox' && doc.has_window"
+  },
+  {
+   "fieldname": "mbx_window_height",
+   "fieldtype": "Int",
+   "label": "Window Height (mm)",
+   "depends_on": "eval:doc.product_type=='Monobox' && doc.has_window"
+  },
+  {
+   "fieldname": "mbx_window_panel",
+   "fieldtype": "Select",
+   "label": "Window Panel",
+   "depends_on": "eval:doc.product_type=='Monobox' && doc.has_window",
+   "options": "\nFront\nBack\nTop\nSide\nOther"
+  },
+  {
+   "fieldname": "mbx_col_break_4",
+   "fieldtype": "Column Break",
+   "label": "",
+   "depends_on": "eval:doc.product_type=='Monobox' && doc.has_window"
+  },
+  {
+   "fieldname": "mbx_window_offset_bottom",
+   "fieldtype": "Int",
+   "label": "Offset from Panel Bottom (mm)",
+   "depends_on": "eval:doc.product_type=='Monobox' && doc.has_window"
+  },
+  {
+   "fieldname": "mbx_window_offset_left",
+   "fieldtype": "Int",
+   "label": "Offset from Panel Left (mm)",
+   "depends_on": "eval:doc.product_type=='Monobox' && doc.has_window"
+  },
+  {
+   "fieldname": "mbx_film_material",
+   "fieldtype": "Data",
+   "label": "Film Material",
+   "depends_on": "eval:doc.product_type=='Monobox' && doc.has_window",
+   "description": "Free text for now, e.g. PET 30 micron."
+  },
+  {
+   "fieldname": "mbx_film_micron",
+   "fieldtype": "Float",
+   "label": "Film Micron",
+   "depends_on": "eval:doc.product_type=='Monobox' && doc.has_window"
+  },
+  {
+   "fieldname": "mbx_film_patch_width",
+   "fieldtype": "Int",
+   "label": "Film Patch Width (mm)",
+   "depends_on": "eval:doc.product_type=='Monobox' && doc.has_window"
+  },
+  {
+   "fieldname": "mbx_film_patch_height",
+   "fieldtype": "Int",
+   "label": "Film Patch Height (mm)",
+   "depends_on": "eval:doc.product_type=='Monobox' && doc.has_window"
+  },
+  {
+   "fieldname": "mbx_coating_section",
+   "fieldtype": "Section Break",
+   "label": "Coating",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_coating_type",
+   "fieldtype": "Select",
+   "label": "Coating Type",
+   "depends_on": "eval:doc.product_type=='Monobox'",
+   "options": "None\nGloss Lamination\nMatt Lamination\nUV Varnish\nAqueous Varnish",
+   "default": "None"
+  },
+  {
+   "fieldname": "mbx_route_section",
+   "fieldtype": "Section Break",
+   "label": "Production Route",
+   "depends_on": "eval:doc.product_type=='Monobox'",
+   "description": "Which stages this product runs. The job card inherits these and may override them for a one-off."
+  },
+  {
+   "fieldname": "mbx_applies_printing",
+   "fieldtype": "Check",
+   "label": "1 Board Prep & Printing",
+   "depends_on": "eval:doc.product_type=='Monobox'",
+   "default": "1"
+  },
+  {
+   "fieldname": "mbx_applies_coating",
+   "fieldtype": "Check",
+   "label": "2 Coating",
+   "depends_on": "eval:doc.product_type=='Monobox'",
+   "default": "0"
+  },
+  {
+   "fieldname": "mbx_applies_diecut",
+   "fieldtype": "Check",
+   "label": "3 Die-cutting & Stripping",
+   "depends_on": "eval:doc.product_type=='Monobox'",
+   "default": "1"
+  },
+  {
+   "fieldname": "mbx_col_break_5",
+   "fieldtype": "Column Break",
+   "label": "",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_applies_window_patch",
+   "fieldtype": "Check",
+   "label": "4 Window Patching",
+   "depends_on": "eval:doc.product_type=='Monobox'",
+   "default": "0"
+  },
+  {
+   "fieldname": "mbx_applies_gluing",
+   "fieldtype": "Check",
+   "label": "5 Folding & Gluing",
+   "depends_on": "eval:doc.product_type=='Monobox'",
+   "default": "1"
+  },
+  {
+   "fieldname": "mbx_applies_bundling",
+   "fieldtype": "Check",
+   "label": "6 Bundling & Packing",
+   "depends_on": "eval:doc.product_type=='Monobox'",
+   "default": "1"
+  },
+  {
+   "fieldname": "mbx_packing_section",
+   "fieldtype": "Section Break",
+   "label": "Monobox Packing",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_boxes_per_bundle",
+   "fieldtype": "Int",
+   "label": "Boxes per Bundle",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_bundles_per_carton",
+   "fieldtype": "Int",
+   "label": "Bundles per Carton",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_col_break_6",
+   "fieldtype": "Column Break",
+   "label": "",
+   "depends_on": "eval:doc.product_type=='Monobox'"
+  },
+  {
+   "fieldname": "mbx_packing_notes",
+   "fieldtype": "Small Text",
+   "label": "Packing Notes",
+   "depends_on": "eval:doc.product_type=='Monobox'"
   }
  ],
  "links": [],

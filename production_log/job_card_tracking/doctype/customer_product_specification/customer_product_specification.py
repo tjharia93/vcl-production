@@ -16,6 +16,7 @@ INK_TYPE_DEFAULTS = {
 	"Carton":                       "Process Offset",
 	"Label":                        "Process UV",
 	"ETR (Reel to Reel Printing)":  "Water Based",
+	"Monobox":                      "Process Offset",
 }
 
 
@@ -327,6 +328,7 @@ class CustomerProductSpecification(Document):
 				"Label":                        "LBL-SPEC-.#####",
 				"Exercise Books":               "EXB-SPEC-.#####",
 				"ETR (Reel to Reel Printing)": "ETR-SPEC-.#####",
+				"Monobox":                      "MBX-SPEC-.#####",
 			}
 			self.naming_series = series_map.get(self.product_type)
 
