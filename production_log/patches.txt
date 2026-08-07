@@ -76,3 +76,9 @@ production_log.patches.v9_0.setup_monobox
 # the model sync, which every patch in this app does - patches.txt carries no
 # [post_model_sync] header, so Frappe parses it in old format as all-pre.
 production_log.patches.v9_1.rename_monobox_die_to_flatbed
+# The artwork tracker link, the deferral flag, and a Desk control for the
+# Numbering question. v8_3 enforced both rules on a form that could not satisfy
+# either: numbering_confirmed is hidden and Desk had no way to answer, and the
+# artwork it demanded already lives in the Design and Artwork Tracker. Additive
+# throughout - no backfill, and the existing estate is untouched.
+production_log.patches.v9_2.add_cps_artwork_tracker_and_numbering_answer

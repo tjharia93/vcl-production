@@ -61,6 +61,18 @@ NUMBERING_CONFIRMED_FIELD = "numbering_confirmed"
 
 NUMBERING_NOTES_FIELD = "numbering_notes"
 
+# The Desk input. A Check cannot express "not answered", which is the whole
+# reason NUMBERING_CONFIRMED_FIELD exists — but that flag is hidden provenance,
+# not something to tick by hand, so Desk had no way to answer the question at
+# all and every new Computer Paper specification written there was refused.
+# This Select has the three states the question actually has; blank is "not
+# answered". It is an input only: it writes the two stored fields above, which
+# remain what production, the Job Card and the order snapshot read.
+NUMBERING_ANSWER_FIELD = "numbering_answer"
+
+NUMBERING_ANSWER_YES = "Yes"
+NUMBERING_ANSWER_NO = "No"
+
 # The four process inks, as Checks on the specification.
 CMYK_FIELDS = ("uses_c", "uses_m", "uses_y", "uses_k")
 
@@ -72,6 +84,25 @@ PRINT_SIDE_FIELD = "print_side"
 
 ARTWORK_FIELD = "artwork"
 ARTWORK_NOTES_FIELD = "artwork_notes"
+
+# The Design and Artwork Tracker job this specification is plated from. VCL's
+# artwork already lives there — it is where the design is drawn, revised and
+# approved — so copying the file onto the specification made a second, staler
+# copy of something the business already tracks. A link says which job, and the
+# tracker stays the one place the artwork is.
+#
+# It does NOT replace ARTWORK_FIELD. Sixty-five live specifications carry an
+# attached file and removing the field would strand every one of them, so both
+# are accepted and the attach route keeps working.
+ARTWORK_TRACKER_FIELD = "artwork_tracker"
+
+# A deliberate deferral: the specification is complete in every other respect
+# and the artwork is genuinely still being drawn. Ticking it is what lets a
+# Printed specification submit without either a file or a tracker job.
+#
+# This is an unguarded bypass, and knowingly so — anybody who can edit the
+# specification can tick it. It is a record of a decision, not a control.
+ARTWORK_NOT_READY_FIELD = "artwork_not_ready"
 
 # What counts as somebody deliberately touching the colour of this record, and
 # therefore as the save that has to meet the new standard.
@@ -203,6 +234,23 @@ def numbering_answer(doc):
 def numbering_confirmed(doc):
 	"""Whether a person is recorded as having actually answered."""
 	return _checked(_get(doc, NUMBERING_CONFIRMED_FIELD))
+
+
+def numbering_answer_fields(answer):
+	"""The two stored numbering fields implied by a Desk answer, or None.
+
+	Blank is not an answer and returns None rather than 0/0. The difference
+	matters: a legacy record edited for an unrelated reason carries no answer in
+	the Select, and writing 0/0 for it would withdraw a confirmation nobody
+	touched — refused by :func:`numbering_block_reason`, and rightly.
+	"""
+	value = _text(answer)
+	if value not in (NUMBERING_ANSWER_YES, NUMBERING_ANSWER_NO):
+		return None
+	return {
+		NUMBERING_FIELD: 1 if value == NUMBERING_ANSWER_YES else 0,
+		NUMBERING_CONFIRMED_FIELD: 1,
+	}
 
 
 def numbering_changed(before, after):
@@ -806,6 +854,40 @@ def artwork_required(doc):
 	return normalise_print_type(_get(doc, PRINT_TYPE_FIELD)) == PRINT_TYPE_PRINTED
 
 
+def artwork_deferred(doc):
+	"""Whether the artwork is recorded as still being drawn."""
+	return _checked(_get(doc, ARTWORK_NOT_READY_FIELD))
+
+
+def artwork_evidence(doc):
+	"""What this specification offers about its artwork, or None.
+
+	Three things count, and they are genuinely different claims rather than three
+	spellings of one:
+
+	``"file"``
+		An attached file, proved by :func:`artwork_file_error` at submit.
+
+	``"tracker"``
+		A Design and Artwork Tracker job. The artwork exists and lives there,
+		which is where it was drawn and approved in the first place.
+
+	``"deferred"``
+		Nobody claims there is artwork. Somebody has said so on the record.
+
+	Returned rather than a bare boolean so a caller — a Job Card, a traveller,
+	a report of specifications waiting on design — can tell "the artwork is in
+	the tracker" from "there is no artwork yet", which a boolean flattens.
+	"""
+	if _text(_get(doc, ARTWORK_FIELD)):
+		return "file"
+	if _text(_get(doc, ARTWORK_TRACKER_FIELD)):
+		return "tracker"
+	if artwork_deferred(doc):
+		return "deferred"
+	return None
+
+
 def artwork_submit_block_reason(doc):
 	"""Why this specification cannot be submitted for want of artwork, or None.
 
@@ -813,15 +895,21 @@ def artwork_submit_block_reason(doc):
 	arrives after the specification is written, and refusing the draft would mean
 	the sizes, the parts and the colours could not be recorded until the customer
 	sent a file.
+
+	Satisfied by any of the three claims in :func:`artwork_evidence`. The rule is
+	no longer "there is a file on this document" but "somebody has said where the
+	artwork is, or that there isn't any yet" — because the file was never the
+	point. An unanswered artwork question was.
 	"""
 	if not artwork_required(doc):
 		return None
-	if _text(_get(doc, ARTWORK_FIELD)):
+	if artwork_evidence(doc) is not None:
 		return None
 	return CPSBlock(
 		BLOCK_ARTWORK_MISSING,
-		"A Printed specification cannot be submitted without artwork. Attach the file, "
-		"or save it as a draft until the artwork arrives.",
+		"A Printed specification cannot be submitted with nothing said about its artwork. "
+		"Link the Design & Artwork Tracker job, attach the file, or tick Artwork Not Yet "
+		"Ready if the design is still being drawn.",
 		(),
 	)
 

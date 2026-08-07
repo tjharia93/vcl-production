@@ -745,6 +745,92 @@ class TestArtworkSubmit(unittest.TestCase):
 		reason = r.artwork_submit_block_reason(spec(artwork="   "))
 		self.assertIsNotNone(reason)
 
+	def test_tracker_job_satisfies_the_requirement(self):
+		self.assertIsNone(
+			r.artwork_submit_block_reason(
+				spec(artwork=None, artwork_tracker="ADVANCE PLASTICS LTD - 00001")
+			)
+		)
+
+	def test_not_yet_ready_satisfies_the_requirement(self):
+		self.assertIsNone(
+			r.artwork_submit_block_reason(spec(artwork=None, artwork_not_ready=1))
+		)
+
+	def test_nothing_said_at_all_is_still_refused(self):
+		reason = r.artwork_submit_block_reason(
+			spec(artwork=None, artwork_tracker=None, artwork_not_ready=0)
+		)
+		self.assertIsNotNone(reason)
+		self.assertEqual(reason.code, r.BLOCK_ARTWORK_MISSING)
+
+	def test_whitespace_is_not_a_tracker_job(self):
+		self.assertIsNotNone(
+			r.artwork_submit_block_reason(spec(artwork=None, artwork_tracker="  "))
+		)
+
+
+class TestArtworkEvidence(unittest.TestCase):
+	"""Which claim a specification makes, not merely whether it makes one."""
+
+	def test_file_wins_when_everything_is_set(self):
+		self.assertEqual(
+			r.artwork_evidence(
+				spec(artwork_tracker="ADVANCE PLASTICS LTD - 00001", artwork_not_ready=1)
+			),
+			"file",
+		)
+
+	def test_tracker_beats_deferral(self):
+		self.assertEqual(
+			r.artwork_evidence(
+				spec(artwork=None, artwork_tracker="ADVANCE PLASTICS LTD - 00001",
+				     artwork_not_ready=1)
+			),
+			"tracker",
+		)
+
+	def test_deferred_when_that_is_all_there_is(self):
+		self.assertEqual(
+			r.artwork_evidence(spec(artwork=None, artwork_not_ready=1)), "deferred"
+		)
+
+	def test_none_when_nothing_is_claimed(self):
+		self.assertIsNone(r.artwork_evidence(spec(artwork=None)))
+
+
+class TestNumberingAnswer(unittest.TestCase):
+	"""The Desk Select mapped onto the two stored fields."""
+
+	def test_yes_sets_both(self):
+		self.assertEqual(
+			r.numbering_answer_fields("Yes"),
+			{r.NUMBERING_FIELD: 1, r.NUMBERING_CONFIRMED_FIELD: 1},
+		)
+
+	def test_no_confirms_without_requiring(self):
+		self.assertEqual(
+			r.numbering_answer_fields("No"),
+			{r.NUMBERING_FIELD: 0, r.NUMBERING_CONFIRMED_FIELD: 1},
+		)
+
+	def test_blank_writes_nothing(self):
+		# The legacy estate's whole protection: a record nobody answered carries
+		# no answer here, and 0/0 would withdraw a confirmation nobody touched.
+		self.assertIsNone(r.numbering_answer_fields(""))
+		self.assertIsNone(r.numbering_answer_fields(None))
+		self.assertIsNone(r.numbering_answer_fields("   "))
+
+	def test_unrecognised_value_writes_nothing(self):
+		self.assertIsNone(r.numbering_answer_fields("Maybe"))
+
+	def test_answering_clears_the_numbering_block(self):
+		# The whole point of the field: a new Desk record that answers the
+		# question must save, and one that does not must still be refused.
+		answered = spec(name=None, **r.numbering_answer_fields("No"))
+		self.assertIsNone(r.numbering_block_reason(None, answered))
+		self.assertIsNotNone(r.numbering_block_reason(None, spec(name=None)))
+
 
 class TestArtworkDeletable(unittest.TestCase):
 	DT = "Customer Product Specification"

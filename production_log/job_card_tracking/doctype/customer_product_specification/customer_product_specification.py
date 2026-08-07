@@ -34,6 +34,10 @@ class CustomerProductSpecification(Document):
 		self.set_naming_series()
 		self.apply_ink_type_default()
 		self.recalculate_number_of_colours()
+		# Before the capture rules, which are what refuse an unanswered Numbering
+		# question. This is the answer being given, so it has to land first or a
+		# person who just chose Yes would be told they had not chosen anything.
+		self.apply_numbering_answer()
 		# Before validate_computer_paper, deliberately. This asks the identity
 		# questions - is the job Printed, was Numbering actually answered - and a
 		# reader who has not said whether the job is printed is not helped by
@@ -52,6 +56,36 @@ class CustomerProductSpecification(Document):
 		self.validate_etr()
 		self.validate_linked_item()
 		cps_pricing.validate_pricing(self)
+
+	def apply_numbering_answer(self):
+		"""Write the Numbering Select onto the two stored numbering fields.
+
+		Server-side rather than only in the Desk Client Script, so a REST caller,
+		a Data Import and Compass all mean the same thing by the same field. The
+		Select is an input; ``numbering_required`` is what production, the Job
+		Card and the frozen order snapshot have always read, and it keeps that
+		job exactly.
+
+		Guarded on the field existing, on the same terms as the numbering and
+		artwork rules: in the window between a deploy and its migrate the column
+		is not there yet, and reading it would throw on every save.
+
+		A blank Select writes nothing. That is what lets the legacy estate keep
+		saving — a record nobody has answered carries no answer here either, and
+		forcing 0/0 onto it would withdraw a confirmation nobody touched.
+		"""
+		if self.product_type != cps_cp_rules.COMPUTER_PAPER:
+			return
+		if not self.meta.has_field(cps_cp_rules.NUMBERING_ANSWER_FIELD):
+			return
+
+		fields = cps_cp_rules.numbering_answer_fields(
+			self.get(cps_cp_rules.NUMBERING_ANSWER_FIELD)
+		)
+		if fields is None:
+			return
+		for fieldname, value in fields.items():
+			self.set(fieldname, value)
 
 	def before_submit(self):
 		"""Rules that only bite when the specification becomes real.
@@ -129,6 +163,15 @@ class CustomerProductSpecification(Document):
 			return
 
 		url = (self.get(cps_cp_rules.ARTWORK_FIELD) or "").strip()
+		# Nothing stored, nothing to prove. Until the tracker link and the
+		# not-yet-ready flag existed this branch was unreachable, because
+		# artwork_submit_block_reason had already refused an empty field — a
+		# Printed specification that satisfies the requirement some other way now
+		# reaches here with no URL, and asking a File lookup about "" would report
+		# a missing file as if somebody had typed a bad path.
+		if not url:
+			return
+
 		reason = cps_cp_rules.artwork_file_error(
 			self._stored_artwork_file(url), self.doctype, self.name
 		)
