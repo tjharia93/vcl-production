@@ -119,6 +119,13 @@ scheduler_events = {
 		"0 14 * * *": [  # 14:00 UTC = 17:00 EAT
 			"production_log.api.gemba.scheduled_eod_run",
 		],
+		# Weekly chase on Printed specifications that still say nothing about
+		# their artwork. Replaces the submit gate removed on 2026-08-07 — see
+		# job_card_tracking/artwork_chase_rules.py. Sends nothing on a week with
+		# nothing outstanding; the run is logged either way.
+		"0 13 * * 5": [  # 13:00 UTC Friday = 16:00 EAT
+			"production_log.api.artwork_chase.scheduled_weekly_run",
+		],
 	},
 }
 
