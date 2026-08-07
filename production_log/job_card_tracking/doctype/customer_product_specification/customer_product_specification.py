@@ -90,38 +90,33 @@ class CustomerProductSpecification(Document):
 	def before_submit(self):
 		"""Rules that only bite when the specification becomes real.
 
-		Artwork is the whole of it, and it is deliberately here rather than in
-		``validate``: the file frequently arrives after the sizes, the parts and
-		the colours are known, and refusing the *draft* would mean none of that
-		could be recorded until the customer sent a PDF.
+		Weight is now the whole of it. A draft may be recorded before the finished
+		size and the pack are known, but a specification going to production must
+		carry a real carton weight — that is a number the floor and the order
+		snapshot both read, and there is no second place to get it.
 
-		Two questions, not one. First that a Printed specification *has* artwork,
-		and then that what it has is really artwork — see
-		:meth:`validate_artwork_integrity`, which is the half that makes the
-		attach control, a REST write and a Data Import obey the same rules as the
-		Compass uploader.
+		Artwork used to be the other half and no longer refuses anything. VCL's
+		artwork lives in the Design and Artwork Tracker, so the specification never
+		needed its own copy of it, and the live estate had been saying so for
+		months: thirty-nine of forty-three submitted Printed specifications carried
+		nothing in the field. Where the artwork is now gets asked by
+		``cps_cp_rules.artwork_evidence`` and chased weekly, rather than refused
+		here. See the note where ``artwork_submit_block_reason`` used to be.
 
-		Skipped entirely on a site where the ``artwork`` field has not landed yet.
-		That is the window between a deploy and its migrate, and in it the rule
-		would refuse every Printed submission for want of a field with nowhere to
-		put a value.
+		What is kept is :meth:`validate_artwork_integrity`, which asks the
+		different and still-worthwhile question of whether a file somebody *did*
+		attach is real, private and bound to this document — the half that makes
+		the attach control, a REST write and a Data Import obey the same rules as
+		the Compass uploader.
 
-		Existing submitted records are untouched by any of this: ``before_submit``
-		fires once, on the transition out of draft, and never again on a record
-		that made that transition before this release.
-
-		Weight is the second submit rule, and stands on exactly the same ground: a
-		draft may be recorded before the finished size and the pack are known, but a
-		specification going to production must carry a real carton weight. Its own
-		``has_field`` guard, independent of artwork, so a site that has one column
-		and not the other still checks whichever it has.
+		Guarded on the field existing for the window between a deploy and its
+		migrate. Existing submitted records are untouched either way:
+		``before_submit`` fires once, on the transition out of draft, and never
+		again on a record that made that transition earlier.
 		"""
 		self._before_submit_weight()
 		if not self.meta.has_field(cps_cp_rules.ARTWORK_FIELD):
 			return
-		reason = cps_cp_rules.artwork_submit_block_reason(self)
-		if reason is not None:
-			frappe.throw(_(reason.template).format(*reason.args))
 		self.validate_artwork_integrity()
 
 	def _before_submit_weight(self):
@@ -163,12 +158,12 @@ class CustomerProductSpecification(Document):
 			return
 
 		url = (self.get(cps_cp_rules.ARTWORK_FIELD) or "").strip()
-		# Nothing stored, nothing to prove. Until the tracker link and the
-		# not-yet-ready flag existed this branch was unreachable, because
-		# artwork_submit_block_reason had already refused an empty field — a
-		# Printed specification that satisfies the requirement some other way now
-		# reaches here with no URL, and asking a File lookup about "" would report
-		# a missing file as if somebody had typed a bad path.
+		# Nothing stored, nothing to prove — and now the ordinary case rather than
+		# the impossible one. While artwork was required this branch was
+		# unreachable, because an empty field had already been refused; with the
+		# requirement gone, most Printed specifications reach here with no URL at
+		# all. Asking a File lookup about "" would report a missing file as if
+		# somebody had typed a bad path.
 		if not url:
 			return
 

@@ -720,53 +720,30 @@ class TestArtworkFileError(unittest.TestCase):
 		self.assertEqual(reason.code, r.BLOCK_ARTWORK_WRONG_DOC)
 
 
-class TestArtworkSubmit(unittest.TestCase):
-	def test_printed_needs_artwork_to_submit(self):
-		reason = r.artwork_submit_block_reason(spec(artwork=None))
-		self.assertIsNotNone(reason)
-		self.assertEqual(reason.code, r.BLOCK_ARTWORK_MISSING)
+class TestArtworkNoLongerBlocksSubmit(unittest.TestCase):
+	"""The submit gate is gone, and its absence is worth a test.
 
-	def test_printed_with_artwork_submits(self):
-		self.assertIsNone(r.artwork_submit_block_reason(spec()))
+	Deleting a rule leaves nothing behind to fail, so without these the next
+	reader has no way to tell "deliberately removed" from "never existed" — and
+	the obvious repair for a Printed specification with no artwork would be to
+	put the gate back.
+	"""
 
-	def test_plain_does_not_need_artwork(self):
+	def test_the_rule_is_gone_from_the_module(self):
+		self.assertFalse(hasattr(r, "artwork_submit_block_reason"))
+		self.assertFalse(hasattr(r, "BLOCK_ARTWORK_MISSING"))
+
+	def test_printed_still_declares_that_artwork_applies_to_it(self):
+		# artwork_required is KEPT: it is what tells a report, a Job Card or the
+		# weekly chase that this job is printed and therefore ought to have
+		# artwork somewhere. It just no longer refuses anything.
+		self.assertTrue(r.artwork_required(spec(artwork=None)))
+		self.assertFalse(r.artwork_required(spec(print_type=r.PRINT_TYPE_PLAIN)))
+		self.assertFalse(r.artwork_required(spec(product_type="Label")))
+
+	def test_a_printed_spec_with_no_artwork_has_no_save_block(self):
 		self.assertIsNone(
-			r.artwork_submit_block_reason(
-				spec(print_type=r.PRINT_TYPE_PLAIN, artwork=None)
-			)
-		)
-
-	def test_other_product_types_are_not_asked(self):
-		self.assertIsNone(
-			r.artwork_submit_block_reason(spec(product_type="Label", artwork=None))
-		)
-
-	def test_whitespace_is_not_artwork(self):
-		reason = r.artwork_submit_block_reason(spec(artwork="   "))
-		self.assertIsNotNone(reason)
-
-	def test_tracker_job_satisfies_the_requirement(self):
-		self.assertIsNone(
-			r.artwork_submit_block_reason(
-				spec(artwork=None, artwork_tracker="ADVANCE PLASTICS LTD - 00001")
-			)
-		)
-
-	def test_not_yet_ready_satisfies_the_requirement(self):
-		self.assertIsNone(
-			r.artwork_submit_block_reason(spec(artwork=None, artwork_not_ready=1))
-		)
-
-	def test_nothing_said_at_all_is_still_refused(self):
-		reason = r.artwork_submit_block_reason(
-			spec(artwork=None, artwork_tracker=None, artwork_not_ready=0)
-		)
-		self.assertIsNotNone(reason)
-		self.assertEqual(reason.code, r.BLOCK_ARTWORK_MISSING)
-
-	def test_whitespace_is_not_a_tracker_job(self):
-		self.assertIsNotNone(
-			r.artwork_submit_block_reason(spec(artwork=None, artwork_tracker="  "))
+			r.save_block_reason(None, spec(name=None, artwork=None, numbering_confirmed=1))
 		)
 
 

@@ -25,7 +25,12 @@ thing it must not be able to lose:
 * **Colour of parts.** Pre-tinted paper, not ink. The two are separate physical
   things and the form has always shown them in one undifferentiated block.
 
-* **Artwork.** A Printed specification with no artwork is not a specification.
+* **Artwork.** Where the artwork is, when anybody knows. Retired as a *rule* on
+  2026-08-07 — see :func:`artwork_evidence`. Thirty-nine of the forty-three
+  submitted Printed specifications say nothing at all about their artwork, and a
+  gate that the live estate fails ninety per cent of is not describing how VCL
+  works. The artwork lives in the Design and Artwork Tracker; a weekly chase on
+  what is still unanswered is the control, not a refusal at submit.
 
 * And the one thing it must not lose: a legacy record that nobody has
   deliberately changed must keep saving. Twenty-one live Printed records hold no
@@ -145,7 +150,6 @@ BLOCK_PLAIN_HAS_INK = "plain-has-ink"
 BLOCK_PRINT_TYPE_MISSING = "print-type-missing"
 BLOCK_PRINT_TYPE_UNKNOWN = "print-type-unknown"
 BLOCK_PRINT_SIDE_ON_PLAIN = "print-side-on-plain"
-BLOCK_ARTWORK_MISSING = "artwork-missing"
 BLOCK_ARTWORK_NOT_PRIVATE = "artwork-not-private"
 BLOCK_ARTWORK_WRONG_DOC = "artwork-wrong-document"
 BLOCK_ARTWORK_EXTENSION = "artwork-extension"
@@ -888,30 +892,25 @@ def artwork_evidence(doc):
 	return None
 
 
-def artwork_submit_block_reason(doc):
-	"""Why this specification cannot be submitted for want of artwork, or None.
-
-	Deliberately a *submit* rule and not a save rule: the artwork frequently
-	arrives after the specification is written, and refusing the draft would mean
-	the sizes, the parts and the colours could not be recorded until the customer
-	sent a file.
-
-	Satisfied by any of the three claims in :func:`artwork_evidence`. The rule is
-	no longer "there is a file on this document" but "somebody has said where the
-	artwork is, or that there isn't any yet" — because the file was never the
-	point. An unanswered artwork question was.
-	"""
-	if not artwork_required(doc):
-		return None
-	if artwork_evidence(doc) is not None:
-		return None
-	return CPSBlock(
-		BLOCK_ARTWORK_MISSING,
-		"A Printed specification cannot be submitted with nothing said about its artwork. "
-		"Link the Design & Artwork Tracker job, attach the file, or tick Artwork Not Yet "
-		"Ready if the design is still being drawn.",
-		(),
-	)
+# ``artwork_submit_block_reason`` lived here until 2026-08-07 and refused any
+# Printed specification carrying no artwork. It is gone rather than softened.
+#
+# The rule was written on the belief that a Printed specification without
+# artwork is incomplete. That is true of the artwork; it was not true of the
+# *field*. VCL's artwork lives in the Design and Artwork Tracker, where it is
+# drawn, revised and approved, so the specification never needed its own copy —
+# and the live estate said so plainly: thirty-nine of forty-three submitted
+# Printed specifications had nothing in the field, four had a file, and the rule
+# had been in force for months. A gate that the work routes around is not a
+# control, it is a delay with a message attached.
+#
+# What replaced it is :func:`artwork_evidence` plus a weekly chase on the
+# specifications still saying nothing. Asking later costs a reminder; refusing
+# at submit cost the specification.
+#
+# ``validate_artwork_integrity`` on the controller is deliberately KEPT. It asks
+# a different question — whether a file somebody did attach is real, private and
+# bound to this document — and that stays worth proving.
 
 
 def artwork_deletable(file_row, doctype, name, other_references=0):

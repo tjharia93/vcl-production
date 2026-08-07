@@ -167,9 +167,10 @@ def get_custom_fields():
 				"depends_on": _COMPUTER_PAPER_ONLY,
 				"allow_on_submit": 1,
 				"description": (
-					"Tick to submit a Printed specification whose artwork is still "
-					"outstanding. Say why in Artwork Notes. Untick and link the tracker job "
-					"once the design is ready - the field stays editable after submit."
+					"Marks a Printed specification whose artwork is still being drawn. Does not "
+					"affect submission - artwork has not blocked submit since 2026-08-07. It is "
+					"what tells a deliberate wait from a question nobody has answered on the "
+					"weekly artwork chase."
 				),
 			},
 		],
