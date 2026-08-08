@@ -355,6 +355,65 @@ class TestPrintSide(unittest.TestCase):
 		self.assertIsNone(r.print_side_block_reason(before, after))
 
 
+class TestItemPrintTypeMismatch(unittest.TestCase):
+	def test_plain_print_type_on_a_pre_printed_item_is_refused_on_a_new_record(self):
+		doc = spec(print_type=r.PRINT_TYPE_PLAIN, linked_item="Computer Paper Pre-Printed-9.5 x 8-2 Part",
+		           uses_c=0, uses_m=0, uses_y=0, uses_k=0, spot_colours=[])
+		reason = r.item_print_type_mismatch_reason(None, doc, r.ITEM_GROUP_PRE_PRINTED)
+		self.assertIsNotNone(reason)
+		self.assertEqual(reason.code, r.BLOCK_ITEM_PRINT_TYPE_MISMATCH)
+
+	def test_printed_print_type_on_a_plain_item_is_refused(self):
+		doc = spec(print_type=r.PRINT_TYPE_PRINTED, linked_item="Computer Paper Plain")
+		reason = r.item_print_type_mismatch_reason(None, doc, r.ITEM_GROUP_PLAIN)
+		self.assertIsNotNone(reason)
+		self.assertEqual(reason.code, r.BLOCK_ITEM_PRINT_TYPE_MISMATCH)
+
+	def test_matching_item_and_print_type_passes(self):
+		doc = spec(print_type=r.PRINT_TYPE_PRINTED, linked_item="Computer Paper Pre-Printed-9.5 x 8-2 Part")
+		self.assertIsNone(r.item_print_type_mismatch_reason(None, doc, r.ITEM_GROUP_PRE_PRINTED))
+
+	def test_no_item_group_is_silent(self):
+		# Nothing linked, or the caller has not looked it up - either way this
+		# rule has no opinion rather than a spurious refusal.
+		doc = spec(print_type=r.PRINT_TYPE_PLAIN, linked_item=None,
+		           uses_c=0, uses_m=0, uses_y=0, uses_k=0, spot_colours=[])
+		self.assertIsNone(r.item_print_type_mismatch_reason(None, doc, None))
+
+	def test_computer_paper_other_is_silent(self):
+		# A third group that says nothing about which print type the job is.
+		doc = spec(print_type=r.PRINT_TYPE_PLAIN, linked_item="Computer Paper Other-Foo",
+		           uses_c=0, uses_m=0, uses_y=0, uses_k=0, spot_colours=[])
+		self.assertIsNone(r.item_print_type_mismatch_reason(None, doc, "Computer Paper Other"))
+
+	def test_legacy_mismatch_saves_for_an_unrelated_edit(self):
+		# Neither Print Type nor the Item link moved, so an old mismatch stays
+		# untouched by a save about something else - CPT-SPEC-00053's own shape
+		# before it was corrected.
+		before = spec(print_type=r.PRINT_TYPE_PLAIN, linked_item="Computer Paper Pre-Printed-9.5x11x5.5-2 Part",
+		              job_size="241 x 279")
+		after = spec(print_type=r.PRINT_TYPE_PLAIN, linked_item="Computer Paper Pre-Printed-9.5x11x5.5-2 Part",
+		             job_size="9.5 x 11")
+		self.assertIsNone(r.item_print_type_mismatch_reason(before, after, r.ITEM_GROUP_PRE_PRINTED))
+
+	def test_changing_print_type_under_an_unchanged_mismatched_item_is_caught(self):
+		# The Item was already "Computer Paper Plain"; moving Print Type onto
+		# Printed is the deliberate act that creates the mismatch, so it must be
+		# caught even though the Item itself did not change this save.
+		before = spec(print_type=r.PRINT_TYPE_PLAIN, linked_item="Computer Paper Plain")
+		after = spec(print_type=r.PRINT_TYPE_PRINTED, linked_item="Computer Paper Plain")
+		reason = r.item_print_type_mismatch_reason(before, after, r.ITEM_GROUP_PLAIN)
+		self.assertIsNotNone(reason)
+		self.assertEqual(reason.code, r.BLOCK_ITEM_PRINT_TYPE_MISMATCH)
+
+	def test_swapping_the_item_under_an_unchanged_print_type_is_caught(self):
+		before = spec(print_type=r.PRINT_TYPE_PRINTED, linked_item="Computer Paper Pre-Printed-9.5 x 8-2 Part")
+		after = spec(print_type=r.PRINT_TYPE_PRINTED, linked_item="Computer Paper Plain")
+		reason = r.item_print_type_mismatch_reason(before, after, r.ITEM_GROUP_PLAIN)
+		self.assertIsNotNone(reason)
+		self.assertEqual(reason.code, r.BLOCK_ITEM_PRINT_TYPE_MISMATCH)
+
+
 class TestSaveBlockOrdering(unittest.TestCase):
 	def test_print_type_is_reported_before_numbering(self):
 		# Neither ink rule means anything until the record says which kind of job
@@ -390,6 +449,21 @@ class TestSaveBlockOrdering(unittest.TestCase):
 		reason = r.save_block_reason(None, doc, numbering_available=False)
 		self.assertIsNotNone(reason)
 		self.assertEqual(reason.code, r.BLOCK_PRINTED_NO_INK)
+
+	def test_item_mismatch_is_reported_after_colour_but_before_numbering(self):
+		# CPT-SPEC-00053's own shape: Plain with no ink (colour rules pass) but
+		# linked to a Pre-Printed Item, and Numbering also unanswered. The Item
+		# question is the one worth fixing first.
+		doc = spec(print_type=r.PRINT_TYPE_PLAIN, linked_item="Computer Paper Pre-Printed-9.5x11x5.5-2 Part",
+		           uses_c=0, uses_m=0, uses_y=0, uses_k=0, spot_colours=[], numbering_confirmed=0)
+		reason = r.save_block_reason(None, doc, linked_item_group=r.ITEM_GROUP_PRE_PRINTED)
+		self.assertEqual(reason.code, r.BLOCK_ITEM_PRINT_TYPE_MISMATCH)
+
+	def test_no_linked_item_group_is_silent_by_default(self):
+		# A caller that does not pass linked_item_group (every existing call
+		# before this rule existed) gets exactly the old behaviour.
+		doc = spec(numbering_confirmed=1, numbering_required=0, linked_item="Computer Paper Plain")
+		self.assertIsNone(r.save_block_reason(None, doc))
 
 
 # ---------------------------------------------------------------------------

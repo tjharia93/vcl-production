@@ -82,3 +82,10 @@ production_log.patches.v9_1.rename_monobox_die_to_flatbed
 # artwork it demanded already lives in the Design and Artwork Tracker. Additive
 # throughout - no backfill, and the existing estate is untouched.
 production_log.patches.v9_2.add_cps_artwork_tracker_and_numbering_answer
+# CPT-SPEC-00053 carried print_type="Plain" while linked to a Pre-Printed Item
+# and ticking all four CMYK inks - a contradiction neither the colour rules nor
+# the new Item/Print Type rule caught, because both are transition rules and
+# the record predates either. One-record correction, checked against the whole
+# linked estate first; see the patch docstring for why "Printed" is the right
+# answer, not "Plain".
+production_log.patches.v9_3.fix_cpt_spec_00053_print_type

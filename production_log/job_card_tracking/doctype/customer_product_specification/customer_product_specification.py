@@ -254,9 +254,24 @@ class CustomerProductSpecification(Document):
 			before,
 			self,
 			numbering_available=self.meta.has_field(cps_cp_rules.NUMBERING_CONFIRMED_FIELD),
+			linked_item_group=self._linked_item_group(),
 		)
 		if reason is not None:
 			frappe.throw(_(reason.template).format(*reason.args))
+
+	def _linked_item_group(self):
+		"""``item_group`` of :data:`cps_cp_rules.LINKED_ITEM_FIELD`, or None.
+
+		A plain lookup rather than a fetched field on this doctype: the Item is
+		free to be renamed or its group changed without this specification going
+		stale, and there is only ever one Item to look up per save. None when
+		nothing is linked, which :func:`cps_cp_rules.item_print_type_mismatch_reason`
+		reads as "no opinion" rather than as a mismatch.
+		"""
+		linked_item = self.get(cps_cp_rules.LINKED_ITEM_FIELD)
+		if not linked_item:
+			return None
+		return frappe.db.get_value("Item", linked_item, "item_group")
 
 		# Only the *new* standard is reported as a list here. The long-standing
 		# paper type / GSM / sequence rules stay where they are, in

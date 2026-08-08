@@ -86,6 +86,18 @@ COLOUR_OF_PARTS_FIELD = "colour_of_parts"
 
 PRINT_TYPE_FIELD = "print_type"
 PRINT_SIDE_FIELD = "print_side"
+LINKED_ITEM_FIELD = "linked_item"
+
+# The two Computer Paper item groups that say, on their own, which print type
+# they are. "Computer Paper Other" and an unlinked Item say nothing about it,
+# so neither is compared - this dict is deliberately not exhaustive over every
+# group Item Group can hold.
+ITEM_GROUP_PLAIN = "Computer Paper Plain"
+ITEM_GROUP_PRE_PRINTED = "Computer Paper Pre-Printed"
+ITEM_GROUP_PRINT_TYPE = {
+	ITEM_GROUP_PLAIN: PRINT_TYPE_PLAIN,
+	ITEM_GROUP_PRE_PRINTED: PRINT_TYPE_PRINTED,
+}
 
 ARTWORK_FIELD = "artwork"
 ARTWORK_NOTES_FIELD = "artwork_notes"
@@ -150,6 +162,7 @@ BLOCK_PLAIN_HAS_INK = "plain-has-ink"
 BLOCK_PRINT_TYPE_MISSING = "print-type-missing"
 BLOCK_PRINT_TYPE_UNKNOWN = "print-type-unknown"
 BLOCK_PRINT_SIDE_ON_PLAIN = "print-side-on-plain"
+BLOCK_ITEM_PRINT_TYPE_MISMATCH = "item-print-type-mismatch"
 BLOCK_ARTWORK_NOT_PRIVATE = "artwork-not-private"
 BLOCK_ARTWORK_WRONG_DOC = "artwork-wrong-document"
 BLOCK_ARTWORK_EXTENSION = "artwork-extension"
@@ -491,6 +504,71 @@ def print_side_block_reason(before, after):
 		"Print Side is {0} on a Plain specification. A Plain job is not printed, so it has "
 		"no printed side - set it to N/A or change the print type to Printed.",
 		(side,),
+	)
+
+
+def item_touched(before, after):
+	"""Whether this save changes Print Type or which Item is linked.
+
+	The trigger for :func:`item_print_type_mismatch_reason`, on the same terms
+	as :func:`colour_touched`: either field on its own can create the
+	mismatch — Print Type can move under an unchanged Item, or the Item can be
+	swapped under an unchanged Print Type — so both are watched.
+	"""
+	if before is None or after is None:
+		return False
+	for fieldname in (PRINT_TYPE_FIELD, LINKED_ITEM_FIELD):
+		if _text(_get(before, fieldname)) != _text(_get(after, fieldname)):
+			return True
+	return False
+
+
+def item_print_type_rules_apply(before, after):
+	"""Whether the Item/Print Type consistency rule binds this particular save.
+
+	New records always. Existing records only when somebody has deliberately
+	moved Print Type or the Item link — the same transition discipline as the
+	colour rules, so a legacy record correcting something unrelated is not
+	refused for a mismatch nobody just created.
+	"""
+	if after is None or not is_computer_paper(after):
+		return False
+	return is_new(before) or item_touched(before, after)
+
+
+def item_print_type_mismatch_reason(before, after, linked_item_group):
+	"""Why this save's Print Type disagrees with its linked Item, or None.
+
+	``linked_item_group`` is the ``item_group`` of ``after``'s
+	:data:`LINKED_ITEM_FIELD`, read by the Frappe-bound caller — this module
+	stays free of Item lookups the same way it stays free of everything else
+	Frappe. Only "Computer Paper Plain" and "Computer Paper Pre-Printed" are
+	understood; "Computer Paper Other", any other group, and no group at all
+	(nothing linked, or the caller has not looked it up) all pass, because none
+	of them claims to say which print type the job is.
+
+	This is a second, independent way the same contradiction used to reach a
+	live record: CPT-SPEC-00053 carried ``print_type="Plain"`` while linked to
+	a Pre-Printed Item (and, separately, while carrying four process inks —
+	:func:`colour_block_reason` catches that half). Either symptom alone is
+	now refused.
+	"""
+	if not item_print_type_rules_apply(before, after):
+		return None
+
+	expected = ITEM_GROUP_PRINT_TYPE.get(_text(linked_item_group))
+	if expected is None:
+		return None
+
+	print_type = normalise_print_type(_get(after, PRINT_TYPE_FIELD))
+	if print_type is None or print_type == expected:
+		return None
+
+	return CPSBlock(
+		BLOCK_ITEM_PRINT_TYPE_MISMATCH,
+		"Print Type is {0}, but the linked Item ({1}) is a {2} item. Choose an Item that "
+		"matches the print type, or change Print Type to {3}.",
+		(print_type, _get(after, LINKED_ITEM_FIELD) or "(none)", linked_item_group, expected),
 	)
 
 
@@ -931,13 +1009,14 @@ def artwork_deletable(file_row, doctype, name, other_references=0):
 # ---------------------------------------------------------------------------
 
 
-def save_block_reason(before, after, numbering_available=True):
+def save_block_reason(before, after, numbering_available=True, linked_item_group=None):
 	"""The first reason this Computer Paper save must be refused, or None.
 
 	Ordered the way a person fixes them: the identity question (which kind of job
-	is this) is inside the colour rules and comes first, then Numbering, then the
-	print side. Parts are reported separately and as a list, because they are a
-	grid — see :func:`part_row_errors`.
+	is this) is inside the colour rules and comes first, then whether the linked
+	Item agrees with that identity, then Numbering, then the print side. Parts
+	are reported separately and as a list, because they are a grid — see
+	:func:`part_row_errors`.
 
 	``numbering_available`` is whether :data:`NUMBERING_CONFIRMED_FIELD` exists on
 	this site yet. It defaults to True because that is the state every site is in
@@ -946,12 +1025,18 @@ def save_block_reason(before, after, numbering_available=True):
 	a confirmation that has nowhere to be recorded, and refuse every new Computer
 	Paper specification with an error nobody could clear. The colour rules take no
 	such parameter because they read only fields that already existed.
+
+	``linked_item_group`` is passed straight through to
+	:func:`item_print_type_mismatch_reason`. Defaults to None, which is silent —
+	a caller that has not looked up the Item (or there is none to look up) gets
+	no opinion from this rule, rather than a spurious refusal.
 	"""
 	if after is None or not is_computer_paper(after):
 		return None
 
 	for reason in (
 		colour_block_reason(before, after),
+		item_print_type_mismatch_reason(before, after, linked_item_group),
 		numbering_block_reason(before, after) if numbering_available else None,
 		print_side_block_reason(before, after),
 	):
