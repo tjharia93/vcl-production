@@ -89,3 +89,10 @@ production_log.patches.v9_2.add_cps_artwork_tracker_and_numbering_answer
 # linked estate first; see the patch docstring for why "Printed" is the right
 # answer, not "Plain".
 production_log.patches.v9_3.fix_cpt_spec_00053_print_type
+# Seven more Computer Paper specifications carry the same defect as
+# CPT-SPEC-00053 - print_type="Plain" while recording real CMYK ink - missed
+# by v9_3 because none of them has a linked_item for the new rule to check
+# against. The always-on colour rule (Plain cannot carry ink) is the signal
+# instead. Checked against the full live Plain population first: 11 total, 2
+# genuinely Plain and untouched, 1 cancelled and untouched, these 7 corrected.
+production_log.patches.v9_4.fix_plain_computer_paper_with_ink
