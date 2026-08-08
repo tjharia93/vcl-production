@@ -96,3 +96,11 @@ production_log.patches.v9_3.fix_cpt_spec_00053_print_type
 # instead. Checked against the full live Plain population first: 11 total, 2
 # genuinely Plain and untouched, 1 cancelled and untouched, these 7 corrected.
 production_log.patches.v9_4.fix_plain_computer_paper_with_ink
+# patch_v5_5 dropped "All" from the Workstation Product Line Select but never
+# re-tagged the records still holding it, so nine live Workstations - both
+# collators among them - could not be saved at all. Restores the option (and
+# with it the field's own default, which still pointed at "All"). Option list
+# only: nothing is re-tagged, because several of those machines genuinely
+# serve more than one line. Mirrored in fixtures/custom_field.json, which is
+# what a deploy actually applies.
+production_log.patches.v9_5.restore_all_product_line_option
