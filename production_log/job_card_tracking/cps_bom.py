@@ -143,3 +143,140 @@ def resolve_part_item(part, finished_width_mm):
 		).format(number, len(usable), ", ".join(row["name"] for row in usable))
 
 	return usable[0]["name"], None
+
+
+# The packing carton, held here rather than inline so it can be changed
+# without touching the builder. One carton serves every Computer Paper job:
+# it is a telescoping two-piece box, and the other carton items in the master
+# are legacy or customer-specific.
+PACKING_ITEM = "COMPUTER PAPER TOP AND BOTTOM"
+PACKING_QTY = 1
+
+DEFAULT_ROUTING = "Computer Paper - Print and Collate"
+LINKED_BOM_FIELD = "linked_bom"
+
+
+def _existing_bom(spec):
+	"""The BOM this spec already has, or None.
+
+	Read from ``linked_bom`` rather than searched by item. Several
+	specifications share one ``linked_item`` with different colour recipes —
+	that is the whole reason ``is_default`` is meaningless here — so finding a
+	BOM by item would happily return another customer's recipe.
+	"""
+	name = spec.get(LINKED_BOM_FIELD)
+	if not name:
+		return None
+	if not frappe.db.exists("BOM", name):
+		return None
+	if frappe.db.get_value("BOM", name, "docstatus") == 2:
+		return None
+	return name
+
+
+@frappe.whitelist()
+def create_bom_from_cps(cps):
+	"""Create the draft BOM for a Computer Paper specification.
+
+	Returns ``{"bom": <name>, "created": <bool>}``. Pressing the button twice
+	is harmless: the second press returns the first BOM with ``created`` False.
+
+	Every part is resolved before anything is written, so a specification that
+	cannot be fully resolved leaves no half-built document behind.
+	"""
+	spec = frappe.get_doc("Customer Product Specification", cps)
+	spec.check_permission("read")
+
+	if spec.product_type != cps_cp_rules.COMPUTER_PAPER:
+		frappe.throw(_(
+			"{0} is a {1} specification. Only Computer Paper can generate a BOM today."
+		).format(spec.name, spec.product_type))
+
+	if spec.docstatus != 1:
+		frappe.throw(_(
+			"{0} is {1}. Submit the specification before generating a BOM — its weights "
+			"are not final until then."
+		).format(spec.name, _("still a draft") if spec.docstatus == 0 else _("cancelled")))
+
+	if not spec.get("linked_item"):
+		frappe.throw(_(
+			"{0} has no Item linked. The BOM is built for that Item, so it must be set first."
+		).format(spec.name))
+
+	existing = _existing_bom(spec)
+	if existing:
+		return {"bom": existing, "created": False}
+
+	parts = [
+		{
+			"part_number": row.part_number,
+			"paper_type": row.paper_type,
+			"gsm": row.gsm,
+			"colour": row.colour,
+		}
+		for row in (spec.colour_of_parts or [])
+	]
+
+	quantities = cps_cp_rules.part_quantities(
+		spec.get("paper_weight_per_set_g"), spec.get("sets_per_carton"), parts
+	)
+	if not quantities:
+		frappe.throw(_(
+			"{0} has no computed paper weight. Paper Weight per Set and Sets per Carton "
+			"must both be set before a BOM can be built."
+		).format(spec.name))
+
+	resolved, errors = [], []
+	for row, qty in zip(parts, quantities):
+		item_code, error = resolve_part_item(row, spec.get("finished_width_mm"))
+		if error:
+			errors.append(error)
+		else:
+			resolved.append((item_code, qty))
+
+	if errors:
+		frappe.throw("<br>".join(errors), title=_("Cannot build the BOM"))
+
+	bom = frappe.new_doc("BOM")
+	bom.item = spec.linked_item
+	bom.company = frappe.defaults.get_user_default("Company") or spec.get("company")
+	bom.quantity = 1
+	bom.uom = frappe.db.get_value("Item", spec.linked_item, "stock_uom")
+	bom.rm_cost_as_per = "Valuation Rate"
+	bom.is_active = 1
+	bom.is_default = 1
+	bom.allow_alternative_item = 1
+
+	for item_code, qty in resolved:
+		bom.append("items", {
+			"item_code": item_code,
+			"qty": qty,
+			"uom": frappe.db.get_value("Item", item_code, "stock_uom"),
+			"allow_alternative_item": 1,
+		})
+
+	bom.append("items", {
+		"item_code": PACKING_ITEM,
+		"qty": PACKING_QTY,
+		"uom": frappe.db.get_value("Item", PACKING_ITEM, "stock_uom"),
+		"allow_alternative_item": 0,
+	})
+
+	if frappe.db.exists("Routing", DEFAULT_ROUTING):
+		bom.with_operations = 1
+		bom.routing = DEFAULT_ROUTING
+		for op in frappe.get_doc("Routing", DEFAULT_ROUTING).operations:
+			bom.append("operations", {
+				"sequence_id": op.sequence_id,
+				"operation": op.operation,
+				"workstation": op.workstation,
+				"time_in_mins": op.time_in_mins,
+				"hour_rate": op.hour_rate,
+				"description": op.description,
+			})
+
+	bom.insert()
+
+	spec.db_set(LINKED_BOM_FIELD, bom.name, update_modified=False)
+
+	return {"bom": bom.name, "created": True}
