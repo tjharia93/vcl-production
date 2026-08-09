@@ -48,16 +48,20 @@ def _items_with_attribute(attribute, value, candidates=None):
 
 
 def available_reel_widths(type_attr, gsm, colour):
-	"""Reel widths stocked for this paper, as ints, ascending.
+	"""Reel widths stocked for this paper, and the candidates carrying them.
 
-	Asked of the item master rather than hardcoded, so the day a 300mm reel is
-	stocked the 11.7in specs start resolving without a code change.
+	Returns a tuple of (widths, candidates):
+	- widths: reel widths as ints, ascending
+	- candidates: item codes carrying these Type/GSM/Colour attributes
+
+	Widths are asked of the item master rather than hardcoded, so the day a
+	300mm reel is stocked the 11.7in specs start resolving without a code change.
 	"""
 	candidates = _items_with_attribute(ATTR_TYPE, type_attr)
 	candidates = _items_with_attribute(ATTR_GSM, gsm, candidates)
 	candidates = _items_with_attribute(ATTR_COLOUR, colour, candidates)
 	if not candidates:
-		return []
+		return [], set()
 
 	rows = frappe.get_all(
 		"Item Variant Attribute",
@@ -72,7 +76,7 @@ def available_reel_widths(type_attr, gsm, colour):
 			widths.add(int(float(row["attribute_value"])))
 		except (TypeError, ValueError):
 			continue
-	return sorted(widths)
+	return sorted(widths), candidates
 
 
 def resolve_part_item(part, finished_width_mm):
@@ -94,31 +98,28 @@ def resolve_part_item(part, finished_width_mm):
 			"ream rather than by weight and is not supported yet."
 		).format(number, paper_type or _("blank"))
 
-	widths = available_reel_widths(type_attr, gsm, colour)
+	widths, candidates = available_reel_widths(type_attr, gsm, colour)
 	if not widths:
 		return None, _(
 			"Part {0} needs {1} / {2} GSM / {3} paper. No item in the master carries that "
 			"combination in any reel width."
-		).format(number, type_attr, gsm, colour)
+		).format(number, type_attr, gsm or _("blank"), colour or _("blank"))
 
 	width = cps_cp_rules.reel_width_for(finished_width_mm, widths)
 	if not width:
 		return None, _(
 			"Part {0}: no reel fits a {1} mm form. Stocked widths for {2} / {3} GSM / {4} "
 			"are {5} mm. Wider forms are cut from jumbo reels, which is not supported yet."
-		).format(number, finished_width_mm, type_attr, gsm, colour,
+		).format(number, finished_width_mm, type_attr, gsm or _("blank"), colour or _("blank"),
 		         ", ".join(str(w) for w in widths))
 
-	candidates = _items_with_attribute(ATTR_TYPE, type_attr)
-	candidates = _items_with_attribute(ATTR_GSM, gsm, candidates)
-	candidates = _items_with_attribute(ATTR_COLOUR, colour, candidates)
 	candidates = _items_with_attribute(ATTR_WIDTH, width, candidates)
 	candidates = _items_with_attribute(ATTR_COUNTRY, cps_cp_rules.BOM_ORIGIN, candidates)
 
 	if not candidates:
 		return None, _(
 			"Part {0} needs {1} / {2} GSM / {3} / {4} mm from {5}. No such item exists."
-		).format(number, type_attr, gsm, colour, width, cps_cp_rules.BOM_ORIGIN)
+		).format(number, type_attr, gsm or _("blank"), colour or _("blank"), width, cps_cp_rules.BOM_ORIGIN)
 
 	usable = frappe.get_all(
 		"Item",
@@ -132,7 +133,7 @@ def resolve_part_item(part, finished_width_mm):
 		return None, _(
 			"Part {0}: {1} matches {2} / {3} GSM / {4} / {5} mm from {6}, but it is disabled "
 			"or not a stock item."
-		).format(number, ", ".join(sorted(candidates)), type_attr, gsm, colour, width,
+		).format(number, ", ".join(sorted(candidates)), type_attr, gsm or _("blank"), colour or _("blank"), width,
 		         cps_cp_rules.BOM_ORIGIN)
 
 	if len(usable) > 1:
