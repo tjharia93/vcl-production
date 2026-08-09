@@ -414,6 +414,52 @@ class TestItemPrintTypeMismatch(unittest.TestCase):
 		self.assertEqual(reason.code, r.BLOCK_ITEM_PRINT_TYPE_MISMATCH)
 
 
+class TestPaperTypeAttribute(unittest.TestCase):
+	def test_the_three_coating_types_map_to_attribute_values(self):
+		self.assertEqual(r.paper_type_attribute("CB"), "Coated Back")
+		self.assertEqual(r.paper_type_attribute("CF"), "Coated Front")
+		self.assertEqual(r.paper_type_attribute("CFB"), "Coated Front and Back")
+
+	def test_bond_does_not_map(self):
+		# Bond is deferred to v2: bought by Ream, and BOND 70 GSM carries no
+		# attributes at all, so there is nothing for the resolver to match on.
+		self.assertIsNone(r.paper_type_attribute("60 GSM Bond"))
+		self.assertIsNone(r.paper_type_attribute("70 GSM Bond"))
+
+	def test_unknown_and_blank_return_none_rather_than_guessing(self):
+		for value in ("Litho", "", None, "cb"):
+			self.assertIsNone(r.paper_type_attribute(value), value)
+
+
+class TestReelWidthFor(unittest.TestCase):
+	WIDTHS = [250, 625, 750]
+
+	def test_the_9_5_inch_anchor(self):
+		# 9.5in = 241.3mm, run on a 250mm reel: 8.7mm of trim.
+		self.assertEqual(r.reel_width_for(241.3, self.WIDTHS), 250)
+
+	def test_11_7_inch_finds_nothing_rather_than_matching_a_jumbo(self):
+		# 297.18mm. 625 fits "wider than" but is 328mm too wide - it is a jumbo
+		# nobody slits for this job. Deferred to v2; must refuse, not guess.
+		self.assertIsNone(r.reel_width_for(297.18, self.WIDTHS))
+
+	def test_narrowest_wins_when_several_fit(self):
+		self.assertEqual(r.reel_width_for(241.3, [250, 260, 270]), 250)
+
+	def test_exact_fit_is_accepted(self):
+		self.assertEqual(r.reel_width_for(250, self.WIDTHS), 250)
+
+	def test_tolerance_boundary(self):
+		# Exactly 25mm over is in; a hair more is out.
+		self.assertEqual(r.reel_width_for(225, [250]), 250)
+		self.assertIsNone(r.reel_width_for(224.9, [250]))
+
+	def test_no_widths_or_no_size_returns_none(self):
+		self.assertIsNone(r.reel_width_for(241.3, []))
+		self.assertIsNone(r.reel_width_for(0, self.WIDTHS))
+		self.assertIsNone(r.reel_width_for(None, self.WIDTHS))
+
+
 class TestSaveBlockOrdering(unittest.TestCase):
 	def test_print_type_is_reported_before_numbering(self):
 		# Neither ink rule means anything until the record says which kind of job

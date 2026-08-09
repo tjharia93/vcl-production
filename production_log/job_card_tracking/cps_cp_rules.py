@@ -148,6 +148,76 @@ SPOT_ROW_FIELDS = (
 PART_ROW_FIELDS = ("part_number", "paper_type", "gsm", "colour", "purpose")
 
 
+# --- BOM generation: turning a part row into a real Item -------------------
+#
+# The NCR reels are already ERPNext variants of `NCR-Reel` and carry Type, GSM,
+# Colour, Reel Width (mm) and Country as Item Attribute values. The resolver
+# reads those; it must never parse an item code. The master holds nine
+# duplicate `-ID-`/`-Rainbow-` code families and a `BLU`/`BLUE` pair one letter
+# apart, so any string matching would eventually resolve onto the wrong item.
+
+# The CPS says CB / CF / CFB; the Item Attribute says the words. Three entries,
+# stated rather than derived, because a wrong guess here picks the wrong paper.
+PAPER_TYPE_TO_ATTRIBUTE = {
+	"CB": "Coated Back",
+	"CF": "Coated Front",
+	"CFB": "Coated Front and Back",
+}
+
+# The standing origin for a generated BOM line. Every other origin is reachable
+# at issue time through Item Alternative, so this decides the default only.
+BOM_ORIGIN = "Indonesia"
+
+# How much wider than the finished form a reel may be and still be the right
+# reel. 9.5in (241.3mm) runs on a 250mm reel, so 8.7mm of trim is real; 25mm is
+# a judgement wide enough to admit that and narrow enough to exclude a 625mm
+# jumbo, which is 328mm over and is slit down rather than run as-is.
+REEL_WIDTH_TOLERANCE_MM = 25
+
+
+def paper_type_attribute(paper_type):
+	"""The Item Attribute ``Type`` value for a CPS paper type, or None.
+
+	Blank, unknown and the two Bond types all return None. Bond is not a
+	coating at all — it is uncoated stock bought by the ream — so there is no
+	NCR reel for it to name, and returning None sends it to the "cannot
+	resolve" path rather than silently onto a coated reel.
+	"""
+	return PAPER_TYPE_TO_ATTRIBUTE.get(_text(paper_type))
+
+
+def reel_width_for(finished_width_mm, available_widths):
+	"""The reel width to run a form of ``finished_width_mm`` on, or None.
+
+	The narrowest available width that is at least as wide as the form and no
+	more than :data:`REEL_WIDTH_TOLERANCE_MM` wider.
+
+	The upper bound is the whole point. Without it a 297.18mm form would match
+	a 625mm jumbo — technically "wide enough" — and the BOM would call for a
+	reel the floor never puts on that machine. Refusing is the correct answer
+	until the jumbo-slitting case is designed.
+	"""
+	try:
+		width = float(finished_width_mm)
+	except (TypeError, ValueError):
+		return None
+	if width <= 0:
+		return None
+
+	fits = []
+	for candidate in available_widths or []:
+		try:
+			value = float(candidate)
+		except (TypeError, ValueError):
+			continue
+		if width <= value <= width + REEL_WIDTH_TOLERANCE_MM:
+			fits.append(value)
+
+	if not fits:
+		return None
+	return int(min(fits))
+
+
 # A refusal, carried as an untranslated template plus its arguments so this
 # module stays Frappe-free and the caller can do ``_(reason.template).format()``.
 # Same shape as :class:`cps_rules.SpecBlock`, and named differently only because
