@@ -104,3 +104,7 @@ production_log.patches.v9_4.fix_plain_computer_paper_with_ink
 # serve more than one line. Mirrored in fixtures/custom_field.json, which is
 # what a deploy actually applies.
 production_log.patches.v9_5.restore_all_product_line_option
+# The BOM generated from a specification. Not a convenience: several specs
+# share one linked_item with different colour recipes, so is_default on the
+# BOM cannot say which recipe belongs to which job.
+production_log.patches.v9_6.add_cps_linked_bom
