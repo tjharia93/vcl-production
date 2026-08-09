@@ -174,6 +174,21 @@ def _existing_bom(spec):
 	return name
 
 
+def _company_for(item_code):
+	"""The company this BOM belongs to.
+
+	Read from the Item's own defaults rather than the acting user's default
+	company. The site carries four companies, so keying off the user would
+	put the BOM in whichever books that person happens to default to — and
+	a BOM in the wrong company does not look wrong until its cost surfaces
+	somewhere nobody expected.
+	"""
+	company = frappe.db.get_value(
+		"Item Default", {"parent": item_code, "parenttype": "Item"}, "company"
+	)
+	return company or frappe.defaults.get_user_default("Company")
+
+
 @frappe.whitelist()
 def create_bom_from_cps(cps):
 	"""Create the draft BOM for a Computer Paper specification.
@@ -237,9 +252,16 @@ def create_bom_from_cps(cps):
 	if errors:
 		frappe.throw("<br>".join(errors), title=_("Cannot build the BOM"))
 
+	company = _company_for(spec.linked_item)
+	if not company:
+		frappe.throw(_(
+			"{0} has no default company set for Item {1}, and the acting user has no "
+			"default company either. Set one before a BOM can be built."
+		).format(spec.name, spec.linked_item))
+
 	bom = frappe.new_doc("BOM")
 	bom.item = spec.linked_item
-	bom.company = frappe.defaults.get_user_default("Company") or spec.get("company")
+	bom.company = company
 	bom.quantity = 1
 	bom.uom = frappe.db.get_value("Item", spec.linked_item, "stock_uom")
 	bom.rm_cost_as_per = "Valuation Rate"
