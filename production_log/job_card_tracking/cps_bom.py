@@ -200,7 +200,11 @@ def create_bom_from_cps(cps):
 	cannot be fully resolved leaves no half-built document behind.
 	"""
 	spec = frappe.get_doc("Customer Product Specification", cps)
-	spec.check_permission("read")
+	# Write, not read: this function stamps linked_bom onto the spec via
+	# db_set below, which writes straight to the database and bypasses
+	# document-level permission checks. Gating on read would let a user who
+	# cannot edit this spec through the form cause a field write on it here.
+	spec.check_permission("write")
 
 	if spec.product_type != cps_cp_rules.COMPUTER_PAPER:
 		frappe.throw(_(
