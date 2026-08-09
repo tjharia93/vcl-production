@@ -215,7 +215,7 @@ def reel_width_for(finished_width_mm, available_widths):
 python3 -m unittest production_log.job_card_tracking.test_cps_cp_rules 2>&1 | tail -4
 ```
 
-Expected: `OK`, 141 tests (128 + 13 new).
+Expected: `OK`, 137 tests (128 + 9 new).
 
 - [ ] **Step 5: Commit**
 
@@ -339,7 +339,7 @@ def part_quantities(paper_weight_per_set_g, sets_per_carton, parts):
 python3 -m unittest production_log.job_card_tracking.test_cps_cp_rules 2>&1 | tail -4
 ```
 
-Expected: `OK`, 145 tests.
+Expected: `OK`, 141 tests (137 + 4 new).
 
 - [ ] **Step 5: Commit**
 
@@ -535,7 +535,7 @@ Expected: `COMPILES`, then `0` — `cps_cp_rules.py` must still import no Frappe
 python3 -m unittest production_log.job_card_tracking.test_cps_cp_rules 2>&1 | tail -4
 ```
 
-Expected: `OK`, 145 tests.
+Expected: `OK`, 141 tests (137 + 4 new).
 
 - [ ] **Step 4: Commit**
 
