@@ -2,6 +2,22 @@
 
 **Date:** 2026-08-09 · **Product line:** Computer Paper · **App:** `vcl-production` (`production_log`)
 **Status:** design agreed, not built
+**Revision:** rev B — supersedes rev A of the same date after review comments on the PDF
+
+---
+
+## Revision note
+
+Rev A proposed adding four custom fields to the Item master and creating a Paper Colour DocType.
+**Both were unnecessary.** Review comment: *"Can we not use the default colour doctype?"* — and the
+answer is yes. `Colour` already exists as an **Item Attribute**, and every NCR reel is already a variant
+of `NCR-Reel` carrying `Colour`, `GSM`, `Reel Width (mm)`, `Country` and `Type` as attribute values.
+
+Rev A's entire §1 (item tagging), its Paper Colour master and its backfill patch are deleted. The
+resolver reads `Item Variant Attribute` instead. That was the largest single piece of work in the plan.
+
+Also from review: Bond deferred to v2 (§10), the packing carton made configurable rather than literal
+(§4.2), and the 11.7in width case confirmed as a v2 problem (§10).
 
 ---
 
@@ -40,86 +56,77 @@ This button is the first link in the chain that closes that gap. It is not a dat
 
 ## 2. Decisions taken
 
-All confirmed by Tanuj on 2026-08-09 unless noted.
+Confirmed by Tanuj on 2026-08-09.
 
 | # | Decision | Chosen | Rejected |
 |---|---|---|---|
-| D1 | Reel width | 9.5in → 250mm. Resolver picks the narrowest tagged reel ≥ finished width, within a tolerance. 11.7in is a one-off and stays unsupported. | Hardcoding a width table; supporting jumbo slitting |
-| D2 | Parts & colours | Normalise `colour` to a Link master, resolve to an item at generation time | Direct Item link per part row; hybrid auto-suggest field |
+| D1 | Reel width | 9.5in → 250mm, via a tolerance rule (§5.1). 11.7in refuses — see D7 | Hardcoding a width table |
+| D2 | Parts & colours | Normalise `colour` to a controlled value, resolve to an item at generation time | Direct Item link per part row; hybrid auto-suggest field |
 | D3 | Origin | **Indonesia** as standing default; `Item Alternative` covers the rest | Per-spec origin choice; highest-stock-at-runtime |
 | D4 | Re-clicking | Create once. If a BOM already exists, the button opens it and generates nothing | Versioned regeneration; update-draft-in-place |
-| D5 | Packing carton | One generic item (`COMPUTER PAPER TOP AND BOTTOM`) for all Computer Paper | Per-spec carton field; derive from size |
-| D6 | Item master | **Tag the NCR items** with structured fields; do not parse item codes | Parsing item codes at resolve time |
+| D5 | Packing carton | One carton for all Computer Paper, held as **configuration not code** so it can change without a deploy | Per-spec carton field; derive from size |
+| D6 | Item identification | **Use the existing `Item Variant Attribute` data.** No new fields, no new master, no backfill | Adding custom fields (rev A); parsing item codes |
+| D7 | Bond, and 11.7in | **Deferred to v2.** Both refuse with a clear message in v1 | Supporting them now |
 
-D6 was initially offered as optional. The stock recon independently found nine duplicate
-`-ID-`/`-Rainbow-` code families for the same material, a `BLU`/`BLUE` collision one letter apart, and
-concluded *"fuzzy matching across this master is unsafe"*. A parser would eventually resolve a BOM line
-onto a zero-stock phantom code. Tagging is therefore treated as necessary.
+### Why D6 changed
+
+Rev A argued for tagging because parsing item codes is unsafe — the stock recon found nine duplicate
+`-ID-`/`-Rainbow-` code families and a `BLU`/`BLUE` collision one letter apart. **That reasoning still
+holds: the resolver must never parse an item code.** What changed is that the structured data already
+exists, so tagging was solving a solved problem.
+
+Verified on `NCR-Reel-250-55-WHI-ID-CB`:
+
+```
+variant_of: NCR-Reel   variant_based_on: Item Attribute
+  Reel Width (mm) = 250      GSM = 55       Colour = White
+  Country = Indonesia        Type = Coated Back
+```
 
 ---
 
 ## 3. Architecture
 
-Four units, each independently testable:
-
 ```
-Item master tagging  ──┐
-                       ├──> resolver ──> BOM builder ──> button
-Paper Colour master  ──┘
+Item Variant Attribute (existing) ──> resolver ──> BOM builder ──> button
 ```
 
 | Unit | Lives in | Depends on | Frappe? |
 |---|---|---|---|
-| Item tagging | patch + Custom Fields | — | data only |
-| Paper Colour master | new DocType + patch | — | data only |
 | Resolver rules | `cps_cp_rules.py` | nothing | **no** — pure, unit-tested |
-| Item lookup | `cps_bom.py` | resolver, Item | yes |
+| Item lookup | `cps_bom.py` | resolver, Item Variant Attribute | yes |
 | BOM builder | `cps_bom.py` | lookup, CPS | yes |
 | Button | Client Script | whitelisted API | yes |
 
-The split matters: every rule that can be decided from plain data stays in `cps_cp_rules.py`, which
-imports nothing from Frappe and is tested without a bench (128 tests today). Only the item query and
-document creation are Frappe-bound.
+Every rule decidable from plain data stays in `cps_cp_rules.py`, which imports nothing from Frappe and
+is tested without a bench (128 tests today). Only the attribute query and document creation are
+Frappe-bound.
 
 ---
 
 ## 4. Data model changes
 
-### 4.1 Item — four tagging fields
+Far smaller than rev A. **Nothing on Item changes at all.**
 
-Custom Fields on `Item`, meaningful only for NCR raw materials:
+### 4.1 Colour of Parts — `colour` becomes controlled
 
-| Field | Type | Example |
-|---|---|---|
-| `custom_paper_type` | Select: CB / CF / CFB | `CB` |
-| `custom_paper_colour` | Link → Paper Colour | `White` |
-| `custom_reel_width_mm` | Int | `250` |
-| `custom_origin` | Select: China / Indonesia / Korea / Thailand | `Indonesia` |
+`colour` is `Data` today and holds both `WHITE` and `white` in live data (`CPT-SPEC-00063` uppercase,
+`CPT-SPEC-00038-1` lowercase). It becomes a **Select**, options seeded from the live `Colour` Item
+Attribute values: White, Pink, Blue, Yellow, Green, Red, Black.
 
-Backfilled by patch from the existing codes. **Anything ambiguous is left blank and reported, never
-guessed** — the `-Rainbow-` duplicates and the legacy origin-less `NCR-250-55-WHI-CB` are expected to
-land in that bucket, and an untagged item is simply invisible to the resolver rather than wrongly
-matched.
+`Item Attribute Value` is a child table (`istable = 1`) and therefore cannot be a Link target — a
+Select is the closest native equivalent. The Item Attribute remains the single source of truth; the
+Select is seeded from it by patch and re-seeding is idempotent.
 
-GSM is *not* a new field — `Item.gsm` equivalents already resolve deterministically from coating type
-at 250mm (CFB ⇒ 50, CF ⇒ 55, CB ⇒ 55; verified across every 250mm item in the master).
+A patch normalises existing values to the canonical casing first (`WHITE` → `White`). The field is
+`reqd = 1` today and stays so.
 
-### 4.2 Paper Colour — new master
+### 4.2 Packing carton — configuration, not a literal
 
-Small DocType, seeded with the five colours that exist as items: **White, Pink, Blue, Yellow, Green**.
+Held as a setting rather than hardcoded in the builder, so *"in the future we can change it"* needs no
+deploy. Default `COMPUTER PAPER TOP AND BOTTOM`, 1 Nos per carton.
 
-`cps_cp_rules.DEFAULT_PART_COLOURS` also lists Buff, Lilac and Grey. No items exist for those, so they
-are seeded `disabled = 1` — present for history, not offered on new specs.
-
-### 4.3 Colour of Parts — colour becomes a Link
-
-`Colour of Parts.colour` changes `Data` → `Link → Paper Colour`.
-
-A patch normalises the existing free text first (`WHITE` / `white` → `White`). Live data confirms both
-cases are present (`CPT-SPEC-00063` uppercase, `CPT-SPEC-00038-1` lowercase). The field is `reqd = 1`
-today and stays so.
-
-### 4.4 CPS — `linked_bom`
+### 4.3 CPS — `linked_bom`
 
 Custom Field on Customer Product Specification, `Link → BOM`, **`allow_on_submit = 1`**.
 
@@ -138,13 +145,17 @@ reel_width_for(finished_width_mm, available_widths) -> int | None
 
 The narrowest available width `w` where `w >= finished_width_mm` **and** `w - finished_width_mm <= 25`.
 
-The tolerance is what makes it safe. Without it, an 11.7in form (297.18mm) would match the 625mm
+The tolerance is what keeps v1 safe. Without it, an 11.7in form (297.18mm) would match the 625mm
 jumbo — 328mm too wide — and silently produce a BOM consuming a reel nobody slits for that job.
 
 | Form | mm | Result |
 |---|---|---|
 | 9.5in | 241.3 | **250** (8.7mm trim) |
-| 11.7in | 297.18 | **None** — 625 is 328mm wider, correctly rejected |
+| 11.7in | 297.18 | **None** — 625 is 328mm wider, correctly rejected (v2, D7) |
+
+The 25mm figure is a judgement, not a measurement: the only real data point is 250 − 241.3 = 8.7mm. It
+is wide enough to admit the one real case and narrow enough to exclude every jumbo. Revisit with §10's
+11.7in work.
 
 ### 5.2 Part quantities (pure rule)
 
@@ -161,30 +172,35 @@ against the spec's own `net_product_weight_per_carton_kg` of 2.697.
 All inputs are already server-computed and read-only on the CPS. **The BOM never recomputes a weight —
 it reads what the spec already proved.**
 
+This rule assumes the material is bought by weight. Bond is bought by **Ream**, which is why it is
+deferred (D7, §10).
+
 ### 5.3 Item lookup (Frappe-bound)
 
-Exact filtered query on the tagged fields — no string matching:
+Query `Item Variant Attribute` for items whose attribute values all match, then intersect:
 
-```
-custom_paper_type = <part.paper_type>
-custom_paper_colour = <part.colour>
-custom_reel_width_mm = <resolved width>
-custom_origin = "Indonesia"
-disabled = 0
-```
+| Attribute | From | Example |
+|---|---|---|
+| `Type` | part `paper_type`, mapped | `CB` → `Coated Back` |
+| `GSM` | part `gsm` | `55` |
+| `Colour` | part `colour` | `White` |
+| `Reel Width (mm)` | §5.1 | `250` |
+| `Country` | D3 constant | `Indonesia` |
 
-Exactly one match → use it. Zero or several → refuse and say which (§7).
+Two details that matter:
 
-**GSM is deliberately not in the filter.** The CPS controller's `_validate_paper_type_and_gsm` already
-refuses to save any part outside CB/55, CFB/50 or CF/55 (and the Bond options for a single-part set),
-so paper type and GSM cannot disagree on a saved spec — filtering on both would be redundant, and
-matching the item's GSM against a value the spec is incapable of getting wrong adds a failure mode
-without adding safety.
+- **`Type` needs a map.** The CPS says `CB` / `CF` / `CFB`; the attribute says `Coated Back` /
+  `Coated Front` / `Coated Front and Back`. A three-entry constant in `cps_cp_rules.py`, not a guess.
+- **Attribute values are strings.** All five attributes have `numeric_values = 0`, so `GSM` is `"55"`
+  and `Reel Width (mm)` is `"250"`. Compare as strings, or normalise both sides — do not assume ints.
 
-**The two Bond paper types do not resolve, by design.** `custom_paper_type` offers CB / CF / CFB only.
-A single-part spec using `60 GSM Bond` or `70 GSM Bond` has no NCR reel to point at — bond is not
-carbonless paper — so it falls into the "resolves to nothing" path in §7 with a message naming the
-paper type. `CPT-SPEC-00004` and `CPT-SPEC-00051` are the live cases.
+**GSM is filtered on, not inferred.** Rev A argued coating type determines GSM (CFB⇒50, CF⇒55, CB⇒55)
+and skipped the field. That inference happens to hold across every 250mm item today but would break
+silently the day a 53gsm CFB is stocked — and `NCR-Reel-250-53-WHITE-CFB` already exists, unstocked.
+Since GSM is right there as an attribute, filter on it.
+
+Candidates are then narrowed to `disabled = 0` and `is_stock_item = 1`. Exactly one → use it. Zero or
+several → refuse and say which (§7).
 
 ---
 
@@ -202,8 +218,8 @@ It calls a whitelisted method:
 production_log.job_card_tracking.cps_bom.create_bom_from_cps(cps: str) -> dict
 ```
 
-which returns `{"bom": <name>, "created": bool}`. The client routes to the BOM either way, so pressing
-it twice is harmless.
+returning `{"bom": <name>, "created": bool}`. The client routes to the BOM either way, so pressing it
+twice is harmless.
 
 The BOM it builds:
 
@@ -213,7 +229,7 @@ The BOM it builds:
 | `quantity` / `uom` | 1 / Carton |
 | `company` | Vimit Converters Limited |
 | paper lines | resolved item, computed kg, `allow_alternative_item = 1` |
-| packing line | `COMPUTER PAPER TOP AND BOTTOM`, 1 Nos, `allow_alternative_item = 0` |
+| packing line | configured carton (§4.2), 1 Nos, `allow_alternative_item = 0` |
 | `with_operations` | 1 |
 | `routing` | `Computer Paper - Print and Collate` |
 | `rm_cost_as_per` | Valuation Rate |
@@ -224,8 +240,8 @@ the basis for a Work Order.
 
 ### Idempotency (D4)
 
-If `CPS.linked_bom` is set and that BOM exists and is not cancelled, return it with
-`created = False`. Otherwise build, then write `linked_bom` back.
+If `CPS.linked_bom` is set and that BOM exists and is not cancelled, return it with `created = False`.
+Otherwise build, then write `linked_bom` back.
 
 `linked_bom` is the only source of truth for "does this spec have a BOM". Searching BOMs by item would
 be wrong — several specs share one `linked_item` with different recipes, which is the whole reason
@@ -240,21 +256,22 @@ every line before writing anything.
 
 | Condition | Message |
 |---|---|
-| Not Computer Paper | Names the product type and that only Computer Paper is supported |
+| Not Computer Paper | Names the product type; only Computer Paper is supported |
 | Draft or cancelled | Says the spec must be submitted first |
 | No `linked_item` | Points at the Item field |
 | Weights not computed | Names the empty field (`paper_weight_per_set_g` / `sets_per_carton`) |
-| No reel width matches | States the finished width and the widths available |
-| Part resolves to nothing | Names the part number and the full spec sought — e.g. *"Part 1 needs a 55gsm CB White reel at 250mm from Indonesia; no such item exists"* |
+| No reel width matches | States the finished width and the widths available; notes 11.7in is not yet supported |
+| **Bond paper type** | Names the part and says Bond is not yet supported — it is bought by Ream, not weight (D7) |
+| Part resolves to nothing | Names the part and the full spec sought — e.g. *"Part 1 needs Coated Back / 55 GSM / White / 250mm / Indonesia; no such item"* |
 | Part resolves to several | Lists the candidates rather than picking |
 | BOM already exists | Not an error — returns it |
 
-Two known live cases will hit the "resolves to nothing" path immediately, and **that is correct
-behaviour, not a defect**:
+Known live cases that will refuse, **correctly**:
 
-- **CB 55gsm Yellow** — referenced by `CPT-SPEC-00014` (Classic Ironmongers). No CB-Yellow exists in
-  the item master, and the 31 Jul physical count shows none in any width or origin.
-- **70 GSM Bond White** — referenced by `CPT-SPEC-00004` and `CPT-SPEC-00051`.
+- **CB 55gsm Yellow** — `CPT-SPEC-00014` (Classic Ironmongers). No CB-Yellow exists in the item master,
+  and the 31 Jul physical count found none in any width or origin.
+- **70 GSM Bond** — `CPT-SPEC-00004`, `CPT-SPEC-00051`. Deferred (D7).
+- **11.7in** — `CPT-SPEC-00024`. Deferred (D7).
 
 ---
 
@@ -262,7 +279,8 @@ behaviour, not a defect**:
 
 **Pure rules** — `test_cps_cp_rules.py`, plain `unittest`, no bench, matching the existing 128 tests:
 
-- width: 241.3 → 250; 297.18 → None; empty width list → None; exact-fit; tolerance boundary at 25mm
+- width: 241.3 → 250; 297.18 → None; empty width list → None; exact fit; the 25mm boundary
+- type map: CB/CF/CFB → the three attribute values; an unknown type → None rather than a wrong guess
 - quantities: the `CPT-SPEC-00063` anchor (1.3475 × 2, sums to 2.695); a 4-part 55/50/50/55 split
   (`CPT-SPEC-00065`, sums to its own 7.079); zero/missing inputs → no quantities rather than zeros
 
@@ -277,26 +295,33 @@ the established live-first method. The acceptance test is reproducing
 
 Follows `skill vcl-frappe-app` and the method used for v9_2 and v9_5:
 
-1. Custom Fields, Paper Colour master and Client Script applied **live first**
-2. Mirrored into `fixtures/` — CPS **and** Item Custom Fields are in the `hooks.py` fixtures list, so
-   without the fixture edit the next deploy re-imports the old definition and reverts the change
+1. Custom Field (`linked_bom`), the `colour` Select and the Client Script applied **live first**
+2. Mirrored into `fixtures/` — CPS Custom Fields are in the `hooks.py` fixtures list, so without the
+   fixture edit the next deploy re-imports the old definition and reverts the change
 3. Patch series **v9_6**, `pre_model_sync` like every patch in this app
 4. **live == fixture == patch verified three ways before commit**
 5. Push to `main`; Tanuj deploys. Merging is not deploying — patches only run on migrate.
 
-Patch content: create the fields, seed Paper Colour, backfill Item tags, normalise existing part
-colours. All idempotent.
+Patch content: add `linked_bom`, seed the `colour` Select from the Colour Item Attribute, normalise
+existing part colours to canonical casing. All idempotent. **No Item records are touched.**
 
 ---
 
 ## 10. Out of scope
 
-**Phase 2 — `linked_bom` → `Sales Order Item.bom_no`.** `bom_no` is a real native field the
-Create-Work-Order-from-Sales-Order flow already reads, so propagating it means a job inherits the right
-recipe with nobody choosing from a list of identically-named BOMs. It is the payoff for
-multiple-BOMs-per-item, but it touches the order flow and deserves its own pass once BOMs exist.
+**v2 — explicitly picked up later:**
 
-**Not in this design at all:**
+- **Bond paper** (D7). Bought by **Ream**, not weight, so §5.2's kg-by-gsm-share rule does not apply;
+  needs a sheets → reams derivation. `BOND 70 GSM` also carries **no attributes at all** (it is not a
+  variant) and no colour, so the §5.3 resolver cannot see it. Both must be solved together.
+- **11.7in forms** (D1, D7). 297.18mm has no stocked reel; whether it is slit from a jumbo or bought at
+  its own width is unresolved, and the answer changes the quantity maths.
+- **`linked_bom` → `Sales Order Item.bom_no`.** `bom_no` is a real native field the
+  Create-Work-Order-from-Sales-Order flow already reads, so propagating it means a job inherits the
+  right recipe without anyone choosing from a list of identically-named BOMs. The payoff for
+  multiple-BOMs-per-item, but it touches the order flow and deserves its own pass.
+
+**Not planned:**
 
 - **Strapping** — dropped on instruction; the route is Printing → Collation only
 - **Make-ready / `setup_time`** — not captured; printing is run-time only, which understates short runs
@@ -306,9 +331,9 @@ multiple-BOMs-per-item, but it touches the order flow and deserves its own pass 
   and Rent are empty, so operating cost is labour only
 - **Product lines other than Computer Paper** — Carton, Label, ETR and Monobox have different part
   structures and are separate work
-- **The NCR stock findings** — parked by decision on 2026-08-09; report preserved at
-  `~/projects/ncr_stock_recon/`. They need production output records, which ERPNext does not hold by
-  definition, and this project is what will start producing them
+- **The NCR stock findings** — parked 2026-08-09; report at `~/projects/ncr_stock_recon/`. They need
+  production output records, which ERPNext does not hold by definition, and this project is what will
+  start producing them
 
 ---
 
@@ -316,7 +341,8 @@ multiple-BOMs-per-item, but it touches the order flow and deserves its own pass 
 
 | # | Item | Blocks |
 |---|---|---|
-| O1 | Miyakoshi 2 and 3 have no `custom_max_speed_per_hour`; only Miyakoshi 01 (4,000/hr) does. Treated as equal for now | Routing accuracy if they differ |
+| O1 | Miyakoshi 2 and 3 have no `custom_max_speed_per_hour`; only Miyakoshi 01 (4,000/hr) does. Treated as equal | Routing accuracy if they differ |
 | O2 | Nine Workstations still hold `custom_product_line = "All"`. Legal again after v9_5, but real per-line scheduling would need each tagged | Nothing today |
 | O3 | Miyakoshi labour assumes David and Nelson sit in Hillary Nganga's band (20,330/month); only Nganga was looked up | Rate precision |
 | O4 | Charles Wandera (23,100) assumed to be the collator operator over Charles Kyalo Mutiso (93,900) | Rate precision |
+| O5 | The `-Rainbow-` duplicate item families hold no stock but carry the open purchase orders. If goods land on them, the resolver will still pick the `-ID-` item and the receipt will not relieve it | Resolver correctness once open POs land |
