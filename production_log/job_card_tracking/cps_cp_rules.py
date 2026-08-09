@@ -218,6 +218,45 @@ def reel_width_for(finished_width_mm, available_widths):
 	return int(min(fits))
 
 
+def part_quantities(paper_weight_per_set_g, sets_per_carton, parts):
+	"""Kilograms of paper per part for one carton, in ``parts`` order.
+
+	The carton's whole paper weight is ``paper_weight_per_set_g x
+	sets_per_carton``, and each ply takes its share of that by GSM. Both inputs
+	are already computed and stored on the specification, so this reads what
+	the spec proved rather than deriving a weight a second way — the two could
+	then disagree, and the spec is the one production reads.
+
+	The share is taken against the sum of the parts' own GSM rather than the
+	stored ``cp_total_gsm``. They are the same number on a valid record, and
+	using the parts keeps the split internally consistent even if the stored
+	total is stale.
+
+	Returns ``[]`` — not a list of zeros — when anything needed is missing. A
+	zero quantity is a claim that the job consumes no paper; an empty list is
+	the honest "this cannot be computed", and the caller refuses on it.
+	"""
+	try:
+		per_set = float(paper_weight_per_set_g)
+		sets = float(sets_per_carton)
+	except (TypeError, ValueError):
+		return []
+
+	rows = _rows(parts)
+	if per_set <= 0 or sets <= 0 or not rows:
+		return []
+
+	gsms = [_int(_get(row, "gsm"), 0) for row in rows]
+	total_gsm = sum(gsms)
+	if total_gsm <= 0:
+		return []
+
+	total_kg = (per_set * sets) / 1000.0
+	# 4 dp is what the BOM Item qty field carries and what the hand-built BOM
+	# stored; rounding here keeps the generated document byte-identical to it.
+	return [round(total_kg * (gsm / total_gsm), 4) for gsm in gsms]
+
+
 # A refusal, carried as an untranslated template plus its arguments so this
 # module stays Frappe-free and the caller can do ``_(reason.template).format()``.
 # Same shape as :class:`cps_rules.SpecBlock`, and named differently only because

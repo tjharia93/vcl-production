@@ -460,6 +460,38 @@ class TestReelWidthFor(unittest.TestCase):
 		self.assertIsNone(r.reel_width_for(None, self.WIDTHS))
 
 
+class TestPartQuantities(unittest.TestCase):
+	def test_the_gilanis_anchor(self):
+		# CPT-SPEC-00063: 5.39 g/set x 500 sets = 2,695 g, split 55/55.
+		# Reproduces the 1.3475 kg lines built by hand on 2026-08-08.
+		parts = [part(1, "CB", 55), part(2, "CF", 55)]
+		qtys = r.part_quantities(5.39, 500, parts)
+		self.assertEqual(qtys, [1.3475, 1.3475])
+		self.assertAlmostEqual(sum(qtys), 2.695, places=4)
+
+	def test_a_four_part_set_splits_by_gsm_not_evenly(self):
+		# CPT-SPEC-00065: 55/50/50/55 = 210 total, 14.16 g/set x 500 sets.
+		parts = [part(1, "CB", 55), part(2, "CFB", 50),
+		         part(3, "CFB", 50), part(4, "CF", 55)]
+		qtys = r.part_quantities(14.16, 500, parts)
+		self.assertAlmostEqual(sum(qtys), 7.08, places=2)
+		# The 50gsm plies draw less than the 55gsm ones.
+		self.assertGreater(qtys[0], qtys[1])
+		self.assertEqual(qtys[0], qtys[3])
+		self.assertEqual(qtys[1], qtys[2])
+
+	def test_incomplete_inputs_give_nothing_rather_than_zeros(self):
+		parts = [part(1, "CB", 55), part(2, "CF", 55)]
+		self.assertEqual(r.part_quantities(0, 500, parts), [])
+		self.assertEqual(r.part_quantities(5.39, 0, parts), [])
+		self.assertEqual(r.part_quantities(None, 500, parts), [])
+		self.assertEqual(r.part_quantities(5.39, 500, []), [])
+
+	def test_parts_with_no_gsm_give_nothing(self):
+		# Dividing by a zero total would raise; refuse instead.
+		self.assertEqual(r.part_quantities(5.39, 500, [part(1, "CB", 0)]), [])
+
+
 class TestSaveBlockOrdering(unittest.TestCase):
 	def test_print_type_is_reported_before_numbering(self):
 		# Neither ink rule means anything until the record says which kind of job
