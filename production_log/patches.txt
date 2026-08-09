@@ -11,6 +11,12 @@ production_log.patches.v8_1.normalise_carton_quantity_ordered
 # stops being an Int. Their post-sync counterpart is verify_label_order_migration.
 production_log.patches.v8_2.retire_label_order_custom_fields
 production_log.patches.v8_2.audit_label_quantity_ordered
+# Normalise part colours to the Colour Item Attribute's spellings BEFORE the same
+# release turns colour into a Select in colour_of_parts.json. Pre-sync because the
+# doctype change lands at model sync: rewriting the rows first is what stops every
+# spec holding "WHITE" becoming unsaveable, the same failure v9_5 had to undo on
+# Workstation.
+production_log.patches.v9_6.normalise_part_colours
 
 [post_model_sync]
 production_log.patches.v1_0.setup_roles_and_permissions

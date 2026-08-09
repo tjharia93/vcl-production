@@ -34,9 +34,10 @@
   },
   {
    "fieldname": "colour",
-   "fieldtype": "Data",
+   "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Colour",
+   "options": "White\nPink\nBlue\nYellow\nGreen\nRed\nBlack",
    "reqd": 1
   },
   {
