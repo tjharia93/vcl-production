@@ -904,25 +904,32 @@ hooks.py fixtures list, so without it the next deploy drops the field."
 
 ---
 
-### Task 6: Normalise part colours, then make `colour` a Select
+### Task 6: Normalise part colours, then constrain `colour` to a Select
 
 **Files:**
+- Modify: `production_log/job_card_tracking/doctype/colour_of_parts/colour_of_parts.json`
 - Create: `production_log/patches/v9_6/normalise_part_colours.py`
 - Modify: `production_log/patches.txt`
-- Modify: `production_log/fixtures/custom_field.json`
 
-> **This task deliberately does NOT follow the live-first method.** `colour`
-> holds `WHITE` and `white` in live data. Frappe validates a Select on save, so
-> changing the field to a Select while those values are stored makes every
-> affected CPS **unsaveable** — the exact v9_5 Workstation freeze. Data must be
-> normalised first, and data may only be changed by a patch. So both halves live
-> in one patch, in order, and neither is applied live by hand.
+> **CORRECTED 2026-08-09, mid-execution.** An earlier version of this task used
+> `create_custom_fields` to redefine `colour`, and registered the patch under
+> `[post_model_sync]`. **Both were wrong and the first would have failed on deploy.**
+> `Colour of Parts.colour` is a **native DocField** in this app's own doctype JSON — not a
+> Custom Field — so creating a Custom Field of the same fieldname collides with it. The
+> field change therefore belongs in the doctype JSON, needs **no fixture entry**, and the
+> phase **inverts**: see Step 3.
+
+> **This task deliberately does NOT follow the live-first method.** `colour` holds `WHITE`
+> and `white` in live data. Frappe validates a Select on save, so making the field a Select
+> while those values are stored would make every affected CPS **unsaveable** — the exact
+> v9_5 Workstation freeze. Data must be normalised first, and data may only be changed by a
+> patch. Nothing here is applied live by hand.
 
 **Interfaces:**
-- Consumes: the live `Colour` Item Attribute values
+- Consumes: the live `Colour` Item Attribute values (White, Pink, Blue, Yellow, Green, Red, Black)
 - Produces: `Colour of Parts.colour` as a Select
 
-- [ ] **Step 1: Check what the live data actually holds**
+- [ ] **Step 1: Confirm the live data really does hold both cases**
 
 `Colour of Parts` is a child table and 403s over REST, so read it through its parents:
 
@@ -931,41 +938,69 @@ mcp__vcl-erpnext__get_doc  doctype="Customer Product Specification"  name="CPT-S
 mcp__vcl-erpnext__get_doc  doctype="Customer Product Specification"  name="CPT-SPEC-00038-1"
 ```
 
-Expected: `00063` holds `WHITE` / `YELLOW`, `00038-1` holds `white` / `pink` — both cases present, confirming the freeze risk is real.
+Expected: `00063` holds `WHITE`/`YELLOW`, `00038-1` holds `white`/`pink`. Both cases present
+confirms the freeze risk is real and that the ordering below matters.
 
-- [ ] **Step 2: Write the patch**
+- [ ] **Step 2: Change the field in the doctype JSON**
+
+In `colour_of_parts.json`, change the `colour` field from `Data` to a Select. Keep every
+other key exactly as it is — in particular `reqd: 1` and its position in `field_order`.
+
+```json
+{
+ "fieldname": "colour",
+ "fieldtype": "Select",
+ "in_list_view": 1,
+ "label": "Colour",
+ "options": "White\nPink\nBlue\nYellow\nGreen\nRed\nBlack",
+ "reqd": 1
+}
+```
+
+The option list is the live `Colour` Item Attribute's values, in its own order. It is static
+here rather than seeded at runtime because a DocField's options live in the JSON — that is a
+fair trade: the list is versioned, reviewable and deterministic, and the resolver still
+matches against the Item Attribute itself.
+
+**Do not add a Custom Field, and do not touch `fixtures/custom_field.json`.** This is a
+native DocField owned by the app; the doctype JSON is the whole change.
+
+- [ ] **Step 3: Write the normalisation patch**
 
 `production_log/patches/v9_6/normalise_part_colours.py`:
 
 ```python
-"""Patch v9_6: normalise part colours, then constrain the field to a Select.
+"""Patch v9_6: normalise part colours before the field becomes a Select.
 
-Order matters and is the whole point of this patch.
+Ordering is the entire point of this patch, and it is why it is registered under
+``[pre_model_sync]`` rather than beside its v9_6 sibling.
 
-``Colour of Parts.colour`` is free text and the live estate holds both
-``WHITE`` (CPT-SPEC-00063) and ``white`` (CPT-SPEC-00038-1). Frappe validates
-a Select against its options on every save, so turning the field into a Select
-while those values are stored would make every affected specification
-**unsaveable** — not read-only, unsaveable, with an error naming the allowed
-values and no hint that the stored one used to be legal.
+``Colour of Parts.colour`` is free text today and the live estate holds both
+``WHITE`` (CPT-SPEC-00063) and ``white`` (CPT-SPEC-00038-1). The same release
+turns that field into a Select in the doctype JSON, and Frappe validates a
+Select against its options on every save — so a specification still holding
+``WHITE`` when the Select lands becomes **unsaveable**. Not read-only:
+unsaveable, with an error naming the allowed values and no hint that the stored
+one used to be legal.
 
-That is not hypothetical: it is exactly what v9_5 had to undo on Workstation,
-where narrowing a Select's options without migrating the rows froze nine
-records.
+That is not hypothetical. It is exactly what v9_5 had to undo on Workstation,
+where narrowing a Select's options without migrating the rows froze nine records.
 
-So the data is normalised first and the options are set second, in one
-``execute()``. Neither half is applied live by hand.
+The doctype JSON change applies during the model sync. ``[pre_model_sync]`` runs
+before it — which is precisely what that section is for, in its own words: "work
+that must happen while a column still has its old type". So the rows are
+rewritten while ``colour`` is still a Data field, and the Select arrives to find
+every value already legal.
 
 The canonical spellings come from the live ``Colour`` Item Attribute — the same
 master the BOM resolver matches against — so the specification and the item
 master cannot drift into two vocabularies.
 
-Idempotent: rows already canonical are skipped, and re-setting identical
-options is a no-op.
+Idempotent: rows already canonical are skipped, and a second run finds nothing
+to do.
 """
 
 import frappe
-from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 COLOUR_ATTRIBUTE = "Colour"
 CHILD_DOCTYPE = "Colour of Parts"
@@ -973,39 +1008,11 @@ FIELDNAME = "colour"
 
 
 def execute():
-	options = _canonical_colours()
-	if not options:
+	canonical = _canonical_colours()
+	if not canonical:
 		return
 
-	_normalise_existing(options)
-	_constrain_field(options)
-
-	frappe.clear_cache(doctype=CHILD_DOCTYPE)
-
-
-def _canonical_colours():
-	"""The Colour Item Attribute's values, in their stored order."""
-	if not frappe.db.exists("Item Attribute", COLOUR_ATTRIBUTE):
-		return []
-	attr = frappe.get_doc("Item Attribute", COLOUR_ATTRIBUTE)
-	return [row.attribute_value for row in attr.item_attribute_values if row.attribute_value]
-
-
-def _normalise_existing(options):
-	"""Rewrite stored colours to canonical casing.
-
-	Matched case-insensitively and trimmed. A value that matches nothing is
-	left exactly as it is — it will fail the Select on its next save, which is
-	the correct outcome for a colour nobody stocks, and silently rewriting it
-	to something plausible would be inventing data.
-	"""
-	canonical = {value.strip().lower(): value for value in options}
-
-	rows = frappe.get_all(
-		CHILD_DOCTYPE,
-		fields=["name", FIELDNAME],
-		limit_page_length=0,
-	)
+	rows = frappe.get_all(CHILD_DOCTYPE, fields=["name", FIELDNAME], limit_page_length=0)
 	for row in rows:
 		stored = (row.get(FIELDNAME) or "").strip()
 		if not stored:
@@ -1017,89 +1024,77 @@ def _normalise_existing(options):
 			)
 
 
-def _constrain_field(options):
-	create_custom_fields(
-		{
-			CHILD_DOCTYPE: [
-				{
-					"fieldname": FIELDNAME,
-					"label": "Colour",
-					"fieldtype": "Select",
-					"options": "\n".join(options),
-					"reqd": 1,
-					"in_list_view": 1,
-					"description": (
-						"Pre-tinted paper colour, not print ink. The list is the Colour "
-						"Item Attribute, which is what the BOM resolver matches against."
-					),
-				},
-			],
-		},
-		ignore_validate=True,
-		update=True,
-	)
+def _canonical_colours():
+	"""Lowercased stored colour -> the Item Attribute's own spelling.
+
+	Read from the master rather than hardcoded so the specification and the item
+	master cannot drift apart. An empty result means the attribute is missing and
+	the patch does nothing rather than guessing at spellings.
+	"""
+	if not frappe.db.exists("Item Attribute", COLOUR_ATTRIBUTE):
+		return {}
+	attr = frappe.get_doc("Item Attribute", COLOUR_ATTRIBUTE)
+	return {
+		row.attribute_value.strip().lower(): row.attribute_value
+		for row in attr.item_attribute_values
+		if row.attribute_value
+	}
 ```
 
-- [ ] **Step 3: Register the patch**
+A stored value matching nothing is **left exactly as it is**. It will fail the Select on its
+next save, which is the correct outcome for a colour nobody stocks — silently rewriting it to
+something plausible would be inventing data.
 
-Append to `production_log/patches.txt` under `[pre_model_sync]`, directly after the `add_cps_linked_bom` line:
+- [ ] **Step 4: Register the patch under `[pre_model_sync]`**
+
+This is the opposite phase from Task 5's patch, deliberately. Add under the `[pre_model_sync]`
+header, after `production_log.patches.v8_2.audit_label_quantity_ordered`:
 
 ```
-# Normalise part colours to the Colour Item Attribute's spellings, THEN make
-# the field a Select. Order matters: live data holds both WHITE and white, and
-# constraining the field first would freeze every spec holding the wrong case -
-# the same failure v9_5 had to undo on Workstation.
+# Normalise part colours to the Colour Item Attribute's spellings BEFORE the same
+# release turns colour into a Select in colour_of_parts.json. Pre-sync because the
+# doctype change lands at model sync: rewriting the rows first is what stops every
+# spec holding "WHITE" becoming unsaveable, the same failure v9_5 had to undo on
+# Workstation.
 production_log.patches.v9_6.normalise_part_colours
 ```
 
-- [ ] **Step 4: Mirror the field into the fixture**
-
-Add the `Colour of Parts-colour` Custom Field entry to `fixtures/custom_field.json` with the same options string the patch writes.
+- [ ] **Step 5: Verify**
 
 ```bash
-python3 -c "
-import json
-d = json.load(open('production_log/fixtures/custom_field.json'))
-rows = [r for r in d if r.get('dt') == 'Colour of Parts' and r.get('fieldname') == 'colour']
-print('rows:', len(rows))
-print('options:', repr(rows[0]['options']) if rows else 'MISSING')
-"
-```
-
-Expected: `rows: 1`, options containing `White`, `Pink`, `Blue`, `Yellow`, `Green`, `Red`, `Black`.
-
-- [ ] **Step 5: Verify the patch compiles and tests still pass**
-
-```bash
+cd /home/tanujharia/projects/worktrees/cps-artwork-tracker
 python3 -m py_compile production_log/patches/v9_6/normalise_part_colours.py && echo "COMPILES"
-python3 -m unittest production_log.job_card_tracking.test_cps_cp_rules 2>&1 | tail -4
+python3 -c "import json; d=json.load(open('production_log/job_card_tracking/doctype/colour_of_parts/colour_of_parts.json')); f=[x for x in d['fields'] if x['fieldname']=='colour'][0]; print(f['fieldtype'], '|', repr(f['options']), '| reqd=', f.get('reqd'))"
+python3 -m unittest production_log.job_card_tracking.test_cps_cp_rules 2>&1 | tail -3
+grep -n -A2 "pre_model_sync" production_log/patches.txt | head -20
 ```
 
-Expected: `COMPILES`, then `OK` with 145 tests.
+Expected: `COMPILES`; the field reads `Select | 'White\nPink\nBlue\nYellow\nGreen\nRed\nBlack' | reqd= 1`;
+141 tests OK; the new patch listed under `[pre_model_sync]`.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add production_log/patches/v9_6/normalise_part_colours.py production_log/patches.txt production_log/fixtures/custom_field.json
-git commit -m "feat(cps): normalise part colours, then constrain to a Select
+git add production_log/job_card_tracking/doctype/colour_of_parts/colour_of_parts.json production_log/patches/v9_6/normalise_part_colours.py production_log/patches.txt
+git commit -m "feat(cps): normalise part colours, then constrain colour to a Select
 
 Order is the point. colour is free text and live data holds both WHITE and
-white. Frappe validates a Select on save, so constraining the field first
+white. Frappe validates a Select on save, so letting the Select land first
 would make every affected spec unsaveable - the same freeze v9_5 had to undo
 on Workstation, where narrowing options without migrating rows froze nine
 records.
 
-Data is normalised first and options set second, in one execute(), and
-neither half is applied live by hand - which is why this task deliberately
-departs from the live-first method used elsewhere in this series.
+colour is a native DocField in this app's doctype JSON, not a Custom Field,
+so the field change goes in colour_of_parts.json and needs no fixture entry.
+That also decides the phase: the JSON applies at model sync, so the data
+normalisation must run before it, under [pre_model_sync] - the opposite phase
+from v9_6's own linked_bom patch, and exactly what that section is for.
 
 Canonical spellings come from the Colour Item Attribute, the same master the
-BOM resolver matches against, so spec and item master cannot drift apart. A
-colour matching nothing is left alone rather than rewritten to something
-plausible."
+BOM resolver matches against. A colour matching nothing is left alone rather
+than rewritten to something plausible."
 ```
 
----
 
 ### Task 7: The Create BOM button
 
