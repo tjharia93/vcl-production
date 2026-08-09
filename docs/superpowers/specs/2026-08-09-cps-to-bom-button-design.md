@@ -298,7 +298,7 @@ Follows `skill vcl-frappe-app` and the method used for v9_2 and v9_5:
 1. Custom Field (`linked_bom`), the `colour` Select and the Client Script applied **live first**
 2. Mirrored into `fixtures/` — CPS Custom Fields are in the `hooks.py` fixtures list, so without the
    fixture edit the next deploy re-imports the old definition and reverts the change
-3. Patch series **v9_6**, `pre_model_sync` like every patch in this app
+3. Patch series **v9_6**, under `[post_model_sync]` like v9_2–v9_5
 4. **live == fixture == patch verified three ways before commit**
 5. Push to `main`; Tanuj deploys. Merging is not deploying — patches only run on migrate.
 

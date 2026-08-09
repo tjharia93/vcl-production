@@ -17,7 +17,7 @@
 - **Deploy contract: Claude pushes code, Tanuj deploys.** Never run `bench`, never `bench migrate`. When a deploy is needed, say "deploy X" and stop.
 - **`cps_cp_rules.py` must stay importable without Frappe.** No `import frappe` in it, ever. That is why its 128 tests run with no bench.
 - **Patches are the only sanctioned way to change production data.** Do not modify live records over REST.
-- **Every patch in this app runs `pre_model_sync`.** `patches.txt` has that header; put new entries under it.
+- **Most patches in this app run `post_model_sync`.** `patches.txt` has BOTH headers: only three legacy entries sit under `[pre_model_sync]`; v9_2 through v9_5 are all under `[post_model_sync]`, which is where a Custom-Field-only patch belongs. (An older note claiming "all pre_model_sync" predates the `[post_model_sync]` header being added and is stale.)
 - **Patch series is v9_6** (v9_5 is the last used).
 - **CPS Custom Fields and Client Scripts are in the `hooks.py` fixtures list.** Any live change must also be written to `production_log/fixtures/custom_field.json` / `client_script.json`, or the next deploy silently reverts it. This trap bit v9_5.
 - **`get_meta` does not return Custom Fields.** Query the `Custom Field` doctype by `dt` + `fieldname`.
