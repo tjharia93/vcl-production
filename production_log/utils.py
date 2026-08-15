@@ -24,7 +24,11 @@ _COLORS = {
 _JOINT_CONFIG = {
     "Gluing - Manual":  {"tabWidth": 30, "label": "Glue Tab",   "color": "#4CAF5040", "markerType": "glue"},
     "Gluing - Machine": {"tabWidth": 30, "label": "Glue Tab",   "color": "#4CAF5040", "markerType": "glue"},
-    "Stitched":         {"tabWidth": 40, "label": "Stitch Flap", "color": "#D32F2F30", "markerType": "stitch"},
+    # VCL standard: 30mm tab for every joint type (stitch flap reduced from
+    # 40mm 2026-07-23). This copy was missed at the time, so the traveller
+    # drew a 40mm flap beside board figures computed with 30 in both JS
+    # copies. See production_log.job_card_tracking.cps_carton_board.
+    "Stitched":         {"tabWidth": 30, "label": "Stitch Flap", "color": "#D32F2F30", "markerType": "stitch"},
 }
 
 

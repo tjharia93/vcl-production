@@ -6358,7 +6358,7 @@
  {
   "alignment": "",
   "allow_in_quick_entry": 0,
-  "allow_on_submit": 0,
+  "allow_on_submit": 1,
   "bold": 0,
   "button_color": "",
   "collapsible": 0,
@@ -6548,7 +6548,7 @@
  {
   "alignment": "",
   "allow_in_quick_entry": 0,
-  "allow_on_submit": 0,
+  "allow_on_submit": 1,
   "bold": 0,
   "button_color": "",
   "collapsible": 0,
@@ -6595,7 +6595,7 @@
  {
   "alignment": "",
   "allow_in_quick_entry": 0,
-  "allow_on_submit": 0,
+  "allow_on_submit": 1,
   "bold": 0,
   "button_color": "",
   "collapsible": 0,
@@ -6736,7 +6736,7 @@
  {
   "alignment": "",
   "allow_in_quick_entry": 0,
-  "allow_on_submit": 0,
+  "allow_on_submit": 1,
   "bold": 0,
   "button_color": "",
   "collapsible": 0,
@@ -6783,7 +6783,7 @@
  {
   "alignment": "",
   "allow_in_quick_entry": 0,
-  "allow_on_submit": 0,
+  "allow_on_submit": 1,
   "bold": 0,
   "button_color": "",
   "collapsible": 0,
@@ -6877,7 +6877,7 @@
  {
   "alignment": "",
   "allow_in_quick_entry": 0,
-  "allow_on_submit": 0,
+  "allow_on_submit": 1,
   "bold": 0,
   "button_color": "",
   "collapsible": 0,
@@ -6925,7 +6925,7 @@
  {
   "alignment": "",
   "allow_in_quick_entry": 0,
-  "allow_on_submit": 0,
+  "allow_on_submit": 1,
   "bold": 0,
   "button_color": "",
   "collapsible": 0,
@@ -7309,7 +7309,7 @@
  {
   "alignment": "",
   "allow_in_quick_entry": 0,
-  "allow_on_submit": 0,
+  "allow_on_submit": 1,
   "bold": 0,
   "button_color": "",
   "collapsible": 0,

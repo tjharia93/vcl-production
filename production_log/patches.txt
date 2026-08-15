@@ -114,3 +114,10 @@ production_log.patches.v9_5.restore_all_product_line_option
 # share one linked_item with different colour recipes, so is_default on the
 # BOM cannot say which recipe belongs to which job.
 production_log.patches.v9_6.add_cps_linked_bom
+# Twenty-six carton specifications were submitted before the Board Plan fields
+# existed (2026-07-23) and carry zeroes for all six. Opens the eight board and
+# weight fields for update-after-submit and retires the cps_revise Server
+# Script, which could only ever revise Computer Paper parts. Fills in nothing:
+# the flap is a formula, not a measurement, so the values are decided per
+# specification through the button.
+production_log.patches.v9_7.allow_carton_board_plan_on_submit
