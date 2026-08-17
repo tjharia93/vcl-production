@@ -183,6 +183,13 @@ fixtures = [
 					# §2.1), the two weight fields, revision_notes, and the Board Plan.
 					# Rebuilding the site from this app would not have reproduced them.
 					"Customer Product Specification",
+					# Dies carries four: the derived Die Name and the three
+					# layout fields the form script draws into (the column
+					# break plus the two HTML canvases). Custom Fields rather
+					# than DocFields because Frappe Cloud blocks DocField
+					# writes, so this is the only shape that is identical
+					# live and in the repo.
+					"Dies",
 				]
 			]
 		],
