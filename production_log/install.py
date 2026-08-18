@@ -58,8 +58,9 @@ def backfill_die_names():
 	from production_log.job_card_tracking.doctype.dies.dies import get_die_name
 
 	updated = 0
-	for die in frappe.get_all("Dies", fields=["name", "length", "width", "custom_die_name"]):
-		derived = get_die_name(die.length, die.width)
+	fields = ["name", "length", "width", "across_ups", "round_ups", "teeth", "custom_die_name"]
+	for die in frappe.get_all("Dies", fields=fields):
+		derived = get_die_name(die.length, die.width, die.across_ups, die.round_ups, die.teeth)
 		if (die.custom_die_name or "") == derived:
 			continue
 		frappe.db.set_value("Dies", die.name, "custom_die_name", derived, update_modified=False)

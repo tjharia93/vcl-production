@@ -139,6 +139,7 @@
  "modified_by": "Administrator",
  "module": "Job Card Tracking",
  "name": "Dies",
+ "naming_rule": "By \"Naming Series\" field",
  "owner": "Administrator",
  "permissions": [
   {
@@ -195,8 +196,10 @@
    "role": "Manufacturing User"
   }
  ],
+ "search_fields": "custom_die_name,die_size,teeth",
+ "show_title_field_in_link": 1,
  "sort_field": "die_number",
  "sort_order": "ASC",
- "track_changes": 1,
- "naming_rule": "By \"Naming Series\" field"
+ "title_field": "custom_die_name",
+ "track_changes": 1
 }

@@ -1,6 +1,6 @@
 import frappe
 from frappe.model.document import Document
-from frappe.utils import flt
+from frappe.utils import cint, flt
 
 
 class Dies(Document):
@@ -41,17 +41,35 @@ class Dies(Document):
 		if not self.meta.has_field("custom_die_name"):
 			return
 
-		self.custom_die_name = get_die_name(self.length, self.width)
+		self.custom_die_name = get_die_name(
+			self.length, self.width, self.across_ups, self.round_ups, self.teeth
+		)
 
 
-def get_die_name(length, width):
-	"""Return "L:70 W:45", or "" when neither dimension is set."""
-	length = flt(length)
-	width = flt(width)
-	if length <= 0 and width <= 0:
-		return ""
+def get_die_name(length, width, across_ups=0, round_ups=0, teeth=0):
+	"""Return "L70 W45 · 4×4 up · 92T" — size, how it runs, which cylinder.
+
+	Size alone does not identify a die: nine of the 86 are 60 × 20, five are
+	66 × 66, five are 32 × 32 — 56 records shared a size-only name. Adding ups
+	and teeth makes 84 of 86 unique. Parts that are not set drop out rather
+	than reading "0", so a die with no cylinder yet is "L60 W20 · 5 up".
+	"""
+	length, width, teeth = flt(length), flt(width), flt(teeth)
+	across_ups, round_ups = cint(across_ups), cint(round_ups)
 
 	def fmt(value):
 		return f"{value:g}"
 
-	return f"L:{fmt(length)} W:{fmt(width)}"
+	parts = []
+	if length > 0 or width > 0:
+		parts.append(f"L{fmt(length)} W{fmt(width)}")
+	if across_ups > 0 and round_ups > 0:
+		parts.append(f"{across_ups}×{round_ups} up")
+	elif across_ups > 0:
+		parts.append(f"{across_ups} up")
+	elif round_ups > 0:
+		parts.append(f"{round_ups} round")
+	if teeth > 0:
+		parts.append(f"{fmt(teeth)}T")
+
+	return " · ".join(parts)

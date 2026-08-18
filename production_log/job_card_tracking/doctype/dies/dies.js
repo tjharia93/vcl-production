@@ -34,9 +34,9 @@ frappe.ui.form.on("Dies", {
 	length(frm)     { vcl_die_redraw(frm); },
 	width(frm)      { vcl_die_redraw(frm); },
 	shape(frm)      { vcl_die_redraw(frm); },
-	across_ups(frm) { vcl_render_die_layout(frm); },
-	round_ups(frm)  { vcl_render_die_layout(frm); },
-	teeth(frm)      { vcl_render_die_layout(frm); },
+	across_ups(frm) { vcl_die_sync_name(frm); vcl_render_die_layout(frm); },
+	round_ups(frm)  { vcl_die_sync_name(frm); vcl_render_die_layout(frm); },
+	teeth(frm)      { vcl_die_sync_name(frm); vcl_render_die_layout(frm); },
 });
 
 function vcl_die_redraw(frm) {
@@ -54,9 +54,20 @@ function vcl_die_redraw(frm) {
 
 function vcl_die_name(doc) {
 	const L = flt(doc.length), W = flt(doc.width);
-	if (!(L > 0) && !(W > 0)) return "";
+	const across = cint(doc.across_ups), round_ = cint(doc.round_ups);
+	const teeth = flt(doc.teeth);
 	const fmt = (v) => (Math.round(v * 100) / 100).toString();
-	return "L:" + fmt(L) + " W:" + fmt(W);
+
+	// Size alone does not identify a die — nine of them are 60 × 20, five are
+	// 66 × 66. Ups and teeth are what tell two apart, so they belong in the
+	// name. Parts that are not set drop out rather than reading "0".
+	const parts = [];
+	if (L > 0 || W > 0) parts.push("L" + fmt(L) + " W" + fmt(W));
+	if (across > 0 && round_ > 0) parts.push(across + "×" + round_ + " up");
+	else if (across > 0) parts.push(across + " up");
+	else if (round_ > 0) parts.push(round_ + " round");
+	if (teeth > 0) parts.push(fmt(teeth) + "T");
+	return parts.join(" · ");
 }
 
 function vcl_die_sync_name(frm) {
