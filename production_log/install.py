@@ -71,15 +71,20 @@ def backfill_die_names():
 
 
 def retire_dies_stopgap_client_script():
-	"""Delete the transitional Client Script now that dies.js ships in the app.
+	"""Delete the transitional Client Scripts now that dies.js ships in the app.
 
-	Created live on 2026-08-17 so the preview and layout worked before this
-	deploy. It carries the same code guarded by ``window.__VCL_DIES_VIZ__``,
+	Created live on 2026-08-17 so the preview, layout and list status worked
+	before this deploy. They carry the same code, guarded by
+	``window.__VCL_DIES_VIZ__`` / ``window.__VCL_DIES_LIST__``,
 	so leaving it would be harmless but duplicated — and a second copy of a
 	form script is exactly how the two versions drift.
 	"""
-	name = "Dies — Die Name, Preview & Layout (stopgap)"
-	if frappe.db.exists("Client Script", name):
-		frappe.delete_doc("Client Script", name, ignore_permissions=True)
-		print(f"Deleted transitional Client Script: {name}")
+	names = [
+		"Dies — Die Name, Preview & Layout (stopgap)",
+		"Dies — List status (stopgap)",
+	]
+	for name in names:
+		if frappe.db.exists("Client Script", name):
+			frappe.delete_doc("Client Script", name, ignore_permissions=True)
+			print(f"Deleted transitional Client Script: {name}")
 	frappe.db.commit()

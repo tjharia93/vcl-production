@@ -163,6 +163,49 @@ function vcl_die_dim_v(x, y1, y2, label) {
 	return s;
 }
 
+// The tail of die_size once the numbers are stripped — "SPECIAL CUT",
+// "Top Seal". Free text, but it is the only place a special profile is
+// recorded, so it is worth surfacing rather than losing to the derived name.
+function vcl_die_qualifier(doc) {
+	const raw = (doc.die_size || "").trim();
+	if (!raw) return "";
+	const tail = raw.replace(/^[\d\s.xX×mM]+/, "").replace(/^[-–·,:\s]+/, "").trim();
+	if (!tail || tail.length > 40) return "";
+	if (tail.toUpperCase() === (doc.shape || "").toUpperCase()) return "";
+	return tail;
+}
+
+// A die whose real cut is not the drawn box. The layout maths still runs off
+// the bounding envelope — ups and repeat are set by the box, not the profile —
+// but the drawing must not pretend to be the profile.
+function vcl_die_is_irregular(doc) {
+	return (doc.shape || "").toUpperCase() === "IRREGULAR";
+}
+
+// The dieline itself, when someone has attached it. For a special cut this is
+// the only true picture of the profile — the drawing can only ever be the box
+// it fits in. Images render inline; anything else (a PDF, usually) gets a link.
+function vcl_die_attachments(frm) {
+	const info = frm.get_docinfo ? frm.get_docinfo() : null;
+	const files = (info && info.attachments) || [];
+	if (!files.length) return "";
+
+	let out = '<div style="margin-top:8px;">';
+	files.slice(0, 3).forEach(function (f) {
+		const url = frappe.utils.escape_html(f.file_url || "");
+		const nm = frappe.utils.escape_html(f.file_name || f.file_url || "file");
+		if (/\.(png|jpe?g|gif|webp|svg)$/i.test(f.file_name || "")) {
+			out += '<img src="' + url + '" alt="' + nm + '" style="max-width:100%;max-height:190px;'
+				+ 'border:1px solid #E3E5E8;border-radius:4px;display:block;margin-bottom:4px;">';
+		}
+		out += '<a href="' + url + '" target="_blank" style="display:inline-block;padding:2px 8px;'
+			+ 'margin:0 4px 4px 0;background:#F4F5F7;border:1px solid #E3E5E8;border-radius:10px;'
+			+ 'font-size:11px;color:' + VCL_DIE.deep + ';text-decoration:none;">⎙ ' + nm + "</a>";
+	});
+	out += "</div>";
+	return out;
+}
+
 // ═══════════════════════════════════════════════════════════
 // 2. Die Preview — one die, dimensioned
 // ═══════════════════════════════════════════════════════════
@@ -201,6 +244,20 @@ function vcl_render_die_preview(frm) {
 		meta += '<br><span style="color:#8A8F98;">Die Size as entered: ' + frappe.utils.escape_html(entered) + "</span>";
 	}
 	meta += "</div>";
+
+	const qualifier = vcl_die_qualifier(frm.doc);
+	if (qualifier) {
+		meta += '<div style="margin-top:6px;"><span style="display:inline-block;padding:2px 8px;'
+			+ 'background:#EEF0FB;color:' + VCL_DIE.primary + ';border-radius:10px;font-size:11px;'
+			+ 'font-weight:600;">' + frappe.utils.escape_html(qualifier) + "</span></div>";
+	}
+	const files = vcl_die_attachments(frm);
+	if (vcl_die_is_irregular(frm.doc)) {
+		meta += vcl_die_note("<b>Irregular profile</b> — the dashed outline is the bounding envelope, "
+			+ "not the cut shape. Ups and repeat are set by this box; the profile itself is on the "
+			+ (files ? "dieline below." : "dieline artwork, so attach it to this die."));
+	}
+	meta += files;
 
 	$w.html('<div style="margin:2px 0 4px;">' + svg + meta + "</div>");
 }
