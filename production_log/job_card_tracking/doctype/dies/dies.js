@@ -136,10 +136,13 @@ function vcl_render_die_supply(frm) {
 
 	$w.html(vcl_die_hint("Loading purchase history…"));
 
-	// Filter the PARENT by a child-table field. Reading Purchase Receipt Item
-	// directly needs read permission on the child doctype, which most users do
-	// not have — the request hangs behind a permission dialog rather than
-	// failing cleanly. This form needs no child permission at all.
+	// Filter the PARENT by a child-table field. The desk cannot read a child
+	// doctype at all: frappe.db.get_list routes to
+	// frappe.desk.reportview.get_list, which takes no `parent` argument and
+	// dies with "DatabaseQuery.execute() got an unexpected keyword argument
+	// 'parent'" (frappe 16.31). Only the REST endpoint frappe.client.get_list
+	// accepts one. Filtering the parent works from both, and needs no
+	// permission on the child doctype.
 	//
 	// docstatus is deliberately not filtered: MAT-PRE-2026-00100 sat in Draft
 	// while the dies were already on the shelf, and a panel that hid drafts
