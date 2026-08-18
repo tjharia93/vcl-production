@@ -27,20 +27,26 @@ const VCL_DIE = {
 
 frappe.ui.form.on("Dies", {
 	refresh(frm) {
+		frm.set_query("custom_die_item", () => ({ filters: { item_group: "Design and Artwork" } }));
 		vcl_die_sync_name(frm);
+		vcl_die_sync_status(frm);
 		vcl_render_die_preview(frm);
 		vcl_render_die_layout(frm);
+		vcl_render_die_supply(frm);
 	},
+
+	custom_die_item(frm) { vcl_render_die_supply(frm); },
 	length(frm)     { vcl_die_redraw(frm); },
 	width(frm)      { vcl_die_redraw(frm); },
 	shape(frm)      { vcl_die_redraw(frm); },
-	across_ups(frm) { vcl_die_sync_name(frm); vcl_render_die_layout(frm); },
-	round_ups(frm)  { vcl_die_sync_name(frm); vcl_render_die_layout(frm); },
-	teeth(frm)      { vcl_die_sync_name(frm); vcl_render_die_layout(frm); },
+	across_ups(frm) { vcl_die_redraw(frm); },
+	round_ups(frm)  { vcl_die_redraw(frm); },
+	teeth(frm)      { vcl_die_redraw(frm); },
 });
 
 function vcl_die_redraw(frm) {
 	vcl_die_sync_name(frm);
+	vcl_die_sync_status(frm);
 	vcl_render_die_preview(frm);
 	vcl_render_die_layout(frm);
 }
@@ -80,6 +86,125 @@ function vcl_die_sync_name(frm) {
 		frm.doc.custom_die_name = derived;
 		frm.refresh_field("custom_die_name");
 	}
+}
+
+// ═══════════════════════════════════════════════════════════
+// Setup Status — stored so it can be filtered and reported on
+// Recomputed on every change and on save; dies.py validate() writes the
+// same value server-side, so the field can never drift from the record.
+// ═══════════════════════════════════════════════════════════
+
+function vcl_die_setup_status(doc) {
+	const L = flt(doc.length);
+	const across = cint(doc.across_ups), round_ = cint(doc.round_ups);
+	const teeth = flt(doc.teeth);
+
+	if (teeth > 0 && round_ > 0 && round_ * L > teeth * VCL_DIE.pitch + 0.05) return "Check Cylinder";
+	if (!across || !round_ || !teeth) return "Incomplete";
+	return "Ready";
+}
+
+function vcl_die_sync_status(frm) {
+	if (!frm.fields_dict.custom_setup_status) return;
+	const derived = vcl_die_setup_status(frm.doc);
+	if (frm.doc.custom_setup_status === derived) return;
+	if (frm.is_new() || frm.is_dirty()) {
+		frm.set_value("custom_setup_status", derived);
+	} else {
+		frm.doc.custom_setup_status = derived;
+		frm.refresh_field("custom_setup_status");
+	}
+}
+
+// ═══════════════════════════════════════════════════════════
+// 4. Supply — where this tool came from
+// A die is bought as a stock item ("Flexible Die - 45 x 70 mm"), so the
+// order and the receiving document already exist in ERPNext. Link the item
+// once and the rest is read, never re-keyed: Purchase Order, Purchase
+// Receipt, date, supplier, rate.
+// ═══════════════════════════════════════════════════════════
+
+function vcl_render_die_supply(frm) {
+	const $w = vcl_die_wrapper(frm, "custom_die_supply");
+	if (!$w) return;
+
+	const item = frm.doc.custom_die_item;
+	if (!item) {
+		$w.html(vcl_die_hint("Link the stock item this die was bought as to see its order and receiving history."));
+		return;
+	}
+
+	$w.html(vcl_die_hint("Loading purchase history…"));
+
+	// Filter the PARENT by a child-table field. Reading Purchase Receipt Item
+	// directly needs read permission on the child doctype, which most users do
+	// not have — the request hangs behind a permission dialog rather than
+	// failing cleanly. This form needs no child permission at all.
+	//
+	// docstatus is deliberately not filtered: MAT-PRE-2026-00100 sat in Draft
+	// while the dies were already on the shelf, and a panel that hid drafts
+	// would have said the tools were never received.
+	const parents = (doctype, dateField) => frappe.db.get_list(doctype, {
+		filters: [[doctype + " Item", "item_code", "=", item]],
+		fields: ["name", dateField, "supplier_name", "supplier", "status", "docstatus"],
+		order_by: dateField + " desc",
+		limit: 20,
+	}).then((rows) => (rows || []).map((r) => ({
+		name: r.name,
+		date: r[dateField],
+		supplier: r.supplier_name || r.supplier,
+		status: r.status,
+		docstatus: cint(r.docstatus),
+	})));
+
+	Promise.all([parents("Purchase Order", "transaction_date"), parents("Purchase Receipt", "posting_date")])
+		.then(function (out) {
+			const [orders, receipts] = out;
+			if (!orders.length && !receipts.length) {
+				$w.html(vcl_die_note("No Purchase Order or Purchase Receipt carries <b>"
+					+ frappe.utils.escape_html(item) + "</b> yet."));
+				return;
+			}
+
+			const section = (title, rows, doctype) => {
+				if (!rows.length) {
+					return '<div style="font-size:12.5px;color:#8A8F98;margin:8px 0 3px;">' + title
+						+ ": <i>none yet</i></div>";
+				}
+				let h = '<div style="font-size:11.5px;color:#8A8F98;text-transform:uppercase;'
+					+ 'letter-spacing:0.4px;margin:8px 0 3px;">' + title + "</div>";
+				h += '<table style="width:100%;max-width:620px;border-collapse:collapse;font-size:12.5px;'
+					+ 'background:#fff;border:1px solid #E3E5E8;">';
+				rows.forEach(function (r, i) {
+					const link = "/app/" + frappe.router.slug(doctype) + "/" + encodeURIComponent(r.name);
+					const draft = r.docstatus === 0
+						? ' <span style="margin-left:6px;padding:1px 6px;border-radius:8px;font-size:10.5px;'
+							+ 'background:#FFF3E0;color:#E65100;font-weight:600;">Draft</span>'
+						: "";
+					h += '<tr style="background:' + (i % 2 ? "#FFFFFF" : "#FAFAFB") + ';border-top:1px solid #EEF0F2;">'
+						+ '<td style="padding:5px 10px;"><a href="' + link + '" style="color:' + VCL_DIE.primary
+						+ ';font-weight:600;">' + frappe.utils.escape_html(r.name) + "</a>" + draft + "</td>"
+						+ '<td style="padding:5px 10px;color:#555;white-space:nowrap;">'
+						+ (r.date ? frappe.datetime.str_to_user(r.date) : "—") + "</td>"
+						+ '<td style="padding:5px 10px;color:#555;">'
+						+ frappe.utils.escape_html(r.supplier || "—") + "</td>"
+						+ '<td style="padding:5px 10px;color:#8A8F98;text-align:right;">'
+						+ frappe.utils.escape_html(r.status || "") + "</td></tr>";
+				});
+				return h + "</table>";
+			};
+
+			$w.html('<div style="margin:4px 0;">'
+				+ section("Ordered", orders, "Purchase Order")
+				+ section("Received", receipts, "Purchase Receipt")
+				+ '<div style="margin-top:6px;font-size:11px;color:#8A8F98;font-style:italic;">'
+				+ "Read from ERPNext — the order and the receiving document are the record; nothing is copied onto the die."
+				+ "</div></div>");
+		})
+		.catch(function (e) {
+			$w.html(vcl_die_note("Could not read the purchase history: "
+				+ frappe.utils.escape_html((e && e.message) || String(e))));
+		});
 }
 
 // ═══════════════════════════════════════════════════════════

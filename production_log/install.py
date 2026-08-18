@@ -39,6 +39,7 @@ def after_migrate():
 
 	setup_monobox.set_default_print_format()
 	backfill_die_names()
+	backfill_die_setup_status()
 	retire_dies_stopgap_client_script()
 
 
@@ -68,6 +69,31 @@ def backfill_die_names():
 
 	if updated:
 		print(f"Dies: Die Name backfilled on {updated} record(s)")
+
+
+def backfill_die_setup_status():
+	"""Fill Setup Status on dies saved before the field existed.
+
+	Same reasoning as backfill_die_names: the field arrives with
+	sync_fixtures, which runs after post_model_sync patches, so a patch
+	cannot do this.
+	"""
+	if not frappe.db.has_column("Dies", "custom_setup_status"):
+		return
+
+	from production_log.job_card_tracking.doctype.dies.dies import get_setup_status
+
+	updated = 0
+	fields = ["name", "length", "across_ups", "round_ups", "teeth", "custom_setup_status"]
+	for die in frappe.get_all("Dies", fields=fields):
+		derived = get_setup_status(die.length, die.across_ups, die.round_ups, die.teeth)
+		if (die.custom_setup_status or "") == derived:
+			continue
+		frappe.db.set_value("Dies", die.name, "custom_setup_status", derived, update_modified=False)
+		updated += 1
+
+	if updated:
+		print(f"Dies: Setup Status backfilled on {updated} record(s)")
 
 
 def retire_dies_stopgap_client_script():

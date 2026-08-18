@@ -2,6 +2,9 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import cint, flt
 
+# Gear tooth pitch: 1/8" = 3.175 mm. Cylinder repeat = teeth × pitch.
+TOOTH_PITCH_MM = 3.175
+
 
 class Dies(Document):
 	"""
@@ -18,6 +21,7 @@ class Dies(Document):
 		"""Main validation method called before saving."""
 		self.validate_dimensions()
 		self.set_die_name()
+		self.set_setup_status()
 
 	def validate_dimensions(self):
 		"""Validate that length and width are positive values."""
@@ -44,6 +48,39 @@ class Dies(Document):
 		self.custom_die_name = get_die_name(
 			self.length, self.width, self.across_ups, self.round_ups, self.teeth
 		)
+
+
+	def set_setup_status(self):
+		"""Derive Setup Status so the list can be filtered on it.
+
+		Stored rather than computed in the list view alone, because the point
+		of it is to filter and report: "show me every die that cannot be
+		planned". Recomputed on every save, so it cannot drift.
+		"""
+		if not self.meta.has_field("custom_setup_status"):
+			return
+
+		self.custom_setup_status = get_setup_status(
+			self.length, self.across_ups, self.round_ups, self.teeth
+		)
+
+
+def get_setup_status(length, across_ups, round_ups, teeth):
+	"""Ready / Incomplete / Check Cylinder.
+
+	Check Cylinder means the numbers contradict each other: the rows around
+	the cylinder need more than the repeat the teeth allow, so teeth, round
+	ups or the dimensions are wrong. Eight dies were in this state when the
+	field was introduced.
+	"""
+	length, teeth = flt(length), flt(teeth)
+	across_ups, round_ups = cint(across_ups), cint(round_ups)
+
+	if teeth > 0 and round_ups > 0 and round_ups * length > teeth * TOOTH_PITCH_MM + 0.05:
+		return "Check Cylinder"
+	if not across_ups or not round_ups or not teeth:
+		return "Incomplete"
+	return "Ready"
 
 
 def get_die_name(length, width, across_ups=0, round_ups=0, teeth=0):
