@@ -57,17 +57,25 @@ had them installed.</p>
 
 <hr>
 
-<h2>A second app in this repo: VCL Production Lite</h2>
+<h2>The Production Floor module</h2>
 
-<p>The directory <code>vcl_production/</code> is a <strong>separate, standalone
-Frappe app</strong> — not part of <code>production_log</code>. It is the
-lightweight daily production entry and reporting screen for the floor, it
-declares no <code>required_apps</code>, and it shares no DocTypes, routes or
-fixtures with this app.</p>
+<p><code>production_log/production_floor/</code> is the lightweight daily
+production entry and reporting screen for the factory floor — the one that
+replaces the WhatsApp production thread. It lives at
+<code>/app/vcl-production-lite</code> with its own workspace at
+<code>/app/production-floor</code>; <code>/app/vcl-production</code> remains
+this app's main workspace.</p>
 
-<p>See <a href="vcl_production/README.md"><code>vcl_production/README.md</code></a>
-for installation and <a href="vcl_production/docs/architecture.md"><code>vcl_production/docs/architecture.md</code></a>
-for how the two apps relate and how ERPNext is wired in later.</p>
+<p>It keeps its own <code>VCL *</code> DocTypes and holds <strong>no Link to
+any ERPNext document</strong>, so a supervisor can record what ran without
+waiting for a Job Card, a Work Order or a Customer record to exist. That
+independence is in the data model, not the packaging: the module ships inside
+this app and deploys with it.</p>
+
+<p>See <a href="docs/production-floor/architecture.md"><code>docs/production-floor/architecture.md</code></a>
+for how it relates to the rest of the app and how ERPNext is wired in later,
+and <a href="testing/production-floor/"><code>testing/production-floor/</code></a>
+for its OAT and UAT plans.</p>
 
 <hr>
 

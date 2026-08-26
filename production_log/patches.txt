@@ -121,3 +121,9 @@ production_log.patches.v9_6.add_cps_linked_bom
 # the flap is a formula, not a measurement, so the values are decided per
 # specification through the button.
 production_log.patches.v9_7.allow_carton_board_plan_on_submit
+# The Production Floor module: roles, the Settings Single, the machine master
+# and the department/unit Select options. Idempotent and safe to re-run — it
+# creates only what is missing and never overwrites a machine someone
+# deliberately deactivated. Post-sync because it reads DocTypes this same
+# migrate creates.
+production_log.patches.v10_0.seed_production_floor
