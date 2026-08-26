@@ -1,0 +1,234 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "VPJ-.YYYY.-.#####",
+ "creation": "2026-08-26 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "customer_name",
+  "job_name",
+  "department",
+  "column_break_main",
+  "default_uom",
+  "active",
+  "is_demo",
+  "section_detail",
+  "description",
+  "column_break_detail",
+  "full_label",
+  "normalised_key",
+  "source",
+  "last_used_date",
+  "times_used",
+  "section_erpnext",
+  "erpnext_customer",
+  "erpnext_item",
+  "erpnext_sales_order",
+  "column_break_erpnext",
+  "erpnext_work_order",
+  "erpnext_job_card",
+  "erpnext_workstation"
+ ],
+ "fields": [
+  {
+   "description": "Free text today. Becomes optionally linked to an ERPNext Customer later.",
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "job_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Job",
+   "reqd": 1
+  },
+  {
+   "fieldname": "department",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Usual Department",
+   "options": "\nComputer\nOffset\nCarton\nLabels"
+  },
+  {
+   "fieldname": "column_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "default_uom",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Default Unit",
+   "options": "\npcs\ncartons\nreels\nreams\nsheets\nkg\nmetres"
+  },
+  {
+   "default": "1",
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "in_standard_filter": 1,
+   "label": "Active"
+  },
+  {
+   "default": "0",
+   "description": "Ticked on demo / sample data so it can be told apart from real work.",
+   "fieldname": "is_demo",
+   "fieldtype": "Check",
+   "label": "Demo Data",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_detail",
+   "fieldtype": "Section Break",
+   "label": "Detail"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "column_break_detail",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Derived. Shown wherever this job is picked.",
+   "fieldname": "full_label",
+   "fieldtype": "Data",
+   "label": "Label",
+   "read_only": 1
+  },
+  {
+   "description": "Derived dedupe key: normalised customer + job.",
+   "fieldname": "normalised_key",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Normalised Key",
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "default": "Manual",
+   "description": "Where this job came from. ERPNext-sourced jobs will use the same screens as manual ones.",
+   "fieldname": "source",
+   "fieldtype": "Select",
+   "label": "Source",
+   "options": "Manual\nERPNext",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_used_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Last Used",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "times_used",
+   "fieldtype": "Int",
+   "label": "Times Used",
+   "read_only": 1
+  },
+  {
+   "collapsible": 1,
+   "description": "Reserved for the later ERPNext integration. All optional, all empty in V1 - a manual job stays valid with every one of these blank.",
+   "fieldname": "section_erpnext",
+   "fieldtype": "Section Break",
+   "label": "ERPNext Links (future)"
+  },
+  {
+   "fieldname": "erpnext_customer",
+   "fieldtype": "Data",
+   "label": "ERPNext Customer",
+   "read_only": 1
+  },
+  {
+   "fieldname": "erpnext_item",
+   "fieldtype": "Data",
+   "label": "ERPNext Item",
+   "read_only": 1
+  },
+  {
+   "fieldname": "erpnext_sales_order",
+   "fieldtype": "Data",
+   "label": "ERPNext Sales Order",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_erpnext",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "erpnext_work_order",
+   "fieldtype": "Data",
+   "label": "ERPNext Work Order",
+   "read_only": 1
+  },
+  {
+   "fieldname": "erpnext_job_card",
+   "fieldtype": "Data",
+   "label": "ERPNext Job Card",
+   "read_only": 1
+  },
+  {
+   "fieldname": "erpnext_workstation",
+   "fieldtype": "Data",
+   "label": "ERPNext Workstation",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-08-26 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "VCL Production",
+ "name": "VCL Production Job",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "VCL Production User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "VCL Production Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "search_fields": "customer_name,job_name,department",
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "full_label",
+ "track_changes": 1
+}
