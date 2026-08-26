@@ -97,7 +97,17 @@ A manager can turn the blocking off in **VCL Production Settings**. Nothing is
 enforced mid-shift beyond a reason when a job is actually marked paused or
 carried forward, so a busy afternoon is never blocked by a validation.
 
-## Tests
+## Testing before a release
+
+Deploy and functional plans, in the same shape as the `production_log` ones:
+
+- [`docs/testing/oat-plan.md`](docs/testing/oat-plan.md) — install, migrate,
+  rollback, and the checks that `production_log` is untouched. Run first.
+- [`docs/testing/uat-plan.md`](docs/testing/uat-plan.md) — 24 scenarios run by
+  a supervisor on a phone. Run second.
+- [`docs/testing/sign-off.md`](docs/testing/sign-off.md) — copy per release.
+
+### Automated tests
 
 The report wording and the exception rules need no bench:
 
