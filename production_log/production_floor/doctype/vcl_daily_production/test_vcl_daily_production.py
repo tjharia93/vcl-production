@@ -213,3 +213,85 @@ class TestVCLDailyProduction(FrappeTestCase):
 				planned_quantity="10",
 				uom="pcs",
 			)
+
+	def test_picking_a_job_card_records_where_the_entry_came_from(self):
+		day = add_item(
+			production_date=self.date,
+			department="Computer",
+			machine="M3",
+			customer_name="CHANDARIA INDUSTRIES LIMITED",
+			job_name="INVOICE",
+			planned_quantity="40",
+			uom="cartons",
+			job_card="JC-CPT-2026-00079",
+		)
+		row = day["items"][0]
+		self.assertEqual(row["production_job_card"], "JC-CPT-2026-00079")
+		self.assertEqual(row["source"], "Job Card")
+
+	def test_typing_a_job_by_hand_is_still_recorded_as_manual(self):
+		day = add_item(
+			production_date=self.date,
+			department="Computer",
+			machine="M1",
+			customer_name="Chandaria",
+			job_name="Yellow Copy",
+			planned_quantity="3",
+			uom="reels",
+		)
+		row = day["items"][0]
+		self.assertEqual(row["source"], "Manual")
+		self.assertFalse(row.get("production_job_card"))
+
+	def test_the_remembered_job_carries_the_job_card_forward(self):
+		add_item(
+			production_date=self.date,
+			department="Computer",
+			machine="M3",
+			customer_name="CHANDARIA INDUSTRIES LIMITED",
+			job_name="INVOICE",
+			planned_quantity="40",
+			uom="cartons",
+			job_card="JC-CPT-2026-00079",
+		)
+		job = find_job("CHANDARIA INDUSTRIES LIMITED", "INVOICE")
+		self.assertIsNotNone(job)
+		remembered = frappe.get_doc("VCL Production Job", job)
+		self.assertEqual(remembered.production_job_card, "JC-CPT-2026-00079")
+		self.assertEqual(remembered.source, "Job Card")
+
+	def test_a_job_card_that_no_longer_exists_cannot_block_the_entry(self):
+		"""The reason production_job_card is Data and not a Link.
+
+		A Link validates on save, so a job card cancelled or renamed months
+		later would make this row unsaveable and strand real production data.
+		"""
+		day = add_item(
+			production_date=self.date,
+			department="Computer",
+			machine="M1",
+			customer_name="GONE LTD",
+			job_name="INVOICE",
+			planned_quantity="2",
+			uom="cartons",
+			job_card="JC-CPT-1999-99999",
+		)
+		self.assertEqual(day["items"][0]["production_job_card"], "JC-CPT-1999-99999")
+
+		doc = frappe.get_doc("VCL Daily Production", day["day"]["name"])
+		doc.items[0].actual_quantity = 2
+		doc.save()   # must not raise
+
+	def test_the_job_card_list_is_only_open_computer_paper_work(self):
+		from production_log.production_floor.api import list_open_job_cards
+
+		cards = list_open_job_cards()
+		self.assertIsInstance(cards, list)
+		for card in cards:
+			self.assertTrue(card["job_card"])
+			self.assertIn("customer_name", card)
+			self.assertIn("ref", card)
+			status = frappe.db.get_value(
+				"Job Card Computer Paper", card["job_card"], "job_status"
+			)
+			self.assertIn(status, ("Open", "Planned", "In Production", "Packing Pending"))

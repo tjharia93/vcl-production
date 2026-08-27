@@ -7,6 +7,7 @@ database. `api.py` is the thin layer that turns Frappe documents into the
 dicts these functions expect.
 """
 
+import re
 from datetime import date, datetime
 
 DEFAULT_DEPARTMENTS = ["Computer", "Offset", "Carton", "Labels"]
@@ -438,3 +439,61 @@ def normalise_key(customer_name, job_name):
 		return "".join(c for c in (text or "").lower() if c.isalnum())
 
 	return "{0}::{1}".format(scrub(customer_name), scrub(job_name))
+
+
+# How many leading characters of the Customer name must appear at the head of
+# the spec name before it counts as a repeat worth stripping.
+PREFIX_MATCH_CHARS = 10
+
+
+def short_job_name(customer_name, job_name):
+	"""Drop a leading customer-name prefix from a job card's spec name.
+
+	Display only. `specification_name` on a Job Card Computer Paper almost
+	always opens with the customer, so a chip showing both reads the customer
+	twice and overflows a 360px screen.
+	"""
+	job = (job_name or "").strip()
+	cust = (customer_name or "").strip()
+	if not job or not cust:
+		return job
+	# Match on the customer's opening words, not the whole name: the spec name
+	# routinely drops the LTD / LIMITED the Customer record carries, and writes
+	# INDUSTRIES where the Customer says INDUSTRIES LIMITED.
+	if not job.upper().startswith(cust.upper()[:PREFIX_MATCH_CHARS]):
+		return job
+	# Whatever follows the first dash. The separator is written every way there
+	# is on the live cards - " - ", "  - " and " -" with nothing after it.
+	match = re.match(r"^[^-]*-\s*(.+)$", job)
+	if match and match.group(1).strip():
+		return match.group(1).strip()
+	return job
+
+
+# A Job Card Computer Paper still worth showing the floor. Everything else is
+# either finished, abandoned, or waiting on a decision nobody makes at a machine.
+OPEN_JOB_CARD_STATUSES = ("Open", "Planned", "In Production", "Packing Pending")
+
+
+def job_card_is_open(job_status, docstatus=0):
+	"""True when this job card should appear on the floor screen's chip row."""
+	if docstatus and int(docstatus) >= 2:
+		return False
+	return (job_status or "") in OPEN_JOB_CARD_STATUSES
+
+
+def job_card_chip(customer_name, job_name, job_card, due_date=None):
+	"""The one job card as the phone needs it.
+
+	`job_name` is shortened for display only; `job_card` is carried whole,
+	because that is what gets stamped on the production row.
+	"""
+	name = (job_card or "").strip()
+	match = re.match(r"^JC-[A-Z]+-\d{4}-(.+)$", name)
+	return {
+		"job_card": name,
+		"ref": match.group(1) if match else name,
+		"customer_name": (customer_name or "").strip(),
+		"job_name": short_job_name(customer_name, job_name),
+		"due_date": due_date,
+	}

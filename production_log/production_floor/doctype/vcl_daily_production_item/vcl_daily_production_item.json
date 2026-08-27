@@ -27,6 +27,7 @@
   "notes",
   "section_erpnext",
   "source",
+  "production_job_card",
   "erpnext_job_card",
   "erpnext_work_order",
   "column_break_erpnext",
@@ -174,8 +175,15 @@
    "fieldname": "source",
    "fieldtype": "Select",
    "label": "Source",
-   "options": "Manual\nERPNext",
+   "options": "Manual\nJob Card\nERPNext",
    "read_only": 1
+  },
+  {
+   "fieldname": "production_job_card",
+   "fieldtype": "Data",
+   "label": "Job Card",
+   "read_only": 1,
+   "description": "The Job Card Computer Paper this came from. Data and not a Link on purpose: a Link validates on save, so a job card cancelled or renamed later would make this row unsaveable."
   },
   {
    "fieldname": "erpnext_job_card",

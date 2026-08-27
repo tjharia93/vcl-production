@@ -22,6 +22,13 @@ phone**, with a manager watching. This is the last check before merge to
 > **Update this section in every PR that changes behaviour.** Add a dated
 > entry at the top; older entries stay so the trail is visible.
 
+### 2026-08-27 — Picking a job card
+
+**Run Scenario 25 as well as everything below.** The Add Job dialog gains an
+optional **Open Job Cards** row on the Computer department. Nothing else
+changed: every scenario below still applies exactly as written, and typing a
+customer by hand is still the primary path.
+
 ### 2026-08-26 — First release of the Production Floor module
 
 Everything is new. Run every scenario.
@@ -352,6 +359,40 @@ Enter the rest of the shift so the day matches the real example. Add:
       real and will be wanted on day one.
 
 ---
+
+## Scenario 25 — Picking an open job card ⏱
+
+Only on the **Computer** department. This is an optional shortcut; Scenario 7
+already proved a brand new customer is never blocked, and that must stay true.
+
+- [ ] **25.1** Tap **+ Add Job** with Department `Computer`. Under Recent
+      Jobs there is now an **Open Job Cards** row.
+- [ ] **25.2** The cards are real: pick any one and check the same customer
+      and job exist on that job card on the desk.
+- [ ] **25.3** The list is ordered by **due date, soonest first**.
+- [ ] **25.4** **The job reads short.** A card whose spec name repeats the
+      customer — e.g. `CHANDARIA INDUSTRIES - INVOICE` under customer
+      `CHANDARIA INDUSTRIES LIMITED` — shows as just **INVOICE**. Nothing on
+      the row runs off the screen.
+- [ ] **25.5** Where two open cards have the same customer and the same job
+      name, **the job card number tells them apart**. Confirm you can pick the
+      right one without guessing.
+- [ ] **25.6** Tap a card. Customer and Job fill in. **Machine, planned
+      quantity and unit are still yours to enter** — the job card does not
+      set them.
+- [ ] **25.7** Time it. Card → machine → quantity → Add should still land
+      around ten seconds. **Record: .......... seconds.** If this is slower
+      than typing it by hand, the shortcut is not worth having.
+- [ ] **25.8** Add it. The card appears on the board like any other.
+- [ ] **25.9** Switch Department to `Offset`. **The row is gone.** Add a job
+      there by typing, exactly as before.
+- [ ] **25.10** Back on `Computer`, **ignore the row entirely** and type a
+      customer that has no job card at all. It saves. This is the rule that
+      matters more than the shortcut.
+- [ ] **25.11** Change your mind test: tap a job card chip, then instead pick
+      a chip from **Recent Jobs**. Add it, then open that row on the desk —
+      `Source` must read **Manual**, not `Job Card`. The stamp must not
+      survive a change of mind.
 
 ## Tester's verdict
 
