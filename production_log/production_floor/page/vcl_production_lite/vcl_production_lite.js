@@ -590,6 +590,11 @@ class VclProductionBoard {
 					label: __("Recent Jobs"),
 				},
 				{
+					fieldname: "job_cards",
+					fieldtype: "HTML",
+					label: __("Open Job Cards"),
+				},
+				{
 					fieldname: "production_job",
 					fieldtype: "Link",
 					label: __("Search Remembered Jobs"),
@@ -634,10 +639,12 @@ class VclProductionBoard {
 			primary_action: (values) => this.submit_add_job(dialog, values),
 		});
 
+		this.picked_job_card = null;
 		dialog.show();
 		this.make_numeric(dialog, "planned_quantity");
 		this.on_department_change(dialog);
 		this.render_recent_jobs(dialog);
+		this.render_job_cards(dialog);
 	}
 
 	on_department_change(dialog) {
@@ -653,7 +660,9 @@ class VclProductionBoard {
 		} else {
 			dialog.set_value("machine", "");
 		}
+		this.picked_job_card = null;
 		this.render_recent_jobs(dialog);
+		this.render_job_cards(dialog);
 	}
 
 	on_job_pick(dialog) {
@@ -667,6 +676,11 @@ class VclProductionBoard {
 	}
 
 	fill_job(dialog, job) {
+		// Picking a remembered job is a different route in. The stamp records
+		// that a supervisor chose a live card today, so it must not survive a
+		// change of mind - and a card remembered months ago may be closed now.
+		this.picked_job_card = null;
+		dialog.$wrapper.find(".vcl-jobcard").removeClass("selected");
 		dialog.set_value("customer_name", job.customer_name);
 		dialog.set_value("job_name", job.job_name);
 		if (job.default_uom) {
@@ -717,6 +731,61 @@ class VclProductionBoard {
 			});
 	}
 
+	render_job_cards(dialog) {
+		// Optional shortcut, never a requirement. Computer Paper job cards are
+		// the only kind that exist, so the row is shown for that department
+		// only; every other department types as it always has.
+		const wrapper = dialog.fields_dict.job_cards.$wrapper;
+		const department = dialog.get_value("department");
+		dialog.set_df_property("job_cards", "hidden", department !== "Computer");
+		if (department !== "Computer") {
+			wrapper.empty();
+			return;
+		}
+		frappe
+			.call({ method: "production_log.production_floor.api.list_open_job_cards" })
+			.then((response) => {
+				const cards = response.message || [];
+				if (!cards.length) {
+					wrapper.html(
+						`<div class="vcl-chip-empty">${__("No open job cards.")}</div>`
+					);
+					return;
+				}
+				wrapper.html(`
+					<div class="vcl-jobcards">
+						${cards
+							.map(
+								(card, index) => `
+							<button type="button" class="vcl-jobcard" data-index="${index}">
+								<span class="vcl-jobcard-ref">${frappe.utils.escape_html(card.ref)}</span>
+								<span class="vcl-jobcard-label">
+									<span class="vcl-jobcard-customer">${frappe.utils.escape_html(
+										card.customer_name
+									)}</span>
+									<span class="vcl-jobcard-job">${frappe.utils.escape_html(card.job_name)}</span>
+								</span>
+							</button>
+						`
+							)
+							.join("")}
+					</div>
+				`);
+				wrapper.find(".vcl-jobcard").on("click", (event) => {
+					const card = cards[$(event.currentTarget).data("index")];
+					wrapper.find(".vcl-jobcard").removeClass("selected");
+					$(event.currentTarget).addClass("selected");
+					dialog.set_value("customer_name", card.customer_name);
+					dialog.set_value("job_name", card.job_name);
+					this.picked_job_card = card.job_card;
+				});
+			})
+			.catch(() => {
+				// Job Card Tracking is not this screen's problem. Fail quiet.
+				wrapper.empty();
+			});
+	}
+
 	submit_add_job(dialog, values) {
 		const invalid = this.numeric_error(values.planned_quantity, __("Planned Quantity"));
 		if (invalid) {
@@ -736,6 +805,7 @@ class VclProductionBoard {
 					uom: values.uom,
 					production_job: values.production_job || null,
 					remember: values.remember ? 1 : 0,
+					job_card: this.picked_job_card || null,
 				},
 				freeze: true,
 			})

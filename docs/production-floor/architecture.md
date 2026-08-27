@@ -40,6 +40,30 @@ The two halves share no DocTypes, no fixtures, no Custom Fields, and no routes:
 
 Nothing in this module hooks a `production_log` or ERPNext document event.
 
+### The one place it reaches out (2026-08-27)
+
+`list_open_job_cards()` reads `Job Card Computer Paper`, a Job Card Tracking
+DocType, to offer the Add Job dialog an optional chip row. **This is a genuine
+loosening of the boundary above and it should be read as one**, not waved
+through because the two now ship in the same app.
+
+Three things keep it honest, and all three are load-bearing:
+
+1. **Read-only, and optional.** The chips fill Customer and Job. They set no
+   machine, no quantity, no unit, and `add_item` still refuses an entry
+   without a customer and a job typed or filled. A supervisor whose job has no
+   card ignores the row.
+2. **It fails soft.** A missing DocType returns `[]`; a `PermissionError`
+   returns `[]`. The dialog renders and saves either way. A Job Card Tracking
+   problem is never allowed to stop production being recorded.
+3. **Nothing is linked.** `production_job_card` is `Data`, so the reference
+   cannot make a row unsaveable later. It is provenance, not a foreign key.
+
+What must not creep in: reading a job card to *populate* quantity, machine or
+unit, or requiring a card before an entry is accepted. Either would make the
+floor wait on Job Card Tracking, which is the thing this module exists to
+avoid.
+
 ## Why "Production Job" and not "Job Card"
 
 A **VCL Production Job** is what the factory means by a job: a customer and a

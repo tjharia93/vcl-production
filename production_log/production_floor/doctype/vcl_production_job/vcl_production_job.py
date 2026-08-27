@@ -41,7 +41,8 @@ def find_job(customer_name, job_name):
 	)
 
 
-def remember_job(customer_name, job_name, department=None, uom=None, on_date=None, is_demo=0):
+def remember_job(customer_name, job_name, department=None, uom=None, on_date=None, is_demo=0,
+		job_card=None):
 	"""Create or refresh a remembered job for this customer + job pair.
 
 	Idempotent by design: the floor types the same names dozens of times a
@@ -55,10 +56,19 @@ def remember_job(customer_name, job_name, department=None, uom=None, on_date=Non
 	if not (customer_name and job_name):
 		return None
 
+	job_card = (job_card or "").strip()
+
 	existing = find_job(customer_name, job_name)
 	if existing:
 		doc = frappe.get_doc("VCL Production Job", existing)
 		changed = False
+		if job_card and not doc.production_job_card:
+			# Only fills a blank, like department and unit above: a job first
+			# typed by hand and later picked from a card gains the reference,
+			# but a correction made on the master is never overwritten.
+			doc.production_job_card = job_card
+			doc.source = "Job Card"
+			changed = True
 		if not doc.active:
 			doc.active = 1
 			changed = True
@@ -80,7 +90,8 @@ def remember_job(customer_name, job_name, department=None, uom=None, on_date=Non
 		"department": department,
 		"default_uom": uom,
 		"active": 1,
-		"source": "Manual",
+		"source": "Job Card" if job_card else "Manual",
+		"production_job_card": job_card or None,
 		"is_demo": 1 if is_demo else 0,
 	})
 	doc.insert(ignore_permissions=True)

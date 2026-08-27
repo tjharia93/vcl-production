@@ -127,6 +127,7 @@ class VCLDailyProduction(Document):
 				uom=row.uom,
 				on_date=self.production_date,
 				is_demo=self.is_demo,
+				job_card=row.production_job_card,
 			)
 			if job_name and row.production_job != job_name:
 				row.db_set("production_job", job_name, update_modified=False)

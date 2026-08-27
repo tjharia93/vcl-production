@@ -18,6 +18,21 @@ Run OAT **first**, UAT **second**. If OAT fails, UAT cannot begin.
 > **Update this section in every PR.** Note anything the deployer must watch
 > for: new patches, fixtures, hooks, role changes, route changes.
 
+### 2026-08-27 — Add Job can pick an open Computer Paper job card
+
+**Behaviour change, no patch.** Two read-only `Data` fields are added
+(`production_job_card` on `VCL Daily Production Item` and `VCL Production
+Job`) and `source` gains a `Job Card` option. New DocFields and a changed
+Select option list both apply at model sync, so there is nothing to run.
+
+**The one thing to watch:** the floor screen now reads a **Job Card Tracking**
+DocType. `list_open_job_cards()` queries `Job Card Computer Paper` read-only,
+returns `[]` when the DocType is absent, and swallows `PermissionError` so a
+supervisor without read on Job Card Tracking still gets a working dialog —
+just without the shortcut. Section 11 checks this.
+
+**Test counts move:** bench-free 27 → **41**, bench 8 → **13**.
+
 ### 2026-08-26 — Production Floor arrives inside `production_log`
 
 **This is a new module in an installed app, not a new app.** It first shipped
@@ -228,7 +243,7 @@ independence, which is the part that keeps the floor unblocked.
 
 - [ ] **8.1** Bench-side tests pass:
       `bench --site <site> run-tests --module production_log.production_floor.doctype.vcl_daily_production.test_vcl_daily_production`
-      Expected: 8 tests in `TestVCLDailyProduction`, all passing.
+      Expected: **13** tests in `TestVCLDailyProduction`, all passing.
       > Scoped to the module on purpose. `run-tests --app production_log` now
       > runs the whole app's suite, which is a longer and noisier job than
       > this deploy needs.
@@ -238,7 +253,7 @@ independence, which is the part that keeps the floor unblocked.
       > teardown failed — delete it.
 - [ ] **8.2** Bench-free tests pass:
       `cd ~/frappe-bench/apps/production_log && python3 -m unittest discover -s production_log/production_floor/tests -t .`
-      Expected: 27 tests, all passing. These import `reporting.py` directly and
+      Expected: **41** tests, all passing. These import `reporting.py` directly and
       need neither a bench nor a site.
 
 ## 9. Permissions spot-check
@@ -280,6 +295,35 @@ it. A floor-screen problem is no longer a reason to roll back on its own.
       too. **Back up first if the floor has been using it.**
 - [ ] **10.5** Worst case, restore the step 1.1 backup — which also reverts
       every other `production_log` change since that backup.
+
+## 11. The job card shortcut
+
+New with the 2026-08-27 release. All of this is about the one place this
+module now reaches outside itself.
+
+- [ ] **11.1** Open `/app/vcl-production-lite`, tap **+ Add Job** with
+      Department `Computer`. An **Open Job Cards** row appears under Recent
+      Jobs, listing job cards soonest-due first.
+- [ ] **11.2** Every card listed is genuinely open. Cross-check one against
+      the desk: its `job_status` is `Open`, `Planned`, `In Production` or
+      `Packing Pending`, and its docstatus is not 2.
+- [ ] **11.3** Switch Department to `Offset`. **The row disappears.** Same for
+      `Carton` and `Labels`.
+- [ ] **11.4** **It fails soft.** As a user with the `VCL Production User`
+      role but *no* read permission on Job Card Tracking, open the dialog:
+      the Open Job Cards row is empty or absent, and **adding a job typed by
+      hand still works.** This is the check that matters — a Job Card Tracking
+      problem must never stop production being recorded.
+- [ ] **11.5** The stamp lands: pick a card, add the job, then open that row
+      on the desk. `Job Card` holds the job card name and `Source` reads
+      `Job Card`.
+- [ ] **11.6** A job typed by hand still reads `Source = Manual` with `Job
+      Card` blank.
+- [ ] **11.7** `production_job_card` is a read-only **Data** field on both
+      DocTypes, not a Link:
+      `bench --site <site> mariadb -e "SELECT fieldtype, options FROM tabDocField WHERE fieldname='production_job_card'"`
+      — both rows `Data`, options empty. A Link here would let a cancelled job
+      card make an existing production row unsaveable.
 
 ---
 

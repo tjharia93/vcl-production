@@ -23,6 +23,9 @@ from production_log.production_floor.reporting import (  # noqa: E402
 	find_exceptions,
 	format_date_long,
 	format_date_short,
+	short_job_name,
+	job_card_is_open,
+	job_card_chip,
 	format_qty,
 	job_title,
 	normalise_key,
@@ -246,3 +249,94 @@ class TestReportText(unittest.TestCase):
 
 if __name__ == "__main__":
 	unittest.main()
+
+
+class TestShortJobName(unittest.TestCase):
+	"""A job card's specification_name repeats the customer name.
+
+	Left alone the chip reads the customer twice and will not fit a phone, so
+	the leading customer prefix is stripped for display. Display only - the
+	stored job_name is whatever the supervisor confirms.
+	"""
+
+	def test_strips_the_customer_prefix(self):
+		self.assertEqual(
+			short_job_name("CHANDARIA INDUSTRIES LIMITED", "CHANDARIA INDUSTRIES - INVOICE"),
+			"INVOICE",
+		)
+
+	def test_strips_when_the_customer_matches_in_full(self):
+		self.assertEqual(
+			short_job_name("GILANI'S DISTRIBUTORS LTD", "GILANI'S DISTRIBUTORS LTD - 9.5 X 8 2 PART"),
+			"9.5 X 8 2 PART",
+		)
+
+	def test_tolerates_a_double_space_before_the_dash(self):
+		self.assertEqual(short_job_name("SUBARU KENYA", "SUBARU KENYA  - INVOICE"), "INVOICE")
+
+	def test_tolerates_a_missing_space_after_the_dash(self):
+		self.assertEqual(
+			short_job_name("EXCEL CHEMICALS LTD", "EXCEL CHEMICALS LTD -CASH SALE"),
+			"CASH SALE",
+		)
+
+	def test_leaves_an_unrelated_job_name_alone(self):
+		self.assertEqual(
+			short_job_name("DELIGHT PRINTERS AND STATIONERS LIMITED", "IMARIKA SACCO"),
+			"IMARIKA SACCO",
+		)
+
+	def test_never_returns_empty_when_the_job_is_only_the_customer(self):
+		self.assertEqual(
+			short_job_name("RECON STEEL LIMITED", "RECON STEEL LIMITED"),
+			"RECON STEEL LIMITED",
+		)
+
+	def test_handles_missing_values(self):
+		self.assertEqual(short_job_name("", ""), "")
+		self.assertEqual(short_job_name(None, None), "")
+		self.assertEqual(short_job_name(None, "INVOICE"), "INVOICE")
+
+
+class TestOpenJobCardStatuses(unittest.TestCase):
+	"""Which Job Card Computer Paper records belong on the chip row."""
+
+	def test_work_not_yet_finished_is_open(self):
+		for status in ("Open", "Planned", "In Production", "Packing Pending"):
+			self.assertTrue(job_card_is_open(status, 0), status)
+
+	def test_finished_or_abandoned_work_is_not(self):
+		for status in ("Completed", "Closed", "On Hold", "Cancelled"):
+			self.assertFalse(job_card_is_open(status, 0), status)
+
+	def test_a_cancelled_document_is_never_open(self):
+		self.assertFalse(job_card_is_open("In Production", 2))
+
+	def test_an_unknown_status_is_not_open(self):
+		self.assertFalse(job_card_is_open("", 0))
+		self.assertFalse(job_card_is_open(None, 0))
+
+
+class TestJobCardChip(unittest.TestCase):
+	"""What the phone shows for one job card, and what it fills in."""
+
+	def test_builds_the_two_display_lines_and_the_reference(self):
+		chip = job_card_chip(
+			"CHANDARIA INDUSTRIES LIMITED",
+			"CHANDARIA INDUSTRIES - INVOICE",
+			"JC-CPT-2026-00079",
+			"2026-09-02",
+		)
+		self.assertEqual(chip["customer_name"], "CHANDARIA INDUSTRIES LIMITED")
+		self.assertEqual(chip["job_name"], "INVOICE")
+		self.assertEqual(chip["ref"], "00079")
+		self.assertEqual(chip["job_card"], "JC-CPT-2026-00079")
+
+	def test_keeps_the_amended_suffix_in_the_reference(self):
+		chip = job_card_chip("V P P SHAH DISTRIBUTORS LIMITED", "VPP SHAH DISTRIBUTORS LTD - MERU",
+			"JC-CPT-2026-00075-1", "2026-09-01")
+		self.assertEqual(chip["ref"], "00075-1")
+
+	def test_falls_back_to_the_whole_name_when_it_does_not_match_the_series(self):
+		chip = job_card_chip("ACME", "ACME - THING", "SOMETHING-ELSE", None)
+		self.assertEqual(chip["ref"], "SOMETHING-ELSE")

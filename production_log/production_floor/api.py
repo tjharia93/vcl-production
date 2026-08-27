@@ -11,9 +11,11 @@ from frappe.utils import cint, today
 
 from production_log.production_floor.reporting import (
 	QuantityError,
+	OPEN_JOB_CARD_STATUSES,
 	build_report_text,
 	build_whatsapp_text,
 	exception_summary,
+	job_card_chip,
 	order_departments,
 	parse_quantity,
 	summarise,
@@ -48,6 +50,7 @@ ROW_FIELDS = [
 	"start_time",
 	"completed_time",
 	"source",
+	"production_job_card",
 	"erpnext_job_card",
 ]
 
@@ -165,8 +168,14 @@ def add_item(
 	status="Planned",
 	notes=None,
 	remember=1,
+	job_card=None,
 ):
-	"""Add one job to a day. This is the ten-second path."""
+	"""Add one job to a day. This is the ten-second path.
+
+	`job_card` is optional and always will be. A supervisor whose job has no
+	card yet types the customer and job themselves, exactly as before - the
+	guard below is unchanged.
+	"""
 	doc = _open_day(production_date)
 
 	customer_name = (customer_name or "").strip()
@@ -187,7 +196,8 @@ def add_item(
 		"status": status or "Planned",
 		"notes": notes,
 		"remember_job": cint(remember),
-		"source": "Manual",
+		"source": "Job Card" if job_card else "Manual",
+		"production_job_card": (job_card or "").strip() or None,
 	})
 	doc.save()
 	frappe.db.commit()
@@ -354,3 +364,36 @@ def get_history(limit=30):
 		day["counts"] = by_parent.get(day["name"], {})
 		day["total"] = sum(day["counts"].values())
 	return days
+
+
+@frappe.whitelist()
+def list_open_job_cards(limit=40):
+	"""Computer Paper job cards still open, soonest due first.
+
+	Read-only and deliberately forgiving. The floor screen calls this to fill
+	one optional chip row; if the query fails the row renders empty and the
+	Add Job dialog carries on unchanged, because a Job Card Tracking problem
+	must never stop a supervisor recording what ran.
+	"""
+	if not frappe.db.exists("DocType", "Job Card Computer Paper"):
+		return []
+	try:
+		cards = frappe.get_all(
+			"Job Card Computer Paper",
+			filters={
+				"docstatus": ["<", 2],
+				"job_status": ["in", list(OPEN_JOB_CARD_STATUSES)],
+			},
+			fields=["name", "customer", "specification_name", "due_date"],
+			order_by="due_date asc, name asc",
+			limit_page_length=cint(limit) or 40,
+		)
+	except frappe.PermissionError:
+		# A supervisor without read on Job Card Tracking still gets the dialog,
+		# just without the shortcut.
+		return []
+
+	return [
+		job_card_chip(card.customer, card.specification_name, card.name, card.due_date)
+		for card in cards
+	]
