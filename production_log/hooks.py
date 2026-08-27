@@ -17,6 +17,12 @@ required_apps = ["erpnext"]
 # include_js = {"page,html" : "public/js/file.js"}
 # include_css = {"page,html" : "public/css/file.css"}
 
+# The Production Floor screen. A plain file rather than a bundle, so it works
+# on a site that has not had `bench build` run since the deploy. Every selector
+# in it is namespaced under .vcl-*, so loading it desk-wide cannot restyle
+# anything that already exists.
+app_include_css = "/assets/production_log/css/production_floor.css"
+
 # Home Pages
 # ----------
 # home_page = "login"

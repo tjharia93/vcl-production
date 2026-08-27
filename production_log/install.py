@@ -11,8 +11,15 @@ def after_install():
 	already says it is done.
 	"""
 	from production_log.patches.v9_0 import setup_monobox
+	from production_log.production_floor import install as production_floor
 
 	setup_monobox.execute()
+
+	# The Production Floor module seeds its own roles, Settings Single, machine
+	# master and Select options. Called here rather than left to its patch for
+	# the reason in this function's docstring: on a fresh install the patch is
+	# stamped done without running.
+	production_floor.after_install()
 
 	frappe.msgprint(
 		"Production Log installed. "
@@ -36,11 +43,13 @@ def after_migrate():
 	target a no-op.
 	"""
 	from production_log.patches.v9_0 import setup_monobox
+	from production_log.production_floor import install as production_floor
 
 	setup_monobox.set_default_print_format()
 	backfill_die_names()
 	backfill_die_setup_status()
 	retire_dies_stopgap_client_script()
+	production_floor.after_migrate()
 
 
 def backfill_die_names():

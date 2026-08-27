@@ -1,0 +1,66 @@
+{
+ "app": "production_log",
+ "charts": [],
+ "content": "[{\"id\":\"vcl-head\",\"type\":\"header\",\"data\":{\"text\":\"Today\",\"col\":12}},{\"id\":\"vcl-board-card\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Today's Production\",\"col\":4}},{\"id\":\"vcl-day-list\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Production Days\",\"col\":4}},{\"id\":\"vcl-report\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Daily Production Report\",\"col\":4}},{\"id\":\"vcl-master-head\",\"type\":\"header\",\"data\":{\"text\":\"Masters\",\"col\":12}},{\"id\":\"vcl-jobs\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Remembered Jobs\",\"col\":4}},{\"id\":\"vcl-machines\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Machines & Processes\",\"col\":4}},{\"id\":\"vcl-settings\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Production Settings\",\"col\":4}}]",
+ "creation": "2026-08-26 00:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "milestone",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Production Floor",
+ "links": [],
+ "modified": "2026-08-26 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Production Floor",
+ "name": "Production Floor",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 1.0,
+ "shortcuts": [
+  {
+   "color": "Green",
+   "doc_view": "",
+   "label": "Today's Production",
+   "link_to": "vcl-production-lite",
+   "type": "Page"
+  },
+  {
+   "color": "Grey",
+   "label": "Production Days",
+   "link_to": "VCL Daily Production",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "label": "Daily Production Report",
+   "link_to": "VCL Daily Production Report",
+   "type": "Report"
+  },
+  {
+   "color": "Orange",
+   "label": "Remembered Jobs",
+   "link_to": "VCL Production Job",
+   "type": "DocType"
+  },
+  {
+   "color": "Yellow",
+   "label": "Machines & Processes",
+   "link_to": "VCL Production Machine",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "label": "Production Settings",
+   "link_to": "VCL Production Settings",
+   "type": "DocType"
+  }
+ ],
+ "title": "Production Floor"
+}
