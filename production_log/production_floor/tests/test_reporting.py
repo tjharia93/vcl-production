@@ -550,3 +550,46 @@ class SeedDataTests(unittest.TestCase):
 		carton = [r.elts[0].value for r in machines.elts if r.elts[1].value == "Carton"]
 		self.assertFalse(set(monobox) & set(carton))
 
+
+class StylesheetCacheBustTests(unittest.TestCase):
+	"""production_floor.css is served immutable for a year.
+
+	`bundled_asset` only hashes a path containing ".bundle." that does NOT start
+	with "/assets". Ours starts with "/assets", so it is returned verbatim and
+	nginx serves it `max-age=31536000, immutable`. Without a version in the
+	query string a CSS change never reaches a browser that has loaded the screen
+	before - which is what made the board render as unstyled boxes on the phone
+	on 2026-08-28.
+	"""
+
+	@staticmethod
+	def _hook_value():
+		import ast
+
+		here = os.path.dirname(os.path.abspath(__file__))
+		source = open(os.path.join(here, "..", "..", "hooks.py")).read()
+		tree = ast.parse(source)
+		for node in tree.body:
+			if isinstance(node, ast.Assign) and any(
+				getattr(t, "id", None) == "app_include_css" for t in node.targets
+			):
+				return node.value.value
+		raise AssertionError("app_include_css not found in hooks.py")
+
+	def test_the_stylesheet_include_carries_a_version(self):
+		value = self._hook_value()
+		self.assertIn("production_floor.css", value)
+		self.assertIn(
+			"?v=",
+			value,
+			"a plain /assets path is served immutable for a year - without ?v= a CSS "
+			"change is invisible to every browser that has opened the screen before",
+		)
+
+	def test_the_version_is_not_the_one_that_shipped_the_bug(self):
+		# 20260828 is the first version. Any later CSS edit must bump past it,
+		# so this asserts the marker is well formed rather than pinning a date.
+		version = self._hook_value().split("?v=")[1]
+		self.assertRegex(version, r"^\d{8}$", "use a YYYYMMDD version marker")
+		self.assertGreaterEqual(int(version), 20260828)
+
