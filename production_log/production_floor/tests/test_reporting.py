@@ -11,6 +11,7 @@ arguable against a test rather than against a live site.
 import os
 import sys
 import unittest
+from datetime import date
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -26,6 +27,12 @@ from production_log.production_floor.reporting import (  # noqa: E402
 	short_job_name,
 	job_card_is_open,
 	job_card_chip,
+	is_overdue,
+	OPEN_JOB_CARD_STATUSES,
+	DEFAULT_DEPARTMENTS,
+	JOB_CARD_SOURCES,
+	PLANNED_JOB_CARD_STATUS,
+	RECEIVED_JOB_CARD_STATUS,
 	format_qty,
 	job_title,
 	normalise_key,
@@ -340,3 +347,114 @@ class TestJobCardChip(unittest.TestCase):
 	def test_falls_back_to_the_whole_name_when_it_does_not_match_the_series(self):
 		chip = job_card_chip("ACME", "ACME - THING", "SOMETHING-ELSE", None)
 		self.assertEqual(chip["ref"], "SOMETHING-ELSE")
+
+
+class ToPlanStripTests(unittest.TestCase):
+	"""The To Plan strip is derived from the job card's own status vocabulary.
+
+	These lock the two facts the strip depends on: "received" means Open, and
+	planning a job means moving it to Planned. If either drifts, the strip
+	either never fills or never drains.
+	"""
+
+	def test_received_is_open_and_planned_is_planned(self):
+		self.assertEqual(RECEIVED_JOB_CARD_STATUS, "Open")
+		self.assertEqual(PLANNED_JOB_CARD_STATUS, "Planned")
+
+	def test_both_are_real_job_card_statuses(self):
+		# Open and Planned are both in the open set, so a card cannot fall off
+		# the floor's radar just by being planned.
+		self.assertIn(RECEIVED_JOB_CARD_STATUS, OPEN_JOB_CARD_STATUSES)
+		self.assertIn(PLANNED_JOB_CARD_STATUS, OPEN_JOB_CARD_STATUSES)
+
+	def test_every_source_names_a_known_department(self):
+		for source in JOB_CARD_SOURCES:
+			self.assertIn(source["department"], DEFAULT_DEPARTMENTS, source["doctype"])
+
+	def test_every_source_declares_the_fields_the_query_needs(self):
+		for source in JOB_CARD_SOURCES:
+			for key in ("doctype", "department", "customer_field", "instructions_field"):
+				self.assertIn(key, source, source.get("doctype"))
+
+	def test_computer_paper_uses_order_comments_not_production_notes(self):
+		# production_notes is the floor's own commentary; putting it in the
+		# read-only "From the Job Card" box would blur the very line we drew.
+		cp = next(s for s in JOB_CARD_SOURCES if s["doctype"] == "Job Card Computer Paper")
+		self.assertEqual(cp["instructions_field"], "order_comments")
+
+	def test_carton_customer_field_differs_from_the_others(self):
+		by_doctype = {s["doctype"]: s for s in JOB_CARD_SOURCES}
+		self.assertEqual(by_doctype["Job Card Carton"]["customer_field"], "customer_name")
+		self.assertEqual(by_doctype["Job Card Computer Paper"]["customer_field"], "customer")
+
+
+class ChipExtrasTests(unittest.TestCase):
+	def test_chip_carries_what_the_quick_add_sheet_prefills(self):
+		chip = job_card_chip(
+			"EXCEL CHEMICALS LTD",
+			"EXCEL CHEMICALS LTD - CASH SALE",
+			"JC-CPT-2026-00077",
+			"2026-09-03",
+			doctype="Job Card Computer Paper",
+			department="Computer",
+			quantity=12,
+			instructions="  Deliver Friday AM  ",
+			as_of="2026-08-28",
+		)
+		self.assertEqual(chip["department"], "Computer")
+		self.assertEqual(chip["doctype"], "Job Card Computer Paper")
+		self.assertEqual(chip["quantity"], 12)
+		self.assertEqual(chip["instructions"], "Deliver Friday AM")
+		self.assertFalse(chip["overdue"])
+
+	def test_blank_instructions_become_none_not_empty_string(self):
+		# So the phone can test truthiness and not render an empty grey box.
+		chip = job_card_chip("ACME", "ACME - THING", "JC-CORR-2026-0079", None, instructions="   ")
+		self.assertIsNone(chip["instructions"])
+
+	def test_chip_still_works_with_the_original_four_arguments(self):
+		chip = job_card_chip("ACME", "ACME - THING", "JC-CORR-2026-0079", "2026-08-29")
+		self.assertEqual(chip["ref"], "0079")
+		self.assertIsNone(chip["department"])
+		self.assertIsNone(chip["instructions"])
+
+
+class OverdueTests(unittest.TestCase):
+	def test_a_due_date_in_the_past_is_overdue(self):
+		self.assertTrue(is_overdue("2026-07-10", "2026-08-28"))
+
+	def test_today_is_not_yet_overdue(self):
+		self.assertFalse(is_overdue("2026-08-28", "2026-08-28"))
+
+	def test_a_future_due_date_is_not_overdue(self):
+		self.assertFalse(is_overdue("2026-09-03", "2026-08-28"))
+
+	def test_no_due_date_is_not_overdue(self):
+		# An undated card is unscheduled, not late. Colouring it red would put
+		# a permanent row of alarm on the strip that nobody can clear.
+		self.assertFalse(is_overdue(None, "2026-08-28"))
+		self.assertFalse(is_overdue("", "2026-08-28"))
+
+	def test_an_unparseable_date_is_not_overdue(self):
+		self.assertFalse(is_overdue("not a date", "2026-08-28"))
+
+	def test_accepts_a_datetime_string(self):
+		self.assertTrue(is_overdue("2026-07-10 00:00:00", "2026-08-28"))
+
+	def test_accepts_real_date_objects(self):
+		self.assertTrue(is_overdue(date(2026, 7, 10), date(2026, 8, 28)))
+
+
+class MonoboxDepartmentTests(unittest.TestCase):
+	def test_monobox_is_a_department(self):
+		self.assertIn("Monobox", DEFAULT_DEPARTMENTS)
+
+	def test_the_existing_four_keep_their_order(self):
+		# Monobox is appended, not inserted: the WhatsApp report's department
+		# order is what the floor reads every evening, and reordering it would
+		# be a visible change nobody asked for.
+		self.assertEqual(DEFAULT_DEPARTMENTS[:4], ["Computer", "Offset", "Carton", "Labels"])
+
+	def test_a_monobox_row_lands_in_its_own_section(self):
+		rows = [row(department="Computer"), row(department="Monobox")]
+		self.assertEqual(order_departments(rows, DEFAULT_DEPARTMENTS), ["Computer", "Monobox"])

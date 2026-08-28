@@ -282,16 +282,62 @@ class TestVCLDailyProduction(FrappeTestCase):
 		doc.items[0].actual_quantity = 2
 		doc.save()   # must not raise
 
-	def test_the_job_card_list_is_only_open_computer_paper_work(self):
-		from production_log.production_floor.api import list_open_job_cards
+	def test_the_to_plan_list_is_only_received_work(self):
+		from production_log.production_floor.api import list_to_plan
 
-		cards = list_open_job_cards()
+		cards = list_to_plan()
 		self.assertIsInstance(cards, list)
 		for card in cards:
 			self.assertTrue(card["job_card"])
 			self.assertIn("customer_name", card)
 			self.assertIn("ref", card)
-			status = frappe.db.get_value(
-				"Job Card Computer Paper", card["job_card"], "job_status"
+			self.assertIn(card["department"], ("Computer", "Carton", "Monobox"))
+			# Received means Open and nothing else. A card already Planned or in
+			# production must not come back, or the strip never drains.
+			status = frappe.db.get_value(card["doctype"], card["job_card"], "job_status")
+			self.assertEqual(status, "Open")
+
+	def test_the_to_plan_list_can_be_filtered_to_one_department(self):
+		from production_log.production_floor.api import list_to_plan
+
+		for card in list_to_plan(department="Carton"):
+			self.assertEqual(card["department"], "Carton")
+			self.assertEqual(card["doctype"], "Job Card Carton")
+
+	def test_planning_from_a_card_flips_it_and_keeps_the_two_notes_apart(self):
+		card_name = frappe.db.get_value(
+			"Job Card Computer Paper", {"job_status": "Open", "docstatus": ["<", 2]}, "name"
+		)
+		if not card_name:
+			self.skipTest("no received Computer Paper card on this site")
+
+		# add_item commits, so the usual test rollback will not put this back.
+		# Restore it by hand or the run leaves a real card sitting at Planned.
+		def restore():
+			frappe.db.set_value(
+				"Job Card Computer Paper", card_name, "job_status", "Open", update_modified=False
 			)
-			self.assertIn(status, ("Open", "Planned", "In Production", "Packing Pending"))
+			frappe.db.commit()
+
+		self.addCleanup(restore)
+
+		day = add_item(
+			production_date=self.date,
+			department="Computer",
+			machine="M1",
+			customer_name="Chandaria",
+			job_name="Yellow Copy",
+			planned_quantity="2",
+			uom="reels",
+			job_card=card_name,
+			job_card_doctype="Job Card Computer Paper",
+			job_card_instructions="Perforate at 210mm",
+			notes="M1 running slow",
+		)
+
+		row = day["items"][-1]
+		self.assertEqual(row["job_card_instructions"], "Perforate at 210mm")
+		self.assertEqual(row["notes"], "M1 running slow")
+		self.assertEqual(
+			frappe.db.get_value("Job Card Computer Paper", card_name, "job_status"), "Planned"
+		)

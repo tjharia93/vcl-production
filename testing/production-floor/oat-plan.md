@@ -18,6 +18,33 @@ Run OAT **first**, UAT **second**. If OAT fails, UAT cannot begin.
 > **Update this section in every PR.** Note anything the deployer must watch
 > for: new patches, fixtures, hooks, role changes, route changes.
 
+### 2026-08-28 — The To Plan strip, and a Monobox department
+
+**Behaviour change plus one new DocField, no patch.**
+
+- `VCL Daily Production Item` gains `job_card_instructions` (Small Text,
+  read-only). New DocField, applies at model sync.
+- **Monobox** is added to `DEFAULT_DEPARTMENTS` and to the three `department`
+  Select lists. The live options are driven by Property Setters that
+  `install.after_migrate → apply_select_options()` rewrites on every migrate,
+  so the JSON change and the Property Setter agree after one migrate.
+- `after_migrate` now also calls `seed_machines()`, which adds the six Monobox
+  stages. It only ever adds what is missing. **Retire a machine by unticking
+  `active`, not by deleting it**, or the next migrate brings it back.
+- `list_open_job_cards()` is renamed `list_to_plan()` and now covers Computer
+  Paper, Carton and Monobox, filtered to `job_status = "Open"`.
+
+**The one thing to watch:** planning a job from the strip **writes** to a Job
+Card Tracking document — `job_status: Open → Planned`. It runs after the
+production row is saved and swallows its own failures, so the worst case is a
+card that stays on the strip, never a row that is lost.
+
+**Also worth knowing:** `special_instructions` / `order_comments` are empty on
+every currently open card, so the "From the Job Card" box will render blank
+until someone starts filling them in. The plumbing is there; the data is not.
+
+**Test counts move:** bench-free 41 → **60**, bench 13 → **15**.
+
 ### 2026-08-27 — Add Job can pick an open Computer Paper job card
 
 **Behaviour change, no patch.** Two read-only `Data` fields are added
@@ -26,7 +53,8 @@ Job`) and `source` gains a `Job Card` option. New DocFields and a changed
 Select option list both apply at model sync, so there is nothing to run.
 
 **The one thing to watch:** the floor screen now reads a **Job Card Tracking**
-DocType. `list_open_job_cards()` queries `Job Card Computer Paper` read-only,
+DocType. `list_open_job_cards()` (since renamed `list_to_plan()`) queries
+`Job Card Computer Paper` read-only,
 returns `[]` when the DocType is absent, and swallows `PermissionError` so a
 supervisor without read on Job Card Tracking still gets a working dialog —
 just without the shortcut. Section 11 checks this.

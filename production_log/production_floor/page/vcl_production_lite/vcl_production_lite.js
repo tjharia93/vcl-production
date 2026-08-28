@@ -185,6 +185,14 @@ class VclProductionBoard {
 			parts.push(attention);
 		}
 
+		// Above the machines on purpose: what has not been planned yet is the
+		// first thing a supervisor should see, not something found by scrolling
+		// past everything that already has a machine.
+		const to_plan = this.render_to_plan();
+		if (to_plan) {
+			parts.push(to_plan);
+		}
+
 		if (!day.items.length) {
 			parts.push(`
 				<div class="vcl-empty">
@@ -212,6 +220,62 @@ class VclProductionBoard {
 		parts.push(this.render_day_footer(day));
 		this.$body.html(parts.join(""));
 		this.bind_footer();
+		this.bind_to_plan();
+	}
+
+	// ------------------------------------------------------------------
+	// to plan
+	// ------------------------------------------------------------------
+
+	render_to_plan() {
+		// "Received but not yet planned" is not a status anybody keys in - it is
+		// a job card sitting at Open. Planning it flips the card to Planned and
+		// it leaves this strip on its own.
+		const cards = this.board.to_plan || [];
+		if (!cards.length || this.board.day.status === "Closed") {
+			return "";
+		}
+
+		const chips = cards
+			.map((card, index) => {
+				const due = card.due_date
+					? frappe.datetime.str_to_user(card.due_date)
+					: __("no date");
+				return `
+				<button type="button" class="vcl-toplan-chip ${card.overdue ? "vcl-overdue" : ""}"
+					data-toplan="${index}">
+					<div class="vcl-toplan-top">
+						<span class="vcl-toplan-ref">${frappe.utils.escape_html(card.ref)}</span>
+						<span class="vcl-toplan-dept">${frappe.utils.escape_html(card.department || "")}</span>
+					</div>
+					<div class="vcl-toplan-customer">${frappe.utils.escape_html(card.customer_name || "")}</div>
+					<div class="vcl-toplan-job">${frappe.utils.escape_html(card.job_name || "")}</div>
+					<div class="vcl-toplan-due">${frappe.utils.escape_html(due)}</div>
+				</button>
+			`;
+			})
+			.join("");
+
+		return `
+			<div class="vcl-toplan">
+				<div class="vcl-toplan-head">
+					<span>${__("To Plan")}</span>
+					<span class="vcl-toplan-count">${cards.length}</span>
+				</div>
+				<div class="vcl-toplan-hint">${__("Received, not yet on a machine. Tap one to plan it.")}</div>
+				<div class="vcl-toplan-list">${chips}</div>
+			</div>
+		`;
+	}
+
+	bind_to_plan() {
+		this.$body.find(".vcl-toplan-chip").on("click", (event) => {
+			const index = $(event.currentTarget).data("toplan");
+			const card = (this.board.to_plan || [])[index];
+			if (card) {
+				this.quick_add_dialog(card);
+			}
+		});
 	}
 
 	render_day_header(day) {
@@ -291,6 +355,10 @@ class VclProductionBoard {
 		const planned = this.format_qty(row.planned_quantity);
 		const actual = this.format_qty(row.actual_quantity);
 		const reason = (row.reason || "").trim();
+		// Two different voices, never merged into one line: the office wrote
+		// the first, the floor wrote the second.
+		const instructions = (row.job_card_instructions || "").trim();
+		const notes = (row.notes || "").trim();
 		return `
 			<div class="vcl-card" data-row="${frappe.utils.escape_html(row.name)}">
 				<div class="vcl-card-main">
@@ -304,6 +372,20 @@ class VclProductionBoard {
 						<span class="vcl-qty-unit">${unit}</span>
 					</div>
 					${reason ? `<div class="vcl-reason">${frappe.utils.escape_html(reason)}</div>` : ""}
+					${
+						instructions
+							? `<div class="vcl-from-card"><span class="vcl-from-card-tag">${__(
+									"From the card"
+							  )}</span> ${frappe.utils.escape_html(instructions)}</div>`
+							: ""
+					}
+					${
+						notes
+							? `<div class="vcl-floor-note"><span class="vcl-floor-note-tag">${__(
+									"Floor"
+							  )}</span> ${frappe.utils.escape_html(notes)}</div>`
+							: ""
+					}
 				</div>
 				<div class="vcl-card-side">
 					<span class="vcl-badge ${VCL_STATUS_CLASS[row.status] || ""}">${__(row.status)}</span>
@@ -558,6 +640,130 @@ class VclProductionBoard {
 	// dialogs
 	// ------------------------------------------------------------------
 
+	quick_add_dialog(card) {
+		// The short path. Everything the job card already knows is filled in,
+		// so the only decision left at the machine is which machine - which is
+		// the one thing the card cannot tell us.
+		const machines = (this.board.machines || []).filter(
+			(machine) => machine.department === card.department
+		);
+		const units = this.board.units || [];
+
+		if (!machines.length) {
+			frappe.msgprint({
+				title: __("No Machines"),
+				message: __("{0} has no active machine or process set up yet.", [
+					card.department || __("That department"),
+				]),
+				indicator: "orange",
+			});
+			return;
+		}
+
+		const dialog = new frappe.ui.Dialog({
+			title: __("Plan Job"),
+			size: "small",
+			fields: [
+				{ fieldname: "header", fieldtype: "HTML" },
+				{
+					fieldname: "machine",
+					fieldtype: "Select",
+					label: __("Machine / Process"),
+					options: machines.map((machine) => machine.name),
+					default: machines[0].name,
+					reqd: 1,
+				},
+				{
+					fieldname: "planned_quantity",
+					fieldtype: "Data",
+					label: __("Planned Quantity"),
+					default: card.quantity ? String(card.quantity) : "",
+				},
+				{
+					fieldname: "uom",
+					fieldtype: "Select",
+					label: __("Unit"),
+					options: units,
+				},
+				{
+					fieldname: "notes",
+					fieldtype: "Small Text",
+					label: __("Notes"),
+					description: __("The floor's own. What the card asked for is kept separate."),
+				},
+				{ fieldname: "instructions", fieldtype: "HTML" },
+			],
+			primary_action_label: __("Add to Board"),
+			primary_action: (values) => this.submit_quick_add(dialog, values, card),
+		});
+
+		dialog.fields_dict.header.$wrapper.html(`
+			<div class="vcl-quick-head">
+				<div class="vcl-quick-ref">${frappe.utils.escape_html(card.job_card)}</div>
+				<div class="vcl-quick-customer">${frappe.utils.escape_html(card.customer_name || "")}</div>
+				<div class="vcl-quick-job">${frappe.utils.escape_html(card.job_name || "")}</div>
+			</div>
+		`);
+
+		// Read-only, and visibly not the Notes box. This is what the office
+		// wrote on the card; the supervisor does not edit it from the floor.
+		const $instructions = dialog.fields_dict.instructions.$wrapper;
+		if (card.instructions) {
+			$instructions.html(`
+				<div class="vcl-quick-instructions">
+					<div class="vcl-quick-instructions-head">${__("From the Job Card")}</div>
+					<div class="vcl-quick-instructions-body">${frappe.utils.escape_html(
+						card.instructions
+					)}</div>
+				</div>
+			`);
+		} else {
+			$instructions.empty();
+		}
+
+		dialog.show();
+	}
+
+	submit_quick_add(dialog, values, card) {
+		const invalid = this.numeric_error(values.planned_quantity, __("Planned Quantity"));
+		if (invalid) {
+			frappe.msgprint(invalid);
+			return;
+		}
+		frappe
+			.call({
+				method: "production_log.production_floor.api.add_item",
+				args: {
+					production_date: this.date,
+					department: card.department,
+					machine: values.machine,
+					customer_name: card.customer_name,
+					job_name: card.job_name,
+					planned_quantity: values.planned_quantity,
+					uom: values.uom,
+					status: "Planned",
+					notes: values.notes,
+					job_card: card.job_card,
+					job_card_doctype: card.doctype,
+					job_card_instructions: card.instructions,
+				},
+				freeze: true,
+			})
+			.then((response) => {
+				if (!response.message) {
+					return;
+				}
+				// Drop the chip locally rather than re-fetching the whole board.
+				// The card is now Planned, so the next refresh agrees; doing it
+				// here keeps the phone at one round trip per job.
+				this.board.to_plan = (this.board.to_plan || []).filter(
+					(chip) => chip.job_card !== card.job_card
+				);
+				dialog.hide();
+				this.apply_day(response.message);
+			});
+	}
+
 	add_job_dialog() {
 		const departments = this.board.departments || [];
 		const units = this.board.units || [];
@@ -732,18 +938,24 @@ class VclProductionBoard {
 	}
 
 	render_job_cards(dialog) {
-		// Optional shortcut, never a requirement. Computer Paper job cards are
-		// the only kind that exist, so the row is shown for that department
-		// only; every other department types as it always has.
+		// Optional shortcut, never a requirement. Same source as the To Plan
+		// strip, filtered to the department in the dialog - a supervisor whose
+		// job has no card types it in, exactly as before.
 		const wrapper = dialog.fields_dict.job_cards.$wrapper;
 		const department = dialog.get_value("department");
-		dialog.set_df_property("job_cards", "hidden", department !== "Computer");
-		if (department !== "Computer") {
+		const has_cards = (this.board.to_plan || []).some(
+			(card) => card.department === department
+		);
+		dialog.set_df_property("job_cards", "hidden", !has_cards);
+		if (!has_cards) {
 			wrapper.empty();
 			return;
 		}
 		frappe
-			.call({ method: "production_log.production_floor.api.list_open_job_cards" })
+			.call({
+				method: "production_log.production_floor.api.list_to_plan",
+				args: { department: department },
+			})
 			.then((response) => {
 				const cards = response.message || [];
 				if (!cards.length) {
@@ -777,7 +989,10 @@ class VclProductionBoard {
 					$(event.currentTarget).addClass("selected");
 					dialog.set_value("customer_name", card.customer_name);
 					dialog.set_value("job_name", card.job_name);
-					this.picked_job_card = card.job_card;
+					if (card.quantity && !dialog.get_value("planned_quantity")) {
+						dialog.set_value("planned_quantity", String(card.quantity));
+					}
+					this.picked_job_card = card;
 				});
 			})
 			.catch(() => {
@@ -805,12 +1020,20 @@ class VclProductionBoard {
 					uom: values.uom,
 					production_job: values.production_job || null,
 					remember: values.remember ? 1 : 0,
-					job_card: this.picked_job_card || null,
+					job_card: (this.picked_job_card || {}).job_card || null,
+					job_card_doctype: (this.picked_job_card || {}).doctype || null,
+					job_card_instructions: (this.picked_job_card || {}).instructions || null,
 				},
 				freeze: true,
 			})
 			.then((response) => {
 				if (response.message) {
+					const picked = this.picked_job_card;
+					if (picked) {
+						this.board.to_plan = (this.board.to_plan || []).filter(
+							(chip) => chip.job_card !== picked.job_card
+						);
+					}
 					dialog.hide();
 					this.apply_day(response.message);
 					frappe.show_alert({ message: __("Job added"), indicator: "green" });

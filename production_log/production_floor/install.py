@@ -27,6 +27,12 @@ def after_install():
 def after_migrate():
 	create_roles()
 	ensure_settings()
+	# Seeding on migrate too, not just install. `seed_machines` only ever adds
+	# what is missing, and without this a department added in a later release
+	# (Monobox, 2026-08) reaches an existing site with no machines under it -
+	# which shows as a department you cannot add a job to. Retire a machine by
+	# unticking `active`, not by deleting it, or this will bring it back.
+	seed_machines()
 	apply_select_options()
 	frappe.db.commit()
 

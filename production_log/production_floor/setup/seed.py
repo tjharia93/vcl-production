@@ -32,6 +32,15 @@ MACHINES = [
 	("Bundling", "Carton", "Process", 50),
 	("Gluing", "Carton", "Process", 60),
 	("Propheteer", "Labels", "Machine", 10),
+	# Monobox runs as six in-house stages, not machines - the same six the
+	# Monobox job traveller is built around. Names are spelled out in full so
+	# they do not collide with the Carton processes ("Die Cutting", "Bundling").
+	("Board Prep & Printing", "Monobox", "Process", 10),
+	("Coating", "Monobox", "Process", 20),
+	("Die-cutting & Stripping", "Monobox", "Process", 30),
+	("Window Patching", "Monobox", "Process", 40),
+	("Folding & Gluing", "Monobox", "Process", 50),
+	("Bundling & Packing", "Monobox", "Process", 60),
 ]
 
 DEMO_JOBS = [

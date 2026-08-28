@@ -548,3 +548,214 @@
 	color: #6b7280;
 	line-height: 1.3;
 }
+
+/* ------------------------------------------------------------- to plan */
+
+/*
+ * Received, not yet on a machine. Deliberately blue and not amber: this is
+ * work waiting, not something that has gone wrong. Amber and red on this
+ * screen already mean "needs attention" and "late", and the strip would shout
+ * over both of them every morning if it borrowed either.
+ */
+
+.vcl-board .vcl-toplan {
+	border: 1px solid #c9d2ee;
+	background: #f6f8fd;
+	border-radius: 8px;
+	padding: 12px;
+	margin-bottom: 16px;
+}
+
+.vcl-board .vcl-toplan-head {
+	font-weight: 700;
+	text-transform: uppercase;
+	font-size: 13px;
+	letter-spacing: 0.05em;
+	display: flex;
+	justify-content: space-between;
+	color: #2b3990;
+}
+
+.vcl-board .vcl-toplan-count {
+	background: #2b3990;
+	color: #fff;
+	border-radius: 10px;
+	padding: 0 8px;
+}
+
+.vcl-board .vcl-toplan-hint {
+	font-size: 12px;
+	color: var(--vcl-muted);
+	margin: 4px 0 10px;
+}
+
+/* Scrolls sideways rather than growing the page. Eighteen open cards must not
+   push the machines a full screen down. */
+.vcl-board .vcl-toplan-list {
+	display: flex;
+	gap: 8px;
+	overflow-x: auto;
+	padding-bottom: 4px;
+	-webkit-overflow-scrolling: touch;
+}
+
+.vcl-board .vcl-toplan-chip {
+	flex: 0 0 auto;
+	width: 190px;
+	min-height: 88px;
+	text-align: left;
+	border: 1px solid #c9d2ee;
+	border-radius: 8px;
+	background: #fff;
+	padding: 8px 10px;
+	cursor: pointer;
+}
+
+.vcl-board .vcl-toplan-chip:hover,
+.vcl-board .vcl-toplan-chip:focus {
+	border-color: #2b3990;
+	background: #edf0fb;
+}
+
+.vcl-board .vcl-toplan-top {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 6px;
+}
+
+.vcl-board .vcl-toplan-ref {
+	font-family: "Courier New", Courier, monospace;
+	font-size: 11px;
+	font-weight: 700;
+	color: #2b3990;
+}
+
+.vcl-board .vcl-toplan-dept {
+	font-size: 10px;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--vcl-muted);
+}
+
+.vcl-board .vcl-toplan-customer {
+	font-size: 13px;
+	font-weight: 600;
+	margin-top: 4px;
+	line-height: 1.25;
+}
+
+.vcl-board .vcl-toplan-job {
+	font-size: 12px;
+	color: var(--vcl-muted);
+	line-height: 1.25;
+}
+
+.vcl-board .vcl-toplan-due {
+	font-size: 11px;
+	color: var(--vcl-muted);
+	margin-top: 4px;
+}
+
+.vcl-board .vcl-toplan-chip.vcl-overdue {
+	border-color: #e5a6ac;
+}
+
+.vcl-board .vcl-toplan-chip.vcl-overdue .vcl-toplan-due {
+	color: #b02a37;
+	font-weight: 700;
+}
+
+/* ----------------------------------------------- the card's own words */
+
+/*
+ * Two voices on one row card. The office wrote `From the card`; the floor
+ * wrote `Floor`. They are never concatenated into a single line, because the
+ * supervisor needs to know at a glance which half they are allowed to change.
+ */
+
+.vcl-board .vcl-from-card,
+.vcl-board .vcl-floor-note {
+	margin-top: 6px;
+	font-size: 12px;
+	line-height: 1.35;
+}
+
+.vcl-board .vcl-from-card {
+	color: #3f4650;
+}
+
+.vcl-board .vcl-floor-note {
+	color: var(--vcl-muted);
+}
+
+.vcl-board .vcl-from-card-tag,
+.vcl-board .vcl-floor-note-tag {
+	display: inline-block;
+	font-size: 10px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	border-radius: 3px;
+	padding: 1px 5px;
+	margin-right: 4px;
+}
+
+.vcl-board .vcl-from-card-tag {
+	background: #edf0fb;
+	color: #2b3990;
+}
+
+.vcl-board .vcl-floor-note-tag {
+	background: #eef0f2;
+	color: var(--vcl-muted);
+}
+
+/* ------------------------------------------------------ quick add sheet */
+
+.vcl-quick-head {
+	border-bottom: 1px solid #e2e6ea;
+	padding-bottom: 10px;
+	margin-bottom: 4px;
+}
+
+.vcl-quick-ref {
+	font-family: "Courier New", Courier, monospace;
+	font-size: 11px;
+	font-weight: 700;
+	color: #2b3990;
+}
+
+.vcl-quick-customer {
+	font-size: 15px;
+	font-weight: 600;
+	margin-top: 2px;
+}
+
+.vcl-quick-job {
+	font-size: 13px;
+	color: #6b7280;
+}
+
+.vcl-quick-instructions {
+	border: 1px solid #c9d2ee;
+	background: #f6f8fd;
+	border-radius: 6px;
+	padding: 8px 10px;
+	margin-top: 4px;
+}
+
+.vcl-quick-instructions-head {
+	font-size: 10px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: #2b3990;
+	margin-bottom: 3px;
+}
+
+.vcl-quick-instructions-body {
+	font-size: 13px;
+	line-height: 1.4;
+	white-space: pre-wrap;
+}
