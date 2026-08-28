@@ -549,121 +549,349 @@
 	line-height: 1.3;
 }
 
-/* ------------------------------------------------------------- to plan */
+/* --------------------------------------------------- responsive shell */
 
 /*
- * Received, not yet on a machine. Deliberately blue and not amber: this is
- * work waiting, not something that has gone wrong. Amber and red on this
- * screen already mean "needs attention" and "late", and the strip would shout
- * over both of them every morning if it borrowed either.
+ * Two layouts, one screen. The phone gets a single thumb-reachable column;
+ * the desk gets departments side by side with the queue standing beside them.
+ * The breakpoint is 1024px and it lives HERE, not in the JS - both shapes are
+ * always in the markup, so a resize is correct without a re-render.
  */
 
-.vcl-board .vcl-toplan {
-	border: 1px solid #c9d2ee;
-	background: #f6f8fd;
-	border-radius: 8px;
-	padding: 12px;
-	margin-bottom: 16px;
+.vcl-board .vcl-split { display: block; }
+.vcl-board .vcl-lanes { display: block; }
+
+@media (min-width: 1024px) {
+	.vcl-board { max-width: 1400px; }
+
+	.vcl-board .vcl-split {
+		display: grid;
+		grid-template-columns: 280px minmax(0, 1fr);
+		gap: 20px;
+		align-items: start;
+	}
+
+	/* Departments stacked means scrolling to compare. Side by side, the whole
+	   floor is one glance - and an empty column says as much as a full one. */
+	.vcl-board .vcl-lanes {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+		gap: 18px;
+		align-items: start;
+	}
+	.vcl-board .vcl-dept { margin-bottom: 0; }
 }
 
-.vcl-board .vcl-toplan-head {
+/* ------------------------------------------------------------- to plan */
+
+/* The queue is blue, not amber: this is work waiting, not work that has gone
+   wrong. Amber and red already mean "needs attention" and "late" here, and the
+   queue would shout over both of them every morning if it borrowed either. */
+
+.vcl-board .vcl-rail { display: none; }
+
+@media (min-width: 1024px) {
+	.vcl-board .vcl-rail {
+		display: block;
+		position: sticky;
+		top: calc(var(--vcl-sticky-top, 0px) + 76px);
+		border: 1px solid #c9d2ee;
+		background: #f6f8fd;
+		border-radius: 8px;
+		padding: 12px;
+		max-height: calc(100vh - var(--vcl-sticky-top, 0px) - 96px);
+		overflow-y: auto;
+	}
+}
+
+.vcl-board .vcl-rail-head {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
 	font-weight: 700;
 	text-transform: uppercase;
 	font-size: 13px;
 	letter-spacing: 0.05em;
-	display: flex;
-	justify-content: space-between;
 	color: #2b3990;
 }
 
-.vcl-board .vcl-toplan-count {
+.vcl-board .vcl-rail-count {
 	background: #2b3990;
 	color: #fff;
 	border-radius: 10px;
 	padding: 0 8px;
 }
 
-.vcl-board .vcl-toplan-hint {
+.vcl-board .vcl-rail-hint {
 	font-size: 12px;
 	color: var(--vcl-muted);
 	margin: 4px 0 10px;
 }
 
-/* Scrolls sideways rather than growing the page. Eighteen open cards must not
-   push the machines a full screen down. */
-.vcl-board .vcl-toplan-list {
+.vcl-board .vcl-rail-list {
 	display: flex;
+	flex-direction: column;
 	gap: 8px;
-	overflow-x: auto;
-	padding-bottom: 4px;
-	-webkit-overflow-scrolling: touch;
 }
 
-.vcl-board .vcl-toplan-chip {
-	flex: 0 0 auto;
-	width: 190px;
-	min-height: 88px;
+/* ----------------------------------------------------- the To Plan bar */
+
+/*
+ * Phone. One line, not a carousel: during the day the phone's job is
+ * recording, not planning, so the queue must not own the top of the board
+ * from 08:00 to 17:00. Tapping it opens the full-screen queue instead.
+ */
+
+.vcl-board .vcl-planbar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	min-height: 56px;
 	text-align: left;
+	padding: 10px 12px;
+	margin-bottom: 16px;
 	border: 1px solid #c9d2ee;
+	background: #f6f8fd;
 	border-radius: 8px;
-	background: #fff;
-	padding: 8px 10px;
 	cursor: pointer;
 }
 
-.vcl-board .vcl-toplan-chip:hover,
-.vcl-board .vcl-toplan-chip:focus {
-	border-color: #2b3990;
-	background: #edf0fb;
+@media (min-width: 1024px) {
+	.vcl-board .vcl-planbar { display: none; }
 }
 
-.vcl-board .vcl-toplan-top {
+.vcl-board .vcl-planbar-n {
+	font-size: 26px;
+	font-weight: 700;
+	line-height: 1;
+	color: #2b3990;
+	font-variant-numeric: tabular-nums;
+}
+
+.vcl-board .vcl-planbar-txt {
 	display: flex;
-	justify-content: space-between;
-	align-items: baseline;
-	gap: 6px;
+	flex-direction: column;
+	min-width: 0;
 }
 
-.vcl-board .vcl-toplan-ref {
+.vcl-board .vcl-planbar-txt b { font-size: 14px; }
+
+.vcl-board .vcl-planbar-txt span {
+	font-size: 12px;
+	color: var(--vcl-muted);
+}
+
+.vcl-board .vcl-planbar-late {
+	font-size: 11px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: #b02a37;
+	background: #fbe2e4;
+	padding: 2px 8px;
+	border-radius: 10px;
+	white-space: nowrap;
+}
+
+.vcl-board .vcl-planbar-go {
+	margin-left: auto;
+	color: #2b3990;
+	font-size: 22px;
+	line-height: 1;
+}
+
+/* --------------------------------------------------------- queue rows */
+
+.vcl-board .vcl-qrow {
+	display: grid;
+	grid-template-columns: 3px minmax(0, 1fr) auto;
+	align-items: center;
+	width: 100%;
+	/* 56px keeps every row clear of the 44px touch floor with room to spare */
+	min-height: 56px;
+	text-align: left;
+	background: #fff;
+	border: 1px solid #c9d2ee;
+	border-radius: 8px;
+	overflow: hidden;
+	padding: 0;
+	cursor: pointer;
+}
+
+.vcl-board .vcl-qrow + .vcl-qrow { margin-top: 8px; }
+.vcl-board .vcl-qrow:hover,
+.vcl-board .vcl-qrow:focus { border-color: #2b3990; background: #f6f8fd; }
+
+.vcl-board .vcl-qrow-stripe { background: #9aa6d4; align-self: stretch; }
+.vcl-board .vcl-qrow.vcl-overdue { border-color: #e5a6ac; }
+.vcl-board .vcl-qrow.vcl-overdue .vcl-qrow-stripe { background: #b02a37; }
+
+.vcl-board .vcl-qrow-in {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 8px 10px;
+	min-width: 0;
+}
+
+.vcl-board .vcl-qrow-top {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+}
+
+.vcl-board .vcl-qrow-ref {
 	font-family: "Courier New", Courier, monospace;
 	font-size: 11px;
 	font-weight: 700;
 	color: #2b3990;
 }
 
-.vcl-board .vcl-toplan-dept {
+.vcl-board .vcl-qrow-dept {
 	font-size: 10px;
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
 	color: var(--vcl-muted);
 }
 
-.vcl-board .vcl-toplan-customer {
+.vcl-board .vcl-qrow-cust {
 	font-size: 13px;
 	font-weight: 600;
-	margin-top: 4px;
 	line-height: 1.25;
 }
 
-.vcl-board .vcl-toplan-job {
+.vcl-board .vcl-qrow-job {
 	font-size: 12px;
 	color: var(--vcl-muted);
 	line-height: 1.25;
 }
 
-.vcl-board .vcl-toplan-due {
+.vcl-board .vcl-qrow-due {
 	font-size: 11px;
 	color: var(--vcl-muted);
-	margin-top: 4px;
 }
 
-.vcl-board .vcl-toplan-chip.vcl-overdue {
-	border-color: #e5a6ac;
-}
-
-.vcl-board .vcl-toplan-chip.vcl-overdue .vcl-toplan-due {
+.vcl-board .vcl-qrow.vcl-overdue .vcl-qrow-due {
 	color: #b02a37;
 	font-weight: 700;
+}
+
+.vcl-board .vcl-qrow-go {
+	padding: 0 12px;
+	color: #2b3990;
+	font-size: 20px;
+}
+
+/* ------------------------------------------------------- planning mode */
+
+.vcl-board .vcl-planhead {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding-bottom: 12px;
+	margin-bottom: 12px;
+	border-bottom: 1px solid var(--vcl-line);
+}
+
+.vcl-board .vcl-planhead-top {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.vcl-board .vcl-plan-back {
+	background: none;
+	border: 0;
+	padding: 6px 2px;
+	font-size: 15px;
+	font-weight: 600;
+	color: #2b3990;
+	cursor: pointer;
+}
+
+.vcl-board .vcl-plan-title {
+	font-size: 20px;
+	font-weight: 700;
+}
+
+.vcl-board .vcl-plan-prog {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.vcl-board .vcl-plan-prog > span {
+	font-size: 12px;
+	color: var(--vcl-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+.vcl-board .vcl-plan-prog .vcl-bar { height: 6px; }
+.vcl-board .vcl-plan-prog .vcl-bar > i { background: #2b3990; }
+
+.vcl-board .vcl-qgroup-head {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 16px 0 8px;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.09em;
+	text-transform: uppercase;
+	color: var(--vcl-muted);
+}
+
+.vcl-board .vcl-qgroup-head.vcl-late { color: #b02a37; }
+.vcl-board .vcl-qgroup-head > i { flex: 1 1 auto; height: 1px; background: var(--vcl-line); }
+.vcl-board .vcl-qgroup-head > em {
+	font-style: normal;
+	font-family: "Courier New", Courier, monospace;
+	font-size: 11px;
+}
+
+@media (min-width: 1024px) {
+	.vcl-board .vcl-queue {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+		gap: 0 18px;
+	}
+	.vcl-board .vcl-qgroup-head { grid-column: 1 / -1; }
+}
+
+/* ------------------------------------------------ the machine picker */
+
+/*
+ * Buttons, not a Select. Machine is the only decision the job card cannot
+ * make for you, and a dropdown is the wrong control to hand someone standing
+ * next to a running press. Six per department at most, so they all fit.
+ */
+
+.vcl-mgrid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.vcl-mpick {
+	min-height: 48px;
+	min-width: 64px;
+	padding: 10px 16px;
+	font-size: 15px;
+	font-weight: 600;
+	border: 1px solid var(--vcl-line, #e2e6ea);
+	border-radius: 8px;
+	background: #fff;
+	color: #3f4650;
+	cursor: pointer;
+}
+
+.vcl-mpick:hover { border-color: #2b3990; }
+
+.vcl-mpick.selected {
+	background: #2b3990;
+	border-color: #2b3990;
+	color: #fff;
 }
 
 /* ----------------------------------------------- the card's own words */
@@ -805,3 +1033,107 @@
 	text-decoration: none;
 	border-bottom: 1px dotted #9aa6d4;
 }
+
+/* ------------------------------------------- tally as filter + stripes */
+
+/*
+ * The tally used to scroll away, and the attention list sat below it as a
+ * second amber panel - so you read a count, then read the same jobs again.
+ * It is sticky now, "Needs update" is one of its tiles, and every tile is a
+ * filter. Reading a number and acting on it become the same gesture.
+ */
+
+.vcl-board .vcl-summary {
+	position: sticky;
+	/* set by sync_sticky_offset() from the measured topbar; the fallback only
+	   applies for the instant before the first render */
+	top: var(--vcl-sticky-top, 0px);
+	z-index: 4;
+	background: #fff;
+	padding: 8px 0;
+}
+
+.vcl-board .vcl-stat {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	width: 100%;
+	min-height: 56px;
+	font: inherit;
+	cursor: pointer;
+}
+
+.vcl-board .vcl-stat:hover { border-color: #2b3990; }
+
+.vcl-board .vcl-stat.selected {
+	background: #edf0fb;
+	border-color: #2b3990;
+	box-shadow: inset 0 0 0 1px #2b3990;
+}
+
+.vcl-board .vcl-badge-attention {
+	border-left-color: #e0a02a;
+}
+
+.vcl-board .vcl-filter-clear {
+	display: block;
+	width: 100%;
+	margin: -6px 0 14px;
+	padding: 9px 12px;
+	min-height: 44px;
+	font-size: 13px;
+	font-weight: 600;
+	color: #2b3990;
+	background: #edf0fb;
+	border: 1px solid #c9d2ee;
+	border-radius: 8px;
+	cursor: pointer;
+}
+
+/* The severity stripe. A pill at the far right of a 1180px row is unreadable
+   next to the machine name; a stripe puts state and identity in one glance at
+   any width. The pill stays - it just stops being the only carrier. */
+
+.vcl-board .vcl-card {
+	padding: 0;
+	overflow: hidden;
+	align-items: stretch;
+	gap: 0;
+}
+
+.vcl-board .vcl-card-stripe {
+	flex: 0 0 4px;
+	background: #9aa6d4;
+}
+
+.vcl-board .vcl-card-main { padding: 12px; min-width: 0; }
+.vcl-board .vcl-card-side { padding: 12px 12px 12px 0; }
+
+.vcl-board .vcl-s-running .vcl-card-stripe          { background: #1a9f5c; }
+.vcl-board .vcl-s-planned .vcl-card-stripe          { background: #9aa6d4; }
+.vcl-board .vcl-s-not-started .vcl-card-stripe      { background: #b6bcc6; }
+.vcl-board .vcl-s-paused .vcl-card-stripe           { background: #e0a02a; }
+.vcl-board .vcl-s-completed .vcl-card-stripe        { background: #2490ef; }
+.vcl-board .vcl-s-carried-forward .vcl-card-stripe  { background: #b02a37; }
+
+/* Quantity bar. "850 / 2 000" is arithmetic the reader has to do; the bar
+   answers "is this nearly done" without reading at all. */
+
+.vcl-board .vcl-bar {
+	height: 4px;
+	margin-top: 6px;
+	border-radius: 2px;
+	background: #eef0f2;
+	overflow: hidden;
+}
+
+.vcl-board .vcl-bar > i {
+	display: block;
+	height: 100%;
+	background: #1a9f5c;
+}
+
+.vcl-board .vcl-s-completed .vcl-bar > i { background: #2490ef; }
+.vcl-board .vcl-s-paused .vcl-bar > i    { background: #e0a02a; }
+.vcl-board .vcl-s-planned .vcl-bar > i,
+.vcl-board .vcl-s-not-started .vcl-bar > i { background: #9aa6d4; }

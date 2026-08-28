@@ -526,6 +526,65 @@ def job_card_is_open(job_status, docstatus=0):
 	return (job_status or "") in OPEN_JOB_CARD_STATUSES
 
 
+# How the phone's planning queue is grouped. Not "sorted by due date": a
+# planner works in order of how late a thing is, so the 49-day-old Pegler
+# carton belongs at the top of the screen rather than wherever a date sort
+# happened to leave it. Undated jobs go LAST - unscheduled is not urgent.
+TO_PLAN_GROUPS = [
+	("late", "Late"),
+	("today", "Due today"),
+	("week", "This week"),
+	("later", "Later"),
+	("undated", "No due date"),
+]
+
+
+def to_plan_bucket(due_date, as_of=None):
+	"""Which planning group a due date falls in."""
+	parsed = _as_date(due_date)
+	if not parsed:
+		return "undated"
+	today_value = _as_date(as_of) or date.today()
+	delta = (parsed - today_value).days
+	if delta < 0:
+		return "late"
+	if delta == 0:
+		return "today"
+	if delta <= 7:
+		return "week"
+	return "later"
+
+
+def days_late(due_date, as_of=None):
+	"""How many days past due, or 0 when it is not late."""
+	parsed = _as_date(due_date)
+	if not parsed:
+		return 0
+	today_value = _as_date(as_of) or date.today()
+	return max(0, (today_value - parsed).days)
+
+
+def group_to_plan(chips, as_of=None):
+	"""The queue as the phone renders it: groups in order, empties dropped.
+
+	Chips arrive already sorted soonest-first with undated last, so within a
+	group the order is left alone.
+	"""
+	buckets = {key: [] for key, _ in TO_PLAN_GROUPS}
+	for chip in chips or []:
+		key = to_plan_bucket(chip.get("due_date"), as_of)
+		chip = dict(chip)
+		chip["bucket"] = key
+		chip["days_late"] = days_late(chip.get("due_date"), as_of)
+		buckets[key].append(chip)
+
+	return [
+		{"key": key, "label": label, "chips": buckets[key], "count": len(buckets[key])}
+		for key, label in TO_PLAN_GROUPS
+		if buckets[key]
+	]
+
+
 def job_card_doctype(job_card):
 	"""Which product line a job card number belongs to, by its naming series.
 
