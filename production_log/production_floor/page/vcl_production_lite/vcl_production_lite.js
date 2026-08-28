@@ -121,6 +121,13 @@ class VclProductionBoard {
 			this.render();
 		});
 
+		// Bound before the card handler so it can stop the bubble: the whole
+		// card opens the update sheet, and a tap on the job card number must
+		// go to the job card instead of doing both.
+		this.$container.on("click", ".vcl-jc-link", (event) => {
+			event.stopPropagation();
+		});
+
 		this.$container.on("click", ".vcl-card", (event) => {
 			const row = $(event.currentTarget).data("row");
 			this.quick_update_dialog(row);
@@ -350,6 +357,26 @@ class VclProductionBoard {
 		`;
 	}
 
+	job_card_link(row, extra_class) {
+		// Provenance made clickable. A row with no card, or one whose number we
+		// cannot place to a doctype, simply shows nothing - never a dead link.
+		const ref = (row.production_job_card || "").trim();
+		if (!ref) {
+			return "";
+		}
+		const label = frappe.utils.escape_html(ref);
+		if (!row.job_card_route) {
+			return `<div class="vcl-jc ${extra_class || ""}">${label}</div>`;
+		}
+		return `
+			<div class="vcl-jc ${extra_class || ""}">
+				<a href="${frappe.utils.escape_html(row.job_card_route)}" class="vcl-jc-link">
+					${label}
+				</a>
+			</div>
+		`;
+	}
+
 	render_card(row) {
 		const unit = frappe.utils.escape_html(row.uom || "");
 		const planned = this.format_qty(row.planned_quantity);
@@ -365,6 +392,7 @@ class VclProductionBoard {
 					<div class="vcl-machine">${frappe.utils.escape_html(row.machine || "")}</div>
 					<div class="vcl-customer">${frappe.utils.escape_html(row.customer_name || "")}</div>
 					<div class="vcl-job">${frappe.utils.escape_html(row.job_name || "")}</div>
+					${this.job_card_link(row)}
 					<div class="vcl-qty">
 						<span class="vcl-qty-actual">${actual || "0"}</span>
 						<span class="vcl-qty-sep">/</span>
@@ -1150,6 +1178,7 @@ class VclProductionBoard {
 				<div class="vcl-machine">${frappe.utils.escape_html(row.machine || "")}</div>
 				<div class="vcl-customer">${frappe.utils.escape_html(row.customer_name || "")}</div>
 				<div class="vcl-job">${frappe.utils.escape_html(row.job_name || "")}</div>
+				${this.job_card_link(row, "vcl-jc-lg")}
 			</div>
 		`);
 

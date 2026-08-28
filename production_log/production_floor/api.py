@@ -19,6 +19,7 @@ from production_log.production_floor.reporting import (
 	build_whatsapp_text,
 	exception_summary,
 	job_card_chip,
+	job_card_route,
 	order_departments,
 	parse_quantity,
 	summarise,
@@ -64,6 +65,9 @@ def _day_payload(doc):
 	for row in rows:
 		row["start_time"] = str(row["start_time"]) if row["start_time"] else None
 		row["completed_time"] = str(row["completed_time"]) if row["completed_time"] else None
+		# Built here rather than on the phone, so the screen never has to know
+		# how a job card number maps to a doctype or a desk URL.
+		row["job_card_route"] = job_card_route(row.get("production_job_card"))
 
 	departments = get_departments()
 	return {

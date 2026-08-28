@@ -9,6 +9,7 @@ dicts these functions expect.
 
 import re
 from datetime import date, datetime
+from urllib.parse import quote
 
 DEFAULT_DEPARTMENTS = ["Computer", "Offset", "Carton", "Labels", "Monobox"]
 DEFAULT_UNITS = ["pcs", "cartons", "reels", "reams", "sheets", "kg", "metres"]
@@ -496,18 +497,21 @@ PLANNED_JOB_CARD_STATUS = "Planned"
 JOB_CARD_SOURCES = [
 	{
 		"doctype": "Job Card Computer Paper",
+		"series_prefix": "JC-CPT-",
 		"department": "Computer",
 		"customer_field": "customer",
 		"instructions_field": "order_comments",
 	},
 	{
 		"doctype": "Job Card Carton",
+		"series_prefix": "JC-CORR-",
 		"department": "Carton",
 		"customer_field": "customer_name",
 		"instructions_field": "special_instructions",
 	},
 	{
 		"doctype": "Job Card Monobox",
+		"series_prefix": "JC-MBX-",
 		"department": "Monobox",
 		"customer_field": "customer",
 		"instructions_field": "special_instructions",
@@ -520,6 +524,44 @@ def job_card_is_open(job_status, docstatus=0):
 	if docstatus and int(docstatus) >= 2:
 		return False
 	return (job_status or "") in OPEN_JOB_CARD_STATUSES
+
+
+def job_card_doctype(job_card):
+	"""Which product line a job card number belongs to, by its naming series.
+
+	The row stores `production_job_card` as plain Data - provenance, not a
+	foreign key, so that a Job Card Tracking problem can never make a
+	production row unsaveable. That leaves the number itself as the only clue
+	to which doctype it came from, and the naming series is the clue:
+
+	    JC-CPT-....  Computer Paper     JC-CORR-.... Carton
+	    JC-MBX-....  Monobox
+
+	`test_every_source_prefix_matches_its_doctype_naming_series` pins these
+	against the doctype JSON, so a renamed series breaks a test rather than
+	silently breaking every link on the board.
+	"""
+	name = (job_card or "").strip()
+	if not name:
+		return None
+	for source in JOB_CARD_SOURCES:
+		prefix = source.get("series_prefix")
+		if prefix and name.startswith(prefix):
+			return source["doctype"]
+	return None
+
+
+def job_card_route(job_card):
+	"""The desk route for a job card number, or None if we cannot place it.
+
+	Returned to the phone already built, so the screen never has to know how
+	doctype names become URLs.
+	"""
+	doctype = job_card_doctype(job_card)
+	if not doctype:
+		return None
+	slug = doctype.lower().replace(" ", "-")
+	return "/app/{0}/{1}".format(slug, quote((job_card or "").strip()))
 
 
 def job_card_chip(

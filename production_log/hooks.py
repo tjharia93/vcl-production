@@ -39,7 +39,7 @@ required_apps = ["erpnext"]
 #
 # The query string is enough: nginx ignores it when finding the file, the
 # browser treats it as a different cache key.
-app_include_css = "/assets/production_log/css/production_floor.css?v=20260828"
+app_include_css = "/assets/production_log/css/production_floor.css?v=20260829"
 
 # Home Pages
 # ----------
