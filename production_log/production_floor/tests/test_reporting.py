@@ -458,3 +458,95 @@ class MonoboxDepartmentTests(unittest.TestCase):
 	def test_a_monobox_row_lands_in_its_own_section(self):
 		rows = [row(department="Computer"), row(department="Monobox")]
 		self.assertEqual(order_departments(rows, DEFAULT_DEPARTMENTS), ["Computer", "Monobox"])
+
+
+class InstallHookOrderTests(unittest.TestCase):
+	"""The one ordering bug that can take the whole site down.
+
+	`seed_machines` inserts against the CURRENT Select options, which live in
+	Property Setters that `apply_select_options` writes. Seed first and a
+	machine in a newly added department fails `_validate_selects` - and a throw
+	inside `after_migrate` aborts the migrate for every app on the bench, not
+	just this one. That is exactly what happened on 2026-08-28.
+
+	Parsed rather than imported: install.py and seed.py both import frappe, and
+	this suite runs without a bench.
+	"""
+
+	@staticmethod
+	def _call_order(func_name):
+		import ast
+
+		here = os.path.dirname(os.path.abspath(__file__))
+		source = open(os.path.join(here, "..", "install.py")).read()
+		tree = ast.parse(source)
+		func = next(
+			node for node in tree.body
+			if isinstance(node, ast.FunctionDef) and node.name == func_name
+		)
+		return [
+			node.func.id
+			for node in ast.walk(func)
+			if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+		]
+
+	def test_after_migrate_widens_the_selects_before_it_seeds(self):
+		calls = self._call_order("after_migrate")
+		self.assertIn("apply_select_options", calls)
+		self.assertIn("seed_machines", calls)
+		self.assertLess(
+			calls.index("apply_select_options"),
+			calls.index("seed_machines"),
+			"apply_select_options must run BEFORE seed_machines, or a machine in a "
+			"newly added department throws and aborts the migrate for every app",
+		)
+
+	def test_after_install_uses_the_same_order(self):
+		calls = self._call_order("after_install")
+		self.assertLess(
+			calls.index("apply_select_options"), calls.index("seed_machines")
+		)
+
+
+class SeedDataTests(unittest.TestCase):
+	def test_every_seeded_machine_is_in_a_known_department(self):
+		"""A machine seeded into a department that does not exist cannot insert.
+
+		Same failure as above, reached a different way - so it is worth its own
+		check rather than relying on the ordering test.
+		"""
+		import ast
+
+		here = os.path.dirname(os.path.abspath(__file__))
+		source = open(os.path.join(here, "..", "setup", "seed.py")).read()
+		tree = ast.parse(source)
+		machines = next(
+			node.value
+			for node in tree.body
+			if isinstance(node, ast.Assign)
+			and any(getattr(t, "id", None) == "MACHINES" for t in node.targets)
+		)
+		departments = [row.elts[1].value for row in machines.elts]
+		self.assertTrue(departments)
+		for department in departments:
+			self.assertIn(department, DEFAULT_DEPARTMENTS, department)
+
+	def test_monobox_stages_are_seeded(self):
+		import ast
+
+		here = os.path.dirname(os.path.abspath(__file__))
+		source = open(os.path.join(here, "..", "setup", "seed.py")).read()
+		tree = ast.parse(source)
+		machines = next(
+			node.value
+			for node in tree.body
+			if isinstance(node, ast.Assign)
+			and any(getattr(t, "id", None) == "MACHINES" for t in node.targets)
+		)
+		monobox = [r.elts[0].value for r in machines.elts if r.elts[1].value == "Monobox"]
+		self.assertEqual(len(monobox), 6, monobox)
+		# Spelled out in full so they do not collide with the Carton processes,
+		# which already own the names "Die Cutting" and "Bundling".
+		carton = [r.elts[0].value for r in machines.elts if r.elts[1].value == "Carton"]
+		self.assertFalse(set(monobox) & set(carton))
+
