@@ -733,3 +733,40 @@ class PlanningQueueTests(unittest.TestCase):
 		self.assertEqual(group_to_plan([], self.TODAY), [])
 		self.assertEqual(group_to_plan(None, self.TODAY), [])
 
+
+class MachinePickerTests(unittest.TestCase):
+	"""One picker, used by both dialogs.
+
+	The claim is that machine is chosen by tapping a button, everywhere. A
+	second copy of the grid, or a Select quietly reintroduced in one of the two
+	dialogs, is exactly the drift this catches.
+	"""
+
+	@staticmethod
+	def _screen():
+		here = os.path.dirname(os.path.abspath(__file__))
+		path = os.path.join(
+			here, "..", "page", "vcl_production_lite", "vcl_production_lite.js"
+		)
+		return open(path).read()
+
+	def test_the_picker_is_defined_once(self):
+		self.assertEqual(self._screen().count("machine_picker(dialog, department) {"), 1)
+
+	def test_both_dialogs_call_it(self):
+		self.assertEqual(self._screen().count("this.machine_picker(dialog,"), 2)
+
+	def test_no_dialog_still_uses_a_machine_select(self):
+		screen = self._screen()
+		self.assertNotIn('fieldname: "machine",', screen)
+		self.assertNotIn("values.machine", screen)
+
+	def test_both_submit_paths_read_the_shared_value(self):
+		# Counting occurrences would also count the comment that explains it.
+		# Assert the thing that matters: each submit function's own body.
+		screen = self._screen()
+		for func in ("submit_add_job(dialog, values) {", "submit_quick_add(dialog, values, card) {"):
+			start = screen.index(func)
+			body = screen[start : screen.index("\n\t}", start)]
+			self.assertIn("dialog.vcl_machine", body, func)
+

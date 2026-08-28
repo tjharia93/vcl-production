@@ -1137,3 +1137,18 @@
 .vcl-board .vcl-s-paused .vcl-bar > i    { background: #e0a02a; }
 .vcl-board .vcl-s-planned .vcl-bar > i,
 .vcl-board .vcl-s-not-started .vcl-bar > i { background: #9aa6d4; }
+
+.vcl-mgrid-empty {
+	font-size: 13px;
+	color: #b02a37;
+	padding: 10px 12px;
+	background: #fbe2e4;
+	border-radius: 8px;
+}
+
+.vcl-field-lab {
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--vcl-muted);
+	margin-bottom: 6px;
+}

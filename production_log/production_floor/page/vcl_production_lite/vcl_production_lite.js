@@ -886,7 +886,7 @@ class VclProductionBoard {
 			size: "small",
 			fields: [
 				{ fieldname: "header", fieldtype: "HTML" },
-				{ fieldname: "machine_pick", fieldtype: "HTML", label: __("Machine / Process") },
+				{ fieldname: "machine_pick", fieldtype: "HTML" },
 				{
 					fieldname: "planned_quantity",
 					fieldtype: "Data",
@@ -908,35 +908,10 @@ class VclProductionBoard {
 				{ fieldname: "instructions", fieldtype: "HTML" },
 			],
 			primary_action_label: __("Plan it"),
-			primary_action: (values) => this.submit_quick_add(dialog, values, card, picked),
+			primary_action: (values) => this.submit_quick_add(dialog, values, card),
 		});
 
-		// Buttons, not a Select. Machine is the only decision the job card
-		// cannot make for you, and a dropdown is the wrong control to hand
-		// someone standing next to a running press. There are never more than
-		// six in a department, so they all fit at a 48px target.
-		let picked = machines[0].name;
-		const $pick = dialog.fields_dict.machine_pick.$wrapper;
-		$pick.html(`
-			<div class="vcl-mgrid">
-				${machines
-					.map(
-						(machine) => `
-					<button type="button" class="vcl-mpick ${
-						machine.name === picked ? "selected" : ""
-					}" data-machine="${frappe.utils.escape_html(machine.name)}">
-						${frappe.utils.escape_html(machine.machine_name || machine.name)}
-					</button>
-				`
-					)
-					.join("")}
-			</div>
-		`);
-		$pick.find(".vcl-mpick").on("click", (event) => {
-			picked = $(event.currentTarget).data("machine");
-			$pick.find(".vcl-mpick").removeClass("selected");
-			$(event.currentTarget).addClass("selected");
-		});
+		this.machine_picker(dialog, card.department);
 
 		dialog.fields_dict.header.$wrapper.html(`
 			<div class="vcl-quick-head">
@@ -965,7 +940,61 @@ class VclProductionBoard {
 		dialog.show();
 	}
 
-	submit_quick_add(dialog, values, card, picked) {
+	// One machine picker, used by both the Add Job dialog and the planning
+	// sheet. Buttons rather than a Select: machine is the only decision the job
+	// card cannot make for you, a dropdown is the wrong control to hand someone
+	// standing next to a running press, and there are never more than six in a
+	// department - so they all fit at a 48px target.
+	//
+	// The chosen machine lives on `dialog.vcl_machine`, not in a Frappe field,
+	// because the control is ours. Both submit paths read it from there.
+	machine_picker(dialog, department) {
+		const machines = (this.board.machines || []).filter(
+			(machine) => machine.department === department
+		);
+		const $wrapper = dialog.fields_dict.machine_pick.$wrapper;
+
+		// The label is rendered here rather than left on the field: writing to
+		// $wrapper replaces everything Frappe put in it, label included.
+		const label = `<div class="vcl-field-lab">${__("Machine / Process")}</div>`;
+
+		dialog.vcl_machine = machines.length ? machines[0].name : "";
+		if (!machines.length) {
+			$wrapper.html(
+				label +
+					`<div class="vcl-mgrid-empty">${__(
+						"{0} has no active machine or process set up yet.",
+						[department || __("That department")]
+					)}</div>`
+			);
+			return;
+		}
+
+		$wrapper.html(`
+			${label}
+			<div class="vcl-mgrid">
+				${machines
+					.map(
+						(machine, index) => `
+					<button type="button" class="vcl-mpick ${index === 0 ? "selected" : ""}"
+						data-machine="${frappe.utils.escape_html(machine.name)}">
+						${frappe.utils.escape_html(machine.machine_name || machine.name)}
+					</button>
+				`
+					)
+					.join("")}
+			</div>
+		`);
+		$wrapper.find(".vcl-mpick").on("click", (event) => {
+			const $btn = $(event.currentTarget);
+			dialog.vcl_machine = $btn.data("machine");
+			$wrapper.find(".vcl-mpick").removeClass("selected");
+			$btn.addClass("selected");
+		});
+	}
+
+	submit_quick_add(dialog, values, card) {
+		const picked = dialog.vcl_machine;
 		const invalid = this.numeric_error(values.planned_quantity, __("Planned Quantity"));
 		if (invalid) {
 			frappe.msgprint(invalid);
@@ -1025,13 +1054,7 @@ class VclProductionBoard {
 					reqd: 1,
 					onchange: () => this.on_department_change(dialog),
 				},
-				{
-					fieldname: "machine",
-					fieldtype: "Select",
-					label: __("Machine / Process"),
-					options: [],
-					reqd: 1,
-				},
+				{ fieldname: "machine_pick", fieldtype: "HTML" },
 				{ fieldtype: "Section Break" },
 				{
 					fieldname: "recent",
@@ -1098,17 +1121,7 @@ class VclProductionBoard {
 
 	on_department_change(dialog) {
 		const department = dialog.get_value("department");
-		const machines = (this.board.machines || []).filter(
-			(machine) => machine.department === department
-		);
-		const field = dialog.fields_dict.machine;
-		field.df.options = machines.map((machine) => machine.name);
-		field.refresh();
-		if (machines.length) {
-			dialog.set_value("machine", machines[0].name);
-		} else {
-			dialog.set_value("machine", "");
-		}
+		this.machine_picker(dialog, department);
 		this.picked_job_card = null;
 		this.render_recent_jobs(dialog);
 		this.render_job_cards(dialog);
@@ -1250,13 +1263,19 @@ class VclProductionBoard {
 			frappe.msgprint(invalid);
 			return;
 		}
+		// The picker is ours, so `reqd` cannot enforce it - say so plainly
+		// rather than letting add_item throw a server-side error.
+		if (!dialog.vcl_machine) {
+			frappe.msgprint(__("Pick a machine or process first."));
+			return;
+		}
 		frappe
 			.call({
 				method: "production_log.production_floor.api.add_item",
 				args: {
 					production_date: this.date,
 					department: values.department,
-					machine: values.machine,
+					machine: dialog.vcl_machine,
 					customer_name: values.customer_name,
 					job_name: values.job_name,
 					planned_quantity: values.planned_quantity || null,
