@@ -15,6 +15,10 @@ report can never quietly include it.
 import frappe
 from frappe.utils import today
 
+# Stage and Workstation live in the alignment patch (v10_1), not here: this
+# list is what a machine IS, and the ERPNext mapping is a decision about a
+# particular site's masters. A fresh site gets the mapping from the patch on its
+# first migrate, same as an existing one.
 MACHINES = [
 	# (machine_name, department, machine_type, display_order)
 	("M1", "Computer", "Machine", 10),

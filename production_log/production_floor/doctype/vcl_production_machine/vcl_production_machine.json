@@ -14,6 +14,7 @@
   "display_order",
   "active",
   "section_erpnext",
+  "stage",
   "erpnext_workstation"
  ],
  "fields": [
@@ -64,18 +65,28 @@
    "label": "Active"
   },
   {
-   "collapsible": 1,
-   "description": "Reserved for the later ERPNext integration. Left empty and unused in V1.",
+   "collapsible": 0,
+   "description": "Workstation Type is the stage vocabulary ERPNext already holds - 21 of them, ordered by custom_stage_position. This is where a floor machine says which stage it serves.",
    "fieldname": "section_erpnext",
    "fieldtype": "Section Break",
-   "label": "ERPNext Link (future)"
+   "label": "ERPNext Alignment"
   },
   {
-   "description": "Will become a Link to Workstation once ERPNext integration is switched on.",
+   "fieldname": "stage",
+   "fieldtype": "Link",
+   "label": "Stage",
+   "options": "Workstation Type",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Which production stage this machine or process serves. Ordered on the board by the Workstation Type's own custom_stage_position. Blank is allowed - Monobox's stages do not exist as Workstation Types yet."
+  },
+  {
+   "description": "The physical machine in ERPNext. Left EMPTY for a department whose 'machines' are really stages (Carton, Monobox) - those carry a Stage and no Workstation, which is the honest shape rather than inventing a record.",
    "fieldname": "erpnext_workstation",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "label": "ERPNext Workstation",
-   "read_only": 1
+   "read_only": 0,
+   "options": "Workstation"
   }
  ],
  "index_web_pages_for_search": 0,

@@ -127,3 +127,10 @@ production_log.patches.v9_7.allow_carton_board_plan_on_submit
 # deliberately deactivated. Post-sync because it reads DocTypes this same
 # migrate creates.
 production_log.patches.v10_0.seed_production_floor
+# Points the floor's machine master at ERPNext's Workstation and Workstation
+# Type, which already hold the machines under the names the job cards use and
+# 21 stages sequenced by custom_stage_position. Creates Miller 01, the one
+# running machine ERPNext never knew about, and deactivates the duplicate
+# `Miyakoshi` that sat under Offset. Fills blanks only, so a hand correction
+# survives a re-run. Post-sync: it reads the `stage` field this migrate adds.
+production_log.patches.v10_1.align_machines_to_workstations
