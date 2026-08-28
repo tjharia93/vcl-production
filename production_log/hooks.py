@@ -21,7 +21,25 @@ required_apps = ["erpnext"]
 # on a site that has not had `bench build` run since the deploy. Every selector
 # in it is namespaced under .vcl-*, so loading it desk-wide cannot restyle
 # anything that already exists.
-app_include_css = "/assets/production_log/css/production_floor.css"
+#
+# ⛔ BUMP ?v= ON EVERY CHANGE TO production_floor.css. This is not optional.
+#
+# `frappe.utils.jinja_globals.bundled_asset` only rewrites a path when it
+# contains ".bundle." AND does NOT start with "/assets" - a real bundle gets a
+# content hash from assets.json, which is what cache-busts it. This path starts
+# with "/assets", so it is returned VERBATIM: no hash, no ?ver=. And nginx
+# serves everything under /assets with:
+#
+#     cache-control: max-age=31536000, immutable
+#
+# "immutable" tells the browser never to revalidate. So without a version here
+# a CSS change is invisible for a YEAR to anyone who has opened the screen
+# before - the new JS ships, the old CSS stays, and the board renders as
+# unstyled boxes. That happened on the phone on 2026-08-28.
+#
+# The query string is enough: nginx ignores it when finding the file, the
+# browser treats it as a different cache key.
+app_include_css = "/assets/production_log/css/production_floor.css?v=20260828"
 
 # Home Pages
 # ----------
