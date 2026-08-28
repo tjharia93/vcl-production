@@ -10,7 +10,7 @@ dicts these functions expect.
 import re
 from datetime import date, datetime
 
-DEFAULT_DEPARTMENTS = ["Computer", "Offset", "Carton", "Labels"]
+DEFAULT_DEPARTMENTS = ["Computer", "Offset", "Carton", "Labels", "Monobox"]
 DEFAULT_UNITS = ["pcs", "cartons", "reels", "reams", "sheets", "kg", "metres"]
 
 STATUSES = [
@@ -470,9 +470,49 @@ def short_job_name(customer_name, job_name):
 	return job
 
 
-# A Job Card Computer Paper still worth showing the floor. Everything else is
-# either finished, abandoned, or waiting on a decision nobody makes at a machine.
+# A job card still worth showing the floor. Everything else is either
+# finished, abandoned, or waiting on a decision nobody makes at a machine.
 OPEN_JOB_CARD_STATUSES = ("Open", "Planned", "In Production", "Packing Pending")
+
+# Received, but nobody has put it on a machine yet. This is the whole basis of
+# the To Plan strip: the job card vocabulary already draws the line we want, so
+# the strip is derived and there is nothing extra for a supervisor to key in.
+# Adding a job to the board flips the card to "Planned", which drains the strip.
+RECEIVED_JOB_CARD_STATUS = "Open"
+PLANNED_JOB_CARD_STATUS = "Planned"
+
+# Which job card doctype feeds which department, and what its fields are called.
+# The three product lines disagree, so it is recorded here rather than guessed at
+# the call site:
+#   - customer:     Carton says `customer_name`, the other two say `customer`
+#   - instructions: Computer Paper has no `special_instructions` at all; its
+#                   nearest equivalent is `order_comments`. Both are what the
+#                   OFFICE wrote about the order, which is the side of the line
+#                   we want - `production_notes` is the floor's own and belongs
+#                   in the row's Notes, not here.
+#
+# Labels and ETR are deliberately absent: their cards exist, but the floor does
+# not plan from them yet. Adding one is a line in this list and nothing else.
+JOB_CARD_SOURCES = [
+	{
+		"doctype": "Job Card Computer Paper",
+		"department": "Computer",
+		"customer_field": "customer",
+		"instructions_field": "order_comments",
+	},
+	{
+		"doctype": "Job Card Carton",
+		"department": "Carton",
+		"customer_field": "customer_name",
+		"instructions_field": "special_instructions",
+	},
+	{
+		"doctype": "Job Card Monobox",
+		"department": "Monobox",
+		"customer_field": "customer",
+		"instructions_field": "special_instructions",
+	},
+]
 
 
 def job_card_is_open(job_status, docstatus=0):
@@ -482,7 +522,17 @@ def job_card_is_open(job_status, docstatus=0):
 	return (job_status or "") in OPEN_JOB_CARD_STATUSES
 
 
-def job_card_chip(customer_name, job_name, job_card, due_date=None):
+def job_card_chip(
+	customer_name,
+	job_name,
+	job_card,
+	due_date=None,
+	doctype=None,
+	department=None,
+	quantity=None,
+	instructions=None,
+	as_of=None,
+):
 	"""The one job card as the phone needs it.
 
 	`job_name` is shortened for display only; `job_card` is carried whole,
@@ -496,4 +546,38 @@ def job_card_chip(customer_name, job_name, job_card, due_date=None):
 		"customer_name": (customer_name or "").strip(),
 		"job_name": short_job_name(customer_name, job_name),
 		"due_date": due_date,
+		"doctype": doctype,
+		"department": department,
+		"quantity": quantity,
+		"instructions": (instructions or "").strip() or None,
+		"overdue": is_overdue(due_date, as_of),
 	}
+
+
+def is_overdue(due_date, as_of=None):
+	"""A card is late once its due date has passed. No due date is not late.
+
+	The floor reads this as a red chip, so it has to be quiet about bad data:
+	a date it cannot parse is treated as no date rather than raised.
+	"""
+	if not due_date:
+		return False
+	parsed = _as_date(due_date)
+	if not parsed:
+		return False
+	today_value = _as_date(as_of) or date.today()
+	return parsed < today_value
+
+
+def _as_date(value):
+	if isinstance(value, datetime):
+		return value.date()
+	if isinstance(value, date):
+		return value
+	text = str(value or "").strip()[:10]
+	if not text:
+		return None
+	try:
+		return datetime.strptime(text, "%Y-%m-%d").date()
+	except ValueError:
+		return None

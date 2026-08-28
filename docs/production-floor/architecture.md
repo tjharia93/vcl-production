@@ -40,24 +40,49 @@ The two halves share no DocTypes, no fixtures, no Custom Fields, and no routes:
 
 Nothing in this module hooks a `production_log` or ERPNext document event.
 
-### The one place it reaches out (2026-08-27)
+### The one place it reaches out (2026-08-27, widened 2026-08-28)
 
-`list_open_job_cards()` reads `Job Card Computer Paper`, a Job Card Tracking
-DocType, to offer the Add Job dialog an optional chip row. **This is a genuine
-loosening of the boundary above and it should be read as one**, not waved
-through because the two now ship in the same app.
+`list_to_plan()` reads the **Job Card Tracking** cards named in
+`JOB_CARD_SOURCES` — Computer Paper, Carton and Monobox — to build the **To
+Plan** strip at the top of the board and to fill the Add Job dialog's optional
+chip row. **This is a genuine loosening of the boundary above and it should be
+read as one**, not waved through because the two now ship in the same app.
 
-Three things keep it honest, and all three are load-bearing:
+Four things keep it honest, and all four are load-bearing:
 
-1. **Read-only, and optional.** The chips fill Customer and Job. They set no
-   machine, no quantity, no unit, and `add_item` still refuses an entry
-   without a customer and a job typed or filled. A supervisor whose job has no
-   card ignores the row.
-2. **It fails soft.** A missing DocType returns `[]`; a `PermissionError`
-   returns `[]`. The dialog renders and saves either way. A Job Card Tracking
-   problem is never allowed to stop production being recorded.
+1. **Read-only on the way in, one field on the way out.** The chips fill
+   Customer, Job, quantity and the card's own instructions. `add_item` still
+   refuses an entry without a customer and a job. The single write is
+   `job_status: Open → Planned` in `_mark_job_card_planned`, and it happens
+   only *after* the production row is saved — a card that cannot be updated
+   never undoes the row.
+2. **It fails soft.** A missing DocType returns `[]`; so does any exception
+   from the query. The board and the dialog render and save either way. A Job
+   Card Tracking problem is never allowed to stop production being recorded.
 3. **Nothing is linked.** `production_job_card` is `Data`, so the reference
    cannot make a row unsaveable later. It is provenance, not a foreign key.
+4. **No new state.** "Received but not yet planned" is not a status anybody
+   keys in — it is `job_status = "Open"`, which the cards already had. There is
+   no second backlog list to drift out of step with the first.
+
+**Adding a product line is one entry in `JOB_CARD_SOURCES`** — doctype,
+department, and the names of its customer and instructions fields, because the
+three cards disagree about both. Labels and ETR are deliberately absent: their
+cards exist, but the floor does not plan from them yet.
+
+### Two notes, never one (2026-08-28)
+
+`VCL Daily Production Item` carries two pieces of free text and they are kept
+apart on purpose:
+
+- `job_card_instructions` — **read-only**, copied from the card when the job was
+  planned (`special_instructions`, or `order_comments` on Computer Paper, which
+  has no `special_instructions` field). This is what the office asked for.
+- `notes` — the floor's own running commentary, editable from the phone.
+
+They render as two separately tagged lines on the row card. Merging them would
+lose the one distinction a supervisor needs at a glance: which half they are
+allowed to change.
 
 What must not creep in: reading a job card to *populate* quantity, machine or
 unit, or requiring a card before an entry is accepted. Either would make the

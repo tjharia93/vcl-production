@@ -24,6 +24,7 @@
   "column_break_status",
   "start_time",
   "completed_time",
+  "job_card_instructions",
   "notes",
   "section_erpnext",
   "source",
@@ -42,7 +43,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Department",
-   "options": "Computer\nOffset\nCarton\nLabels",
+   "options": "Computer\nOffset\nCarton\nLabels\nMonobox",
    "reqd": 1
   },
   {
@@ -157,6 +158,13 @@
    "fieldname": "completed_time",
    "fieldtype": "Datetime",
    "label": "Completed At"
+  },
+  {
+   "fieldname": "job_card_instructions",
+   "fieldtype": "Small Text",
+   "label": "From the Job Card",
+   "read_only": 1,
+   "description": "Special instructions copied from the job card when the job was planned. Read-only on purpose: this is what the office asked for, and it is kept apart from Notes, which is the floor's own running commentary."
   },
   {
    "fieldname": "notes",

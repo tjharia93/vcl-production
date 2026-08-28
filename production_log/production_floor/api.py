@@ -11,7 +11,10 @@ from frappe.utils import cint, today
 
 from production_log.production_floor.reporting import (
 	QuantityError,
+	JOB_CARD_SOURCES,
 	OPEN_JOB_CARD_STATUSES,
+	PLANNED_JOB_CARD_STATUS,
+	RECEIVED_JOB_CARD_STATUS,
 	build_report_text,
 	build_whatsapp_text,
 	exception_summary,
@@ -47,6 +50,7 @@ ROW_FIELDS = [
 	"status",
 	"reason",
 	"notes",
+	"job_card_instructions",
 	"start_time",
 	"completed_time",
 	"source",
@@ -89,6 +93,7 @@ def get_board(production_date=None):
 		"machines": get_machines(),
 		"units": get_units(),
 		"departments": get_departments(),
+		"to_plan": list_to_plan(),
 		"today": today(),
 		"is_manager": MANAGER_ROLE in roles or "System Manager" in roles,
 	}
@@ -169,6 +174,8 @@ def add_item(
 	notes=None,
 	remember=1,
 	job_card=None,
+	job_card_doctype=None,
+	job_card_instructions=None,
 ):
 	"""Add one job to a day. This is the ten-second path.
 
@@ -198,8 +205,16 @@ def add_item(
 		"remember_job": cint(remember),
 		"source": "Job Card" if job_card else "Manual",
 		"production_job_card": (job_card or "").strip() or None,
+		# Kept apart from `notes` on purpose. This is what the office asked for
+		# and it is read-only on the row; `notes` stays the floor's own.
+		"job_card_instructions": (job_card_instructions or "").strip() or None,
 	})
 	doc.save()
+
+	# Only after the row is safely saved. The board is the record that matters.
+	if job_card:
+		_mark_job_card_planned(job_card, job_card_doctype)
+
 	frappe.db.commit()
 	return _day_payload(doc)
 
@@ -367,33 +382,102 @@ def get_history(limit=30):
 
 
 @frappe.whitelist()
-def list_open_job_cards(limit=40):
-	"""Computer Paper job cards still open, soonest due first.
+def list_to_plan(department=None, limit=60):
+	"""Job cards that have been received but not yet planned onto a machine.
+
+	"Received but not planned" is not a new state anybody keys in - it is the
+	job card's own `job_status` of "Open". Putting the job on the board flips
+	the card to "Planned" (see `add_item`), so this strip drains itself and
+	there is no second list to keep in step with the first.
 
 	Read-only and deliberately forgiving. The floor screen calls this to fill
-	one optional chip row; if the query fails the row renders empty and the
-	Add Job dialog carries on unchanged, because a Job Card Tracking problem
-	must never stop a supervisor recording what ran.
+	one optional strip; if a query fails that product line is simply absent and
+	the board carries on, because a Job Card Tracking problem must never stop a
+	supervisor recording what ran.
 	"""
-	if not frappe.db.exists("DocType", "Job Card Computer Paper"):
+	today_value = today()
+	chips = []
+
+	for source in JOB_CARD_SOURCES:
+		if department and source["department"] != department:
+			continue
+		chips.extend(_received_cards(source, today_value))
+
+	# Soonest due first, and anything with no due date last - a card nobody has
+	# dated is not more urgent than one due tomorrow, it is just unscheduled.
+	chips.sort(key=lambda chip: (chip["due_date"] is None, chip["due_date"] or "", chip["job_card"]))
+	return chips[: cint(limit) or 60]
+
+
+def _received_cards(source, today_value):
+	"""One product line's received cards. Never raises."""
+	doctype = source["doctype"]
+	if not frappe.db.exists("DocType", doctype):
 		return []
+
+	customer_field = source["customer_field"]
+	instructions_field = source.get("instructions_field")
+	fields = ["name", customer_field, "specification_name", "due_date", "quantity_ordered"]
+	if instructions_field:
+		fields.append(instructions_field)
 	try:
 		cards = frappe.get_all(
-			"Job Card Computer Paper",
+			doctype,
 			filters={
 				"docstatus": ["<", 2],
-				"job_status": ["in", list(OPEN_JOB_CARD_STATUSES)],
+				"job_status": RECEIVED_JOB_CARD_STATUS,
 			},
-			fields=["name", "customer", "specification_name", "due_date"],
+			fields=fields,
 			order_by="due_date asc, name asc",
-			limit_page_length=cint(limit) or 40,
 		)
-	except frappe.PermissionError:
-		# A supervisor without read on Job Card Tracking still gets the dialog,
-		# just without the shortcut.
+	except Exception:
+		# Deliberately broad. A supervisor without read on Job Card Tracking
+		# still gets the board, just without the shortcut - and a product line
+		# whose card is not deployed on this site is simply absent. Nothing
+		# about Job Card Tracking may stop the floor recording what ran.
 		return []
 
 	return [
-		job_card_chip(card.customer, card.specification_name, card.name, card.due_date)
+		job_card_chip(
+			card.get(customer_field),
+			card.get("specification_name"),
+			card.get("name"),
+			str(card.get("due_date")) if card.get("due_date") else None,
+			doctype=doctype,
+			department=source["department"],
+			quantity=card.get("quantity_ordered"),
+			instructions=card.get(instructions_field) if instructions_field else None,
+			as_of=today_value,
+		)
 		for card in cards
 	]
+
+
+def _mark_job_card_planned(job_card, doctype=None):
+	"""Flip a received card to Planned once it is on the board.
+
+	Best effort by design. The production row is the thing that matters and it
+	is already saved by the time this runs; a card that cannot be updated - no
+	permission, status moved on underneath us - must not undo that.
+	"""
+	job_card = (job_card or "").strip()
+	if not job_card:
+		return None
+
+	candidates = [doctype] if doctype else [s["doctype"] for s in JOB_CARD_SOURCES]
+	for candidate in candidates:
+		if not candidate or not frappe.db.exists("DocType", candidate):
+			continue
+		try:
+			if not frappe.db.exists(candidate, job_card):
+				continue
+			current = frappe.db.get_value(candidate, job_card, "job_status")
+			if current != RECEIVED_JOB_CARD_STATUS:
+				return None
+			frappe.db.set_value(
+				candidate, job_card, "job_status", PLANNED_JOB_CARD_STATUS, update_modified=False
+			)
+			return candidate
+		except Exception:
+			return None
+	return None
