@@ -29,6 +29,10 @@ from production_log.production_floor.reporting import (  # noqa: E402
 	job_card_chip,
 	job_card_doctype,
 	job_card_route,
+	group_to_plan,
+	to_plan_bucket,
+	days_late,
+	TO_PLAN_GROUPS,
 	is_overdue,
 	OPEN_JOB_CARD_STATUSES,
 	DEFAULT_DEPARTMENTS,
@@ -662,4 +666,107 @@ class JobCardLinkTests(unittest.TestCase):
 					source["doctype"], prefix, options
 				),
 			)
+
+
+class PlanningQueueTests(unittest.TestCase):
+	"""The phone's planning queue is grouped by how late a thing is.
+
+	Not "sorted by due date": a planner works late-first, so Pegler's 49-day-old
+	carton belongs at the top of the screen rather than wherever a date sort
+	happened to leave it.
+	"""
+
+	TODAY = "2026-08-28"
+
+	def test_buckets_split_on_the_right_boundaries(self):
+		self.assertEqual(to_plan_bucket("2026-08-27", self.TODAY), "late")
+		self.assertEqual(to_plan_bucket("2026-08-28", self.TODAY), "today")
+		self.assertEqual(to_plan_bucket("2026-08-29", self.TODAY), "week")
+		self.assertEqual(to_plan_bucket("2026-09-04", self.TODAY), "week")
+		self.assertEqual(to_plan_bucket("2026-09-05", self.TODAY), "later")
+
+	def test_an_undated_job_is_unscheduled_not_urgent(self):
+		# It sorts LAST. Colouring or ranking it as urgent would put a permanent
+		# alarm on the queue that nobody can clear.
+		self.assertEqual(to_plan_bucket(None, self.TODAY), "undated")
+		self.assertEqual(to_plan_bucket("", self.TODAY), "undated")
+		self.assertEqual(to_plan_bucket("not a date", self.TODAY), "undated")
+		self.assertEqual(TO_PLAN_GROUPS[-1][0], "undated")
+
+	def test_days_late_counts_only_the_past(self):
+		self.assertEqual(days_late("2026-07-10", self.TODAY), 49)
+		self.assertEqual(days_late("2026-08-28", self.TODAY), 0)
+		self.assertEqual(days_late("2026-09-30", self.TODAY), 0)
+		self.assertEqual(days_late(None, self.TODAY), 0)
+
+	def test_groups_come_back_in_working_order(self):
+		chips = [
+			{"job_card": "A", "due_date": "2026-09-30"},
+			{"job_card": "B", "due_date": None},
+			{"job_card": "C", "due_date": "2026-07-10"},
+			{"job_card": "D", "due_date": "2026-08-28"},
+		]
+		groups = group_to_plan(chips, self.TODAY)
+		self.assertEqual([g["key"] for g in groups], ["late", "today", "later", "undated"])
+
+	def test_empty_groups_are_dropped_not_rendered_blank(self):
+		groups = group_to_plan([{"job_card": "A", "due_date": "2026-07-10"}], self.TODAY)
+		self.assertEqual(len(groups), 1)
+		self.assertEqual(groups[0]["key"], "late")
+		self.assertEqual(groups[0]["count"], 1)
+
+	def test_each_chip_carries_its_bucket_and_lateness(self):
+		groups = group_to_plan([{"job_card": "C", "due_date": "2026-07-10"}], self.TODAY)
+		chip = groups[0]["chips"][0]
+		self.assertEqual(chip["bucket"], "late")
+		self.assertEqual(chip["days_late"], 49)
+
+	def test_grouping_does_not_mutate_the_caller_s_chips(self):
+		# get_board ships the same list twice - flat and grouped. Mutating one
+		# would quietly change the other.
+		chips = [{"job_card": "C", "due_date": "2026-07-10"}]
+		group_to_plan(chips, self.TODAY)
+		self.assertNotIn("bucket", chips[0])
+		self.assertNotIn("days_late", chips[0])
+
+	def test_nothing_waiting_is_no_groups_rather_than_empty_ones(self):
+		self.assertEqual(group_to_plan([], self.TODAY), [])
+		self.assertEqual(group_to_plan(None, self.TODAY), [])
+
+
+class MachinePickerTests(unittest.TestCase):
+	"""One picker, used by both dialogs.
+
+	The claim is that machine is chosen by tapping a button, everywhere. A
+	second copy of the grid, or a Select quietly reintroduced in one of the two
+	dialogs, is exactly the drift this catches.
+	"""
+
+	@staticmethod
+	def _screen():
+		here = os.path.dirname(os.path.abspath(__file__))
+		path = os.path.join(
+			here, "..", "page", "vcl_production_lite", "vcl_production_lite.js"
+		)
+		return open(path).read()
+
+	def test_the_picker_is_defined_once(self):
+		self.assertEqual(self._screen().count("machine_picker(dialog, department) {"), 1)
+
+	def test_both_dialogs_call_it(self):
+		self.assertEqual(self._screen().count("this.machine_picker(dialog,"), 2)
+
+	def test_no_dialog_still_uses_a_machine_select(self):
+		screen = self._screen()
+		self.assertNotIn('fieldname: "machine",', screen)
+		self.assertNotIn("values.machine", screen)
+
+	def test_both_submit_paths_read_the_shared_value(self):
+		# Counting occurrences would also count the comment that explains it.
+		# Assert the thing that matters: each submit function's own body.
+		screen = self._screen()
+		for func in ("submit_add_job(dialog, values) {", "submit_quick_add(dialog, values, card) {"):
+			start = screen.index(func)
+			body = screen[start : screen.index("\n\t}", start)]
+			self.assertIn("dialog.vcl_machine", body, func)
 

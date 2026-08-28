@@ -44,6 +44,7 @@ class VclProductionBoard {
 		this.page = page;
 		this.date = frappe.datetime.get_today();
 		this.tab = "today";
+		this.filter = null;
 		this.board = null;
 		this.setup_actions();
 		this.make_shell();
@@ -116,6 +117,8 @@ class VclProductionBoard {
 			this.refresh();
 		});
 
+		// Leaving via a real tab clears planning mode; the tab buttons only know
+		// about today/report/history.
 		this.$container.on("click", ".vcl-tab", (event) => {
 			this.tab = $(event.currentTarget).data("tab");
 			this.render();
@@ -173,9 +176,12 @@ class VclProductionBoard {
 
 		const show_add = this.tab === "today" && this.board.day.status === "Open";
 		this.$add_job_btn.toggle(show_add);
+		this.$container.toggleClass("vcl-planning", this.tab === "plan");
 
 		if (this.tab === "today") {
 			this.render_today();
+		} else if (this.tab === "plan") {
+			this.render_plan_mode();
 		} else if (this.tab === "report") {
 			this.render_report();
 		} else {
@@ -185,104 +191,69 @@ class VclProductionBoard {
 
 	render_today() {
 		const day = this.board.day;
+		const rows = this.visible_rows(day);
 		const parts = [this.render_day_header(day), this.render_summary(day)];
 
-		const attention = this.render_attention(day);
-		if (attention) {
-			parts.push(attention);
-		}
+		// Both are always in the markup; the media query decides which one the
+		// screen is wide enough for. No breakpoint logic in JS - a resize must
+		// not need a re-render to be correct.
+		parts.push(this.render_plan_bar());
 
-		// Above the machines on purpose: what has not been planned yet is the
-		// first thing a supervisor should see, not something found by scrolling
-		// past everything that already has a machine.
-		const to_plan = this.render_to_plan();
-		if (to_plan) {
-			parts.push(to_plan);
-		}
-
-		if (!day.items.length) {
-			parts.push(`
-				<div class="vcl-empty">
-					<div class="vcl-empty-title">${__("Nothing entered yet")}</div>
-					<div class="vcl-empty-hint">${__("Tap + Add Job to record what is running.")}</div>
-				</div>
-			`);
+		const lanes = [];
+		if (!rows.length) {
+			lanes.push(
+				day.items.length
+					? `<div class="vcl-empty">
+							<div class="vcl-empty-title">${__("Nothing matches that filter")}</div>
+							<div class="vcl-empty-hint">${__("Tap the count again to show everything.")}</div>
+						</div>`
+					: `<div class="vcl-empty">
+							<div class="vcl-empty-title">${__("Nothing entered yet")}</div>
+							<div class="vcl-empty-hint">${__("Tap + Add Job to record what is running.")}</div>
+						</div>`
+			);
 		} else {
 			day.department_order.forEach((department) => {
-				const rows = day.items.filter(
+				const dept_rows = rows.filter(
 					(row) => (row.department || __("Unassigned")) === department
 				);
-				parts.push(`
+				if (!dept_rows.length) {
+					return;
+				}
+				lanes.push(`
 					<div class="vcl-dept">
 						<div class="vcl-dept-head">
 							<span>${frappe.utils.escape_html(department.toUpperCase())}</span>
-							<span class="vcl-dept-count">${rows.length}</span>
+							<span class="vcl-dept-count">${dept_rows.length}</span>
 						</div>
-						${rows.map((row) => this.render_card(row)).join("")}
+						${dept_rows.map((row) => this.render_card(row)).join("")}
 					</div>
 				`);
 			});
 		}
 
+		parts.push(`
+			<div class="vcl-split">
+				${this.render_rail()}
+				<div class="vcl-lanes">${lanes.join("")}</div>
+			</div>
+		`);
+
 		parts.push(this.render_day_footer(day));
 		this.$body.html(parts.join(""));
+		this.sync_sticky_offset();
 		this.bind_footer();
 		this.bind_to_plan();
 	}
 
-	// ------------------------------------------------------------------
-	// to plan
-	// ------------------------------------------------------------------
-
-	render_to_plan() {
-		// "Received but not yet planned" is not a status anybody keys in - it is
-		// a job card sitting at Open. Planning it flips the card to Planned and
-		// it leaves this strip on its own.
-		const cards = this.board.to_plan || [];
-		if (!cards.length || this.board.day.status === "Closed") {
-			return "";
-		}
-
-		const chips = cards
-			.map((card, index) => {
-				const due = card.due_date
-					? frappe.datetime.str_to_user(card.due_date)
-					: __("no date");
-				return `
-				<button type="button" class="vcl-toplan-chip ${card.overdue ? "vcl-overdue" : ""}"
-					data-toplan="${index}">
-					<div class="vcl-toplan-top">
-						<span class="vcl-toplan-ref">${frappe.utils.escape_html(card.ref)}</span>
-						<span class="vcl-toplan-dept">${frappe.utils.escape_html(card.department || "")}</span>
-					</div>
-					<div class="vcl-toplan-customer">${frappe.utils.escape_html(card.customer_name || "")}</div>
-					<div class="vcl-toplan-job">${frappe.utils.escape_html(card.job_name || "")}</div>
-					<div class="vcl-toplan-due">${frappe.utils.escape_html(due)}</div>
-				</button>
-			`;
-			})
-			.join("");
-
-		return `
-			<div class="vcl-toplan">
-				<div class="vcl-toplan-head">
-					<span>${__("To Plan")}</span>
-					<span class="vcl-toplan-count">${cards.length}</span>
-				</div>
-				<div class="vcl-toplan-hint">${__("Received, not yet on a machine. Tap one to plan it.")}</div>
-				<div class="vcl-toplan-list">${chips}</div>
-			</div>
-		`;
-	}
-
-	bind_to_plan() {
-		this.$body.find(".vcl-toplan-chip").on("click", (event) => {
-			const index = $(event.currentTarget).data("toplan");
-			const card = (this.board.to_plan || [])[index];
-			if (card) {
-				this.quick_add_dialog(card);
-			}
-		});
+	// The tally sticks BELOW the topbar, and the topbar's height depends on
+	// whether the tabs wrap. Measure it rather than hard-coding a number that
+	// is wrong on the first phone with a different font size - a guess here
+	// hides the department headings behind the tally.
+	sync_sticky_offset() {
+		const bar = this.$container.find(".vcl-topbar");
+		const height = bar.length ? Math.round(bar.outerHeight()) : 0;
+		this.$container[0].style.setProperty("--vcl-sticky-top", height + "px");
 	}
 
 	render_day_header(day) {
@@ -304,30 +275,75 @@ class VclProductionBoard {
 
 	render_summary(day) {
 		const summary = day.summary || {};
-		const cards = [
-			["Planned", summary["Planned"] || 0],
+		const attention = (day.exceptions || {}).jobs_needing_attention || 0;
+		const tiles = [
 			["Running", summary["Running"] || 0],
-			["Completed", summary["Completed"] || 0],
+			["Planned", summary["Planned"] || 0],
 			["Not Started", summary["Not Started"] || 0],
+			["Paused", summary["Paused"] || 0],
+			["Completed", summary["Completed"] || 0],
 			["Carried Forward", summary["Carried Forward"] || 0],
-		];
-		if (summary["Paused"]) {
-			cards.push(["Paused", summary["Paused"]]);
+		].filter(([label, count]) => count || ["Running", "Planned", "Completed"].includes(label));
+
+		// The attention list used to be its own amber panel below the tally,
+		// which meant reading a count and then reading the same jobs again. It
+		// is a tally tile now, and tapping it filters the board to those rows.
+		const cells = tiles.map(([label, count]) => ({
+			key: label,
+			count: count,
+			label: __(label),
+			cls: VCL_STATUS_CLASS[label] || "",
+		}));
+		if (attention) {
+			cells.push({
+				key: "attention",
+				count: attention,
+				label: __("Needs update"),
+				cls: "vcl-badge-attention",
+			});
 		}
+
 		return `
 			<div class="vcl-summary">
-				${cards
+				${cells
 					.map(
-						([label, count]) => `
-					<div class="vcl-stat ${VCL_STATUS_CLASS[label]}">
-						<div class="vcl-stat-number">${count}</div>
-						<div class="vcl-stat-label">${__(label)}</div>
-					</div>
+						(cell) => `
+					<button type="button" class="vcl-stat ${cell.cls} ${
+							this.filter === cell.key ? "selected" : ""
+						}" data-filter="${frappe.utils.escape_html(cell.key)}"
+						aria-pressed="${this.filter === cell.key}">
+						<span class="vcl-stat-number">${cell.count}</span>
+						<span class="vcl-stat-label">${cell.label}</span>
+					</button>
 				`
 					)
 					.join("")}
 			</div>
+			${
+				this.filter
+					? `<button type="button" class="vcl-filter-clear" data-filter="">
+							${__("Showing {0} only — show everything", [
+								__(this.filter === "attention" ? "Needs update" : this.filter),
+							])}
+						</button>`
+					: ""
+			}
 		`;
+	}
+
+	// Which rows the current filter admits. No filter means all of them.
+	visible_rows(day) {
+		const rows = day.items || [];
+		if (!this.filter) {
+			return rows;
+		}
+		if (this.filter === "attention") {
+			const flagged = new Set(
+				((day.exceptions || {}).all || []).map((item) => item.idx)
+			);
+			return rows.filter((row) => flagged.has(row.idx));
+		}
+		return rows.filter((row) => row.status === this.filter);
 	}
 
 	render_attention(day) {
@@ -355,6 +371,166 @@ class VclProductionBoard {
 				<ul>${items}</ul>
 			</div>
 		`;
+	}
+
+	to_plan() {
+		return this.board.to_plan || [];
+	}
+
+	// Phone. One line, because during the day the phone's job is recording, not
+	// planning - the queue is a task you enter, not a strip that owns the top
+	// of the board from 08:00 to 17:00.
+	render_plan_bar() {
+		const cards = this.to_plan();
+		if (!cards.length || this.board.day.status === "Closed") {
+			return "";
+		}
+		const late = cards.filter((card) => card.overdue).length;
+		return `
+			<button type="button" class="vcl-planbar" data-action="plan-mode">
+				<span class="vcl-planbar-n">${cards.length}</span>
+				<span class="vcl-planbar-txt">
+					<b>${__("To plan")}</b>
+					<span>${__("Received, not yet on a machine")}</span>
+				</span>
+				${late ? `<span class="vcl-planbar-late">${__("{0} late", [late])}</span>` : ""}
+				<span class="vcl-planbar-go">&rsaquo;</span>
+			</button>
+		`;
+	}
+
+	// Desktop. A standing column beside the machines you would assign work to.
+	render_rail() {
+		const cards = this.to_plan();
+		if (!cards.length || this.board.day.status === "Closed") {
+			return "";
+		}
+		return `
+			<aside class="vcl-rail">
+				<div class="vcl-rail-head">
+					<span>${__("To Plan")}</span>
+					<span class="vcl-rail-count">${cards.length}</span>
+				</div>
+				<div class="vcl-rail-hint">${__("Received, not yet on a machine.")}</div>
+				<div class="vcl-rail-list">
+					${cards.map((card, index) => this.render_queue_row(card, index)).join("")}
+				</div>
+			</aside>
+		`;
+	}
+
+	render_queue_row(card, index) {
+		const due = card.due_date
+			? frappe.datetime.str_to_user(card.due_date)
+			: __("no due date");
+		const late = card.days_late
+			? ` &middot; ${__("{0} days late", [card.days_late])}`
+			: "";
+		return `
+			<button type="button" class="vcl-qrow ${card.overdue ? "vcl-overdue" : ""}"
+				data-toplan="${index}">
+				<span class="vcl-qrow-stripe"></span>
+				<span class="vcl-qrow-in">
+					<span class="vcl-qrow-top">
+						<span class="vcl-qrow-ref">${frappe.utils.escape_html(card.job_card)}</span>
+						<span class="vcl-qrow-dept">${frappe.utils.escape_html(card.department || "")}</span>
+					</span>
+					<span class="vcl-qrow-cust">${frappe.utils.escape_html(card.customer_name || "")}</span>
+					<span class="vcl-qrow-job">${frappe.utils.escape_html(card.job_name || "")}</span>
+					<span class="vcl-qrow-due">${frappe.utils.escape_html(due)}${late}</span>
+				</span>
+				<span class="vcl-qrow-go">&rsaquo;</span>
+			</button>
+		`;
+	}
+
+	// Full-screen planning. Grouped by how late a thing is, because that is the
+	// order a planner works in - not the order a due-date sort happens to give.
+	render_plan_mode() {
+		const groups = this.board.to_plan_groups || [];
+		const cards = this.to_plan();
+		const planned = this.planned_from_cards();
+		const total = planned + cards.length;
+		const pct = total ? Math.round((planned / total) * 100) : 0;
+
+		const body = groups.length
+			? groups
+					.map(
+						(group) => `
+				<div class="vcl-qgroup-head ${group.key === "late" ? "vcl-late" : ""}">
+					<span>${__(group.label)}</span>
+					<i></i>
+					<em>${group.count}</em>
+				</div>
+				${group.chips
+					.map((chip) => this.render_queue_row(chip, cards.indexOf(chip)))
+					.join("")}
+			`
+					)
+					.join("")
+			: `<div class="vcl-empty">
+					<div class="vcl-empty-title">${__("Nothing waiting")}</div>
+					<div class="vcl-empty-hint">${__("Every received job card is on a machine.")}</div>
+				</div>`;
+
+		this.$body.html(`
+			<div class="vcl-planhead">
+				<div class="vcl-planhead-top">
+					<button type="button" class="vcl-plan-back" data-action="board">&lsaquo; ${__("Board")}</button>
+					<span class="vcl-plan-title">${__("Plan work")}</span>
+				</div>
+				<div class="vcl-plan-prog">
+					<span>${__("{0} planned today · {1} left", [planned, cards.length])}</span>
+					<div class="vcl-bar"><i style="width:${pct}%"></i></div>
+				</div>
+			</div>
+			<div class="vcl-queue">${body}</div>
+		`);
+		this.bind_to_plan();
+	}
+
+	// Progress is measured against what this day has actually taken off the
+	// queue, not against some notional target nobody set.
+	planned_from_cards() {
+		return (this.board.day.items || []).filter((row) => row.production_job_card).length;
+	}
+
+	drop_from_queue(job_card) {
+		// Locally, so the phone stays at one round trip per job. The card is
+		// Planned now, so the next refresh agrees. Groups are kept in step or
+		// plan mode would keep showing a job that is already on a machine.
+		this.board.to_plan = (this.board.to_plan || []).filter(
+			(chip) => chip.job_card !== job_card
+		);
+		this.board.to_plan_groups = (this.board.to_plan_groups || [])
+			.map((group) => {
+				const chips = group.chips.filter((chip) => chip.job_card !== job_card);
+				return Object.assign({}, group, { chips: chips, count: chips.length });
+			})
+			.filter((group) => group.count);
+	}
+
+	bind_to_plan() {
+		this.$body.find('[data-action="plan-mode"]').on("click", () => {
+			this.tab = "plan";
+			this.render();
+		});
+		this.$body.find('[data-action="board"]').on("click", () => {
+			this.tab = "today";
+			this.render();
+		});
+		this.$body.find("[data-toplan]").on("click", (event) => {
+			const index = $(event.currentTarget).data("toplan");
+			const card = this.to_plan()[index];
+			if (card) {
+				this.quick_add_dialog(card);
+			}
+		});
+		this.$body.find("[data-filter]").on("click", (event) => {
+			const value = $(event.currentTarget).data("filter") || "";
+			this.filter = this.filter === value || !value ? null : value;
+			this.render();
+		});
 	}
 
 	job_card_link(row, extra_class) {
@@ -387,7 +563,10 @@ class VclProductionBoard {
 		const instructions = (row.job_card_instructions || "").trim();
 		const notes = (row.notes || "").trim();
 		return `
-			<div class="vcl-card" data-row="${frappe.utils.escape_html(row.name)}">
+			<div class="vcl-card vcl-s-${frappe.utils.escape_html(
+				(row.status || "Planned").toLowerCase().replace(/\s+/g, "-")
+			)}" data-row="${frappe.utils.escape_html(row.name)}">
+				<div class="vcl-card-stripe"></div>
 				<div class="vcl-card-main">
 					<div class="vcl-machine">${frappe.utils.escape_html(row.machine || "")}</div>
 					<div class="vcl-customer">${frappe.utils.escape_html(row.customer_name || "")}</div>
@@ -399,6 +578,7 @@ class VclProductionBoard {
 						<span class="vcl-qty-plan">${planned || "—"}</span>
 						<span class="vcl-qty-unit">${unit}</span>
 					</div>
+					${this.progress_bar(row)}
 					${reason ? `<div class="vcl-reason">${frappe.utils.escape_html(reason)}</div>` : ""}
 					${
 						instructions
@@ -420,6 +600,19 @@ class VclProductionBoard {
 				</div>
 			</div>
 		`;
+	}
+
+	progress_bar(row) {
+		// "850 / 2 000" is arithmetic the reader has to do. The bar answers
+		// "is this nearly done" without reading, which is the actual question
+		// when the end-of-day report goes out.
+		const planned = parseFloat(row.planned_quantity);
+		const actual = parseFloat(row.actual_quantity);
+		if (!planned || planned <= 0 || isNaN(actual)) {
+			return "";
+		}
+		const pct = Math.max(0, Math.min(100, Math.round((actual / planned) * 100)));
+		return `<div class="vcl-bar"><i style="width:${pct}%"></i></div>`;
 	}
 
 	render_day_footer(day) {
@@ -693,14 +886,7 @@ class VclProductionBoard {
 			size: "small",
 			fields: [
 				{ fieldname: "header", fieldtype: "HTML" },
-				{
-					fieldname: "machine",
-					fieldtype: "Select",
-					label: __("Machine / Process"),
-					options: machines.map((machine) => machine.name),
-					default: machines[0].name,
-					reqd: 1,
-				},
+				{ fieldname: "machine_pick", fieldtype: "HTML" },
 				{
 					fieldname: "planned_quantity",
 					fieldtype: "Data",
@@ -721,9 +907,11 @@ class VclProductionBoard {
 				},
 				{ fieldname: "instructions", fieldtype: "HTML" },
 			],
-			primary_action_label: __("Add to Board"),
+			primary_action_label: __("Plan it"),
 			primary_action: (values) => this.submit_quick_add(dialog, values, card),
 		});
+
+		this.machine_picker(dialog, card.department);
 
 		dialog.fields_dict.header.$wrapper.html(`
 			<div class="vcl-quick-head">
@@ -752,7 +940,61 @@ class VclProductionBoard {
 		dialog.show();
 	}
 
+	// One machine picker, used by both the Add Job dialog and the planning
+	// sheet. Buttons rather than a Select: machine is the only decision the job
+	// card cannot make for you, a dropdown is the wrong control to hand someone
+	// standing next to a running press, and there are never more than six in a
+	// department - so they all fit at a 48px target.
+	//
+	// The chosen machine lives on `dialog.vcl_machine`, not in a Frappe field,
+	// because the control is ours. Both submit paths read it from there.
+	machine_picker(dialog, department) {
+		const machines = (this.board.machines || []).filter(
+			(machine) => machine.department === department
+		);
+		const $wrapper = dialog.fields_dict.machine_pick.$wrapper;
+
+		// The label is rendered here rather than left on the field: writing to
+		// $wrapper replaces everything Frappe put in it, label included.
+		const label = `<div class="vcl-field-lab">${__("Machine / Process")}</div>`;
+
+		dialog.vcl_machine = machines.length ? machines[0].name : "";
+		if (!machines.length) {
+			$wrapper.html(
+				label +
+					`<div class="vcl-mgrid-empty">${__(
+						"{0} has no active machine or process set up yet.",
+						[department || __("That department")]
+					)}</div>`
+			);
+			return;
+		}
+
+		$wrapper.html(`
+			${label}
+			<div class="vcl-mgrid">
+				${machines
+					.map(
+						(machine, index) => `
+					<button type="button" class="vcl-mpick ${index === 0 ? "selected" : ""}"
+						data-machine="${frappe.utils.escape_html(machine.name)}">
+						${frappe.utils.escape_html(machine.machine_name || machine.name)}
+					</button>
+				`
+					)
+					.join("")}
+			</div>
+		`);
+		$wrapper.find(".vcl-mpick").on("click", (event) => {
+			const $btn = $(event.currentTarget);
+			dialog.vcl_machine = $btn.data("machine");
+			$wrapper.find(".vcl-mpick").removeClass("selected");
+			$btn.addClass("selected");
+		});
+	}
+
 	submit_quick_add(dialog, values, card) {
+		const picked = dialog.vcl_machine;
 		const invalid = this.numeric_error(values.planned_quantity, __("Planned Quantity"));
 		if (invalid) {
 			frappe.msgprint(invalid);
@@ -764,7 +1006,7 @@ class VclProductionBoard {
 				args: {
 					production_date: this.date,
 					department: card.department,
-					machine: values.machine,
+					machine: picked,
 					customer_name: card.customer_name,
 					job_name: card.job_name,
 					planned_quantity: values.planned_quantity,
@@ -784,11 +1026,13 @@ class VclProductionBoard {
 				// Drop the chip locally rather than re-fetching the whole board.
 				// The card is now Planned, so the next refresh agrees; doing it
 				// here keeps the phone at one round trip per job.
-				this.board.to_plan = (this.board.to_plan || []).filter(
-					(chip) => chip.job_card !== card.job_card
-				);
+				this.drop_from_queue(card.job_card);
 				dialog.hide();
 				this.apply_day(response.message);
+				frappe.show_alert(
+					{ message: __("Planned on {0}", [picked]), indicator: "green" },
+					4
+				);
 			});
 	}
 
@@ -810,13 +1054,7 @@ class VclProductionBoard {
 					reqd: 1,
 					onchange: () => this.on_department_change(dialog),
 				},
-				{
-					fieldname: "machine",
-					fieldtype: "Select",
-					label: __("Machine / Process"),
-					options: [],
-					reqd: 1,
-				},
+				{ fieldname: "machine_pick", fieldtype: "HTML" },
 				{ fieldtype: "Section Break" },
 				{
 					fieldname: "recent",
@@ -883,17 +1121,7 @@ class VclProductionBoard {
 
 	on_department_change(dialog) {
 		const department = dialog.get_value("department");
-		const machines = (this.board.machines || []).filter(
-			(machine) => machine.department === department
-		);
-		const field = dialog.fields_dict.machine;
-		field.df.options = machines.map((machine) => machine.name);
-		field.refresh();
-		if (machines.length) {
-			dialog.set_value("machine", machines[0].name);
-		} else {
-			dialog.set_value("machine", "");
-		}
+		this.machine_picker(dialog, department);
 		this.picked_job_card = null;
 		this.render_recent_jobs(dialog);
 		this.render_job_cards(dialog);
@@ -1035,13 +1263,19 @@ class VclProductionBoard {
 			frappe.msgprint(invalid);
 			return;
 		}
+		// The picker is ours, so `reqd` cannot enforce it - say so plainly
+		// rather than letting add_item throw a server-side error.
+		if (!dialog.vcl_machine) {
+			frappe.msgprint(__("Pick a machine or process first."));
+			return;
+		}
 		frappe
 			.call({
 				method: "production_log.production_floor.api.add_item",
 				args: {
 					production_date: this.date,
 					department: values.department,
-					machine: values.machine,
+					machine: dialog.vcl_machine,
 					customer_name: values.customer_name,
 					job_name: values.job_name,
 					planned_quantity: values.planned_quantity || null,
@@ -1056,11 +1290,8 @@ class VclProductionBoard {
 			})
 			.then((response) => {
 				if (response.message) {
-					const picked = this.picked_job_card;
-					if (picked) {
-						this.board.to_plan = (this.board.to_plan || []).filter(
-							(chip) => chip.job_card !== picked.job_card
-						);
+					if (this.picked_job_card) {
+						this.drop_from_queue(this.picked_job_card.job_card);
 					}
 					dialog.hide();
 					this.apply_day(response.message);

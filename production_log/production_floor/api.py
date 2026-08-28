@@ -19,6 +19,7 @@ from production_log.production_floor.reporting import (
 	build_whatsapp_text,
 	exception_summary,
 	job_card_chip,
+	group_to_plan,
 	job_card_route,
 	order_departments,
 	parse_quantity,
@@ -92,12 +93,16 @@ def get_board(production_date=None):
 	production_date = production_date or today()
 	doc = get_or_create_day(production_date)
 	roles = frappe.get_roles()
+	to_plan = list_to_plan()
 	return {
 		"day": _day_payload(doc),
 		"machines": get_machines(),
 		"units": get_units(),
 		"departments": get_departments(),
-		"to_plan": list_to_plan(),
+		"to_plan": to_plan,
+		# Grouped here rather than on the phone: "how late is it" is a rule, and
+		# rules for this screen live in reporting.py where they are unit tested.
+		"to_plan_groups": group_to_plan(to_plan, today()),
 		"today": today(),
 		"is_manager": MANAGER_ROLE in roles or "System Manager" in roles,
 	}
