@@ -769,4 +769,82 @@ class MachinePickerTests(unittest.TestCase):
 			start = screen.index(func)
 			body = screen[start : screen.index("\n\t}", start)]
 			self.assertIn("dialog.vcl_machine", body, func)
+class MachineAlignmentTests(unittest.TestCase):
+	"""The floor master must point at ERPNext's vocabulary, not a second one.
+
+	VCL had two machine lists that disagreed - job cards said `Miyakoshi 01`,
+	the floor said `M1` - so any roll-up across them silently dropped rows.
+	These pin the mapping's shape without a bench.
+	"""
+
+	@staticmethod
+	def _patch():
+		import importlib.util
+
+		here = os.path.dirname(os.path.abspath(__file__))
+		path = os.path.join(
+			here, "..", "..", "patches", "v10_1", "align_machines_to_workstations.py"
+		)
+		# Loaded by source rather than imported: the module imports frappe.
+		source = open(path).read()
+		namespace = {}
+		import ast
+
+		tree = ast.parse(source)
+		for node in tree.body:
+			if isinstance(node, (ast.Assign, ast.AnnAssign)):
+				exec(compile(ast.Module([node], []), path, "exec"), namespace)
+		return namespace
+
+	def test_every_computer_machine_maps_to_a_miyakoshi(self):
+		mapping = self._patch()["MAPPING"]
+		for floor, workstation in [
+			("M1", "Miyakoshi 01"),
+			("M2", "Miyakoshi 2"),
+			("M3", "Miyakoshi 3"),
+			("M4", "Miyakoshi 4"),
+		]:
+			stage, ws = mapping[floor]
+			self.assertEqual(ws, workstation, floor)
+			# Continuous stationery is reel-fed. If this ever reads sheet-fed,
+			# the mapping has been copied from Offset by mistake.
+			self.assertEqual(stage, "Reel to Reel Printing", floor)
+
+	def test_offset_is_sheet_fed_not_reel_fed(self):
+		mapping = self._patch()["MAPPING"]
+		for floor in ("Solna", "Miller"):
+			self.assertEqual(mapping[floor][0], "Sheet to Sheet Printing", floor)
+
+	def test_a_process_may_have_a_stage_and_no_workstation(self):
+		# The whole point of the two-link model: Carton's "machines" are stages
+		# on a line. Inventing a Workstation for each would be a lie.
+		mapping = self._patch()["MAPPING"]
+		self.assertIsNone(mapping["Stitching"][1])
+		self.assertIsNone(mapping["Die Cutting"][1])
+		self.assertEqual(mapping["Stitching"][0], "Carton Stitching")
+
+	def test_every_mapping_names_a_stage(self):
+		for floor, (stage, _ws) in self._patch()["MAPPING"].items():
+			self.assertTrue(stage, floor)
+
+	def test_monobox_is_deliberately_absent(self):
+		# Its stages have no Workstation Type yet. A blank stage is honest;
+		# mapping Window Patching onto Lamination because it is nearby is not.
+		mapping = self._patch()["MAPPING"]
+		for stage_name in ("Coating", "Window Patching", "Folding & Gluing", "Bundling & Packing"):
+			self.assertNotIn(stage_name, mapping, stage_name)
+
+	def test_the_floors_holding_areas_are_not_treated_as_stages(self):
+		namespace = self._patch()
+		self.assertIn("PLANNING", namespace["NOT_A_STAGE"])
+		self.assertNotIn("PLANNING", namespace["MAPPING"])
+
+	def test_the_duplicate_miyakoshi_is_retired_not_mapped(self):
+		namespace = self._patch()
+		self.assertEqual(namespace["DUPLICATE"], "Miyakoshi")
+		self.assertNotIn("Miyakoshi", namespace["MAPPING"])
+
+	def test_miller_follows_the_house_numbering(self):
+		# Solna 02, Collater 01, Bundler 01 - the masters are numbered.
+		self.assertEqual(self._patch()["MILLER"]["workstation_name"], "Miller 01")
 
