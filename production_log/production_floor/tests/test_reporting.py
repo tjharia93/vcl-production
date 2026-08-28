@@ -27,6 +27,8 @@ from production_log.production_floor.reporting import (  # noqa: E402
 	short_job_name,
 	job_card_is_open,
 	job_card_chip,
+	job_card_doctype,
+	job_card_route,
 	is_overdue,
 	OPEN_JOB_CARD_STATUSES,
 	DEFAULT_DEPARTMENTS,
@@ -592,4 +594,72 @@ class StylesheetCacheBustTests(unittest.TestCase):
 		version = self._hook_value().split("?v=")[1]
 		self.assertRegex(version, r"^\d{8}$", "use a YYYYMMDD version marker")
 		self.assertGreaterEqual(int(version), 20260828)
+
+
+class JobCardLinkTests(unittest.TestCase):
+	"""`production_job_card` is Data, not a Link - deliberately, so a Job Card
+	Tracking problem can never make a production row unsaveable. The number is
+	therefore the only clue to which doctype it came from, and the naming series
+	is that clue.
+	"""
+
+	def test_each_series_resolves_to_its_product_line(self):
+		self.assertEqual(job_card_doctype("JC-CPT-2026-00075"), "Job Card Computer Paper")
+		self.assertEqual(job_card_doctype("JC-CORR-2026-0067"), "Job Card Carton")
+		self.assertEqual(job_card_doctype("JC-MBX-2026-0001"), "Job Card Monobox")
+
+	def test_an_amended_suffix_still_resolves(self):
+		self.assertEqual(job_card_doctype("JC-CPT-2026-00075-1"), "Job Card Computer Paper")
+
+	def test_a_series_we_do_not_plan_from_resolves_to_nothing(self):
+		# Labels and ETR cards exist but are not in JOB_CARD_SOURCES yet. They
+		# must render as plain text, never as a link to a route we cannot build.
+		self.assertIsNone(job_card_doctype("JC-LBL-2026-00001"))
+		self.assertIsNone(job_card_doctype("JC-ETR-2026-00001"))
+
+	def test_junk_and_blanks_resolve_to_nothing_rather_than_raising(self):
+		for value in (None, "", "   ", "GARBAGE", "JC-", "2026-0067"):
+			self.assertIsNone(job_card_doctype(value), repr(value))
+			self.assertIsNone(job_card_route(value), repr(value))
+
+	def test_the_route_is_the_desk_url_for_that_doctype(self):
+		self.assertEqual(
+			job_card_route("JC-CORR-2026-0067"), "/app/job-card-carton/JC-CORR-2026-0067"
+		)
+		self.assertEqual(
+			job_card_route("JC-CPT-2026-00075"),
+			"/app/job-card-computer-paper/JC-CPT-2026-00075",
+		)
+
+	def test_the_route_escapes_a_name_that_needs_it(self):
+		self.assertNotIn(" ", job_card_route("JC-CORR-2026-0067") or "")
+
+	def test_every_source_prefix_matches_its_doctype_naming_series(self):
+		"""The whole scheme rests on these prefixes. Pin them to the JSON.
+
+		A renamed naming series then breaks this test rather than silently
+		turning every job card link on the board into plain text.
+		"""
+		import json
+
+		here = os.path.dirname(os.path.abspath(__file__))
+		root = os.path.abspath(os.path.join(here, "..", "..", "job_card_tracking", "doctype"))
+		for source in JOB_CARD_SOURCES:
+			prefix = source.get("series_prefix")
+			self.assertTrue(prefix, source["doctype"])
+			folder = source["doctype"].lower().replace(" ", "_")
+			path = os.path.join(root, folder, folder + ".json")
+			self.assertTrue(os.path.exists(path), path)
+			meta = json.load(open(path))
+			options = next(
+				f.get("options") or ""
+				for f in meta["fields"]
+				if f["fieldname"] == "naming_series"
+			)
+			self.assertTrue(
+				options.startswith(prefix),
+				"{0}: registry says {1!r}, naming series is {2!r}".format(
+					source["doctype"], prefix, options
+				),
+			)
 

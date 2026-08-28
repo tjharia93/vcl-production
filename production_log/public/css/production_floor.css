@@ -759,3 +759,49 @@
 	line-height: 1.4;
 	white-space: pre-wrap;
 }
+
+/* -------------------------------------------------- job card reference */
+
+/*
+ * The job card number on a production row. Monospace because it is a
+ * reference to be read and compared, not prose, and it sits between the job
+ * name and the quantity so the eye meets it before the numbers.
+ */
+
+.vcl-board .vcl-jc {
+	margin-top: 4px;
+	font-family: "Courier New", Courier, monospace;
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+	color: var(--vcl-muted);
+}
+
+.vcl-board .vcl-jc-link {
+	color: #2b3990;
+	text-decoration: none;
+	border-bottom: 1px dotted #9aa6d4;
+	/* 44px is the floor's touch target everywhere else on this screen; the
+	   padding is what gets this line there without moving the layout. */
+	display: inline-block;
+	padding: 4px 2px;
+	margin: -4px -2px;
+}
+
+.vcl-board .vcl-jc-link:hover,
+.vcl-board .vcl-jc-link:focus {
+	color: #1d2870;
+	border-bottom-style: solid;
+}
+
+.vcl-update-head .vcl-jc {
+	margin-top: 6px;
+	font-size: 12px;
+}
+
+.vcl-update-head .vcl-jc-lg .vcl-jc-link,
+.vcl-update-head .vcl-jc-link {
+	color: #2b3990;
+	text-decoration: none;
+	border-bottom: 1px dotted #9aa6d4;
+}
