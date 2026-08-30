@@ -1152,3 +1152,17 @@
 	color: var(--vcl-muted);
 	margin-bottom: 6px;
 }
+
+/* Deliberately not styled like the machines themselves: it is an action, not
+   a choice, and a supervisor scanning for M3 should not stop on it. */
+.vcl-mpick-add {
+	border-style: dashed;
+	border-color: #9aa6d4;
+	color: #2b3990;
+	font-weight: 600;
+}
+
+.vcl-mpick-add:hover {
+	border-style: solid;
+	background: #edf0fb;
+}

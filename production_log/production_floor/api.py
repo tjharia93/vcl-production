@@ -123,6 +123,68 @@ def get_machines(department=None):
 
 
 @frappe.whitelist()
+def add_machine(machine_name=None, department=None, machine_type="Machine"):
+	"""Create a machine from the floor screen, without leaving it.
+
+	A machine missing from the master stops the entry dead - the supervisor
+	cannot record what actually ran. Sending them to the desk form mid-shift is
+	the friction this screen exists to remove, so the picker offers it inline.
+
+	Managers only, and by the same role the masters already require: this
+	writes to a master, and a user who may not edit it there may not edit it
+	from here either.
+	"""
+	roles = frappe.get_roles()
+	if MANAGER_ROLE not in roles and "System Manager" not in roles:
+		frappe.throw(
+			_("Only a production manager can add a machine."), frappe.PermissionError
+		)
+
+	machine_name = (machine_name or "").strip()
+	if not machine_name:
+		frappe.throw(_("Give the machine or process a name."))
+	if not department:
+		frappe.throw(_("A machine has to belong to a department."))
+	if department not in get_departments():
+		frappe.throw(_("{0} is not one of the departments.").format(department))
+	if machine_type not in ("Machine", "Process"):
+		machine_type = "Machine"
+
+	if frappe.db.exists("VCL Production Machine", machine_name):
+		existing = frappe.db.get_value(
+			"VCL Production Machine", machine_name, ["department", "active"], as_dict=True
+		)
+		# Deactivated rather than deleted is how this master retires things, so
+		# a name coming back usually means someone is reinstating it.
+		if not existing.active:
+			frappe.db.set_value("VCL Production Machine", machine_name, "active", 1)
+			frappe.db.commit()
+			return {"name": machine_name, "reactivated": 1, "machines": get_machines()}
+		frappe.throw(
+			_("{0} already exists, under {1}.").format(machine_name, existing.department)
+		)
+
+	# Sorted to the end of its own department rather than the middle of it.
+	last = frappe.db.get_value(
+		"VCL Production Machine",
+		{"department": department},
+		"display_order",
+		order_by="display_order desc",
+	)
+	frappe.get_doc({
+		"doctype": "VCL Production Machine",
+		"machine_name": machine_name,
+		"department": department,
+		"machine_type": machine_type,
+		"display_order": (cint(last) or 0) + 10,
+		"active": 1,
+	}).insert(ignore_permissions=True)
+	frappe.db.commit()
+
+	return {"name": machine_name, "reactivated": 0, "machines": get_machines()}
+
+
+@frappe.whitelist()
 def suggest_jobs(txt=None, department=None, limit=12):
 	"""Autocomplete for the Customer / Job pair.
 

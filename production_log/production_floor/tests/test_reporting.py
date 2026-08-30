@@ -754,12 +754,24 @@ class MachinePickerTests(unittest.TestCase):
 		self.assertEqual(self._screen().count("machine_picker(dialog, department) {"), 1)
 
 	def test_both_dialogs_call_it(self):
-		self.assertEqual(self._screen().count("this.machine_picker(dialog,"), 2)
+		# Counting calls was brittle - adding a legitimate third (re-render
+		# after creating a machine) broke it. Assert what matters: each dialog
+		# entry point builds the picker.
+		screen = self._screen()
+		for func, end in [
+			("on_department_change(dialog) {", "\n\t}"),
+			("quick_add_dialog(card) {", "\n\tsubmit_quick_add"),
+		]:
+			start = screen.index(func)
+			self.assertIn("this.machine_picker(dialog,", screen[start : screen.index(end, start)], func)
 
 	def test_no_dialog_still_uses_a_machine_select(self):
+		# `values.machine_name` legitimately contains "values.machine", so guard
+		# the real thing: no machine Select field, and no submit reading the
+		# machine off Frappe's values instead of the shared picker.
 		screen = self._screen()
 		self.assertNotIn('fieldname: "machine",', screen)
-		self.assertNotIn("values.machine", screen)
+		self.assertNotIn("machine: values.machine,", screen)
 
 	def test_both_submit_paths_read_the_shared_value(self):
 		# Counting occurrences would also count the comment that explains it.
@@ -847,4 +859,59 @@ class MachineAlignmentTests(unittest.TestCase):
 	def test_miller_follows_the_house_numbering(self):
 		# Solna 02, Collater 01, Bundler 01 - the masters are numbered.
 		self.assertEqual(self._patch()["MILLER"]["workstation_name"], "Miller 01")
+
+
+class AddMachineInlineTests(unittest.TestCase):
+	"""A machine missing from the master stops entry dead, so the picker offers
+	to create one. It writes to a master, so it is manager-gated the same way
+	the master itself is.
+	"""
+
+	@staticmethod
+	def _api():
+		here = os.path.dirname(os.path.abspath(__file__))
+		return open(os.path.join(here, "..", "api.py")).read()
+
+	@staticmethod
+	def _screen():
+		here = os.path.dirname(os.path.abspath(__file__))
+		return open(
+			os.path.join(here, "..", "page", "vcl_production_lite", "vcl_production_lite.js")
+		).read()
+
+	def test_the_endpoint_is_manager_gated(self):
+		api = self._api()
+		start = api.index("def add_machine(")
+		body = api[start : api.index("\n@frappe.whitelist()", start)]
+		self.assertIn("MANAGER_ROLE not in roles", body)
+		self.assertIn("frappe.PermissionError", body)
+
+	def test_it_refuses_a_department_that_is_not_one(self):
+		api = self._api()
+		start = api.index("def add_machine(")
+		body = api[start : api.index("\n@frappe.whitelist()", start)]
+		self.assertIn("not in get_departments()", body)
+
+	def test_a_retired_machine_is_reactivated_rather_than_duplicated(self):
+		# This master retires by unticking `active`, never by deleting - so a
+		# name coming back means reinstate, not "already exists, go away".
+		api = self._api()
+		start = api.index("def add_machine(")
+		body = api[start : api.index("\n@frappe.whitelist()", start)]
+		self.assertIn('"active", 1', body)
+		self.assertIn("reactivated", body)
+
+	def test_the_chip_is_hidden_from_a_non_manager(self):
+		screen = self._screen()
+		start = screen.index("add_machine_chip() {")
+		body = screen[start : screen.index("\n\t}", start)]
+		self.assertIn("this.board.is_manager", body)
+
+	def test_the_chip_is_offered_even_when_the_department_is_empty(self):
+		# That is precisely when you need it, so the empty state must not be a
+		# dead end.
+		screen = self._screen()
+		start = screen.index("machine_picker(dialog, department) {")
+		body = screen[start : screen.index("\n\tsubmit_quick_add", start)]
+		self.assertEqual(body.count("this.add_machine_chip()"), 2)
 

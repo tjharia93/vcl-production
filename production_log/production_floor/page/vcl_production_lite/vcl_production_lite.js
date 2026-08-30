@@ -965,8 +965,10 @@ class VclProductionBoard {
 					`<div class="vcl-mgrid-empty">${__(
 						"{0} has no active machine or process set up yet.",
 						[department || __("That department")]
-					)}</div>`
+					)}</div>
+					<div class="vcl-mgrid">${this.add_machine_chip()}</div>`
 			);
+			this.bind_add_machine($wrapper, dialog, department);
 			return;
 		}
 
@@ -983,14 +985,93 @@ class VclProductionBoard {
 				`
 					)
 					.join("")}
+				${this.add_machine_chip()}
 			</div>
 		`);
+		this.bind_add_machine($wrapper, dialog, department);
 		$wrapper.find(".vcl-mpick").on("click", (event) => {
 			const $btn = $(event.currentTarget);
 			dialog.vcl_machine = $btn.data("machine");
 			$wrapper.find(".vcl-mpick").removeClass("selected");
 			$btn.addClass("selected");
 		});
+	}
+
+	add_machine_chip() {
+		// Managers only, and for the same reason the master itself is manager
+		// only: this writes to a master. A user who may not edit it on the desk
+		// may not edit it from here.
+		if (!this.board.is_manager) {
+			return "";
+		}
+		return `<button type="button" class="vcl-mpick vcl-mpick-add" data-add-machine="1">
+			+ ${__("Add machine")}
+		</button>`;
+	}
+
+	bind_add_machine($wrapper, dialog, department) {
+		$wrapper.find("[data-add-machine]").on("click", () => {
+			frappe.prompt(
+				[
+					{
+						fieldname: "machine_name",
+						fieldtype: "Data",
+						label: __("Machine / Process Name"),
+						reqd: 1,
+						description: __("Exactly as the floor says it — Roland, Kord, Pasting."),
+					},
+					{
+						fieldname: "machine_type",
+						fieldtype: "Select",
+						label: __("Type"),
+						options: ["Machine", "Process"],
+						default: "Machine",
+						description: __("A Process is a step on a line rather than a single machine."),
+					},
+				],
+				(values) => this.create_machine(values, dialog, department),
+				__("Add to {0}", [department]),
+				__("Add")
+			);
+		});
+	}
+
+	create_machine(values, dialog, department) {
+		frappe
+			.call({
+				method: "production_log.production_floor.api.add_machine",
+				args: {
+					machine_name: values.machine_name,
+					department: department,
+					machine_type: values.machine_type,
+				},
+				freeze: true,
+			})
+			.then((response) => {
+				const result = response.message;
+				if (!result) {
+					return;
+				}
+				// The board's own copy has to move too, or the next dialog opens
+				// without the machine that was just created.
+				this.board.machines = result.machines;
+				this.machine_picker(dialog, department);
+				dialog.vcl_machine = result.name;
+				const $grid = dialog.fields_dict.machine_pick.$wrapper;
+				$grid.find(".vcl-mpick").removeClass("selected");
+				$grid
+					.find(`.vcl-mpick[data-machine="${result.name.replace(/"/g, '\\"')}"]`)
+					.addClass("selected");
+				frappe.show_alert(
+					{
+						message: result.reactivated
+							? __("{0} was retired — brought back and selected.", [result.name])
+							: __("{0} added and selected.", [result.name]),
+						indicator: "green",
+					},
+					5
+				);
+			});
 	}
 
 	submit_quick_add(dialog, values, card) {
