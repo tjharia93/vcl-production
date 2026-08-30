@@ -803,18 +803,19 @@ class MachineAlignmentTests(unittest.TestCase):
 		import importlib.util
 
 		here = os.path.dirname(os.path.abspath(__file__))
-		path = os.path.join(
-			here, "..", "..", "patches", "v10_1", "align_machines_to_workstations.py"
-		)
-		# Loaded by source rather than imported: the module imports frappe.
-		source = open(path).read()
-		namespace = {}
+		# MAPPING lives in setup/alignment.py so the patch and after_migrate
+		# share one copy; the rest still lives on the patch.
 		import ast
 
-		tree = ast.parse(source)
-		for node in tree.body:
-			if isinstance(node, (ast.Assign, ast.AnnAssign)):
-				exec(compile(ast.Module([node], []), path, "exec"), namespace)
+		namespace = {}
+		for path in (
+			os.path.join(here, "..", "setup", "alignment.py"),
+			os.path.join(here, "..", "..", "patches", "v10_1", "align_machines_to_workstations.py"),
+		):
+			# Read rather than imported: both modules import frappe.
+			for node in ast.parse(open(path).read()).body:
+				if isinstance(node, (ast.Assign, ast.AnnAssign)):
+					exec(compile(ast.Module([node], []), path, "exec"), namespace)
 		return namespace
 
 	def test_every_computer_machine_maps_to_a_miyakoshi(self):
@@ -1084,14 +1085,19 @@ class ReelToReelDepartmentTests(unittest.TestCase):
 		# splitting one press's history in half.
 		namespace = self._patch()
 		self.assertEqual(namespace["SHARED"], ["M1", "M2", "M3", "M4"])
-		self.assertEqual(namespace["SLITTER"]["machine_name"], "Slitter")
-		self.assertNotIn("M1", namespace["SLITTER"].values())
+		self.assertEqual(namespace["SLITTER_MACHINE"], "Slitter")
 
-	def test_only_the_slitter_belongs_to_the_new_department_outright(self):
-		namespace = self._patch()
-		self.assertEqual(namespace["SLITTER"]["department"], "Reel to Reel")
-		self.assertEqual(namespace["SLITTER"]["stage"], "ETR Slitting")
-		self.assertEqual(namespace["SLITTER"]["erpnext_workstation"], "Slitter 01")
+	def test_the_slitter_is_mapped_in_the_shared_alignment(self):
+		# It is SEEDED, not created by the patch - see PatchesMustNotInsertTests.
+		import ast
+
+		here = os.path.dirname(os.path.abspath(__file__))
+		ns = {}
+		path = os.path.join(here, "..", "setup", "alignment.py")
+		for node in ast.parse(open(path).read()).body:
+			if isinstance(node, ast.Assign):
+				exec(compile(ast.Module([node], []), path, "exec"), ns)
+		self.assertEqual(ns["MAPPING"]["Slitter"], ("ETR Slitting", "Slitter 01"))
 
 	def test_the_seed_does_not_list_the_shared_presses_twice(self):
 		import ast
@@ -1257,3 +1263,83 @@ class CarryForwardTests(unittest.TestCase):
 
 	def test_a_negative_carry_is_not_a_row(self):
 		self.assertIsNone(carry_forward_row(self.row(carried_quantity=-5), "2026-08-28"))
+
+
+class PatchesMustNotInsertTests(unittest.TestCase):
+	"""⛔ The ordering trap that has taken this site down once already.
+
+	    migrate:  pre_model_sync patches
+	           -> model sync
+	           -> post_model_sync patches      <- our patches
+	           -> after_migrate hooks           <- apply_select_options
+
+	`apply_select_options` is what widens the `department` Select for a newly
+	added department. A patch that INSERTS a machine into that department runs
+	first, fails `_validate_selects`, and a throw inside migrate aborts it for
+	EVERY app on the bench.
+
+	So patches may only `db.set_value` on rows that already exist. Anything that
+	creates a machine belongs in after_migrate, after the Select is widened and
+	after seed_machines.
+	"""
+
+	@staticmethod
+	def _patch_sources():
+		import glob
+
+		here = os.path.dirname(os.path.abspath(__file__))
+		root = os.path.join(here, "..", "..", "patches")
+		return {
+			os.path.basename(path): open(path).read()
+			for path in glob.glob(os.path.join(root, "v10_*", "*.py"))
+			if not path.endswith("__init__.py")
+		}
+
+	def test_no_patch_inserts_a_production_machine(self):
+		for name, source in self._patch_sources().items():
+			self.assertNotIn(
+				'"doctype": "VCL Production Machine"',
+				source,
+				"{0} creates a machine. Patches run BEFORE the department Select "
+				"is widened, so this aborts the whole migrate. Seed it from "
+				"after_migrate instead.".format(name),
+			)
+
+	def test_the_mapping_lives_in_one_place(self):
+		# Both the patch and after_migrate apply it, and two copies would drift.
+		here = os.path.dirname(os.path.abspath(__file__))
+		shared = open(os.path.join(here, "..", "setup", "alignment.py")).read()
+		self.assertIn("MAPPING = {", shared)
+		for name, source in self._patch_sources().items():
+			if "MAPPING" in source:
+				self.assertIn("from production_log.production_floor.setup.alignment import", source, name)
+
+	def test_after_migrate_aligns_after_it_seeds(self):
+		import ast
+
+		here = os.path.dirname(os.path.abspath(__file__))
+		tree = ast.parse(open(os.path.join(here, "..", "install.py")).read())
+		func = next(
+			n for n in tree.body
+			if isinstance(n, ast.FunctionDef) and n.name == "after_migrate"
+		)
+		calls = [
+			n.func.id for n in ast.walk(func)
+			if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
+		]
+		self.assertLess(calls.index("apply_select_options"), calls.index("seed_machines"))
+		self.assertLess(calls.index("seed_machines"), calls.index("align_machines"))
+
+	def test_the_slitter_is_seeded_not_patched(self):
+		import ast
+
+		here = os.path.dirname(os.path.abspath(__file__))
+		source = open(os.path.join(here, "..", "setup", "seed.py")).read()
+		machines = next(
+			node.value for node in ast.parse(source).body
+			if isinstance(node, ast.Assign)
+			and any(getattr(t, "id", None) == "MACHINES" for t in node.targets)
+		)
+		names = [r.elts[0].value for r in machines.elts]
+		self.assertIn("Slitter", names)
+

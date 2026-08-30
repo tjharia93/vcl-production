@@ -27,28 +27,7 @@ since corrected by hand.
 
 import frappe
 
-# floor machine -> (Workstation Type, Workstation or None)
-MAPPING = {
-	# Computer Paper is reel-to-reel, which is what the Miyakoshis are.
-	"M1": ("Reel to Reel Printing", "Miyakoshi 01"),
-	"M2": ("Reel to Reel Printing", "Miyakoshi 2"),
-	"M3": ("Reel to Reel Printing", "Miyakoshi 3"),
-	"M4": ("Reel to Reel Printing", "Miyakoshi 4"),
-	"Collator": ("Collation", "Collater 01"),
-	# Offset is sheet-fed.
-	"Solna": ("Sheet to Sheet Printing", "Solna 02"),
-	"Miller": ("Sheet to Sheet Printing", "Miller 01"),
-	"Propheteer": ("Label Printing", "Profeteer 01"),
-	# Carton: these are stages on a line, not separate machines. Two of them do
-	# have a Workstation; the rest legitimately have none.
-	"CORRUGATION": ("Corrugation", None),
-	"Printing": ("Carton Printing", None),
-	"Die Cutting": ("Die Cutting", None),
-	"Slotting": ("Slotting", "Slotter 01"),
-	"Stitching": ("Carton Stitching", None),
-	"Bundling": ("Bundling", "Bundler 01"),
-	"Gluing": ("Carton Gluing", None),
-}
+from production_log.production_floor.setup.alignment import MAPPING, align_machines
 
 # The floor's own holding areas. They are real to a supervisor - work sits in
 # them - but they are not production stages and ERPNext has no type for them.
@@ -70,24 +49,10 @@ def execute():
 		return
 
 	_ensure_miller()
-
-	for machine, (stage, workstation) in MAPPING.items():
-		if not frappe.db.exists("VCL Production Machine", machine):
-			continue
-
-		current = frappe.db.get_value(
-			"VCL Production Machine", machine, ["stage", "erpnext_workstation"], as_dict=True
-		)
-
-		if not current.stage and frappe.db.exists("Workstation Type", stage):
-			frappe.db.set_value("VCL Production Machine", machine, "stage", stage)
-
-		if workstation and not current.erpnext_workstation:
-			if frappe.db.exists("Workstation", workstation):
-				frappe.db.set_value(
-					"VCL Production Machine", machine, "erpnext_workstation", workstation
-				)
-
+	# Only ever db.set_value on machines that already exist - no insert, so no
+	# _validate_selects, so no chance of aborting the migrate. See
+	# setup/alignment.py for why that distinction matters.
+	align_machines()
 	_retire_duplicate()
 	frappe.db.commit()
 

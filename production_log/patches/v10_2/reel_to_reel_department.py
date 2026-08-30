@@ -25,15 +25,9 @@ DEPARTMENT = "Reel to Reel"
 # The presses shared with Computer Paper.
 SHARED = ["M1", "M2", "M3", "M4"]
 
-# Only this department slits. Stage and Workstation match the v10_1 mapping.
-SLITTER = {
-	"machine_name": "Slitter",
-	"department": DEPARTMENT,
-	"machine_type": "Machine",
-	"display_order": 10,
-	"stage": "ETR Slitting",
-	"erpnext_workstation": "Slitter 01",
-}
+# The Slitter belongs to this department alone, but it is created by
+# `seed_machines` from after_migrate rather than here - see execute().
+SLITTER_MACHINE = "Slitter"
 
 
 def execute():
@@ -43,7 +37,11 @@ def execute():
 	for machine in SHARED:
 		_also_serve(machine, DEPARTMENT)
 
-	_ensure_slitter()
+	# The Slitter is NOT created here. Patches run BEFORE the after_migrate hook
+	# that widens the department Select, so inserting a machine into a brand new
+	# department throws _validate_selects and aborts the migrate for every app
+	# on the bench. `seed_machines` creates it, and `align_machines` maps it,
+	# both from after_migrate - after the Select knows the department exists.
 	frappe.db.commit()
 
 
@@ -58,33 +56,3 @@ def _also_serve(machine, department):
 	frappe.db.set_value(
 		"VCL Production Machine", machine, "also_serves", "\n".join(listed)
 	)
-
-
-def _ensure_slitter():
-	name = SLITTER["machine_name"]
-	if frappe.db.exists("VCL Production Machine", name):
-		# Someone may have added it by hand already; fill only what is blank.
-		for field in ("stage", "erpnext_workstation"):
-			value = SLITTER[field]
-			if frappe.db.get_value("VCL Production Machine", name, field):
-				continue
-			if field == "stage" and not frappe.db.exists("Workstation Type", value):
-				continue
-			if field == "erpnext_workstation" and not frappe.db.exists("Workstation", value):
-				continue
-			frappe.db.set_value("VCL Production Machine", name, field, value)
-		return
-
-	doc = {
-		"doctype": "VCL Production Machine",
-		"machine_name": name,
-		"department": SLITTER["department"],
-		"machine_type": SLITTER["machine_type"],
-		"display_order": SLITTER["display_order"],
-		"active": 1,
-	}
-	if frappe.db.exists("Workstation Type", SLITTER["stage"]):
-		doc["stage"] = SLITTER["stage"]
-	if frappe.db.exists("Workstation", SLITTER["erpnext_workstation"]):
-		doc["erpnext_workstation"] = SLITTER["erpnext_workstation"]
-	frappe.get_doc(doc).insert(ignore_permissions=True)
