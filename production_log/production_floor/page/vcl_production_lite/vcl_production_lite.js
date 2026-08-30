@@ -602,6 +602,108 @@ class VclProductionBoard {
 		`;
 	}
 
+	// How far this job card has got, across every day and machine that has
+	// touched it. Read back from rows the floor already entered - nothing extra
+	// is keyed to produce it.
+	render_job_progress(dialog, row) {
+		const $wrapper = dialog.fields_dict.progress.$wrapper;
+		const card = (row.production_job_card || "").trim();
+		if (!card) {
+			$wrapper.empty();
+			return;
+		}
+		$wrapper.html(`<div class="vcl-stages-wait">${__("Loading progress…")}</div>`);
+
+		frappe
+			.call({
+				method: "production_log.production_floor.api.get_job_progress",
+				args: { job_card: card },
+			})
+			.then((response) => {
+				const data = response.message;
+				if (!data || !data.stages || !data.stages.length) {
+					$wrapper.empty();
+					return;
+				}
+				$wrapper.html(this.stages_html(data));
+			})
+			.catch(() => {
+				// Progress is a nicety; updating the row is the job. Never let
+				// this stop the sheet working.
+				$wrapper.empty();
+			});
+	}
+
+	stages_html(data) {
+		const rows = data.stages
+			.map((stage) => {
+				const name = stage.stage || __("Not yet assigned to a stage");
+				const totals = Object.keys(stage.totals || {})
+					.map(
+						(unit) =>
+							`<span class="vcl-stage-qty">${this.format_qty(
+								stage.totals[unit]
+							)} <u>${frappe.utils.escape_html(unit)}</u></span>`
+					)
+					.join("");
+				const bar =
+					stage.percent === null || stage.percent === undefined
+						? ""
+						: `<div class="vcl-bar"><i style="width:${stage.percent}%"></i></div>`;
+				return `
+				<div class="vcl-stage ${stage.stage ? "" : "vcl-stage-unassigned"}">
+					<div class="vcl-stage-top">
+						<span class="vcl-stage-name">${frappe.utils.escape_html(name)}</span>
+						<span class="vcl-badge ${VCL_STATUS_CLASS[stage.status] || ""}">${__(
+					stage.status
+				)}</span>
+					</div>
+					<div class="vcl-stage-qtys">${totals || "&mdash;"}</div>
+					${bar}
+					<div class="vcl-stage-meta">${frappe.utils.escape_html(
+						(stage.machines || []).join(", ")
+					)}</div>
+				</div>
+			`;
+			})
+			.join("");
+
+		// Only where both sides are counted the same way. Where they are not,
+		// say so rather than offer a subtraction that means nothing.
+		const flows = (data.flows || [])
+			.map((flow) =>
+				flow.comparable
+					? `<li>${__("{0} waiting to go from {1} to {2}", [
+							`<b>${this.format_qty(flow.waiting)} ${frappe.utils.escape_html(flow.uom)}</b>`,
+							frappe.utils.escape_html(flow.from),
+							frappe.utils.escape_html(flow.to),
+					  ])}</li>`
+					: `<li class="vcl-flow-na">${__("{0} and {1} are counted differently — they do not compare", [
+							frappe.utils.escape_html(flow.from),
+							frappe.utils.escape_html(flow.to),
+					  ])}</li>`
+			)
+			.join("");
+
+		const ordered = data.ordered_quantity
+			? `<div class="vcl-stage-order">${__("Ordered: {0} {1}", [
+					this.format_qty(data.ordered_quantity),
+					frappe.utils.escape_html(data.ordered_uom || ""),
+			  ])}</div>`
+			: "";
+
+		return `
+			<div class="vcl-stages">
+				<div class="vcl-stages-head">
+					<span>${__("Progress")}</span>
+					${ordered}
+				</div>
+				${rows}
+				${flows ? `<ul class="vcl-flows">${flows}</ul>` : ""}
+			</div>
+		`;
+	}
+
 	progress_bar(row) {
 		// "850 / 2 000" is arithmetic the reader has to do. The bar answers
 		// "is this nearly done" without reading, which is the actual question
@@ -1317,6 +1419,7 @@ class VclProductionBoard {
 			size: "small",
 			fields: [
 				{ fieldname: "header", fieldtype: "HTML" },
+				{ fieldname: "progress", fieldtype: "HTML" },
 				{ fieldname: "status_buttons", fieldtype: "HTML", label: __("Status") },
 				{
 					fieldname: "actual_quantity",
@@ -1412,6 +1515,8 @@ class VclProductionBoard {
 				${this.job_card_link(row, "vcl-jc-lg")}
 			</div>
 		`);
+
+		this.render_job_progress(dialog, row);
 
 		const $status = dialog.fields_dict.status_buttons.$wrapper;
 		$status.html(`

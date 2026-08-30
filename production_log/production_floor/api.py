@@ -20,7 +20,11 @@ from production_log.production_floor.reporting import (
 	exception_summary,
 	job_card_chip,
 	group_to_plan,
+	job_card_doctype,
 	job_card_route,
+	roll_up_stages,
+	stage_flow,
+	stage_percent,
 	order_departments,
 	parse_quantity,
 	summarise,
@@ -120,6 +124,112 @@ def get_machines(department=None):
 		fields=["name", "machine_name", "department", "machine_type", "display_order"],
 		order_by="department asc, display_order asc, machine_name asc",
 	)
+
+
+@frappe.whitelist()
+def get_job_progress(job_card=None):
+	"""Every board row stamped with this job card, gathered into its stages.
+
+	Nothing new is recorded to produce this. The floor already enters
+	(machine, quantity, unit) every day; the machine says which stage it
+	serves, and ERPNext's Workstation Type already sequences the stages. This
+	only reads back what is there.
+	"""
+	job_card = (job_card or "").strip()
+	if not job_card:
+		frappe.throw(_("Which job card?"))
+
+	rows = _rows_for_job_card(job_card)
+	stage_of_machine, position_of_stage = _stage_maps()
+	stages = roll_up_stages(rows, stage_of_machine, position_of_stage)
+
+	ordered, unit = _order_size(job_card)
+	for stage in stages:
+		# Only against the unit the order was placed in. A stage counted in kg
+		# has no percentage of an order counted in cartons, and saying so is
+		# the whole point of this section.
+		total = stage["totals"].get(unit) if unit else None
+		stage["percent"] = stage_percent(total, ordered)
+
+	return {
+		"job_card": job_card,
+		"doctype": job_card_doctype(job_card),
+		"ordered_quantity": ordered,
+		"ordered_uom": unit,
+		"stages": stages,
+		"flows": stage_flow(stages),
+		"entries": len(rows),
+	}
+
+
+def _rows_for_job_card(job_card):
+	"""The production rows for one card, across every day, dated."""
+	rows = frappe.get_all(
+		"VCL Daily Production Item",
+		filters={"production_job_card": job_card, "parenttype": "VCL Daily Production"},
+		fields=["parent", "machine", "department", "actual_quantity", "uom", "status", "idx"],
+	)
+	if not rows:
+		return []
+
+	# The date lives on the parent, and a stage total spanning two days is the
+	# normal case - Collation ran on the 3rd and the 4th for one job.
+	dates = dict(
+		frappe.get_all(
+			"VCL Daily Production",
+			filters={"name": ["in", list({r.parent for r in rows})]},
+			fields=["name", "production_date"],
+			as_list=True,
+		)
+	)
+	for row in rows:
+		row["production_date"] = str(dates.get(row.parent) or "")
+	return rows
+
+
+def _stage_maps():
+	"""machine -> stage, and stage -> where it sits in the route."""
+	stage_of_machine = {
+		m.name: m.stage
+		for m in frappe.get_all("VCL Production Machine", fields=["name", "stage"])
+		if m.stage
+	}
+	position_of_stage = {}
+	if frappe.db.exists("DocType", "Workstation Type"):
+		try:
+			position_of_stage = {
+				t.name: t.get("custom_stage_position")
+				for t in frappe.get_all(
+					"Workstation Type", fields=["name", "custom_stage_position"]
+				)
+			}
+		except Exception:
+			# A site without the custom field still gets its stages, just in
+			# name order rather than route order.
+			position_of_stage = {}
+	return stage_of_machine, position_of_stage
+
+
+def _order_size(job_card):
+	"""How much was ordered, and in what - or (None, None) if we cannot tell."""
+	doctype = job_card_doctype(job_card)
+	if not doctype or not frappe.db.exists("DocType", doctype):
+		return None, None
+	try:
+		ordered = frappe.db.get_value(doctype, job_card, "quantity_ordered")
+	except Exception:
+		return None, None
+	if ordered in (None, ""):
+		return None, None
+	try:
+		ordered = float(ordered)
+	except (TypeError, ValueError):
+		# Carton stores quantity_ordered as Data, so it is not always a number.
+		return None, None
+	# Computer Paper and Carton are both ordered in cartons, and the floor
+	# counts the finishing stages the same way - which is what makes a
+	# percentage meaningful at all.
+	return ordered, "cartons"
 
 
 @frappe.whitelist()
