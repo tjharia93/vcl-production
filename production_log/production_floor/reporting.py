@@ -585,6 +585,136 @@ def group_to_plan(chips, as_of=None):
 	]
 
 
+# --------------------------------------------------------------------------
+# stage roll-up
+# --------------------------------------------------------------------------
+
+# ⛔ THE RULE THIS WHOLE SECTION EXISTS TO KEEP: never add across units.
+#
+# Computer Paper printing is measured in KG, per part - two parts is two
+# machine runs. Collation and Pack are counted in CARTONS, which is also the
+# unit the order is placed in. There is no written-down kg-to-carton factor and
+# guessing one would make every stage report quietly wrong.
+#
+# So a stage reports its own totals PER UNIT, and a flow between two stages is
+# only offered when both sides are counted the same way.
+
+def stage_totals(rows):
+	"""What a set of rows adds up to, kept apart by unit.
+
+	Returns {"pcs": 1031.0, ...}. A row with no actual quantity contributes
+	nothing - a quantity nobody entered is not zero.
+	"""
+	totals = {}
+	for row in rows or []:
+		quantity = row.get("actual_quantity")
+		if quantity in (None, ""):
+			continue
+		unit = (row.get("uom") or "").strip() or "—"
+		totals[unit] = totals.get(unit, 0.0) + float(quantity)
+	return totals
+
+
+def roll_up_stages(rows, stage_of_machine, position_of_stage=None):
+	"""One job card's board rows, gathered into the stages they belong to.
+
+	`rows` are every production row stamped with that job card, across every
+	day. `stage_of_machine` maps a machine name to its Workstation Type. A
+	machine with no stage yet - Monobox, the planning areas - is NOT dropped:
+	it comes back under a `None` stage so the screen can say "recorded, not yet
+	assigned to a stage" rather than silently losing the work.
+	"""
+	positions = position_of_stage or {}
+	buckets = {}
+	for row in rows or []:
+		stage = stage_of_machine.get(row.get("machine"))
+		bucket = buckets.setdefault(stage, {"stage": stage, "rows": [], "machines": []})
+		bucket["rows"].append(row)
+		machine = row.get("machine")
+		if machine and machine not in bucket["machines"]:
+			bucket["machines"].append(machine)
+
+	out = []
+	for stage, bucket in buckets.items():
+		bucket_rows = bucket["rows"]
+		out.append({
+			"stage": stage,
+			"position": positions.get(stage) if stage else None,
+			"machines": bucket["machines"],
+			"totals": stage_totals(bucket_rows),
+			"entries": len(bucket_rows),
+			"status": stage_status(bucket_rows),
+			"days": sorted({r.get("production_date") for r in bucket_rows if r.get("production_date")}),
+		})
+
+	# Unstaged work sorts last: it is a gap to close, not a step in the route.
+	out.sort(key=lambda s: (s["position"] is None, s["position"] or 0, s["stage"] or ""))
+	return out
+
+
+def stage_status(rows):
+	"""One word for how a stage is going, from the rows that make it up.
+
+	Completed only when every row is - a stage with one machine finished and
+	another still running has not finished.
+	"""
+	statuses = {(row.get("status") or "Planned") for row in rows or []}
+	if not statuses:
+		return "Not Started"
+	if statuses == {"Completed"}:
+		return "Completed"
+	if "Running" in statuses:
+		return "Running"
+	if "Paused" in statuses:
+		return "Paused"
+	if "Carried Forward" in statuses:
+		return "Carried Forward"
+	if statuses == {"Planned"}:
+		return "Planned"
+	return "Not Started"
+
+
+def stage_flow(stages):
+	"""What is sitting between one stage and the next, where that is knowable.
+
+	Only offered when both stages carry the SAME unit - otherwise the honest
+	answer is that the two numbers do not compare, and the caller is told so
+	rather than handed a subtraction that means nothing.
+	"""
+	flows = []
+	staged = [s for s in stages if s["stage"]]
+	for upstream, downstream in zip(staged, staged[1:]):
+		shared = set(upstream["totals"]) & set(downstream["totals"])
+		if not shared:
+			flows.append({
+				"from": upstream["stage"],
+				"to": downstream["stage"],
+				"comparable": False,
+				"reason": "counted differently",
+			})
+			continue
+		for unit in sorted(shared):
+			flows.append({
+				"from": upstream["stage"],
+				"to": downstream["stage"],
+				"comparable": True,
+				"uom": unit,
+				"waiting": round(upstream["totals"][unit] - downstream["totals"][unit], 4),
+			})
+	return flows
+
+
+def stage_percent(total, ordered_quantity):
+	"""Percent of the order a stage has done, or None when it cannot be said.
+
+	Needs an order quantity AND the stage counted in the order's own unit; the
+	caller decides that, because only it knows what the order was placed in.
+	"""
+	if not ordered_quantity or ordered_quantity <= 0 or total is None:
+		return None
+	return max(0, min(100, round((float(total) / float(ordered_quantity)) * 100)))
+
+
 def job_card_doctype(job_card):
 	"""Which product line a job card number belongs to, by its naming series.
 
