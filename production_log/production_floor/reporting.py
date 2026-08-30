@@ -11,7 +11,7 @@ import re
 from datetime import date, datetime
 from urllib.parse import quote
 
-DEFAULT_DEPARTMENTS = ["Computer", "Offset", "Carton", "Labels", "Monobox"]
+DEFAULT_DEPARTMENTS = ["Computer", "Offset", "Carton", "Labels", "Monobox", "Reel to Reel"]
 DEFAULT_UNITS = ["pcs", "cartons", "reels", "reams", "sheets", "kg", "metres"]
 
 STATUSES = [

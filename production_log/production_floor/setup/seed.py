@@ -36,6 +36,11 @@ MACHINES = [
 	("Bundling", "Carton", "Process", 50),
 	("Gluing", "Carton", "Process", 60),
 	("Propheteer", "Labels", "Machine", 10),
+	# Reel to Reel shares the four Miyakoshis with Computer Paper - that is
+	# handled by `also_serves` on those machines, not by listing them twice.
+	# The Slitter is the one machine only this department uses: ETR is printed
+	# reel-to-reel and THEN slit, while KCB-type work finishes on the press.
+	("Slitter", "Reel to Reel", "Machine", 10),
 	# Monobox runs as six in-house stages, not machines - the same six the
 	# Monobox job traveller is built around. Names are spelled out in full so
 	# they do not collide with the Carton processes ("Die Cutting", "Bundling").

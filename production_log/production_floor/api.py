@@ -110,16 +110,37 @@ def get_board(production_date=None):
 
 def get_machines(department=None):
 	"""Not whitelisted: the board already ships the machine list, so there is
-	no reason for this to be reachable from a browser on its own."""
-	filters = {"active": 1}
-	if department:
-		filters["department"] = department
-	return frappe.get_all(
+	no reason for this to be reachable from a browser on its own.
+
+	A machine can serve more than one department - M1 prints Computer Paper and
+	Reel to Reel on the same press - so filtering is done here rather than in
+	the query. One press must never become two records: that splits its history
+	in half and shows the same machine twice on the board.
+	"""
+	machines = frappe.get_all(
 		"VCL Production Machine",
-		filters=filters,
-		fields=["name", "machine_name", "department", "machine_type", "display_order"],
+		filters={"active": 1},
+		fields=[
+			"name", "machine_name", "department", "machine_type",
+			"display_order", "also_serves",
+		],
 		order_by="department asc, display_order asc, machine_name asc",
 	)
+	for machine in machines:
+		machine["departments"] = machine_departments(machine)
+	if not department:
+		return machines
+	return [m for m in machines if department in m["departments"]]
+
+
+def machine_departments(machine):
+	"""Every department a machine can be picked under, home first."""
+	departments = [machine.get("department")] if machine.get("department") else []
+	for line in (machine.get("also_serves") or "").splitlines():
+		name = line.strip()
+		if name and name not in departments:
+			departments.append(name)
+	return departments
 
 
 @frappe.whitelist()
