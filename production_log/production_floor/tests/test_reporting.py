@@ -30,6 +30,11 @@ from production_log.production_floor.reporting import (  # noqa: E402
 	job_card_doctype,
 	job_card_route,
 	group_to_plan,
+	roll_up_stages,
+	stage_totals,
+	stage_status,
+	stage_flow,
+	stage_percent,
 	to_plan_bucket,
 	days_late,
 	TO_PLAN_GROUPS,
@@ -914,4 +919,123 @@ class AddMachineInlineTests(unittest.TestCase):
 		start = screen.index("machine_picker(dialog, department) {")
 		body = screen[start : screen.index("\n\tsubmit_quick_add", start)]
 		self.assertEqual(body.count("this.add_machine_chip()"), 2)
+class StageRollUpTests(unittest.TestCase):
+	"""Board rows, gathered into the stages their machines serve.
+
+	The worked example throughout is JC-CPT-2026-00062 (Gilani's, 500 cartons
+	ordered), taken from the run log typed into that card's production notes:
+
+	    03 Aug  Miyakoshi 01 (M1)  Printing  Part 2  -> 5.4 kg
+	    03 Aug  Miyakoshi 3  (M3)  Printing  Part 1  -> 2.7 kg
+	    03 Aug  Collater 01       Collation         -> 311 ctn
+	    04 Aug  Collater 01       Collation         ->  29 ctn
+	"""
+
+	STAGE_OF = {
+		"M1": "Reel to Reel Printing",
+		"M3": "Reel to Reel Printing",
+		"Collator": "Collation",
+	}
+	POSITION = {"Reel to Reel Printing": 20, "Collation": 50}
+
+	def gilanis(self):
+		return [
+			{"machine": "M1", "actual_quantity": 5.4, "uom": "kg", "status": "Completed", "production_date": "2026-08-03"},
+			{"machine": "M3", "actual_quantity": 2.7, "uom": "kg", "status": "Completed", "production_date": "2026-08-03"},
+			{"machine": "Collator", "actual_quantity": 311, "uom": "cartons", "status": "Running", "production_date": "2026-08-03"},
+			{"machine": "Collator", "actual_quantity": 29, "uom": "cartons", "status": "Running", "production_date": "2026-08-04"},
+		]
+
+	def test_two_parts_on_two_machines_are_one_printing_stage(self):
+		stages = roll_up_stages(self.gilanis(), self.STAGE_OF, self.POSITION)
+		printing = stages[0]
+		self.assertEqual(printing["stage"], "Reel to Reel Printing")
+		self.assertAlmostEqual(printing["totals"]["kg"], 8.1)
+		self.assertEqual(sorted(printing["machines"]), ["M1", "M3"])
+
+	def test_two_days_on_one_machine_are_one_collation_total(self):
+		stages = roll_up_stages(self.gilanis(), self.STAGE_OF, self.POSITION)
+		collation = stages[1]
+		self.assertEqual(collation["totals"]["cartons"], 340)
+		self.assertEqual(collation["days"], ["2026-08-03", "2026-08-04"])
+
+	def test_stages_come_back_in_route_order(self):
+		stages = roll_up_stages(self.gilanis(), self.STAGE_OF, self.POSITION)
+		self.assertEqual([s["position"] for s in stages], [20, 50])
+
+	# ---- the rule the whole section exists to keep -----------------------
+
+	def test_units_are_never_added_together(self):
+		mixed = [
+			{"machine": "M1", "actual_quantity": 5, "uom": "kg", "status": "Completed"},
+			{"machine": "M1", "actual_quantity": 3, "uom": "reels", "status": "Completed"},
+		]
+		totals = roll_up_stages(mixed, self.STAGE_OF, self.POSITION)[0]["totals"]
+		self.assertEqual(totals, {"kg": 5.0, "reels": 3.0})
+
+	def test_a_flow_between_differently_counted_stages_is_refused(self):
+		# kg of paper and cartons of forms do not subtract. There is no written
+		# conversion and inventing one would make every report quietly wrong.
+		flows = stage_flow(roll_up_stages(self.gilanis(), self.STAGE_OF, self.POSITION))
+		self.assertEqual(len(flows), 1)
+		self.assertFalse(flows[0]["comparable"])
+		self.assertNotIn("waiting", flows[0])
+
+	def test_a_flow_between_matching_units_gives_the_work_in_progress(self):
+		rows = [
+			{"machine": "Collator", "actual_quantity": 40, "uom": "cartons", "status": "Completed"},
+			{"machine": "Packer", "actual_quantity": 25, "uom": "cartons", "status": "Running"},
+		]
+		stage_of = dict(self.STAGE_OF, Packer="Pack")
+		flows = stage_flow(roll_up_stages(rows, stage_of, dict(self.POSITION, Pack=170)))
+		self.assertTrue(flows[0]["comparable"])
+		self.assertEqual(flows[0]["waiting"], 15)
+		self.assertEqual(flows[0]["uom"], "cartons")
+
+	# ---- nothing is silently dropped -------------------------------------
+
+	def test_a_machine_with_no_stage_is_surfaced_not_lost(self):
+		rows = self.gilanis() + [
+			{"machine": "Window Patching", "actual_quantity": 50, "uom": "pcs", "status": "Running"}
+		]
+		stages = roll_up_stages(rows, self.STAGE_OF, self.POSITION)
+		unstaged = stages[-1]
+		self.assertIsNone(unstaged["stage"])
+		self.assertEqual(unstaged["totals"], {"pcs": 50.0})
+
+	def test_unstaged_work_sorts_last(self):
+		rows = [{"machine": "Window Patching", "actual_quantity": 1, "uom": "pcs", "status": "Running"}] + self.gilanis()
+		stages = roll_up_stages(rows, self.STAGE_OF, self.POSITION)
+		self.assertIsNone(stages[-1]["stage"])
+
+	def test_a_row_with_no_actual_contributes_nothing(self):
+		# Not zero. A quantity nobody has entered is unknown, and averaging it
+		# in as zero would understate every stage still in progress.
+		self.assertEqual(stage_totals([{"actual_quantity": None, "uom": "kg"}]), {})
+		self.assertEqual(stage_totals([{"actual_quantity": "", "uom": "kg"}]), {})
+
+	# ---- status ----------------------------------------------------------
+
+	def test_a_stage_is_complete_only_when_every_machine_is(self):
+		self.assertEqual(stage_status([{"status": "Completed"}, {"status": "Completed"}]), "Completed")
+		self.assertEqual(stage_status([{"status": "Completed"}, {"status": "Running"}]), "Running")
+
+	def test_running_and_paused_beat_a_quiet_status(self):
+		self.assertEqual(stage_status([{"status": "Planned"}, {"status": "Running"}]), "Running")
+		self.assertEqual(stage_status([{"status": "Planned"}, {"status": "Paused"}]), "Paused")
+
+	# ---- percent ---------------------------------------------------------
+
+	def test_percent_against_the_order(self):
+		# 340 of Gilani's 500 cartons packed.
+		self.assertEqual(stage_percent(340, 500), 68)
+
+	def test_percent_is_none_when_it_cannot_be_said(self):
+		self.assertIsNone(stage_percent(340, 0))
+		self.assertIsNone(stage_percent(340, None))
+		self.assertIsNone(stage_percent(None, 500))
+
+	def test_percent_never_exceeds_full(self):
+		# Vajas ran 940 against 500 planned. The number is kept; the bar stops.
+		self.assertEqual(stage_percent(940, 500), 100)
 
