@@ -8,6 +8,7 @@ the Select options driven by Settings.
 
 import frappe
 
+from production_log.production_floor.setup.alignment import align_machines
 from production_log.production_floor.setup.seed import seed_machines
 
 ROLES = [
@@ -37,6 +38,9 @@ def after_install():
 	ensure_settings()
 	apply_select_options()
 	seed_machines()
+	# After seeding, so a machine created this run is mapped too - the patches
+	# cannot do it, because they run before the department Select is widened.
+	align_machines()
 	frappe.db.commit()
 
 
@@ -50,6 +54,9 @@ def after_migrate():
 	# which shows as a department you cannot add a job to. Retire a machine by
 	# unticking `active`, not by deleting it, or this will bring it back.
 	seed_machines()
+	# After seeding, so a machine created this run is mapped too - the patches
+	# cannot do it, because they run before the department Select is widened.
+	align_machines()
 	frappe.db.commit()
 
 
