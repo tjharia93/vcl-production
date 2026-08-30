@@ -873,6 +873,73 @@ class AddMachineInlineTests(unittest.TestCase):
 	"""
 
 	@staticmethod
+class ReelToReelDepartmentTests(unittest.TestCase):
+	"""Reel to Reel shares the Miyakoshis with Computer Paper.
+
+	ETR is printed reel-to-reel and THEN slit; KCB-type work finishes on the
+	press. That one extra stage is the whole difference, which is why they are
+	one department with two routes rather than two departments.
+	"""
+
+	@staticmethod
+	def _patch():
+		import ast
+
+		here = os.path.dirname(os.path.abspath(__file__))
+		path = os.path.join(here, "..", "..", "patches", "v10_2", "reel_to_reel_department.py")
+		namespace = {}
+		for node in ast.parse(open(path).read()).body:
+			if isinstance(node, ast.Assign):
+				exec(compile(ast.Module([node], []), path, "exec"), namespace)
+		return namespace
+
+	def test_the_department_exists(self):
+		self.assertIn("Reel to Reel", DEFAULT_DEPARTMENTS)
+
+	def test_the_existing_departments_keep_their_order(self):
+		# Appended, not inserted: the evening WhatsApp report reads in this
+		# order and reshuffling it is a visible change nobody asked for.
+		self.assertEqual(
+			DEFAULT_DEPARTMENTS[:5],
+			["Computer", "Offset", "Carton", "Labels", "Monobox"],
+		)
+
+	def test_the_presses_are_widened_not_cloned(self):
+		# The failure this guards: a second "M1" record under Reel to Reel,
+		# splitting one press's history in half.
+		namespace = self._patch()
+		self.assertEqual(namespace["SHARED"], ["M1", "M2", "M3", "M4"])
+		self.assertEqual(namespace["SLITTER"]["machine_name"], "Slitter")
+		self.assertNotIn("M1", namespace["SLITTER"].values())
+
+	def test_only_the_slitter_belongs_to_the_new_department_outright(self):
+		namespace = self._patch()
+		self.assertEqual(namespace["SLITTER"]["department"], "Reel to Reel")
+		self.assertEqual(namespace["SLITTER"]["stage"], "ETR Slitting")
+		self.assertEqual(namespace["SLITTER"]["erpnext_workstation"], "Slitter 01")
+
+	def test_the_seed_does_not_list_the_shared_presses_twice(self):
+		import ast
+
+		here = os.path.dirname(os.path.abspath(__file__))
+		source = open(os.path.join(here, "..", "setup", "seed.py")).read()
+		machines = next(
+			node.value
+			for node in ast.parse(source).body
+			if isinstance(node, ast.Assign)
+			and any(getattr(t, "id", None) == "MACHINES" for t in node.targets)
+		)
+		reel = [r.elts[0].value for r in machines.elts if r.elts[1].value == "Reel to Reel"]
+		self.assertEqual(reel, ["Slitter"])
+		# And no name appears under two departments in the seed at all.
+		names = [r.elts[0].value for r in machines.elts]
+		self.assertEqual(len(names), len(set(names)))
+
+
+class MachineDepartmentsTests(unittest.TestCase):
+	"""One press, many product lines - resolved the same way on both sides."""
+
+	@staticmethod
 	def _api():
 		here = os.path.dirname(os.path.abspath(__file__))
 		return open(os.path.join(here, "..", "api.py")).read()
@@ -1038,4 +1105,29 @@ class StageRollUpTests(unittest.TestCase):
 	def test_percent_never_exceeds_full(self):
 		# Vajas ran 940 against 500 planned. The number is kept; the bar stops.
 		self.assertEqual(stage_percent(940, 500), 100)
+	def test_the_resolver_reads_home_plus_also_serves(self):
+		api = self._api()
+		start = api.index("def machine_departments(machine):")
+		body = api[start : api.index("\n\n\n", start)]
+		self.assertIn('machine.get("department")', body)
+		self.assertIn("also_serves", body)
+		self.assertIn("splitlines()", body)
+
+	def test_get_machines_filters_on_the_resolved_list(self):
+		api = self._api()
+		start = api.index("def get_machines(department=None):")
+		body = api[start : api.index("def machine_departments", start)]
+		# Not a SQL filter on `department` - that would hide a shared press.
+		self.assertIn('m["departments"]', body)
+		self.assertNotIn('filters["department"] = department', body)
+
+	def test_the_screen_filters_the_same_way(self):
+		here = os.path.dirname(os.path.abspath(__file__))
+		screen = open(
+			os.path.join(here, "..", "page", "vcl_production_lite", "vcl_production_lite.js")
+		).read()
+		# The phone filters the board's own copy, so drift here shows as a
+		# machine that exists on the server and cannot be picked.
+		self.assertIn("machine.departments || [machine.department]", screen)
+		self.assertNotIn("machine.department === department", screen)
 

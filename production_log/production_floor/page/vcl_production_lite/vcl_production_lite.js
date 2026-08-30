@@ -1051,8 +1051,10 @@ class VclProductionBoard {
 	// The chosen machine lives on `dialog.vcl_machine`, not in a Frappe field,
 	// because the control is ours. Both submit paths read it from there.
 	machine_picker(dialog, department) {
-		const machines = (this.board.machines || []).filter(
-			(machine) => machine.department === department
+		// `departments` is home plus anything in Also Serves - one press can
+		// print Computer Paper and Reel to Reel, and must appear under both.
+		const machines = (this.board.machines || []).filter((machine) =>
+			(machine.departments || [machine.department]).includes(department)
 		);
 		const $wrapper = dialog.fields_dict.machine_pick.$wrapper;
 

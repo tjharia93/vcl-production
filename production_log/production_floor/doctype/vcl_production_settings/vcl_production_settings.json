@@ -22,7 +22,7 @@
    "label": "Lists"
   },
   {
-   "default": "Computer\nOffset\nCarton\nLabels\nMonobox",
+   "default": "Computer\nOffset\nCarton\nLabels\nMonobox\nReel to Reel",
    "fieldname": "departments",
    "fieldtype": "Small Text",
    "label": "Departments (one per line)",
