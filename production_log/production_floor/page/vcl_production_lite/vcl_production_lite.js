@@ -523,7 +523,7 @@ class VclProductionBoard {
 			const index = $(event.currentTarget).data("toplan");
 			const card = this.to_plan()[index];
 			if (card) {
-				this.quick_add_dialog(card);
+				this.plan_stations_dialog(card);
 			}
 		});
 		this.$body.find("[data-filter]").on("click", (event) => {
@@ -598,6 +598,108 @@ class VclProductionBoard {
 				<div class="vcl-card-side">
 					<span class="vcl-badge ${VCL_STATUS_CLASS[row.status] || ""}">${__(row.status)}</span>
 				</div>
+			</div>
+		`;
+	}
+
+	// How far this job card has got, across every day and machine that has
+	// touched it. Read back from rows the floor already entered - nothing extra
+	// is keyed to produce it.
+	render_job_progress(dialog, row) {
+		const $wrapper = dialog.fields_dict.progress.$wrapper;
+		const card = (row.production_job_card || "").trim();
+		if (!card) {
+			$wrapper.empty();
+			return;
+		}
+		$wrapper.html(`<div class="vcl-stages-wait">${__("Loading progress…")}</div>`);
+
+		frappe
+			.call({
+				method: "production_log.production_floor.api.get_job_progress",
+				args: { job_card: card },
+			})
+			.then((response) => {
+				const data = response.message;
+				if (!data || !data.stages || !data.stages.length) {
+					$wrapper.empty();
+					return;
+				}
+				$wrapper.html(this.stages_html(data));
+			})
+			.catch(() => {
+				// Progress is a nicety; updating the row is the job. Never let
+				// this stop the sheet working.
+				$wrapper.empty();
+			});
+	}
+
+	stages_html(data) {
+		const rows = data.stages
+			.map((stage) => {
+				const name = stage.stage || __("Not yet assigned to a stage");
+				const totals = Object.keys(stage.totals || {})
+					.map(
+						(unit) =>
+							`<span class="vcl-stage-qty">${this.format_qty(
+								stage.totals[unit]
+							)} <u>${frappe.utils.escape_html(unit)}</u></span>`
+					)
+					.join("");
+				const bar =
+					stage.percent === null || stage.percent === undefined
+						? ""
+						: `<div class="vcl-bar"><i style="width:${stage.percent}%"></i></div>`;
+				return `
+				<div class="vcl-stage ${stage.stage ? "" : "vcl-stage-unassigned"}">
+					<div class="vcl-stage-top">
+						<span class="vcl-stage-name">${frappe.utils.escape_html(name)}</span>
+						<span class="vcl-badge ${VCL_STATUS_CLASS[stage.status] || ""}">${__(
+					stage.status
+				)}</span>
+					</div>
+					<div class="vcl-stage-qtys">${totals || "&mdash;"}</div>
+					${bar}
+					<div class="vcl-stage-meta">${frappe.utils.escape_html(
+						(stage.machines || []).join(", ")
+					)}</div>
+				</div>
+			`;
+			})
+			.join("");
+
+		// Only where both sides are counted the same way. Where they are not,
+		// say so rather than offer a subtraction that means nothing.
+		const flows = (data.flows || [])
+			.map((flow) =>
+				flow.comparable
+					? `<li>${__("{0} waiting to go from {1} to {2}", [
+							`<b>${this.format_qty(flow.waiting)} ${frappe.utils.escape_html(flow.uom)}</b>`,
+							frappe.utils.escape_html(flow.from),
+							frappe.utils.escape_html(flow.to),
+					  ])}</li>`
+					: `<li class="vcl-flow-na">${__("{0} and {1} are counted differently — they do not compare", [
+							frappe.utils.escape_html(flow.from),
+							frappe.utils.escape_html(flow.to),
+					  ])}</li>`
+			)
+			.join("");
+
+		const ordered = data.ordered_quantity
+			? `<div class="vcl-stage-order">${__("Ordered: {0} {1}", [
+					this.format_qty(data.ordered_quantity),
+					frappe.utils.escape_html(data.ordered_uom || ""),
+			  ])}</div>`
+			: "";
+
+		return `
+			<div class="vcl-stages">
+				<div class="vcl-stages-head">
+					<span>${__("Progress")}</span>
+					${ordered}
+				</div>
+				${rows}
+				${flows ? `<ul class="vcl-flows">${flows}</ul>` : ""}
 			</div>
 		`;
 	}
@@ -861,6 +963,185 @@ class VclProductionBoard {
 	// dialogs
 	// ------------------------------------------------------------------
 
+	// Plan the whole job at once. A five-stage job is five rows, and making a
+	// planner tap Add Job five times is how a plan stops being made.
+	plan_stations_dialog(card) {
+		frappe
+			.call({
+				method: "production_log.production_floor.api.get_plan_template",
+				args: { job_card: card.job_card },
+				freeze: true,
+				freeze_message: __("Reading the job card…"),
+			})
+			.then((response) => {
+				const plan = response.message;
+				if (!plan || !plan.lines || !plan.lines.length) {
+					// No route on the card - fall back to the single-machine
+					// sheet rather than leaving the tap doing nothing.
+					this.quick_add_dialog(card);
+					return;
+				}
+				this.show_plan_dialog(card, plan);
+			})
+			.catch(() => this.quick_add_dialog(card));
+	}
+
+	show_plan_dialog(card, plan) {
+		const state = plan.lines.map((line) =>
+			Object.assign({}, line, {
+				uom: "",
+				planned_quantity: "",
+				customer_name: plan.customer_name || card.customer_name,
+				job_name: plan.job_name || card.job_name,
+				instructions: plan.instructions || card.instructions,
+			})
+		);
+
+		const dialog = new frappe.ui.Dialog({
+			title: __("Plan {0}", [card.ref || card.job_card]),
+			size: "large",
+			fields: [{ fieldname: "stations", fieldtype: "HTML" }],
+			// The ticked count, not the total: two of six stages may have no
+			// machine and start unticked, and a button promising six when four
+			// will happen is a small lie the planner has to discover.
+			primary_action_label: __("Add {0} stations", [
+				state.filter((line) => line.include).length,
+			]),
+			primary_action: () => this.submit_plan(dialog, card, state),
+		});
+
+		const $body = dialog.fields_dict.stations.$wrapper;
+		$body.html(`
+			<div class="vcl-plan-head">
+				<div class="vcl-plan-cust">${frappe.utils.escape_html(
+					plan.customer_name || ""
+				)}</div>
+				<div class="vcl-plan-job">${frappe.utils.escape_html(plan.job_name || "")}</div>
+				${
+					plan.ordered_quantity
+						? `<div class="vcl-plan-ordered">${__("Ordered: {0}", [
+								this.format_qty(plan.ordered_quantity),
+						  ])}</div>`
+						: ""
+				}
+			</div>
+			<div class="vcl-plan-rows">
+				${state.map((line, index) => this.plan_row_html(line, index, plan.units)).join("")}
+			</div>
+		`);
+
+		$body.on("change", "[data-plan]", (event) => {
+			const $el = $(event.currentTarget);
+			const line = state[$el.data("plan")];
+			const field = $el.data("field");
+			line[field] = $el.is(":checkbox") ? $el.prop("checked") : $el.val();
+			if (field === "include") {
+				$el.closest(".vcl-plan-row").toggleClass("vcl-off", !line.include);
+			}
+			const on = state.filter((l) => l.include).length;
+			dialog.set_primary_action(__("Add {0} stations", [on]), () =>
+				this.submit_plan(dialog, card, state)
+			);
+		});
+
+		dialog.show();
+	}
+
+	plan_row_html(line, index, units) {
+		const noMachine = !line.machines || !line.machines.length;
+		return `
+			<div class="vcl-plan-row ${line.include ? "" : "vcl-off"}">
+				<label class="vcl-plan-tick">
+					<input type="checkbox" data-plan="${index}" data-field="include" ${
+			line.include ? "checked" : ""
+		} ${noMachine ? "disabled" : ""}>
+				</label>
+				<div class="vcl-plan-what">
+					<div class="vcl-plan-stage">${frappe.utils.escape_html(line.stage || "")}</div>
+					${
+						line.part_label
+							? `<div class="vcl-plan-part">${frappe.utils.escape_html(
+									line.part_label
+							  )}</div>`
+							: ""
+					}
+					${
+						noMachine
+							? `<div class="vcl-plan-nomachine">${__(
+									"No machine serves this stage yet — set a Stage on one first"
+							  )}</div>`
+							: ""
+					}
+				</div>
+				<select class="vcl-plan-machine" data-plan="${index}" data-field="machine" ${
+			noMachine ? "disabled" : ""
+		}>
+					${(line.machines || [])
+						.map(
+							(machine) =>
+								`<option value="${frappe.utils.escape_html(
+									machine
+								)}">${frappe.utils.escape_html(machine)}</option>`
+						)
+						.join("")}
+				</select>
+				<input class="vcl-plan-qty" type="text" inputmode="decimal"
+					placeholder="${__("Qty")}" data-plan="${index}" data-field="planned_quantity">
+				<select class="vcl-plan-uom" data-plan="${index}" data-field="uom">
+					<option value="">${__("unit")}</option>
+					${(units || [])
+						.map(
+							(unit) =>
+								`<option value="${frappe.utils.escape_html(
+									unit
+								)}">${frappe.utils.escape_html(unit)}</option>`
+						)
+						.join("")}
+				</select>
+			</div>
+		`;
+	}
+
+	submit_plan(dialog, card, state) {
+		const chosen = state.filter((line) => line.include);
+		if (!chosen.length) {
+			frappe.msgprint(__("Tick at least one station."));
+			return;
+		}
+		for (const line of chosen) {
+			const invalid = this.numeric_error(line.planned_quantity, __("Planned Quantity"));
+			if (invalid) {
+				frappe.msgprint(invalid);
+				return;
+			}
+		}
+		frappe
+			.call({
+				method: "production_log.production_floor.api.plan_job",
+				args: {
+					production_date: this.date,
+					job_card: card.job_card,
+					lines: JSON.stringify(chosen),
+				},
+				freeze: true,
+			})
+			.then((response) => {
+				if (!response.message) {
+					return;
+				}
+				this.drop_from_queue(card.job_card);
+				dialog.hide();
+				this.apply_day(response.message);
+				frappe.show_alert(
+					{
+						message: __("{0} stations planned", [chosen.length]),
+						indicator: "green",
+					},
+					5
+				);
+			});
+	}
+
 	quick_add_dialog(card) {
 		// The short path. Everything the job card already knows is filled in,
 		// so the only decision left at the machine is which machine - which is
@@ -949,8 +1230,10 @@ class VclProductionBoard {
 	// The chosen machine lives on `dialog.vcl_machine`, not in a Frappe field,
 	// because the control is ours. Both submit paths read it from there.
 	machine_picker(dialog, department) {
-		const machines = (this.board.machines || []).filter(
-			(machine) => machine.department === department
+		// `departments` is home plus anything in Also Serves - one press can
+		// print Computer Paper and Reel to Reel, and must appear under both.
+		const machines = (this.board.machines || []).filter((machine) =>
+			(machine.departments || [machine.department]).includes(department)
 		);
 		const $wrapper = dialog.fields_dict.machine_pick.$wrapper;
 
@@ -1398,6 +1681,7 @@ class VclProductionBoard {
 			size: "small",
 			fields: [
 				{ fieldname: "header", fieldtype: "HTML" },
+				{ fieldname: "progress", fieldtype: "HTML" },
 				{ fieldname: "status_buttons", fieldtype: "HTML", label: __("Status") },
 				{
 					fieldname: "actual_quantity",
@@ -1412,6 +1696,15 @@ class VclProductionBoard {
 					label: __("Unit"),
 					options: this.board.units || [],
 					default: row.uom,
+				},
+				{
+					fieldname: "carried_quantity",
+					fieldtype: "Data",
+					label: __("Carry Forward"),
+					default: row.carried_quantity || "",
+					description: __(
+						"Still owed after today. Puts this station on tomorrow's board with that amount already planned."
+					),
 				},
 				{ fieldtype: "Section Break" },
 				{
@@ -1455,6 +1748,7 @@ class VclProductionBoard {
 							uom: values.uom,
 							reason: values.reason || "",
 							notes: values.notes || "",
+							carried_quantity: values.carried_quantity || "",
 						},
 						freeze: true,
 					})
@@ -1463,6 +1757,24 @@ class VclProductionBoard {
 							dialog.hide();
 							this.apply_day(response.message);
 							frappe.show_alert({ message: __("Updated"), indicator: "green" });
+							// A row appearing on ANOTHER day is the kind of side
+							// effect people otherwise discover by accident.
+							const carried = response.message.carried_to;
+							if (carried) {
+								frappe.show_alert(
+									{
+										message: carried.created
+											? __("Carried forward — added to {0}", [
+													frappe.datetime.str_to_user(carried.date),
+											  ])
+											: __("Carry forward updated on {0}", [
+													frappe.datetime.str_to_user(carried.date),
+											  ]),
+										indicator: "blue",
+									},
+									6
+								);
+							}
 						}
 					});
 			},
@@ -1493,6 +1805,8 @@ class VclProductionBoard {
 				${this.job_card_link(row, "vcl-jc-lg")}
 			</div>
 		`);
+
+		this.render_job_progress(dialog, row);
 
 		const $status = dialog.fields_dict.status_buttons.$wrapper;
 		$status.html(`

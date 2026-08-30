@@ -10,6 +10,7 @@
   "machine_name",
   "department",
   "machine_type",
+  "also_serves",
   "column_break_main",
   "display_order",
   "active",
@@ -32,7 +33,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Department",
-   "options": "Computer\nOffset\nCarton\nLabels\nMonobox",
+   "options": "Computer\nOffset\nCarton\nLabels\nMonobox\nReel to Reel",
    "reqd": 1
   },
   {
@@ -44,6 +45,12 @@
    "label": "Type",
    "options": "Machine\nProcess",
    "reqd": 1
+  },
+  {
+   "fieldname": "also_serves",
+   "fieldtype": "Small Text",
+   "label": "Also Serves",
+   "description": "Other departments this machine runs work for, one per line. M1-M4 print Computer Paper AND Reel to Reel on the same press, and one press must not become two records - that would split its history in half. The department above stays its home; this widens where it can be picked."
   },
   {
    "fieldname": "column_break_main",

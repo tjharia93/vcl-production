@@ -45,6 +45,15 @@ from production_log.production_floor.reporting import (  # noqa: E402
 	order_departments,
 	parse_quantity,
 	summarise,
+	roll_up_stages,
+	stage_totals,
+	stage_status,
+	stage_flow,
+	stage_percent,
+	plan_lines,
+	part_label,
+	carry_forward_row,
+	SPLIT_BY_PART,
 )
 
 
@@ -915,3 +924,336 @@ class AddMachineInlineTests(unittest.TestCase):
 		body = screen[start : screen.index("\n\tsubmit_quick_add", start)]
 		self.assertEqual(body.count("this.add_machine_chip()"), 2)
 
+
+
+class StageRollUpTests(unittest.TestCase):
+	"""Board rows, gathered into the stages their machines serve.
+
+	The worked example throughout is JC-CPT-2026-00062 (Gilani's, 500 cartons
+	ordered), taken from the run log typed into that card's production notes:
+
+	    03 Aug  Miyakoshi 01 (M1)  Printing  Part 2  -> 5.4 kg
+	    03 Aug  Miyakoshi 3  (M3)  Printing  Part 1  -> 2.7 kg
+	    03 Aug  Collater 01       Collation         -> 311 ctn
+	    04 Aug  Collater 01       Collation         ->  29 ctn
+	"""
+
+	STAGE_OF = {
+		"M1": "Reel to Reel Printing",
+		"M3": "Reel to Reel Printing",
+		"Collator": "Collation",
+	}
+	POSITION = {"Reel to Reel Printing": 20, "Collation": 50}
+
+	def gilanis(self):
+		return [
+			{"machine": "M1", "actual_quantity": 5.4, "uom": "kg", "status": "Completed", "production_date": "2026-08-03"},
+			{"machine": "M3", "actual_quantity": 2.7, "uom": "kg", "status": "Completed", "production_date": "2026-08-03"},
+			{"machine": "Collator", "actual_quantity": 311, "uom": "cartons", "status": "Running", "production_date": "2026-08-03"},
+			{"machine": "Collator", "actual_quantity": 29, "uom": "cartons", "status": "Running", "production_date": "2026-08-04"},
+		]
+
+	def test_two_parts_on_two_machines_are_one_printing_stage(self):
+		stages = roll_up_stages(self.gilanis(), self.STAGE_OF, self.POSITION)
+		printing = stages[0]
+		self.assertEqual(printing["stage"], "Reel to Reel Printing")
+		self.assertAlmostEqual(printing["totals"]["kg"], 8.1)
+		self.assertEqual(sorted(printing["machines"]), ["M1", "M3"])
+
+	def test_two_days_on_one_machine_are_one_collation_total(self):
+		stages = roll_up_stages(self.gilanis(), self.STAGE_OF, self.POSITION)
+		collation = stages[1]
+		self.assertEqual(collation["totals"]["cartons"], 340)
+		self.assertEqual(collation["days"], ["2026-08-03", "2026-08-04"])
+
+	def test_stages_come_back_in_route_order(self):
+		stages = roll_up_stages(self.gilanis(), self.STAGE_OF, self.POSITION)
+		self.assertEqual([s["position"] for s in stages], [20, 50])
+
+	# ---- the rule the whole section exists to keep -----------------------
+
+	def test_units_are_never_added_together(self):
+		mixed = [
+			{"machine": "M1", "actual_quantity": 5, "uom": "kg", "status": "Completed"},
+			{"machine": "M1", "actual_quantity": 3, "uom": "reels", "status": "Completed"},
+		]
+		totals = roll_up_stages(mixed, self.STAGE_OF, self.POSITION)[0]["totals"]
+		self.assertEqual(totals, {"kg": 5.0, "reels": 3.0})
+
+	def test_a_flow_between_differently_counted_stages_is_refused(self):
+		# kg of paper and cartons of forms do not subtract. There is no written
+		# conversion and inventing one would make every report quietly wrong.
+		flows = stage_flow(roll_up_stages(self.gilanis(), self.STAGE_OF, self.POSITION))
+		self.assertEqual(len(flows), 1)
+		self.assertFalse(flows[0]["comparable"])
+		self.assertNotIn("waiting", flows[0])
+
+	def test_a_flow_between_matching_units_gives_the_work_in_progress(self):
+		rows = [
+			{"machine": "Collator", "actual_quantity": 40, "uom": "cartons", "status": "Completed"},
+			{"machine": "Packer", "actual_quantity": 25, "uom": "cartons", "status": "Running"},
+		]
+		stage_of = dict(self.STAGE_OF, Packer="Pack")
+		flows = stage_flow(roll_up_stages(rows, stage_of, dict(self.POSITION, Pack=170)))
+		self.assertTrue(flows[0]["comparable"])
+		self.assertEqual(flows[0]["waiting"], 15)
+		self.assertEqual(flows[0]["uom"], "cartons")
+
+	# ---- nothing is silently dropped -------------------------------------
+
+	def test_a_machine_with_no_stage_is_surfaced_not_lost(self):
+		rows = self.gilanis() + [
+			{"machine": "Window Patching", "actual_quantity": 50, "uom": "pcs", "status": "Running"}
+		]
+		stages = roll_up_stages(rows, self.STAGE_OF, self.POSITION)
+		unstaged = stages[-1]
+		self.assertIsNone(unstaged["stage"])
+		self.assertEqual(unstaged["totals"], {"pcs": 50.0})
+
+	def test_unstaged_work_sorts_last(self):
+		rows = [{"machine": "Window Patching", "actual_quantity": 1, "uom": "pcs", "status": "Running"}] + self.gilanis()
+		stages = roll_up_stages(rows, self.STAGE_OF, self.POSITION)
+		self.assertIsNone(stages[-1]["stage"])
+
+	def test_a_row_with_no_actual_contributes_nothing(self):
+		# Not zero. A quantity nobody has entered is unknown, and averaging it
+		# in as zero would understate every stage still in progress.
+		self.assertEqual(stage_totals([{"actual_quantity": None, "uom": "kg"}]), {})
+		self.assertEqual(stage_totals([{"actual_quantity": "", "uom": "kg"}]), {})
+
+	# ---- status ----------------------------------------------------------
+
+	def test_a_stage_is_complete_only_when_every_machine_is(self):
+		self.assertEqual(stage_status([{"status": "Completed"}, {"status": "Completed"}]), "Completed")
+		self.assertEqual(stage_status([{"status": "Completed"}, {"status": "Running"}]), "Running")
+
+	def test_running_and_paused_beat_a_quiet_status(self):
+		self.assertEqual(stage_status([{"status": "Planned"}, {"status": "Running"}]), "Running")
+		self.assertEqual(stage_status([{"status": "Planned"}, {"status": "Paused"}]), "Paused")
+
+	# ---- percent ---------------------------------------------------------
+
+	def test_percent_against_the_order(self):
+		# 340 of Gilani's 500 cartons packed.
+		self.assertEqual(stage_percent(340, 500), 68)
+
+	def test_percent_is_none_when_it_cannot_be_said(self):
+		self.assertIsNone(stage_percent(340, 0))
+		self.assertIsNone(stage_percent(340, None))
+		self.assertIsNone(stage_percent(None, 500))
+
+	def test_percent_never_exceeds_full(self):
+		# Vajas ran 940 against 500 planned. The number is kept; the bar stops.
+		self.assertEqual(stage_percent(940, 500), 100)
+
+
+
+class ReelToReelDepartmentTests(unittest.TestCase):
+	"""Reel to Reel shares the Miyakoshis with Computer Paper.
+
+	ETR is printed reel-to-reel and THEN slit; KCB-type work finishes on the
+	press. That one extra stage is the whole difference, which is why they are
+	one department with two routes rather than two departments.
+	"""
+
+	@staticmethod
+	def _patch():
+		import ast
+
+		here = os.path.dirname(os.path.abspath(__file__))
+		path = os.path.join(here, "..", "..", "patches", "v10_2", "reel_to_reel_department.py")
+		namespace = {}
+		for node in ast.parse(open(path).read()).body:
+			if isinstance(node, ast.Assign):
+				exec(compile(ast.Module([node], []), path, "exec"), namespace)
+		return namespace
+
+	def test_the_department_exists(self):
+		self.assertIn("Reel to Reel", DEFAULT_DEPARTMENTS)
+
+	def test_the_existing_departments_keep_their_order(self):
+		# Appended, not inserted: the evening WhatsApp report reads in this
+		# order and reshuffling it is a visible change nobody asked for.
+		self.assertEqual(
+			DEFAULT_DEPARTMENTS[:5],
+			["Computer", "Offset", "Carton", "Labels", "Monobox"],
+		)
+
+	def test_the_presses_are_widened_not_cloned(self):
+		# The failure this guards: a second "M1" record under Reel to Reel,
+		# splitting one press's history in half.
+		namespace = self._patch()
+		self.assertEqual(namespace["SHARED"], ["M1", "M2", "M3", "M4"])
+		self.assertEqual(namespace["SLITTER"]["machine_name"], "Slitter")
+		self.assertNotIn("M1", namespace["SLITTER"].values())
+
+	def test_only_the_slitter_belongs_to_the_new_department_outright(self):
+		namespace = self._patch()
+		self.assertEqual(namespace["SLITTER"]["department"], "Reel to Reel")
+		self.assertEqual(namespace["SLITTER"]["stage"], "ETR Slitting")
+		self.assertEqual(namespace["SLITTER"]["erpnext_workstation"], "Slitter 01")
+
+	def test_the_seed_does_not_list_the_shared_presses_twice(self):
+		import ast
+
+		here = os.path.dirname(os.path.abspath(__file__))
+		source = open(os.path.join(here, "..", "setup", "seed.py")).read()
+		machines = next(
+			node.value
+			for node in ast.parse(source).body
+			if isinstance(node, ast.Assign)
+			and any(getattr(t, "id", None) == "MACHINES" for t in node.targets)
+		)
+		reel = [r.elts[0].value for r in machines.elts if r.elts[1].value == "Reel to Reel"]
+		self.assertEqual(reel, ["Slitter"])
+		# And no name appears under two departments in the seed at all.
+		names = [r.elts[0].value for r in machines.elts]
+		self.assertEqual(len(names), len(set(names)))
+
+
+class MachineDepartmentsTests(unittest.TestCase):
+	"""One press, many product lines - resolved the same way on both sides."""
+
+	@staticmethod
+	def _api():
+		here = os.path.dirname(os.path.abspath(__file__))
+		return open(os.path.join(here, "..", "api.py")).read()
+
+	def test_the_resolver_reads_home_plus_also_serves(self):
+		api = self._api()
+		start = api.index("def machine_departments(machine):")
+		body = api[start : api.index("\n\n\n", start)]
+		self.assertIn('machine.get("department")', body)
+		self.assertIn("also_serves", body)
+		self.assertIn("splitlines()", body)
+
+	def test_get_machines_filters_on_the_resolved_list(self):
+		api = self._api()
+		start = api.index("def get_machines(department=None):")
+		body = api[start : api.index("def machine_departments", start)]
+		# Not a SQL filter on `department` - that would hide a shared press.
+		self.assertIn('m["departments"]', body)
+		self.assertNotIn('filters["department"] = department', body)
+
+	def test_the_screen_filters_the_same_way(self):
+		here = os.path.dirname(os.path.abspath(__file__))
+		screen = open(
+			os.path.join(here, "..", "page", "vcl_production_lite", "vcl_production_lite.js")
+		).read()
+		# The phone filters the board's own copy, so drift here shows as a
+		# machine that exists on the server and cannot be picked.
+		self.assertIn("machine.departments || [machine.department]", screen)
+		self.assertNotIn("machine.department === department", screen)
+
+
+class PlanLinesTests(unittest.TestCase):
+	"""A job card becomes one line per station it will pass through.
+
+	Computer Paper prints each part on its own press - the run log for
+	JC-CPT-2026-00062 has Part 2 (CF Yellow) on Miyakoshi 01 and Part 1
+	(CB White) on Miyakoshi 3, the same day. Collation joins them back into one
+	set, so only printing splits.
+	"""
+
+	ROUTE = ["Design", "Pending Films", "Printing", "Collation", "Pack"]
+	PARTS = [
+		{"part_number": 1, "paper_type": "CB", "colour": "White", "gsm": 55},
+		{"part_number": 2, "paper_type": "CF", "colour": "Yellow", "gsm": 55},
+	]
+
+	def test_printing_splits_per_part_and_nothing_else_does(self):
+		lines = plan_lines(self.ROUTE, self.PARTS)
+		self.assertEqual(len(lines), 6)
+		printing = [l for l in lines if l["stage"] == "Printing"]
+		self.assertEqual(len(printing), 2)
+		for stage in ("Design", "Pending Films", "Collation", "Pack"):
+			self.assertEqual(len([l for l in lines if l["stage"] == stage]), 1, stage)
+
+	def test_the_split_lines_carry_the_colour(self):
+		lines = plan_lines(self.ROUTE, self.PARTS)
+		labels = [l["part_label"] for l in lines if l["stage"] == "Printing"]
+		self.assertEqual(labels, ["Part 1 · CB · White · 55gsm", "Part 2 · CF · Yellow · 55gsm"])
+
+	def test_a_job_with_no_parts_still_gets_a_plan(self):
+		# A missing spec must not silently produce an empty plan - that would
+		# read as "this job needs no work".
+		lines = plan_lines(self.ROUTE, [])
+		self.assertEqual(len(lines), 5)
+		self.assertTrue(all(l["part_label"] is None for l in lines))
+
+	def test_route_order_is_kept_and_split_lines_share_a_sequence(self):
+		lines = plan_lines(self.ROUTE, self.PARTS)
+		self.assertEqual([l["sequence"] for l in lines], [1, 2, 3, 3, 4, 5])
+
+	def test_the_printing_stages_that_split_are_named_explicitly(self):
+		# Reel to Reel and Sheet to Sheet are the ERPNext Workstation Type names
+		# for the same operation; all three must split or a Computer Paper job
+		# planned under its real stage name silently stops splitting.
+		self.assertIn("Printing", SPLIT_BY_PART)
+		self.assertIn("Reel to Reel Printing", SPLIT_BY_PART)
+		self.assertIn("Sheet to Sheet Printing", SPLIT_BY_PART)
+
+	def test_an_empty_route_is_no_lines_not_a_crash(self):
+		self.assertEqual(plan_lines([], self.PARTS), [])
+		self.assertEqual(plan_lines(None, None), [])
+
+
+class PartLabelTests(unittest.TestCase):
+	def test_a_full_part_reads_as_the_floor_says_it(self):
+		self.assertEqual(
+			part_label({"part_number": 2, "paper_type": "CF", "colour": "Yellow", "gsm": 55}),
+			"Part 2 · CF · Yellow · 55gsm",
+		)
+
+	def test_a_sparse_part_still_gets_a_usable_label(self):
+		# Rather than a string full of gaps and separators.
+		self.assertEqual(part_label({"part_number": 1}), "Part 1")
+		self.assertEqual(part_label({"colour": "Blue"}), "Blue")
+		self.assertEqual(part_label({}), "")
+
+
+class CarryForwardTests(unittest.TestCase):
+	"""What is still owed becomes tomorrow's planned quantity."""
+
+	def row(self, **over):
+		base = {
+			"production_date": "2026-08-27",
+			"department": "Reel to Reel",
+			"machine": "M3",
+			"customer_name": "KCB",
+			"job_name": "KCB",
+			"uom": "reels",
+			"carried_quantity": 1,
+			"production_job_card": "JC-CPT-2026-00099",
+			"part_label": None,
+		}
+		base.update(over)
+		return base
+
+	def test_the_carried_amount_becomes_tomorrows_plan(self):
+		nxt = carry_forward_row(self.row(), "2026-08-28")
+		self.assertEqual(nxt["planned_quantity"], 1.0)
+		self.assertEqual(nxt["status"], "Planned")
+		self.assertEqual(nxt["machine"], "M3")
+		self.assertEqual(nxt["uom"], "reels")
+
+	def test_the_job_card_and_part_travel_with_it(self):
+		nxt = carry_forward_row(self.row(part_label="Part 2 · CF · Yellow · 55gsm"), "2026-08-28")
+		self.assertEqual(nxt["production_job_card"], "JC-CPT-2026-00099")
+		self.assertEqual(nxt["part_label"], "Part 2 · CF · Yellow · 55gsm")
+
+	def test_it_says_where_it_came_from(self):
+		nxt = carry_forward_row(self.row(), "2026-08-28")
+		self.assertIn("2026-08-27", nxt["notes"])
+
+	def test_nothing_to_carry_is_no_row(self):
+		# So the caller can run this over every row without checking first.
+		self.assertIsNone(carry_forward_row(self.row(carried_quantity=0), "2026-08-28"))
+		self.assertIsNone(carry_forward_row(self.row(carried_quantity=None), "2026-08-28"))
+		self.assertIsNone(carry_forward_row(self.row(carried_quantity=""), "2026-08-28"))
+
+	def test_junk_carries_nothing_rather_than_raising(self):
+		self.assertIsNone(carry_forward_row(self.row(carried_quantity="lots"), "2026-08-28"))
+
+	def test_a_negative_carry_is_not_a_row(self):
+		self.assertIsNone(carry_forward_row(self.row(carried_quantity=-5), "2026-08-28"))

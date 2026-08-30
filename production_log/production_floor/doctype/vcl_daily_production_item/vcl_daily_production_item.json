@@ -14,9 +14,12 @@
   "section_what",
   "customer_name",
   "job_name",
+  "part_label",
+  "part_number",
   "column_break_what",
   "planned_quantity",
   "actual_quantity",
+  "carried_quantity",
   "uom",
   "section_status",
   "status",
@@ -43,7 +46,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Department",
-   "options": "Computer\nOffset\nCarton\nLabels\nMonobox",
+   "options": "Computer\nOffset\nCarton\nLabels\nMonobox\nReel to Reel",
    "reqd": 1
   },
   {
@@ -96,6 +99,20 @@
    "reqd": 1
   },
   {
+   "fieldname": "part_label",
+   "fieldtype": "Data",
+   "label": "Part",
+   "read_only": 1,
+   "description": "Which part of a multi-part job this row is, for example \"Part 2 · CF · Yellow · 55gsm\". Printing runs once per part on its own press; collation joins them back into one set, so only printing splits."
+  },
+  {
+   "fieldname": "part_number",
+   "fieldtype": "Int",
+   "label": "Part Number",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
    "fieldname": "column_break_what",
    "fieldtype": "Column Break"
   },
@@ -114,6 +131,13 @@
    "in_list_view": 1,
    "label": "Actual Qty",
    "precision": "3"
+  },
+  {
+   "fieldname": "carried_quantity",
+   "fieldtype": "Float",
+   "label": "Carry Forward",
+   "non_negative": 1,
+   "description": "How much of this job is still owed after today. Entered alongside the completed figure rather than derived from it: completed plus carried does not always equal planned, and where it does not that gap is waste or over-run worth seeing. Creates tomorrow's row automatically."
   },
   {
    "columns": 1,

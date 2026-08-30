@@ -134,3 +134,8 @@ production_log.patches.v10_0.seed_production_floor
 # `Miyakoshi` that sat under Offset. Fills blanks only, so a hand correction
 # survives a re-run. Post-sync: it reads the `stage` field this migrate adds.
 production_log.patches.v10_1.align_machines_to_workstations
+# Adds the Reel to Reel department. The four Miyakoshis are widened with
+# `also_serves` rather than cloned - one press must not become two records -
+# and the Slitter joins as the one machine only this department uses. Runs
+# after v10_1 so the stage and workstation it sets already exist as fields.
+production_log.patches.v10_2.reel_to_reel_department

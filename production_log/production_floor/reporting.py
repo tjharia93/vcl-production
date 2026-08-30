@@ -11,7 +11,7 @@ import re
 from datetime import date, datetime
 from urllib.parse import quote
 
-DEFAULT_DEPARTMENTS = ["Computer", "Offset", "Carton", "Labels", "Monobox"]
+DEFAULT_DEPARTMENTS = ["Computer", "Offset", "Carton", "Labels", "Monobox", "Reel to Reel"]
 DEFAULT_UNITS = ["pcs", "cartons", "reels", "reams", "sheets", "kg", "metres"]
 
 STATUSES = [
@@ -583,6 +583,232 @@ def group_to_plan(chips, as_of=None):
 		for key, label in TO_PLAN_GROUPS
 		if buckets[key]
 	]
+
+
+# --------------------------------------------------------------------------
+# stage roll-up
+# --------------------------------------------------------------------------
+
+# ⛔ THE RULE THIS WHOLE SECTION EXISTS TO KEEP: never add across units.
+#
+# Computer Paper printing is measured in KG, per part - two parts is two
+# machine runs. Collation and Pack are counted in CARTONS, which is also the
+# unit the order is placed in. There is no written-down kg-to-carton factor and
+# guessing one would make every stage report quietly wrong.
+#
+# So a stage reports its own totals PER UNIT, and a flow between two stages is
+# only offered when both sides are counted the same way.
+
+def stage_totals(rows):
+	"""What a set of rows adds up to, kept apart by unit.
+
+	Returns {"pcs": 1031.0, ...}. A row with no actual quantity contributes
+	nothing - a quantity nobody entered is not zero.
+	"""
+	totals = {}
+	for row in rows or []:
+		quantity = row.get("actual_quantity")
+		if quantity in (None, ""):
+			continue
+		unit = (row.get("uom") or "").strip() or "—"
+		totals[unit] = totals.get(unit, 0.0) + float(quantity)
+	return totals
+
+
+def roll_up_stages(rows, stage_of_machine, position_of_stage=None):
+	"""One job card's board rows, gathered into the stages they belong to.
+
+	`rows` are every production row stamped with that job card, across every
+	day. `stage_of_machine` maps a machine name to its Workstation Type. A
+	machine with no stage yet - Monobox, the planning areas - is NOT dropped:
+	it comes back under a `None` stage so the screen can say "recorded, not yet
+	assigned to a stage" rather than silently losing the work.
+	"""
+	positions = position_of_stage or {}
+	buckets = {}
+	for row in rows or []:
+		stage = stage_of_machine.get(row.get("machine"))
+		bucket = buckets.setdefault(stage, {"stage": stage, "rows": [], "machines": []})
+		bucket["rows"].append(row)
+		machine = row.get("machine")
+		if machine and machine not in bucket["machines"]:
+			bucket["machines"].append(machine)
+
+	out = []
+	for stage, bucket in buckets.items():
+		bucket_rows = bucket["rows"]
+		out.append({
+			"stage": stage,
+			"position": positions.get(stage) if stage else None,
+			"machines": bucket["machines"],
+			"totals": stage_totals(bucket_rows),
+			"entries": len(bucket_rows),
+			"status": stage_status(bucket_rows),
+			"days": sorted({r.get("production_date") for r in bucket_rows if r.get("production_date")}),
+		})
+
+	# Unstaged work sorts last: it is a gap to close, not a step in the route.
+	out.sort(key=lambda s: (s["position"] is None, s["position"] or 0, s["stage"] or ""))
+	return out
+
+
+def stage_status(rows):
+	"""One word for how a stage is going, from the rows that make it up.
+
+	Completed only when every row is - a stage with one machine finished and
+	another still running has not finished.
+	"""
+	statuses = {(row.get("status") or "Planned") for row in rows or []}
+	if not statuses:
+		return "Not Started"
+	if statuses == {"Completed"}:
+		return "Completed"
+	if "Running" in statuses:
+		return "Running"
+	if "Paused" in statuses:
+		return "Paused"
+	if "Carried Forward" in statuses:
+		return "Carried Forward"
+	if statuses == {"Planned"}:
+		return "Planned"
+	return "Not Started"
+
+
+def stage_flow(stages):
+	"""What is sitting between one stage and the next, where that is knowable.
+
+	Only offered when both stages carry the SAME unit - otherwise the honest
+	answer is that the two numbers do not compare, and the caller is told so
+	rather than handed a subtraction that means nothing.
+	"""
+	flows = []
+	staged = [s for s in stages if s["stage"]]
+	for upstream, downstream in zip(staged, staged[1:]):
+		shared = set(upstream["totals"]) & set(downstream["totals"])
+		if not shared:
+			flows.append({
+				"from": upstream["stage"],
+				"to": downstream["stage"],
+				"comparable": False,
+				"reason": "counted differently",
+			})
+			continue
+		for unit in sorted(shared):
+			flows.append({
+				"from": upstream["stage"],
+				"to": downstream["stage"],
+				"comparable": True,
+				"uom": unit,
+				"waiting": round(upstream["totals"][unit] - downstream["totals"][unit], 4),
+			})
+	return flows
+
+
+def stage_percent(total, ordered_quantity):
+	"""Percent of the order a stage has done, or None when it cannot be said.
+
+	Needs an order quantity AND the stage counted in the order's own unit; the
+	caller decides that, because only it knows what the order was placed in.
+	"""
+	if not ordered_quantity or ordered_quantity <= 0 or total is None:
+		return None
+	return max(0, min(100, round((float(total) / float(ordered_quantity)) * 100)))
+# planning a job across its stations
+# --------------------------------------------------------------------------
+
+# Which stages run once per PART rather than once per job.
+#
+# Computer Paper prints each part on its own press - the run log for
+# JC-CPT-2026-00062 shows Part 2 (CF Yellow) on Miyakoshi 01 and Part 1
+# (CB White) on Miyakoshi 3, the same day. Collation is where the parts become
+# one set again, so everything from there on is a single line.
+SPLIT_BY_PART = {"Printing", "Reel to Reel Printing", "Sheet to Sheet Printing"}
+
+
+def part_label(part):
+	"""How the floor says a part: "Part 2 · CF · Yellow · 55gsm".
+
+	Built from whatever the spec actually has - a part with no paper type or no
+	gsm still gets a usable label rather than a string full of gaps.
+	"""
+	bits = []
+	number = part.get("part_number")
+	if number:
+		bits.append("Part {0}".format(number))
+	for key in ("paper_type", "colour"):
+		value = (part.get(key) or "").strip()
+		if value:
+			bits.append(value)
+	gsm = part.get("gsm")
+	if gsm:
+		bits.append("{0}gsm".format(gsm))
+	return " · ".join(bits)
+
+
+def plan_lines(route, parts=None, split_by_part=None):
+	"""One line per station a job will pass through, parts expanded.
+
+	`route` is the job's stages in order. A stage in `split_by_part` becomes one
+	line per part; every other stage is a single line. A job with no parts
+	recorded gets single lines throughout rather than none - a missing spec must
+	not silently produce an empty plan.
+	"""
+	splits = SPLIT_BY_PART if split_by_part is None else split_by_part
+	parts = [p for p in (parts or []) if p]
+
+	lines = []
+	for sequence, stage in enumerate(route or [], start=1):
+		if stage in splits and parts:
+			for part in parts:
+				lines.append({
+					"stage": stage,
+					"sequence": sequence,
+					"part_number": part.get("part_number"),
+					"part_label": part_label(part),
+				})
+		else:
+			lines.append({
+				"stage": stage,
+				"sequence": sequence,
+				"part_number": None,
+				"part_label": None,
+			})
+	return lines
+
+
+def carry_forward_row(row, next_date):
+	"""Tomorrow's row for work that did not finish today.
+
+	The carried quantity becomes tomorrow's PLANNED quantity - that is the whole
+	point: the morning board already knows what is owed and nobody re-types it.
+	Returns None when there is nothing to carry, so the caller can run this over
+	every row without checking first.
+	"""
+	carried = row.get("carried_quantity")
+	try:
+		carried = float(carried or 0)
+	except (TypeError, ValueError):
+		return None
+	if carried <= 0:
+		return None
+
+	return {
+		"production_date": next_date,
+		"department": row.get("department"),
+		"machine": row.get("machine"),
+		"customer_name": row.get("customer_name"),
+		"job_name": row.get("job_name"),
+		"planned_quantity": carried,
+		"uom": row.get("uom"),
+		"status": "Planned",
+		"production_job_card": row.get("production_job_card"),
+		"job_card_instructions": row.get("job_card_instructions"),
+		"part_number": row.get("part_number"),
+		"part_label": row.get("part_label"),
+		"notes": "Carried forward from {0}".format(
+			row.get("production_date") or "the previous day"
+		),
+	}
 
 
 def job_card_doctype(job_card):
