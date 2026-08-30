@@ -30,11 +30,6 @@ from production_log.production_floor.reporting import (  # noqa: E402
 	job_card_doctype,
 	job_card_route,
 	group_to_plan,
-	roll_up_stages,
-	stage_totals,
-	stage_status,
-	stage_flow,
-	stage_percent,
 	to_plan_bucket,
 	days_late,
 	TO_PLAN_GROUPS,
@@ -50,6 +45,15 @@ from production_log.production_floor.reporting import (  # noqa: E402
 	order_departments,
 	parse_quantity,
 	summarise,
+	roll_up_stages,
+	stage_totals,
+	stage_status,
+	stage_flow,
+	stage_percent,
+	plan_lines,
+	part_label,
+	carry_forward_row,
+	SPLIT_BY_PART,
 )
 
 
@@ -873,73 +877,6 @@ class AddMachineInlineTests(unittest.TestCase):
 	"""
 
 	@staticmethod
-class ReelToReelDepartmentTests(unittest.TestCase):
-	"""Reel to Reel shares the Miyakoshis with Computer Paper.
-
-	ETR is printed reel-to-reel and THEN slit; KCB-type work finishes on the
-	press. That one extra stage is the whole difference, which is why they are
-	one department with two routes rather than two departments.
-	"""
-
-	@staticmethod
-	def _patch():
-		import ast
-
-		here = os.path.dirname(os.path.abspath(__file__))
-		path = os.path.join(here, "..", "..", "patches", "v10_2", "reel_to_reel_department.py")
-		namespace = {}
-		for node in ast.parse(open(path).read()).body:
-			if isinstance(node, ast.Assign):
-				exec(compile(ast.Module([node], []), path, "exec"), namespace)
-		return namespace
-
-	def test_the_department_exists(self):
-		self.assertIn("Reel to Reel", DEFAULT_DEPARTMENTS)
-
-	def test_the_existing_departments_keep_their_order(self):
-		# Appended, not inserted: the evening WhatsApp report reads in this
-		# order and reshuffling it is a visible change nobody asked for.
-		self.assertEqual(
-			DEFAULT_DEPARTMENTS[:5],
-			["Computer", "Offset", "Carton", "Labels", "Monobox"],
-		)
-
-	def test_the_presses_are_widened_not_cloned(self):
-		# The failure this guards: a second "M1" record under Reel to Reel,
-		# splitting one press's history in half.
-		namespace = self._patch()
-		self.assertEqual(namespace["SHARED"], ["M1", "M2", "M3", "M4"])
-		self.assertEqual(namespace["SLITTER"]["machine_name"], "Slitter")
-		self.assertNotIn("M1", namespace["SLITTER"].values())
-
-	def test_only_the_slitter_belongs_to_the_new_department_outright(self):
-		namespace = self._patch()
-		self.assertEqual(namespace["SLITTER"]["department"], "Reel to Reel")
-		self.assertEqual(namespace["SLITTER"]["stage"], "ETR Slitting")
-		self.assertEqual(namespace["SLITTER"]["erpnext_workstation"], "Slitter 01")
-
-	def test_the_seed_does_not_list_the_shared_presses_twice(self):
-		import ast
-
-		here = os.path.dirname(os.path.abspath(__file__))
-		source = open(os.path.join(here, "..", "setup", "seed.py")).read()
-		machines = next(
-			node.value
-			for node in ast.parse(source).body
-			if isinstance(node, ast.Assign)
-			and any(getattr(t, "id", None) == "MACHINES" for t in node.targets)
-		)
-		reel = [r.elts[0].value for r in machines.elts if r.elts[1].value == "Reel to Reel"]
-		self.assertEqual(reel, ["Slitter"])
-		# And no name appears under two departments in the seed at all.
-		names = [r.elts[0].value for r in machines.elts]
-		self.assertEqual(len(names), len(set(names)))
-
-
-class MachineDepartmentsTests(unittest.TestCase):
-	"""One press, many product lines - resolved the same way on both sides."""
-
-	@staticmethod
 	def _api():
 		here = os.path.dirname(os.path.abspath(__file__))
 		return open(os.path.join(here, "..", "api.py")).read()
@@ -986,6 +923,9 @@ class MachineDepartmentsTests(unittest.TestCase):
 		start = screen.index("machine_picker(dialog, department) {")
 		body = screen[start : screen.index("\n\tsubmit_quick_add", start)]
 		self.assertEqual(body.count("this.add_machine_chip()"), 2)
+
+
+
 class StageRollUpTests(unittest.TestCase):
 	"""Board rows, gathered into the stages their machines serve.
 
@@ -1105,6 +1045,80 @@ class StageRollUpTests(unittest.TestCase):
 	def test_percent_never_exceeds_full(self):
 		# Vajas ran 940 against 500 planned. The number is kept; the bar stops.
 		self.assertEqual(stage_percent(940, 500), 100)
+
+
+
+class ReelToReelDepartmentTests(unittest.TestCase):
+	"""Reel to Reel shares the Miyakoshis with Computer Paper.
+
+	ETR is printed reel-to-reel and THEN slit; KCB-type work finishes on the
+	press. That one extra stage is the whole difference, which is why they are
+	one department with two routes rather than two departments.
+	"""
+
+	@staticmethod
+	def _patch():
+		import ast
+
+		here = os.path.dirname(os.path.abspath(__file__))
+		path = os.path.join(here, "..", "..", "patches", "v10_2", "reel_to_reel_department.py")
+		namespace = {}
+		for node in ast.parse(open(path).read()).body:
+			if isinstance(node, ast.Assign):
+				exec(compile(ast.Module([node], []), path, "exec"), namespace)
+		return namespace
+
+	def test_the_department_exists(self):
+		self.assertIn("Reel to Reel", DEFAULT_DEPARTMENTS)
+
+	def test_the_existing_departments_keep_their_order(self):
+		# Appended, not inserted: the evening WhatsApp report reads in this
+		# order and reshuffling it is a visible change nobody asked for.
+		self.assertEqual(
+			DEFAULT_DEPARTMENTS[:5],
+			["Computer", "Offset", "Carton", "Labels", "Monobox"],
+		)
+
+	def test_the_presses_are_widened_not_cloned(self):
+		# The failure this guards: a second "M1" record under Reel to Reel,
+		# splitting one press's history in half.
+		namespace = self._patch()
+		self.assertEqual(namespace["SHARED"], ["M1", "M2", "M3", "M4"])
+		self.assertEqual(namespace["SLITTER"]["machine_name"], "Slitter")
+		self.assertNotIn("M1", namespace["SLITTER"].values())
+
+	def test_only_the_slitter_belongs_to_the_new_department_outright(self):
+		namespace = self._patch()
+		self.assertEqual(namespace["SLITTER"]["department"], "Reel to Reel")
+		self.assertEqual(namespace["SLITTER"]["stage"], "ETR Slitting")
+		self.assertEqual(namespace["SLITTER"]["erpnext_workstation"], "Slitter 01")
+
+	def test_the_seed_does_not_list_the_shared_presses_twice(self):
+		import ast
+
+		here = os.path.dirname(os.path.abspath(__file__))
+		source = open(os.path.join(here, "..", "setup", "seed.py")).read()
+		machines = next(
+			node.value
+			for node in ast.parse(source).body
+			if isinstance(node, ast.Assign)
+			and any(getattr(t, "id", None) == "MACHINES" for t in node.targets)
+		)
+		reel = [r.elts[0].value for r in machines.elts if r.elts[1].value == "Reel to Reel"]
+		self.assertEqual(reel, ["Slitter"])
+		# And no name appears under two departments in the seed at all.
+		names = [r.elts[0].value for r in machines.elts]
+		self.assertEqual(len(names), len(set(names)))
+
+
+class MachineDepartmentsTests(unittest.TestCase):
+	"""One press, many product lines - resolved the same way on both sides."""
+
+	@staticmethod
+	def _api():
+		here = os.path.dirname(os.path.abspath(__file__))
+		return open(os.path.join(here, "..", "api.py")).read()
+
 	def test_the_resolver_reads_home_plus_also_serves(self):
 		api = self._api()
 		start = api.index("def machine_departments(machine):")
@@ -1131,3 +1145,115 @@ class StageRollUpTests(unittest.TestCase):
 		self.assertIn("machine.departments || [machine.department]", screen)
 		self.assertNotIn("machine.department === department", screen)
 
+
+class PlanLinesTests(unittest.TestCase):
+	"""A job card becomes one line per station it will pass through.
+
+	Computer Paper prints each part on its own press - the run log for
+	JC-CPT-2026-00062 has Part 2 (CF Yellow) on Miyakoshi 01 and Part 1
+	(CB White) on Miyakoshi 3, the same day. Collation joins them back into one
+	set, so only printing splits.
+	"""
+
+	ROUTE = ["Design", "Pending Films", "Printing", "Collation", "Pack"]
+	PARTS = [
+		{"part_number": 1, "paper_type": "CB", "colour": "White", "gsm": 55},
+		{"part_number": 2, "paper_type": "CF", "colour": "Yellow", "gsm": 55},
+	]
+
+	def test_printing_splits_per_part_and_nothing_else_does(self):
+		lines = plan_lines(self.ROUTE, self.PARTS)
+		self.assertEqual(len(lines), 6)
+		printing = [l for l in lines if l["stage"] == "Printing"]
+		self.assertEqual(len(printing), 2)
+		for stage in ("Design", "Pending Films", "Collation", "Pack"):
+			self.assertEqual(len([l for l in lines if l["stage"] == stage]), 1, stage)
+
+	def test_the_split_lines_carry_the_colour(self):
+		lines = plan_lines(self.ROUTE, self.PARTS)
+		labels = [l["part_label"] for l in lines if l["stage"] == "Printing"]
+		self.assertEqual(labels, ["Part 1 · CB · White · 55gsm", "Part 2 · CF · Yellow · 55gsm"])
+
+	def test_a_job_with_no_parts_still_gets_a_plan(self):
+		# A missing spec must not silently produce an empty plan - that would
+		# read as "this job needs no work".
+		lines = plan_lines(self.ROUTE, [])
+		self.assertEqual(len(lines), 5)
+		self.assertTrue(all(l["part_label"] is None for l in lines))
+
+	def test_route_order_is_kept_and_split_lines_share_a_sequence(self):
+		lines = plan_lines(self.ROUTE, self.PARTS)
+		self.assertEqual([l["sequence"] for l in lines], [1, 2, 3, 3, 4, 5])
+
+	def test_the_printing_stages_that_split_are_named_explicitly(self):
+		# Reel to Reel and Sheet to Sheet are the ERPNext Workstation Type names
+		# for the same operation; all three must split or a Computer Paper job
+		# planned under its real stage name silently stops splitting.
+		self.assertIn("Printing", SPLIT_BY_PART)
+		self.assertIn("Reel to Reel Printing", SPLIT_BY_PART)
+		self.assertIn("Sheet to Sheet Printing", SPLIT_BY_PART)
+
+	def test_an_empty_route_is_no_lines_not_a_crash(self):
+		self.assertEqual(plan_lines([], self.PARTS), [])
+		self.assertEqual(plan_lines(None, None), [])
+
+
+class PartLabelTests(unittest.TestCase):
+	def test_a_full_part_reads_as_the_floor_says_it(self):
+		self.assertEqual(
+			part_label({"part_number": 2, "paper_type": "CF", "colour": "Yellow", "gsm": 55}),
+			"Part 2 · CF · Yellow · 55gsm",
+		)
+
+	def test_a_sparse_part_still_gets_a_usable_label(self):
+		# Rather than a string full of gaps and separators.
+		self.assertEqual(part_label({"part_number": 1}), "Part 1")
+		self.assertEqual(part_label({"colour": "Blue"}), "Blue")
+		self.assertEqual(part_label({}), "")
+
+
+class CarryForwardTests(unittest.TestCase):
+	"""What is still owed becomes tomorrow's planned quantity."""
+
+	def row(self, **over):
+		base = {
+			"production_date": "2026-08-27",
+			"department": "Reel to Reel",
+			"machine": "M3",
+			"customer_name": "KCB",
+			"job_name": "KCB",
+			"uom": "reels",
+			"carried_quantity": 1,
+			"production_job_card": "JC-CPT-2026-00099",
+			"part_label": None,
+		}
+		base.update(over)
+		return base
+
+	def test_the_carried_amount_becomes_tomorrows_plan(self):
+		nxt = carry_forward_row(self.row(), "2026-08-28")
+		self.assertEqual(nxt["planned_quantity"], 1.0)
+		self.assertEqual(nxt["status"], "Planned")
+		self.assertEqual(nxt["machine"], "M3")
+		self.assertEqual(nxt["uom"], "reels")
+
+	def test_the_job_card_and_part_travel_with_it(self):
+		nxt = carry_forward_row(self.row(part_label="Part 2 · CF · Yellow · 55gsm"), "2026-08-28")
+		self.assertEqual(nxt["production_job_card"], "JC-CPT-2026-00099")
+		self.assertEqual(nxt["part_label"], "Part 2 · CF · Yellow · 55gsm")
+
+	def test_it_says_where_it_came_from(self):
+		nxt = carry_forward_row(self.row(), "2026-08-28")
+		self.assertIn("2026-08-27", nxt["notes"])
+
+	def test_nothing_to_carry_is_no_row(self):
+		# So the caller can run this over every row without checking first.
+		self.assertIsNone(carry_forward_row(self.row(carried_quantity=0), "2026-08-28"))
+		self.assertIsNone(carry_forward_row(self.row(carried_quantity=None), "2026-08-28"))
+		self.assertIsNone(carry_forward_row(self.row(carried_quantity=""), "2026-08-28"))
+
+	def test_junk_carries_nothing_rather_than_raising(self):
+		self.assertIsNone(carry_forward_row(self.row(carried_quantity="lots"), "2026-08-28"))
+
+	def test_a_negative_carry_is_not_a_row(self):
+		self.assertIsNone(carry_forward_row(self.row(carried_quantity=-5), "2026-08-28"))

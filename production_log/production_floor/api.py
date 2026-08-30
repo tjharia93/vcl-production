@@ -5,9 +5,11 @@ production floor only ever talks to this module. Every call is small enough
 to survive a phone on a weak connection.
 """
 
+import json
+
 import frappe
 from frappe import _
-from frappe.utils import cint, today
+from frappe.utils import add_days, cint, today
 
 from production_log.production_floor.reporting import (
 	QuantityError,
@@ -25,6 +27,8 @@ from production_log.production_floor.reporting import (
 	roll_up_stages,
 	stage_flow,
 	stage_percent,
+	carry_forward_row,
+	plan_lines,
 	order_departments,
 	parse_quantity,
 	summarise,
@@ -57,6 +61,9 @@ ROW_FIELDS = [
 	"reason",
 	"notes",
 	"job_card_instructions",
+	"carried_quantity",
+	"part_label",
+	"part_number",
 	"start_time",
 	"completed_time",
 	"source",
@@ -310,6 +317,119 @@ def _order_size(job_card):
 	# counts the finishing stages the same way - which is what makes a
 	# percentage meaningful at all.
 	return ordered, "cartons"
+def get_plan_template(job_card=None):
+	"""Every station a job will pass through, ready to be planned in one go.
+
+	The route comes from the job card itself where it has one - Computer Paper
+	already carries Design / Pending Films / Printing / Collation / Numbering /
+	Pack, with Numbering dropped when the card says it is not needed. Printing
+	is expanded to one line per part, because each part prints on its own press.
+	"""
+	job_card = (job_card or "").strip()
+	doctype = job_card_doctype(job_card)
+	if not job_card or not doctype:
+		frappe.throw(_("That job card is not one we can plan from."))
+
+	card = frappe.get_doc(doctype, job_card)
+	route = _route_for(card)
+	parts = [
+		{
+			"part_number": row.get("part_number"),
+			"paper_type": row.get("paper_type"),
+			"colour": row.get("colour"),
+			"gsm": row.get("gsm"),
+		}
+		for row in (card.get("colour_of_parts") or [])
+	]
+
+	machines = get_machines()
+	by_stage = {}
+	for machine in machines:
+		if machine.get("stage"):
+			by_stage.setdefault(machine["stage"], []).append(machine["name"])
+
+	lines = plan_lines(route, parts)
+	for line in lines:
+		line["machines"] = by_stage.get(line["stage"], [])
+		line["machine"] = line["machines"][0] if line["machines"] else None
+		# Ticked only where we can actually put the work somewhere. A stage with
+		# no machine is shown, unticked, so the gap is visible rather than the
+		# stage silently missing from the plan.
+		line["include"] = bool(line["machines"])
+
+	return {
+		"job_card": job_card,
+		"doctype": doctype,
+		"customer_name": card.get("customer") or card.get("customer_name"),
+		"job_name": card.get("specification_name"),
+		"ordered_quantity": card.get("quantity_ordered"),
+		"instructions": card.get("special_instructions") or card.get("order_comments"),
+		"lines": lines,
+		"units": get_units(),
+	}
+
+
+def _route_for(card):
+	"""The stages this job runs, in order.
+
+	Read off the card rather than assumed: Computer Paper builds its own route
+	and already drops Numbering when numbering_required is off.
+	"""
+	stages = card.get("production_stages") or []
+	if stages:
+		ordered = sorted(stages, key=lambda row: row.get("sequence") or 0)
+		return [row.get("stage") for row in ordered if row.get("stage")]
+	if hasattr(card, "get_production_stage_route"):
+		try:
+			return card.get_production_stage_route()
+		except Exception:
+			pass
+	return []
+
+
+@frappe.whitelist()
+def plan_job(production_date=None, job_card=None, lines=None):
+	"""Put every chosen station on the board in one action.
+
+	One call rather than one per station: a five-stage job is five rows, and
+	making a planner tap Add Job five times is how a plan stops being made.
+	"""
+	doc = _open_day(production_date)
+	job_card = (job_card or "").strip()
+	if isinstance(lines, str):
+		lines = json.loads(lines)
+	lines = [line for line in (lines or []) if line.get("include")]
+	if not lines:
+		frappe.throw(_("Tick at least one station."))
+
+	for line in lines:
+		machine = (line.get("machine") or "").strip()
+		if not machine:
+			frappe.throw(
+				_("{0} has no machine chosen.").format(line.get("stage") or _("A stage"))
+			)
+		department = frappe.db.get_value("VCL Production Machine", machine, "department")
+		doc.append("items", {
+			"department": line.get("department") or department,
+			"machine": machine,
+			"customer_name": (line.get("customer_name") or "").strip(),
+			"job_name": (line.get("job_name") or "").strip(),
+			"part_label": line.get("part_label"),
+			"part_number": line.get("part_number"),
+			"planned_quantity": _quantity(line.get("planned_quantity"), _("Planned Quantity")),
+			"uom": line.get("uom"),
+			"status": "Planned",
+			"source": "Job Card" if job_card else "Manual",
+			"production_job_card": job_card or None,
+			"job_card_instructions": (line.get("instructions") or "").strip() or None,
+			"remember_job": 1,
+		})
+
+	doc.save()
+	if job_card:
+		_mark_job_card_planned(job_card, line.get("doctype"))
+	frappe.db.commit()
+	return _day_payload(doc)
 
 
 @frappe.whitelist()
@@ -428,6 +548,7 @@ def update_item(
 	uom=None,
 	reason=None,
 	notes=None,
+	carried_quantity=None,
 ):
 	"""The quick-update path: status, actual quantity, and why."""
 	doc = _open_day(production_date)
@@ -445,6 +566,8 @@ def update_item(
 		target.actual_quantity = _quantity(actual_quantity, _("Actual Quantity"))
 	if planned_quantity is not None:
 		target.planned_quantity = _quantity(planned_quantity, _("Planned Quantity"))
+	if carried_quantity is not None:
+		target.carried_quantity = _quantity(carried_quantity, _("Carry Forward"))
 	if uom:
 		target.uom = uom
 	if reason is not None:
@@ -462,8 +585,54 @@ def update_item(
 		)
 
 	doc.save()
+
+	# Carrying work forward creates tomorrow's row, so the morning board already
+	# knows what is owed and nobody re-types it. After the save, because the row
+	# being carried has to be safely recorded first.
+	carried_to = None
+	if target.carried_quantity:
+		carried_to = _carry_forward(doc, target)
+
 	frappe.db.commit()
-	return _day_payload(doc)
+	payload = _day_payload(doc)
+	payload["carried_to"] = carried_to
+	return payload
+
+
+def _carry_forward(doc, row):
+	"""Put the unfinished balance on the next day's board.
+
+	Idempotent by machine + job card + job name: editing today's carry figure
+	twice must not leave two rows waiting tomorrow. The existing row's planned
+	quantity is corrected instead.
+	"""
+	values = dict(row.as_dict())
+	values["production_date"] = str(doc.production_date)
+	next_date = add_days(doc.production_date, 1)
+	template = carry_forward_row(values, str(next_date))
+	if not template:
+		return None
+
+	tomorrow = get_or_create_day(next_date)
+	if tomorrow.status == "Closed":
+		return None
+
+	for existing in tomorrow.items:
+		same_job = (
+			existing.machine == template["machine"]
+			and (existing.production_job_card or "") == (template["production_job_card"] or "")
+			and (existing.job_name or "") == (template["job_name"] or "")
+			and (existing.part_label or "") == (template["part_label"] or "")
+		)
+		if same_job and existing.status == "Planned":
+			existing.planned_quantity = template["planned_quantity"]
+			tomorrow.save()
+			return {"date": str(next_date), "created": 0}
+
+	template.pop("production_date", None)
+	tomorrow.append("items", dict(template, remember_job=1))
+	tomorrow.save()
+	return {"date": str(next_date), "created": 1}
 
 
 @frappe.whitelist()

@@ -713,6 +713,102 @@ def stage_percent(total, ordered_quantity):
 	if not ordered_quantity or ordered_quantity <= 0 or total is None:
 		return None
 	return max(0, min(100, round((float(total) / float(ordered_quantity)) * 100)))
+# planning a job across its stations
+# --------------------------------------------------------------------------
+
+# Which stages run once per PART rather than once per job.
+#
+# Computer Paper prints each part on its own press - the run log for
+# JC-CPT-2026-00062 shows Part 2 (CF Yellow) on Miyakoshi 01 and Part 1
+# (CB White) on Miyakoshi 3, the same day. Collation is where the parts become
+# one set again, so everything from there on is a single line.
+SPLIT_BY_PART = {"Printing", "Reel to Reel Printing", "Sheet to Sheet Printing"}
+
+
+def part_label(part):
+	"""How the floor says a part: "Part 2 · CF · Yellow · 55gsm".
+
+	Built from whatever the spec actually has - a part with no paper type or no
+	gsm still gets a usable label rather than a string full of gaps.
+	"""
+	bits = []
+	number = part.get("part_number")
+	if number:
+		bits.append("Part {0}".format(number))
+	for key in ("paper_type", "colour"):
+		value = (part.get(key) or "").strip()
+		if value:
+			bits.append(value)
+	gsm = part.get("gsm")
+	if gsm:
+		bits.append("{0}gsm".format(gsm))
+	return " · ".join(bits)
+
+
+def plan_lines(route, parts=None, split_by_part=None):
+	"""One line per station a job will pass through, parts expanded.
+
+	`route` is the job's stages in order. A stage in `split_by_part` becomes one
+	line per part; every other stage is a single line. A job with no parts
+	recorded gets single lines throughout rather than none - a missing spec must
+	not silently produce an empty plan.
+	"""
+	splits = SPLIT_BY_PART if split_by_part is None else split_by_part
+	parts = [p for p in (parts or []) if p]
+
+	lines = []
+	for sequence, stage in enumerate(route or [], start=1):
+		if stage in splits and parts:
+			for part in parts:
+				lines.append({
+					"stage": stage,
+					"sequence": sequence,
+					"part_number": part.get("part_number"),
+					"part_label": part_label(part),
+				})
+		else:
+			lines.append({
+				"stage": stage,
+				"sequence": sequence,
+				"part_number": None,
+				"part_label": None,
+			})
+	return lines
+
+
+def carry_forward_row(row, next_date):
+	"""Tomorrow's row for work that did not finish today.
+
+	The carried quantity becomes tomorrow's PLANNED quantity - that is the whole
+	point: the morning board already knows what is owed and nobody re-types it.
+	Returns None when there is nothing to carry, so the caller can run this over
+	every row without checking first.
+	"""
+	carried = row.get("carried_quantity")
+	try:
+		carried = float(carried or 0)
+	except (TypeError, ValueError):
+		return None
+	if carried <= 0:
+		return None
+
+	return {
+		"production_date": next_date,
+		"department": row.get("department"),
+		"machine": row.get("machine"),
+		"customer_name": row.get("customer_name"),
+		"job_name": row.get("job_name"),
+		"planned_quantity": carried,
+		"uom": row.get("uom"),
+		"status": "Planned",
+		"production_job_card": row.get("production_job_card"),
+		"job_card_instructions": row.get("job_card_instructions"),
+		"part_number": row.get("part_number"),
+		"part_label": row.get("part_label"),
+		"notes": "Carried forward from {0}".format(
+			row.get("production_date") or "the previous day"
+		),
+	}
 
 
 def job_card_doctype(job_card):
