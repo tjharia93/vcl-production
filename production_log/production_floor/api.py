@@ -709,7 +709,14 @@ def get_report(production_date=None):
 	# Never fatal: a Job Card Tracking problem must not cost the floor its
 	# morning report. An absent queue simply omits the STILL TO PLAN block.
 	try:
-		waiting = list_to_plan()
+		# Grouped, then flattened: group_to_plan is what stamps `days_late` on
+		# each chip. Without it every overdue card reads a bare "(late)" and
+		# the morning report loses the one number that ranks them.
+		waiting = [
+			chip
+			for group in group_to_plan(list_to_plan(), today())
+			for chip in group["chips"]
+		]
 	except Exception:
 		waiting = []
 

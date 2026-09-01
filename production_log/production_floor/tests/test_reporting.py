@@ -283,6 +283,41 @@ class TestReportText(unittest.TestCase):
 		self.assertNotIn("ATTENTION REQUIRED", text)
 		self.assertNotIn("CARRIED FORWARD", text)
 
+	def test_start_report_omits_a_zero_planned_quantity(self):
+		# format_qty(0) returns the STRING "0", which is truthy - testing the
+		# formatted value put "0 cartons planned" onto the first live report.
+		day = {
+			"production_date": "2026-08-26",
+			"items": [row(planned_quantity=0, actual_quantity=0, uom="cartons")],
+		}
+		text = build_whatsapp_start_text(day)
+		self.assertNotIn("0 cartons planned", text)
+		self.assertIn("M1 - ", text)
+
+	def test_start_report_omits_a_missing_planned_quantity(self):
+		day = {
+			"production_date": "2026-08-26",
+			"items": [row(planned_quantity=None, uom="cartons")],
+		}
+		self.assertNotIn("planned", build_whatsapp_start_text(day).split("*COMPUTER*")[1])
+
+	def test_job_title_does_not_double_a_customer_the_job_already_carries(self):
+		self.assertEqual("Mathai 1st Reel", job_title(
+			{"customer_name": "Mathai", "job_name": "Mathai 1st Reel"}))
+		# Unchanged where the job does not open with the customer.
+		self.assertEqual("Chandaria Yellow Copy", job_title(
+			{"customer_name": "Chandaria", "job_name": "Yellow Copy"}))
+
+	def test_start_report_does_not_double_the_customer(self):
+		# A supervisor typing "Mathai 1st reel" against customer Mathai gave
+		# "Mathai Mathai 1st reel" on the live report.
+		day = {
+			"production_date": "2026-08-26",
+			"items": [row(customer_name="Mathai", job_name="Mathai 1st Reel", planned_quantity=1,
+				uom="reels")],
+		}
+		self.assertNotIn("Mathai Mathai", build_whatsapp_start_text(day))
+
 	def test_start_report_shows_work_carried_over(self):
 		day = {
 			"production_date": "2026-08-26",
