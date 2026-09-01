@@ -16,6 +16,7 @@ from datetime import date
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from production_log.production_floor.reporting import (  # noqa: E402
+	qty_pair,
 	build_whatsapp_start_text,
 	planned_pair,
 	QuantityError,
@@ -282,6 +283,31 @@ class TestReportText(unittest.TestCase):
 		text = build_whatsapp_start_text(DAY)
 		self.assertNotIn("ATTENTION REQUIRED", text)
 		self.assertNotIn("CARRIED FORWARD", text)
+
+	def test_evening_report_omits_a_row_with_no_figures_at_all(self):
+		# "0 / 0 cartons - Planned" is not a measurement. It is a row nobody has
+		# put a number against, and as a fraction it reads like a failure.
+		day = {
+			"production_date": "2026-08-26",
+			"items": [row(planned_quantity=0, actual_quantity=0, uom="cartons")],
+		}
+		text = build_whatsapp_text(day)
+		self.assertNotIn("0 / 0", text)
+		self.assertIn("Running", text)
+
+	def test_evening_report_still_shows_a_zero_against_a_real_plan(self):
+		# "0 / 3 reels" is true, and showing it is what the report is FOR.
+		day = {
+			"production_date": "2026-08-26",
+			"items": [row(planned_quantity=3, actual_quantity=0, uom="reels")],
+		}
+		self.assertIn("0 / 3 reels", build_whatsapp_text(day))
+
+	def test_qty_pair_is_blank_only_when_both_are_missing(self):
+		self.assertEqual("", qty_pair(row(planned_quantity=None, actual_quantity=None)))
+		self.assertEqual("", qty_pair(row(planned_quantity=0, actual_quantity=0)))
+		self.assertEqual("0 / 3 reels", qty_pair(row(planned_quantity=3, actual_quantity=0, uom="reels")))
+		self.assertEqual("2 reels", qty_pair(row(planned_quantity=None, actual_quantity=2, uom="reels")))
 
 	def test_start_report_omits_a_zero_planned_quantity(self):
 		# format_qty(0) returns the STRING "0", which is truthy - testing the
