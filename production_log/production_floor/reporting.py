@@ -136,15 +136,36 @@ def job_title(row):
 
 
 def qty_pair(row):
-	"""'1 / 3 reels', or '1 reel' shapes used across the two report styles."""
+	"""'1 / 3 reels', or '1 reel' shapes used across the two report styles.
+
+	Returns '' when NEITHER figure was given. "0 / 0 cartons - Planned" is not
+	a measurement, it is a row nobody has put a number against, and printing it
+	as a fraction makes the report look like a failure it is not.
+
+	A zero actual against a real plan still prints - "0 / 3 reels" is true and
+	is exactly what the evening report exists to show.
+	"""
 	unit = (row.get("uom") or "").strip()
-	actual = format_qty(row.get("actual_quantity")) or "0"
-	planned = format_qty(row.get("planned_quantity"))
-	if planned:
-		body = "{0} / {1}".format(actual, planned)
+	actual_value = _as_number(row.get("actual_quantity"))
+	planned_value = _as_number(row.get("planned_quantity"))
+
+	if actual_value <= 0 and planned_value <= 0:
+		return ""
+
+	actual = format_qty(actual_value) or "0"
+	if planned_value > 0:
+		body = "{0} / {1}".format(actual, format_qty(planned_value))
 	else:
 		body = actual
 	return "{0} {1}".format(body, unit).strip()
+
+
+def _as_number(value):
+	"""0 for anything unusable. An unset quantity is stored as 0, never null."""
+	try:
+		return float(value or 0)
+	except (TypeError, ValueError):
+		return 0.0
 
 
 def order_departments(rows, departments=None):
@@ -449,7 +470,9 @@ def build_whatsapp_text(day, departments=None):
 		lines += ["", "*{0}*".format(dept.upper()), ""]
 		for row in rows_for_department(rows, dept):
 			lines.append("{0} - {1}".format(machine_label(row), job_title(row)))
-			lines.append("{0} - {1}".format(qty_pair(row), row.get("status") or "Planned"))
+			status = row.get("status") or "Planned"
+			quantities = qty_pair(row)
+			lines.append("{0} - {1}".format(quantities, status) if quantities else status)
 			reason = (row.get("reason") or "").strip()
 			if reason:
 				lines.append("({0})".format(reason))
