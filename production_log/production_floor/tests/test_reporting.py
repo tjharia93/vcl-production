@@ -16,6 +16,8 @@ from datetime import date
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from production_log.production_floor.reporting import (  # noqa: E402
+	build_whatsapp_start_text,
+	planned_pair,
 	QuantityError,
 	format_unit,
 	build_report_text,
@@ -255,6 +257,73 @@ class TestReportText(unittest.TestCase):
 			"items": [row(status="Running", actual_quantity=0)],
 		})
 		self.assertIn("1 job requires an update", text)
+
+	# ── start-of-day report ────────────────────────────────────────────
+	# The evening report answers "what happened". The morning one answers
+	# "what is on", which is a different question read by different people
+	# at a different time - so the two must not converge.
+
+	def test_start_report_is_a_plan_not_a_result(self):
+		text = build_whatsapp_start_text(DAY)
+		self.assertEqual(text.splitlines()[0], "*VCL Production Plan - 26 Aug 2026*")
+		self.assertIn("M1 - Chandaria Yellow Copy", text)
+		self.assertIn("3 reels planned", text)
+
+	def test_start_report_never_shows_actuals(self):
+		# A morning report saying "0 / 3" reads as a failure before anyone has
+		# touched a machine. Zero is the absence of a measurement, not one.
+		text = build_whatsapp_start_text(DAY)
+		self.assertNotIn("0 / 3", text)
+		self.assertNotIn("1 / 3", text)
+		self.assertNotIn("Running", text)
+
+	def test_start_report_omits_exceptions_entirely(self):
+		# Nothing can require an update at 7am.
+		text = build_whatsapp_start_text(DAY)
+		self.assertNotIn("ATTENTION REQUIRED", text)
+		self.assertNotIn("CARRIED FORWARD", text)
+
+	def test_start_report_shows_work_carried_over(self):
+		day = {
+			"production_date": "2026-08-26",
+			"items": [row(planned_quantity=5, carried_quantity=2, uom="reels")],
+		}
+		self.assertIn("5 reels planned (incl. 2 carried)", build_whatsapp_start_text(day))
+
+	def test_start_report_lists_cards_still_to_plan(self):
+		# Actionable in the morning; by the evening it is too late to matter.
+		text = build_whatsapp_start_text(DAY, to_plan=[
+			{"ref": "0067", "customer_name": "Afapack", "job_name": "Tray",
+			 "overdue": True, "days_late": 4},
+			{"ref": "0071", "customer_name": "Excel", "job_name": "Invoice"},
+		])
+		self.assertIn("*STILL TO PLAN*", text)
+		self.assertIn("0067 - Afapack Tray (4 days late)", text)
+		self.assertIn("0071 - Excel Invoice", text)
+
+	def test_start_report_caps_a_long_to_plan_queue(self):
+		chips = [{"ref": str(n), "customer_name": "C", "job_name": "J"} for n in range(20)]
+		text = build_whatsapp_start_text(DAY, to_plan=chips)
+		self.assertIn("+ 8 more", text)
+
+	def test_start_report_on_an_empty_morning(self):
+		text = build_whatsapp_start_text({"production_date": "2026-08-26", "items": []})
+		self.assertIn("Nothing planned yet", text)
+		self.assertNotIn("No production entered", text)
+
+	def test_start_report_carries_the_day_note(self):
+		day = dict(DAY, notes="Power cut 11:00-12:30")
+		self.assertIn("Power cut 11:00-12:30", build_whatsapp_start_text(day))
+
+	def test_planned_pair_is_blank_without_a_figure(self):
+		self.assertEqual("", planned_pair(row(planned_quantity=None)))
+		self.assertEqual("3 reels planned", planned_pair(row(planned_quantity=3, uom="reels")))
+
+	def test_start_report_leaves_no_double_blank_lines(self):
+		for text in (build_whatsapp_start_text(DAY),
+					 build_whatsapp_start_text(DAY, to_plan=[{"ref": "1", "customer_name": "C", "job_name": "J"}])):
+			self.assertFalse(text.endswith("\n"))
+			self.assertNotIn("\n\n\n", text)
 
 	def test_neither_report_doubles_up_blank_lines(self):
 		# A department break is one blank line. Two reads as a hole in the
