@@ -337,6 +337,82 @@ def build_report_text(day, departments=None):
 	return "\n".join(lines)
 
 
+def build_whatsapp_start_text(day, departments=None, to_plan=None):
+	"""The MORNING message: what each machine is set to run today.
+
+	The evening report answers "what happened". This answers "what is on",
+	which is a different question with a different audience — it is read
+	before the shift, by people deciding where to stand.
+
+	So it deliberately leaves out everything that can only be known later:
+	no actuals, no exceptions, no ATTENTION REQUIRED. A morning report that
+	says nothing was produced is noise, because nothing has been produced yet.
+
+	What it adds instead is the two things a morning needs: work carried over
+	from yesterday, and job cards received but not yet on any machine.
+	"""
+	rows = day.get("items") or []
+	header = "*VCL Production Plan - {0}*".format(format_date_short(day.get("production_date")))
+	lines = [header]
+
+	if not rows:
+		lines += ["", "Nothing planned yet."]
+	else:
+		for dept in order_departments(rows, departments):
+			_end_block(lines)
+			lines += ["", "*{0}*".format(dept.upper()), ""]
+			for row in rows_for_department(rows, dept):
+				lines.append("{0} - {1}".format(machine_label(row), job_title(row)))
+				detail = planned_pair(row)
+				carried = format_qty(row.get("carried_quantity"))
+				if carried and float(row.get("carried_quantity") or 0) > 0:
+					detail = "{0} (incl. {1} carried)".format(detail, carried) if detail else \
+						"{0} carried over".format(carried)
+				if detail:
+					lines.append(detail)
+				lines.append("")
+
+		_end_block(lines)
+
+	# Received but not yet on a machine. Morning is exactly when this is
+	# actionable; by the evening report it is too late to matter.
+	waiting = list(to_plan or [])
+	if waiting:
+		lines += ["", "*STILL TO PLAN*", ""]
+		for chip in waiting[:12]:
+			label = "{0} {1}".format(
+				(chip.get("customer_name") or "").strip(),
+				(chip.get("job_name") or "").strip(),
+			).strip()
+			ref = (chip.get("ref") or chip.get("job_card") or "").strip()
+			line = "{0} - {1}".format(ref, label) if ref else label
+			if chip.get("overdue"):
+				days = chip.get("days_late")
+				line += " ({0} days late)".format(days) if days else " (late)"
+			lines.append(line)
+		if len(waiting) > 12:
+			lines.append("+ {0} more".format(len(waiting) - 12))
+
+	notes = (day.get("notes") or "").strip()
+	if notes:
+		lines += ["", "*NOTES*", notes]
+
+	return "\n".join(lines).rstrip()
+
+
+def planned_pair(row):
+	"""'3 reels planned', or '' when no figure was given.
+
+	Deliberately NOT qty_pair: that renders '0 / 3 reels', and a zero in the
+	morning is not a measurement, it is the absence of one.
+	"""
+	planned = format_qty(row.get("planned_quantity"))
+	if not planned:
+		return ""
+	unit = (row.get("uom") or "").strip()
+	return "{0} {1} planned".format(planned, unit).strip()
+
+
 def build_whatsapp_text(day, departments=None):
 	"""The message that gets pasted into the group.
 

@@ -19,6 +19,7 @@ from production_log.production_floor.reporting import (
 	RECEIVED_JOB_CARD_STATUS,
 	build_report_text,
 	build_whatsapp_text,
+	build_whatsapp_start_text,
 	exception_summary,
 	job_card_chip,
 	group_to_plan,
@@ -687,22 +688,43 @@ def reopen_day(production_date=None):
 
 @frappe.whitelist()
 def get_report(production_date=None):
-	"""Both report renderings plus the numbers behind them."""
+	"""Every report rendering plus the numbers behind them.
+
+	`whatsapp_start` and `whatsapp` are the two ends of the day and are
+	deliberately different messages, not one message at two times:
+
+	  - START answers "what is on" - planned figures, work carried over, and
+	    the cards still to plan. Read before the shift, by people deciding
+	    where to stand.
+	  - END answers "what happened" - actuals, statuses, reasons, exceptions.
+
+	Both are returned every call rather than gated behind a parameter, so a
+	caller can offer the two buttons without a second round trip on a link
+	that drops for minutes at a time.
+	"""
 	production_date = production_date or today()
 	doc = get_or_create_day(production_date, create=False)
+	departments = get_departments()
+
+	# Never fatal: a Job Card Tracking problem must not cost the floor its
+	# morning report. An absent queue simply omits the STILL TO PLAN block.
+	try:
+		waiting = list_to_plan()
+	except Exception:
+		waiting = []
+
 	if not doc:
 		empty = {"production_date": str(production_date), "items": []}
-		departments = get_departments()
 		return {
 			"exists": False,
 			"production_date": str(production_date),
 			"text": build_report_text(empty, departments),
 			"whatsapp": build_whatsapp_text(empty, departments),
+			"whatsapp_start": build_whatsapp_start_text(empty, departments, waiting),
 			"summary": summarise([]),
 			"exceptions": exception_summary([]),
 		}
 
-	departments = get_departments()
 	payload = _day_payload(doc)
 	return {
 		"exists": True,
@@ -710,6 +732,7 @@ def get_report(production_date=None):
 		"status": doc.status,
 		"text": doc.report_text(departments),
 		"whatsapp": doc.whatsapp_text(departments),
+		"whatsapp_start": build_whatsapp_start_text(payload, departments, waiting),
 		"summary": payload["summary"],
 		"exceptions": payload["exceptions"],
 		"day": payload,
