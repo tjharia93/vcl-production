@@ -118,12 +118,21 @@ def job_title(row):
 
 	Rows are entered by hand, so 'Chandaria' / 'Chandaria' happens. When the
 	job repeats the customer verbatim only one of them is printed.
+
+	It also happens that the job OPENS with the customer - a supervisor typing
+	"Mathai 1st reel" against customer Mathai - which printed "Mathai Mathai
+	1st reel" on the first live report. A job already carrying the customer
+	does not need it prepended.
 	"""
 	customer = (row.get("customer_name") or "").strip()
 	job = (row.get("job_name") or "").strip()
-	if customer and job and job.lower() != customer.lower():
-		return "{0} {1}".format(customer, job)
-	return customer or job
+	if not customer:
+		return job
+	if not job or job.lower() == customer.lower():
+		return customer
+	if job.lower().startswith(customer.lower()):
+		return job
+	return "{0} {1}".format(customer, job)
 
 
 def qty_pair(row):
@@ -405,12 +414,20 @@ def planned_pair(row):
 
 	Deliberately NOT qty_pair: that renders '0 / 3 reels', and a zero in the
 	morning is not a measurement, it is the absence of one.
+
+	⚠ `format_qty(0)` returns the STRING "0", which is truthy - so testing the
+	formatted value let "0 cartons planned" onto the first live report. Test
+	the NUMBER, which is the same trap the phone hit: an unset quantity is
+	stored as 0, never as null.
 	"""
-	planned = format_qty(row.get("planned_quantity"))
-	if not planned:
+	try:
+		value = float(row.get("planned_quantity") or 0)
+	except (TypeError, ValueError):
+		return ""
+	if value <= 0:
 		return ""
 	unit = (row.get("uom") or "").strip()
-	return "{0} {1} planned".format(planned, unit).strip()
+	return "{0} {1} planned".format(format_qty(value), unit).strip()
 
 
 def build_whatsapp_text(day, departments=None):
