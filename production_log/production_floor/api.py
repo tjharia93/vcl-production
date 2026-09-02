@@ -33,6 +33,7 @@ from production_log.production_floor.reporting import (
 	order_departments,
 	parse_quantity,
 	summarise,
+	unfinished_rows,
 )
 from production_log.production_floor.doctype.vcl_daily_production.vcl_daily_production import (
 	MANAGER_ROLE,
@@ -112,6 +113,10 @@ def get_board(production_date=None):
 		"units": get_units(),
 		"departments": get_departments(),
 		"to_plan": to_plan,
+		# Same round trip as everything else: the floor's link drops for
+		# minutes, and a second call to answer "what did yesterday leave?"
+		# would be the one that fails.
+		"unfinished": list_unfinished(production_date),
 		# Grouped here rather than on the phone: "how late is it" is a rule, and
 		# rules for this screen live in reporting.py where they are unit tested.
 		"to_plan_groups": group_to_plan(to_plan, today()),
@@ -777,6 +782,36 @@ def get_history(limit=30):
 		day["counts"] = by_parent.get(day["name"], {})
 		day["total"] = sum(day["counts"].values())
 	return days
+
+
+@frappe.whitelist()
+def list_unfinished(production_date=None, look_back_days=7):
+	"""What the LAST working day left behind, for today's board to offer.
+
+	Deliberately not "yesterday": a Monday must see Saturday's leftovers, and a
+	day nobody closed must not hide behind a day nobody opened. This walks back
+	from the given date to the most recent day that actually had rows on it.
+
+	Read-only. It suggests; it never creates a row. Bringing one forward is the
+	existing carry - `update_item` with a `carried_quantity` - which is already
+	idempotent, so offering the same job twice cannot double it.
+	"""
+	production_date = production_date or today()
+
+	for step in range(1, cint(look_back_days) + 1):
+		previous = add_days(production_date, -step)
+		doc = get_or_create_day(previous, create=False)
+		if not doc or not doc.items:
+			continue
+
+		rows = [{field: row.get(field) for field in ROW_FIELDS} for row in doc.items]
+		return {
+			"source_date": str(doc.production_date),
+			"source_status": doc.status,
+			"rows": unfinished_rows(rows),
+		}
+
+	return {"source_date": None, "source_status": None, "rows": []}
 
 
 @frappe.whitelist()
