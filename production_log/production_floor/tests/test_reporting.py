@@ -1473,3 +1473,95 @@ class PatchesMustNotInsertTests(unittest.TestCase):
 		names = [r.elts[0].value for r in machines.elts]
 		self.assertIn("Slitter", names)
 
+
+
+class NewDepartments2026_09Tests(unittest.TestCase):
+	"""ETR, Sheeting, General Stationery, Exercise Book and Tinting.
+
+	Added with NO machines. `machine` is mandatory on a production row, so
+	until someone creates one in the master these five are visible in the
+	Select and cannot yet be logged against - that is deliberate: Tanuj is
+	creating the real machine and process lists in the UI, and inventing
+	placeholder names here would leave rows pointing at machines that do not
+	exist on the floor.
+	"""
+
+	ADDED = ["ETR", "Sheeting", "General Stationery", "Exercise Book", "Tinting"]
+
+	def test_all_five_are_departments(self):
+		for department in self.ADDED:
+			self.assertIn(department, DEFAULT_DEPARTMENTS, department)
+
+	def test_the_existing_six_keep_their_order(self):
+		# Appended, not inserted. The evening WhatsApp report reads departments
+		# in this order and the floor reads that report top to bottom.
+		self.assertEqual(
+			DEFAULT_DEPARTMENTS[:6],
+			["Computer", "Offset", "Carton", "Labels", "Monobox", "Reel to Reel"],
+		)
+
+	def test_etr_is_not_a_rename_of_reel_to_reel(self):
+		# Two routes, not one name for the same thing:
+		#   ETR          Printing -> Slitting
+		#   Reel to Reel Printing -> reel out
+		# They share the Miyakoshis via `also_serves`, which is why neither one
+		# absorbs the other. See docs/...-COMPUTER-PAPER.md sections 7 and 8.
+		self.assertIn("Reel to Reel", DEFAULT_DEPARTMENTS)
+		self.assertIn("ETR", DEFAULT_DEPARTMENTS)
+
+	def test_no_machines_were_seeded_into_them(self):
+		# Guards the ordering trap from the other side: if someone later adds
+		# seed rows for these departments, they must satisfy
+		# InstallHookOrderTests (widen the Selects first) - this test failing
+		# is the prompt to go read that class.
+		import ast
+
+		here = os.path.dirname(os.path.abspath(__file__))
+		source = open(os.path.join(here, "..", "setup", "seed.py")).read()
+		machines = next(
+			node.value for node in ast.parse(source).body
+			if isinstance(node, ast.Assign)
+			and any(getattr(t, "id", None) == "MACHINES" for t in node.targets)
+		)
+		departments = {r.elts[1].value for r in machines.elts}
+		for department in self.ADDED:
+			self.assertNotIn(department, departments, department)
+
+
+class DepartmentSelectsStayInSyncTests(unittest.TestCase):
+	"""One list, five places. A department added to only some of them is the
+	drift this catches.
+
+	`DEFAULT_DEPARTMENTS` is the fallback the report uses when Settings has
+	never been materialised - which is the live state. The four DocType JSONs
+	are what a fresh site gets before `apply_select_options` runs. If they
+	disagree, the report has departments the Select does not offer.
+	"""
+
+	JSONS = [
+		# (doctype folder, fieldname, leading blank option)
+		("vcl_daily_production_item", "department", False),
+		("vcl_production_machine", "department", False),
+		("vcl_production_job", "department", True),
+	]
+
+	@staticmethod
+	def _field(folder, fieldname):
+		import json
+
+		here = os.path.dirname(os.path.abspath(__file__))
+		path = os.path.join(here, "..", "doctype", folder, folder + ".json")
+		meta = json.load(open(path))
+		return next(f for f in meta["fields"] if f["fieldname"] == fieldname)
+
+	def test_every_department_select_matches_the_constant(self):
+		for folder, fieldname, allow_blank in self.JSONS:
+			options = self._field(folder, fieldname)["options"].split("\n")
+			if allow_blank:
+				self.assertEqual(options[0], "", folder)
+				options = options[1:]
+			self.assertEqual(options, DEFAULT_DEPARTMENTS, folder)
+
+	def test_settings_default_matches_the_constant(self):
+		default = self._field("vcl_production_settings", "departments")["default"]
+		self.assertEqual(default.split("\n"), DEFAULT_DEPARTMENTS)

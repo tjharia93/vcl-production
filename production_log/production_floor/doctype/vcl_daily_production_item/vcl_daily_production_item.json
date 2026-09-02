@@ -46,7 +46,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Department",
-   "options": "Computer\nOffset\nCarton\nLabels\nMonobox\nReel to Reel",
+   "options": "Computer\nOffset\nCarton\nLabels\nMonobox\nReel to Reel\nETR\nSheeting\nGeneral Stationery\nExercise Book\nTinting",
    "reqd": 1
   },
   {

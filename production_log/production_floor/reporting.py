@@ -11,7 +11,24 @@ import re
 from datetime import date, datetime
 from urllib.parse import quote
 
-DEFAULT_DEPARTMENTS = ["Computer", "Offset", "Carton", "Labels", "Monobox", "Reel to Reel"]
+# APPEND ONLY. The evening WhatsApp report reads departments in this order and
+# the floor reads that report top to bottom, so a department that has been in
+# the list keeps its position forever. ETR is its own route, not a synonym for
+# Reel to Reel: ETR is Printing -> Slitting, Reel to Reel is Printing -> reel
+# out. They share the Miyakoshis, which is what `also_serves` is for.
+DEFAULT_DEPARTMENTS = [
+	"Computer",
+	"Offset",
+	"Carton",
+	"Labels",
+	"Monobox",
+	"Reel to Reel",
+	"ETR",
+	"Sheeting",
+	"General Stationery",
+	"Exercise Book",
+	"Tinting",
+]
 DEFAULT_UNITS = ["pcs", "cartons", "reels", "reams", "sheets", "kg", "metres"]
 
 STATUSES = [

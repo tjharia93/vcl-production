@@ -55,7 +55,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Usual Department",
-   "options": "\nComputer\nOffset\nCarton\nLabels\nMonobox\nReel to Reel"
+   "options": "\nComputer\nOffset\nCarton\nLabels\nMonobox\nReel to Reel\nETR\nSheeting\nGeneral Stationery\nExercise Book\nTinting"
   },
   {
    "fieldname": "column_break_main",
