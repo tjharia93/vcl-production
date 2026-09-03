@@ -550,8 +550,16 @@ def update_item(
 	reason=None,
 	notes=None,
 	carried_quantity=None,
+	customer_name=None,
+	job_name=None,
 ):
-	"""The quick-update path: status, actual quantity, and why."""
+	"""The quick-update path: status, actual quantity, and why.
+
+	`customer_name` and `job_name` are here so a name typed wrong can be put
+	right from the floor screen, on the row, without losing its start and
+	completion times. They correct THIS row only - the row carries a snapshot
+	on purpose, so last month's report does not move when a master is renamed.
+	"""
 	doc = _open_day(production_date)
 	target = None
 	for item in doc.items:
@@ -576,10 +584,26 @@ def update_item(
 	if notes is not None:
 		target.notes = notes
 
+	# Blanking either one is not a correction - add_item refuses an empty
+	# customer or job, and a row on the board must stay identifiable.
+	if customer_name is not None:
+		customer_name = customer_name.strip()
+		if not customer_name:
+			frappe.throw(_("Customer cannot be left empty."))
+		target.customer_name = customer_name
+	if job_name is not None:
+		job_name = job_name.strip()
+		if not job_name:
+			frappe.throw(_("Job cannot be left empty."))
+		target.job_name = job_name
+
 	# Enforced here rather than in the DocType, because this is the screen
 	# where the status is actually chosen - the person is looking at the
-	# reason box as they tap it.
-	if target.status in ("Paused", "Carried Forward") and not (target.reason or "").strip():
+	# reason box as they tap it. Scoped to a call that actually sets a status:
+	# the quick-update dialog always sends one, so its behaviour is unchanged,
+	# while correcting a name on an already-Paused row is not blocked by a
+	# missing reason it is not touching.
+	if status and target.status in ("Paused", "Carried Forward") and not (target.reason or "").strip():
 		frappe.throw(
 			_("A job marked {0} needs a reason.").format(_(target.status)),
 			title=_("Reason Needed"),
