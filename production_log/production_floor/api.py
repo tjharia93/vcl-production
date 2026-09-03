@@ -215,6 +215,9 @@ def add_machine(machine_name=None, department=None, machine_type="Machine"):
 	frappe.db.commit()
 
 	return {"name": machine_name, "reactivated": 0, "machines": get_machines()}
+
+
+@frappe.whitelist()
 def get_job_progress(job_card=None):
 	"""Every board row stamped with this job card, gathered into its stages.
 
@@ -318,6 +321,9 @@ def _order_size(job_card):
 	# counts the finishing stages the same way - which is what makes a
 	# percentage meaningful at all.
 	return ordered, "cartons"
+
+
+@frappe.whitelist()
 def get_plan_template(job_card=None):
 	"""Every station a job will pass through, ready to be planned in one go.
 
