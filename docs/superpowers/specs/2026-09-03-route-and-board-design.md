@@ -230,14 +230,93 @@ The cases that must exist, each pinned to something this design got wrong first:
 
 ---
 
-## 7. Open decisions
+## 7. Decisions taken
 
-1. **The exact `STAGE_MAP` for Computer Paper and Carton.** Proposed above;
-   needs a floor read before it is trusted, particularly whether `Numbering` may
-   only run on Collator 01.
-2. **`Pack`** — a real floor step with no station. Add a packing station to the
-   machine master, or accept it as permanently unstaffed?
-3. **The 11 unmapped machines** — six Monobox stages, Roland, Kord, Pasting, and
-   both PLANNING entries. Roland and Kord are real presses and almost certainly
-   should map; the PLANNING entries are pseudo-stations and probably should not
-   be pickable as machines at all.
+Answered by Tanuj, 2026-09-03.
+
+| # | Decision |
+|---|---|
+| 1 | **The `STAGE_MAP` approach is right.** Translate per product type; do not rename anything. |
+| 2 | **`Pack` — not needed now.** It stays a floor stage with no station. Do **not** add a packing machine. |
+| 3 | **Roland maps like M4** → `Reel to Reel Printing`. |
+| 4 | **Kord is a printing machine** → `Sheet to Sheet Printing`, matching Solna and Miller. |
+| 5 | **The two PLANNING entries come out of the machine master.** Planning is a process, not something production is recorded against. |
+
+### On removing the PLANNING entries
+
+`PLANNING` (Computer) and `PLANNING STAGE - PRINTING` (Offset) are already
+`machine_type = Process`; the change is that they stop being **pickable**.
+
+**Untick `active`. Never delete.** `seed_machines` runs from `after_migrate` and
+adds back anything missing, so a deleted machine returns on the next deploy. A
+deactivated one does not, and its history survives.
+
+---
+
+## 8. Three things the mapping work turned up
+
+None of these block the design, but each will bite whoever writes the map.
+
+### 8.1 There is only one Collator
+
+The Department 01 master describes **two**: Collator 01 collates *and numbers*,
+Collator 02 collates only. The live machine master carries a single `Collator`,
+stage `Collation`.
+
+So the intended rule — *Numbering runs only on the collator that numbers* —
+**cannot be expressed today**. Two ways out, and it is a floor decision:
+
+- Split the master into `Collator 01` and `Collator 02`, matching the plant, and
+  map `Numbering` to 01 alone. Correct, and it is what the master already says.
+- Map `Numbering` to the single `Collator` and accept that the app cannot tell a
+  numbered job from a plain one at the machine.
+
+Until it is resolved, `Numbering` maps to `Collator` and the limitation is
+recorded rather than hidden.
+
+### 8.2 "Reel to Reel" means two different things
+
+This will mislead someone, so it is written down.
+
+- In the **Department 01 master**, *Reel-to-Reel* is a **route**: reel in, reel
+  out, no folding. By that meaning **M4 cannot do it**, and neither can Roland.
+- In **ERPNext**, `Reel to Reel Printing` is a **Workstation Type**: reel-**fed**
+  printing. By that meaning M1–M4 and Roland all qualify, because they are web
+  presses that print and convert inline from a reel.
+
+Both are true at once. Mapping Roland and M4 to `Reel to Reel Printing` is
+correct **as a station type** and says nothing about whether they can produce a
+finished reel. The master's capability table remains the authority on that, and
+the app must never infer route capability from the station type.
+
+### 8.3 Workstation Types exist for stations the master is missing
+
+The site already defines `Carton Pasting`, `Creasing`, `Sheeting`, `Lamination`,
+`Plate Making`, `Ruling`, `Flexo Label Printing` and
+`Label Slitting and Re-Winding`.
+
+Two consequences:
+
+- **`Pasting` (Carton) has no stage** but `Carton Pasting` exists — a one-field
+  fix, not a modelling question.
+- **`Sheeting` and `Creasing` have Workstation Types but no machines at all.**
+  Both are named stations in the Department 02 ladder, and their absence from
+  the machine master was already recorded as an open finding. A Carton route
+  derived from the flags will therefore produce `Creasing and Slitting` as a
+  floor stage with nowhere to put it — shown unticked, which is the honest
+  outcome and the reason unstaffed stages are a first-class case.
+
+Also note `Design` exists as a Workstation Type. It is still treated as an
+**office** stage here: it is a step on the traveller, not a machine the floor
+records production against.
+
+---
+
+## 9. Still open
+
+1. **Collator 01 / 02** — split the master, or accept one collator? (§8.1)
+2. **Label, ETR and Reel-to-Reel routes.** None exist, and there is live work on
+   both ETR and R2R now. ETR is `Printing → Slitting`; R2R is
+   `Printing → Reel output`. Writing them down is a floor decision.
+3. **Monobox** — its route varies job to job, so a template is the wrong shape
+   until the per-job mechanism is decided.
