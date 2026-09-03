@@ -34,6 +34,10 @@ from production_log.production_floor.reporting import (
 	parse_quantity,
 	summarise,
 )
+from production_log.production_floor.routes import (
+	resolve_stage,
+	route_for_carton,
+)
 from production_log.production_floor.doctype.vcl_daily_production.vcl_daily_production import (
 	MANAGER_ROLE,
 	get_or_create_day,
@@ -350,19 +354,39 @@ def get_plan_template(job_card=None):
 	]
 
 	machines = get_machines()
-	by_stage = {}
+	by_type = {}
 	for machine in machines:
 		if machine.get("stage"):
-			by_stage.setdefault(machine["stage"], []).append(machine["name"])
+			by_type.setdefault(machine["stage"], []).append(machine["name"])
 
-	lines = plan_lines(route, parts)
-	for line in lines:
-		line["machines"] = by_stage.get(line["stage"], [])
-		line["machine"] = line["machines"][0] if line["machines"] else None
-		# Ticked only where we can actually put the work somewhere. A stage with
-		# no machine is shown, unticked, so the gap is visible rather than the
-		# stage silently missing from the plan.
-		line["include"] = bool(line["machines"])
+	lines = []
+	for line in plan_lines(route, parts):
+		resolved = resolve_stage(doctype, line["stage"])
+
+		# Office stages never reach a machine board. Design and film work are
+		# steps on the traveller; nobody records production against them.
+		if resolved["office"]:
+			continue
+
+		candidates = []
+		for station in resolved["types"]:
+			for name in by_type.get(station, []):
+				if name not in candidates:
+					candidates.append(name)
+
+		line["machines"] = candidates
+		line["machine"] = candidates[0] if candidates else None
+		line["office"] = False
+		# Ticked only where the work can actually go somewhere. A stage with no
+		# machine is SHOWN, unticked, with the reason - so the gap is visible
+		# rather than the stage quietly missing from the plan.
+		line["include"] = bool(candidates)
+		line["reason"] = None if candidates else (
+			"No machine is set up for this stage yet."
+			if resolved["types"]
+			else "This stage has no station."
+		)
+		lines.append(line)
 
 	return {
 		"job_card": job_card,
@@ -386,11 +410,19 @@ def _route_for(card):
 	if stages:
 		ordered = sorted(stages, key=lambda row: row.get("sequence") or 0)
 		return [row.get("stage") for row in ordered if row.get("stage")]
+
 	if hasattr(card, "get_production_stage_route"):
 		try:
 			return card.get_production_stage_route()
 		except Exception:
 			pass
+
+	# Carton has no stage table at all - its route lives in eight flags, which
+	# is why every Carton card used to produce an empty route and refuse to be
+	# planned.
+	if card.doctype == "Job Card Carton":
+		return route_for_carton(card.as_dict())
+
 	return []
 
 
