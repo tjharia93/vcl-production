@@ -11,6 +11,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 from production_log.production_floor.routes import (  # noqa: E402
 	STAGE_MAP,
 	resolve_stage,
+	route_for_carton,
 )
 
 CP = "Job Card Computer Paper"
@@ -59,6 +60,82 @@ class TestResolveStage(unittest.TestCase):
 		# but only one "Collator" exists in the machine master, so this cannot
 		# yet be narrowed. See spec 8.1.
 		self.assertEqual(("Collation",), resolve_stage(CP, "Numbering")["types"])
+
+
+def carton(**overrides):
+	"""JC-CORR-2026-0077 as it really is on the live site."""
+	base = {
+		"applies_corrugated": 1,
+		"applies_pasting": 1,
+		"applies_creasing": 1,
+		"applies_printing": 1,
+		"applies_diecut": 0,
+		"applies_slotting": 1,
+		"applies_stitching": 1,
+		"applies_bundling": 1,
+		"joint_type": "Stitched",
+	}
+	base.update(overrides)
+	return base
+
+
+class TestCartonRoute(unittest.TestCase):
+
+	def test_the_live_card_produces_its_real_ladder(self):
+		# Before this, _route_for() returned [] for every Carton card and
+		# plan_job threw "Tick at least one station."
+		self.assertEqual(
+			[
+				"Corrugated",
+				"Pasting",
+				"Creasing and Slitting",
+				"Printing",
+				"Slotting",
+				"Stitching",
+				"Bundling",
+			],
+			route_for_carton(carton()),
+		)
+
+	def test_die_cutting_off_stays_off(self):
+		self.assertNotIn("Die-cutting and Stripping", route_for_carton(carton()))
+
+	def test_die_cutting_on_appears_in_ladder_order(self):
+		route = route_for_carton(carton(applies_diecut=1))
+		self.assertLess(route.index("Printing"), route.index("Die-cutting and Stripping"))
+		self.assertLess(route.index("Die-cutting and Stripping"), route.index("Slotting"))
+
+	def test_a_glued_job_gets_gluing_instead_of_stitching(self):
+		# There is no applies_gluing. The joint is derived from joint_type.
+		route = route_for_carton(carton(joint_type="Gluing - Machine", applies_stitching=0))
+		self.assertIn("Gluing", route)
+		self.assertNotIn("Stitching", route)
+
+	def test_manual_gluing_is_the_same_station(self):
+		self.assertIn("Gluing", route_for_carton(
+			carton(joint_type="Gluing - Manual", applies_stitching=0)))
+
+	def test_a_plain_tray_skips_printing_and_slotting(self):
+		route = route_for_carton(carton(applies_printing=0, applies_slotting=0))
+		self.assertNotIn("Printing", route)
+		self.assertNotIn("Slotting", route)
+		self.assertIn("Creasing and Slitting", route)
+
+	def test_all_flags_zero_means_no_route_recorded_not_no_stages(self):
+		# Historic cards predate the flags and carry all eight as zero. Reading
+		# that as "this job has no stages" would empty every old traveller.
+		blank = {key: 0 for key in carton() if key.startswith("applies_")}
+		blank["joint_type"] = "Stitched"
+		route = route_for_carton(blank)
+		self.assertIn("Corrugated", route)
+		self.assertIn("Bundling", route)
+		self.assertNotIn("Die-cutting and Stripping", route)
+
+	def test_every_stage_it_emits_is_mappable(self):
+		# A route naming a stage the map has never heard of would resolve to
+		# unstaffed and look like a missing machine rather than a typo.
+		for stage in route_for_carton(carton(applies_diecut=1)):
+			self.assertIn(stage, STAGE_MAP["Job Card Carton"], stage)
 
 
 if __name__ == "__main__":
