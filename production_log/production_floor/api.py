@@ -143,7 +143,12 @@ def get_machines(department=None):
 		filters={"active": 1},
 		fields=[
 			"name", "machine_name", "department", "machine_type",
-			"display_order", "also_serves",
+			# `stage` is the Workstation Type this station serves, and it is
+			# what get_plan_template matches a card's route against. Leaving it
+			# out of the SELECT made every stage resolve to no machine at all -
+			# the route rendered, every line unticked, "No machine is set up for
+			# this stage yet" against presses that were set up.
+			"stage", "display_order", "also_serves",
 		],
 		order_by="department asc, display_order asc, machine_name asc",
 	)
