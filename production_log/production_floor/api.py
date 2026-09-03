@@ -34,6 +34,10 @@ from production_log.production_floor.reporting import (
 	parse_quantity,
 	summarise,
 )
+from production_log.production_floor.routes import (
+	resolve_stage,
+	route_for_carton,
+)
 from production_log.production_floor.doctype.vcl_daily_production.vcl_daily_production import (
 	MANAGER_ROLE,
 	get_or_create_day,
@@ -350,19 +354,39 @@ def get_plan_template(job_card=None):
 	]
 
 	machines = get_machines()
-	by_stage = {}
+	by_type = {}
 	for machine in machines:
 		if machine.get("stage"):
-			by_stage.setdefault(machine["stage"], []).append(machine["name"])
+			by_type.setdefault(machine["stage"], []).append(machine["name"])
 
-	lines = plan_lines(route, parts)
-	for line in lines:
-		line["machines"] = by_stage.get(line["stage"], [])
-		line["machine"] = line["machines"][0] if line["machines"] else None
-		# Ticked only where we can actually put the work somewhere. A stage with
-		# no machine is shown, unticked, so the gap is visible rather than the
-		# stage silently missing from the plan.
-		line["include"] = bool(line["machines"])
+	lines = []
+	for line in plan_lines(route, parts):
+		resolved = resolve_stage(doctype, line["stage"])
+
+		# Office stages never reach a machine board. Design and film work are
+		# steps on the traveller; nobody records production against them.
+		if resolved["office"]:
+			continue
+
+		candidates = []
+		for station in resolved["types"]:
+			for name in by_type.get(station, []):
+				if name not in candidates:
+					candidates.append(name)
+
+		line["machines"] = candidates
+		line["machine"] = candidates[0] if candidates else None
+		line["office"] = False
+		# Ticked only where the work can actually go somewhere. A stage with no
+		# machine is SHOWN, unticked, with the reason - so the gap is visible
+		# rather than the stage quietly missing from the plan.
+		line["include"] = bool(candidates)
+		line["reason"] = None if candidates else (
+			"No machine is set up for this stage yet."
+			if resolved["types"]
+			else "This stage has no station."
+		)
+		lines.append(line)
 
 	return {
 		"job_card": job_card,
@@ -386,11 +410,19 @@ def _route_for(card):
 	if stages:
 		ordered = sorted(stages, key=lambda row: row.get("sequence") or 0)
 		return [row.get("stage") for row in ordered if row.get("stage")]
+
 	if hasattr(card, "get_production_stage_route"):
 		try:
 			return card.get_production_stage_route()
 		except Exception:
 			pass
+
+	# Carton has no stage table at all - its route lives in eight flags, which
+	# is why every Carton card used to produce an empty route and refuse to be
+	# planned.
+	if card.doctype == "Job Card Carton":
+		return route_for_carton(card.as_dict())
+
 	return []
 
 
@@ -774,6 +806,50 @@ def get_report(production_date=None):
 		"exceptions": payload["exceptions"],
 		"day": payload,
 	}
+
+
+def push_stage_status(job_card):
+	"""Set a card's stage_status from what the board actually recorded.
+
+	Derived, never typed: stage_status becomes a projection of the board, so
+	the card and the floor cannot disagree. A stage with no rows is left at
+	"Not Started" rather than blanked - absence of work is not a status.
+
+	Only for cards that HAVE a stage table. Carton, Label, ETR and Monobox read
+	their progress through get_job_progress instead; giving them a stage table
+	is a bigger decision than this.
+	"""
+	doctype = job_card_doctype(job_card)
+	if not doctype:
+		return
+
+	card = frappe.get_doc(doctype, job_card)
+	stage_rows = card.get("production_stages") or []
+	if not stage_rows:
+		return
+
+	stage_of_machine, _ = _stage_maps()
+	rolled = roll_up_stages(_rows_for_job_card(job_card), stage_of_machine)
+
+	# The board reports Workstation Types; the card names its own stages. Walk
+	# the card's stages and ask the map which types belong to each.
+	status_of_type = {r["stage"]: r["status"] for r in rolled if r["stage"]}
+
+	changed = False
+	for row in stage_rows:
+		types = resolve_stage(doctype, row.stage)["types"]
+		statuses = [status_of_type[t] for t in types if t in status_of_type]
+		if not statuses:
+			continue
+		# Running beats Completed: any station still going means the stage is.
+		fresh = "Running" if "Running" in statuses else statuses[0]
+		if row.stage_status != fresh:
+			row.stage_status = fresh
+			changed = True
+
+	if changed:
+		card.save(ignore_permissions=True)
+		frappe.db.commit()
 
 
 @frappe.whitelist()

@@ -139,3 +139,8 @@ production_log.patches.v10_1.align_machines_to_workstations
 # and the Slitter joins as the one machine only this department uses. Runs
 # after v10_1 so the stage and workstation it sets already exist as fields.
 production_log.patches.v10_2.reel_to_reel_department
+# Maps Roland and Kord to the station types they actually are, gives Pasting
+# the Carton Pasting type that already existed, and retires the two PLANNING
+# entries from the machine list - planning is a process, not something
+# production is recorded against. Updates only; never creates a machine.
+production_log.patches.v10_3.map_presses_and_retire_planning
