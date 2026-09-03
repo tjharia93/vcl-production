@@ -892,6 +892,56 @@ def plan_lines(route, parts=None, split_by_part=None):
 	return lines
 
 
+# A job with one of these statuses has no outcome yet. "Completed" is an
+# outcome; "Carried Forward" already produced tomorrow's row and so is one too.
+UNFINISHED_STATUSES = ("Planned", "Not Started", "Running", "Paused")
+
+
+def unfinished_rows(rows):
+	"""What a day left behind - work with no outcome recorded against it.
+
+	Nothing should ever silently disappear between one morning and the next. A
+	job either finished, or it carries, or somebody decided to drop it - and
+	the third has to be a decision somebody takes, not a row nobody looked at
+	again.
+
+	`balance` is what is still owed: planned minus done. It is a SUGGESTION for
+	the next day's planned quantity, never an assumption - a supervisor may
+	have finished the job and not said so, or the order may have been pulled.
+	None means the row carried no figures at all, so there is nothing to
+	suggest and the quantity must be typed.
+	"""
+	out = []
+	for row in rows or []:
+		status = (row.get("status") or "Planned").strip()
+		if status not in UNFINISHED_STATUSES:
+			continue
+
+		planned = _as_number(row.get("planned_quantity"))
+		actual = _as_number(row.get("actual_quantity"))
+		balance = planned - actual
+		out.append({
+			"row_name": row.get("name"),
+			"department": row.get("department"),
+			"machine": row.get("machine"),
+			"customer_name": row.get("customer_name"),
+			"job_name": row.get("job_name"),
+			"uom": row.get("uom"),
+			"status": status,
+			"planned_quantity": planned or None,
+			"actual_quantity": actual or None,
+			# Only a positive remainder is worth suggesting. A job planned for
+			# 3 with 3 done but never marked Completed owes nothing.
+			"balance": balance if balance > 0 else None,
+			"production_job_card": row.get("production_job_card"),
+			"job_card_instructions": row.get("job_card_instructions"),
+			"part_number": row.get("part_number"),
+			"part_label": row.get("part_label"),
+			"label": "{0} - {1}".format(machine_label(row), job_title(row)),
+		})
+	return out
+
+
 def carry_forward_row(row, next_date):
 	"""Tomorrow's row for work that did not finish today.
 

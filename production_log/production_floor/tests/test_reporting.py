@@ -16,6 +16,7 @@ from datetime import date
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from production_log.production_floor.reporting import (  # noqa: E402
+	unfinished_rows,
 	qty_pair,
 	build_whatsapp_start_text,
 	planned_pair,
@@ -283,6 +284,74 @@ class TestReportText(unittest.TestCase):
 		text = build_whatsapp_start_text(DAY)
 		self.assertNotIn("ATTENTION REQUIRED", text)
 		self.assertNotIn("CARRIED FORWARD", text)
+
+	# ── what a day leaves behind ───────────────────────────────────────
+	# Nothing should silently disappear between one morning and the next. A
+	# job either finished, or it carries, or somebody decided to drop it -
+	# and the third has to be a decision, not a row nobody looked at again.
+
+	def test_unfinished_keeps_work_with_no_outcome(self):
+		rows = [
+			row(machine="M1", status="Planned"),
+			row(machine="M2", status="Running"),
+			row(machine="M3", status="Paused"),
+			row(machine="M4", status="Not Started"),
+		]
+		self.assertEqual(
+			["M1", "M2", "M3", "M4"],
+			[r["machine"] for r in unfinished_rows(rows)],
+		)
+
+	def test_completed_is_an_outcome_and_drops_out(self):
+		self.assertEqual([], unfinished_rows([row(status="Completed")]))
+
+	def test_carried_forward_is_an_outcome_too(self):
+		# It already produced tomorrow's row; offering it again would double it.
+		self.assertEqual([], unfinished_rows([row(status="Carried Forward")]))
+
+	def test_the_balance_is_what_is_still_owed(self):
+		found = unfinished_rows([row(status="Running", planned_quantity=3, actual_quantity=1)])
+		self.assertEqual(2, found[0]["balance"])
+
+	def test_a_job_that_made_its_number_owes_nothing(self):
+		# Planned 3, made 3, nobody pressed Completed. It is still unfinished -
+		# somebody must say so - but there is no balance to suggest.
+		found = unfinished_rows([row(status="Running", planned_quantity=3, actual_quantity=3)])
+		self.assertEqual(1, len(found))
+		self.assertIsNone(found[0]["balance"])
+
+	def test_overproduction_does_not_suggest_a_negative(self):
+		found = unfinished_rows([row(status="Running", planned_quantity=3, actual_quantity=5)])
+		self.assertIsNone(found[0]["balance"])
+
+	def test_a_row_with_no_figures_still_carries_forward_with_none(self):
+		# The live 1 Sep board had exactly this: M1, planned 0, actual 0,
+		# Planned all day. It must not vanish just because nobody typed a
+		# number against it.
+		found = unfinished_rows([row(status="Planned", planned_quantity=0, actual_quantity=0)])
+		self.assertEqual(1, len(found))
+		self.assertIsNone(found[0]["balance"])
+		self.assertIsNone(found[0]["planned_quantity"])
+
+	def test_unfinished_carries_the_job_card_and_the_part(self):
+		# Both are part of carry-forward's idempotency key, so dropping them
+		# would let the same job come forward twice.
+		found = unfinished_rows([row(
+			status="Running", production_job_card="JC-CPT-2026-00062",
+			part_label="Part 2 - CF - Yellow", part_number=2,
+		)])
+		self.assertEqual("JC-CPT-2026-00062", found[0]["production_job_card"])
+		self.assertEqual("Part 2 - CF - Yellow", found[0]["part_label"])
+		self.assertEqual(2, found[0]["part_number"])
+
+	def test_unfinished_labels_a_row_the_way_the_reports_do(self):
+		found = unfinished_rows([row(machine="M1", customer_name="Chandaria",
+			job_name="Yellow Copy", status="Running")])
+		self.assertEqual("M1 - Chandaria Yellow Copy", found[0]["label"])
+
+	def test_an_empty_day_leaves_nothing_behind(self):
+		self.assertEqual([], unfinished_rows([]))
+		self.assertEqual([], unfinished_rows(None))
 
 	def test_evening_report_omits_a_row_with_no_figures_at_all(self):
 		# "0 / 0 cartons - Planned" is not a measurement. It is a row nobody has
