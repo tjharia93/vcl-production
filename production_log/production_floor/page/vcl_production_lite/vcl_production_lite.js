@@ -1843,6 +1843,81 @@ class VclProductionBoard {
 		if (!row.production_job) {
 			dialog.add_custom_action(__("Remember this Job"), () => this.remember_job(row, dialog));
 		}
+
+		// Kept off the quick path on purpose. Correcting a name is rare and
+		// deliberate; actual quantity is typed every day. Mixing them invites
+		// a stray keystroke into a field the reports read.
+		dialog.add_custom_action(__("Correct Customer / Job"), () =>
+			this.correct_names(row, dialog)
+		);
+	}
+
+	/**
+	 * Fix a customer or job typed wrong, from the screen the mistake was made
+	 * on. Editing the row keeps its start and completion times - removing and
+	 * re-adding, which is what people did before this existed, discards them.
+	 */
+	correct_names(row, dialog) {
+		const fix = new frappe.ui.Dialog({
+			title: __("Correct Customer / Job"),
+			size: "small",
+			fields: [
+				{
+					fieldname: "customer_name",
+					fieldtype: "Data",
+					label: __("Customer"),
+					default: row.customer_name || "",
+					reqd: 1,
+				},
+				{
+					fieldname: "job_name",
+					fieldtype: "Data",
+					label: __("Job"),
+					default: row.job_name || "",
+					reqd: 1,
+				},
+				{
+					fieldname: "note",
+					fieldtype: "HTML",
+					options: `<p class="text-muted small">${__(
+						"Corrects this row only. Earlier days keep the name they were recorded with."
+					)}</p>`,
+				},
+			],
+			primary_action_label: __("Save"),
+			primary_action: (values) => {
+				const customer_name = (values.customer_name || "").trim();
+				const job_name = (values.job_name || "").trim();
+				if (!customer_name || !job_name) {
+					frappe.msgprint(__("Customer and job are both needed."));
+					return;
+				}
+				if (customer_name === row.customer_name && job_name === row.job_name) {
+					fix.hide();
+					return;
+				}
+				frappe
+					.call({
+						method: "production_log.production_floor.api.update_item",
+						args: {
+							production_date: this.date,
+							row: row.name,
+							customer_name: customer_name,
+							job_name: job_name,
+						},
+						freeze: true,
+					})
+					.then((response) => {
+						if (response.message) {
+							fix.hide();
+							dialog.hide();
+							this.apply_day(response.message);
+							frappe.show_alert({ message: __("Name corrected"), indicator: "green" });
+						}
+					});
+			},
+		});
+		fix.show();
 	}
 
 	// ------------------------------------------------------------------
