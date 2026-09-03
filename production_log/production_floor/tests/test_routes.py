@@ -138,5 +138,28 @@ class TestCartonRoute(unittest.TestCase):
 			self.assertIn(stage, STAGE_MAP["Job Card Carton"], stage)
 
 
+class TestStageStatusRule(unittest.TestCase):
+	"""Running beats Completed when a stage has several stations.
+
+	Computer Paper prints each part on its own press, so "Printing" can be
+	two rows at once. If one press has finished and the other is still going,
+	the STAGE is still running - reporting it Completed would tell the office
+	a job is off the press when half of it is not.
+	"""
+
+	@staticmethod
+	def pick(statuses):
+		return "Running" if "Running" in statuses else statuses[0]
+
+	def test_one_press_still_running_keeps_the_stage_running(self):
+		self.assertEqual("Running", self.pick(["Completed", "Running"]))
+
+	def test_all_finished_completes_the_stage(self):
+		self.assertEqual("Completed", self.pick(["Completed", "Completed"]))
+
+	def test_a_single_station_reports_itself(self):
+		self.assertEqual("Paused", self.pick(["Paused"]))
+
+
 if __name__ == "__main__":
 	unittest.main()

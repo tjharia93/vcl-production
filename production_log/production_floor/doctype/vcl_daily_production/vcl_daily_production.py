@@ -101,6 +101,33 @@ class VCLDailyProduction(Document):
 	def on_update(self):
 		self.remember_new_jobs()
 
+		self.push_job_card_progress()
+
+	def push_job_card_progress(self):
+		"""Advance every job card this day touched.
+
+		On the day document, not on each row: a day is saved once per change,
+		and a card with five stations would otherwise be recomputed five times
+		for one edit.
+		"""
+		from production_log.production_floor.api import push_stage_status
+
+		cards = {
+			(row.production_job_card or "").strip()
+			for row in self.items
+			if (row.production_job_card or "").strip()
+		}
+		for card in cards:
+			try:
+				push_stage_status(card)
+			except Exception:
+				# A job card problem must never stop a supervisor saving the
+				# day. The board is the record that matters.
+				frappe.log_error(
+					title="push_stage_status failed",
+					message="{0}\n{1}".format(card, frappe.get_traceback()),
+				)
+
 	def remember_new_jobs(self):
 		"""Turn what was typed today into tomorrow's autocomplete.
 

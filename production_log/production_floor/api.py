@@ -808,6 +808,50 @@ def get_report(production_date=None):
 	}
 
 
+def push_stage_status(job_card):
+	"""Set a card's stage_status from what the board actually recorded.
+
+	Derived, never typed: stage_status becomes a projection of the board, so
+	the card and the floor cannot disagree. A stage with no rows is left at
+	"Not Started" rather than blanked - absence of work is not a status.
+
+	Only for cards that HAVE a stage table. Carton, Label, ETR and Monobox read
+	their progress through get_job_progress instead; giving them a stage table
+	is a bigger decision than this.
+	"""
+	doctype = job_card_doctype(job_card)
+	if not doctype:
+		return
+
+	card = frappe.get_doc(doctype, job_card)
+	stage_rows = card.get("production_stages") or []
+	if not stage_rows:
+		return
+
+	stage_of_machine, _ = _stage_maps()
+	rolled = roll_up_stages(_rows_for_job_card(job_card), stage_of_machine)
+
+	# The board reports Workstation Types; the card names its own stages. Walk
+	# the card's stages and ask the map which types belong to each.
+	status_of_type = {r["stage"]: r["status"] for r in rolled if r["stage"]}
+
+	changed = False
+	for row in stage_rows:
+		types = resolve_stage(doctype, row.stage)["types"]
+		statuses = [status_of_type[t] for t in types if t in status_of_type]
+		if not statuses:
+			continue
+		# Running beats Completed: any station still going means the stage is.
+		fresh = "Running" if "Running" in statuses else statuses[0]
+		if row.stage_status != fresh:
+			row.stage_status = fresh
+			changed = True
+
+	if changed:
+		card.save(ignore_permissions=True)
+		frappe.db.commit()
+
+
 @frappe.whitelist()
 def get_history(limit=30):
 	"""Previous production days, newest first."""
