@@ -24,6 +24,7 @@ from production_log.production_floor.reporting import (  # noqa: E402
 	format_unit,
 	build_report_text,
 	build_whatsapp_text,
+	carry_quantity,
 	day_in_progress,
 	exception_summary,
 	find_exceptions,
@@ -1698,3 +1699,58 @@ class StillToPlanInEveningReportTests(unittest.TestCase):
 		many = [dict(self.CHIPS[1], job_card="JC-%d" % n, ref=str(n)) for n in range(15)]
 		lines = to_plan_lines(many)
 		self.assertIn("+ 3 more", lines)
+
+
+class CarryQuantityTests(unittest.TestCase):
+	"""Marking a job Carried Forward is the instruction; the box is optional.
+
+	The Solna A5 covers were carried on 3 Sep with a reason and an empty
+	quantity box, and appeared on no board the next morning. Nothing about the
+	gesture told the supervisor anything was missing.
+	"""
+
+	def row(self, **over):
+		base = {
+			"status": "Carried Forward", "machine": "Solna",
+			"customer_name": "Vimit Converters", "job_name": "A5 Brand Prince Covers",
+			"planned_quantity": 30000, "actual_quantity": 7400,
+			"carried_quantity": 0, "uom": "sheets", "production_date": "2026-09-03",
+		}
+		base.update(over)
+		return base
+
+	def test_an_empty_box_carries_what_is_still_owed(self):
+		self.assertEqual(carry_quantity(self.row()), 22600)
+
+	def test_a_typed_figure_always_wins(self):
+		# The supervisor knows something the arithmetic does not.
+		self.assertEqual(carry_quantity(self.row(carried_quantity=5000)), 5000)
+
+	def test_nothing_owed_carries_nothing(self):
+		self.assertEqual(carry_quantity(self.row(actual_quantity=30000)), 0)
+		self.assertEqual(carry_quantity(self.row(planned_quantity=0)), 0)
+
+	def test_another_status_is_never_guessed_at(self):
+		# Only "Carried Forward" means carry. A Running row with a balance is
+		# just a Running row.
+		self.assertEqual(carry_quantity(self.row(status="Running")), 0)
+		self.assertEqual(carry_quantity(self.row(status="Completed")), 0)
+
+	def test_a_running_row_with_a_typed_figure_still_carries(self):
+		self.assertEqual(carry_quantity(self.row(status="Running", carried_quantity=120)), 120)
+
+	def test_junk_in_the_box_falls_back_to_the_balance(self):
+		self.assertEqual(carry_quantity(self.row(carried_quantity="")), 22600)
+		self.assertEqual(carry_quantity(self.row(carried_quantity=None)), 22600)
+
+	def test_the_status_alone_builds_tomorrows_row(self):
+		built = carry_forward_row(self.row(), "2026-09-04")
+		self.assertIsNotNone(built)
+		self.assertEqual(built["planned_quantity"], 22600)
+		self.assertEqual(built["machine"], "Solna")
+		self.assertEqual(built["status"], "Planned")
+		self.assertEqual(built["uom"], "sheets")
+		self.assertIn("2026-09-03", built["notes"])
+
+	def test_a_finished_job_marked_carried_builds_nothing(self):
+		self.assertIsNone(carry_forward_row(self.row(actual_quantity=30000), "2026-09-04"))

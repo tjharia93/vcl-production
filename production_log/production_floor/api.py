@@ -30,6 +30,7 @@ from production_log.production_floor.reporting import (
 	stage_flow,
 	stage_percent,
 	carry_forward_row,
+	carry_quantity,
 	plan_lines,
 	order_departments,
 	parse_quantity,
@@ -662,6 +663,12 @@ def update_item(
 			_("A job marked {0} needs a reason.").format(_(target.status)),
 			title=_("Reason Needed"),
 		)
+
+	# A row marked Carried Forward with an empty figure carries the balance -
+	# see carry_quantity. Written back onto the row BEFORE the save so the day's
+	# own report and tomorrow's board can never quote different numbers.
+	if target.status == "Carried Forward":
+		target.carried_quantity = carry_quantity(target.as_dict())
 
 	doc.save()
 

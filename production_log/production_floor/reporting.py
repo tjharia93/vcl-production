@@ -998,6 +998,31 @@ def unfinished_rows(rows):
 	return out
 
 
+def carry_quantity(row):
+	"""How much this row carries into tomorrow.
+
+	What was typed in the Carry Forward box, or — when the row is marked
+	Carried Forward and that box was left empty — what is still owed.
+
+	⛔ The status IS the instruction. Marking a job Carried Forward and typing
+	the reason is the whole gesture a supervisor makes; the quantity box is a
+	second control next to it that is easy to miss, and missing it used to mean
+	the job silently appeared on no board the next morning (Solna A5 covers,
+	3 Sep 2026 — carried with a reason, and nothing was created). A row that
+	says it carries must carry something.
+
+	Nothing owed comes back as 0, so a job finished-but-not-marked-Completed
+	does not conjure a phantom row.
+	"""
+	explicit = _as_number(row.get("carried_quantity"))
+	if explicit > 0:
+		return explicit
+	if (row.get("status") or "").strip() != "Carried Forward":
+		return 0
+	balance = _as_number(row.get("planned_quantity")) - _as_number(row.get("actual_quantity"))
+	return balance if balance > 0 else 0
+
+
 def carry_forward_row(row, next_date):
 	"""Tomorrow's row for work that did not finish today.
 
@@ -1006,11 +1031,7 @@ def carry_forward_row(row, next_date):
 	Returns None when there is nothing to carry, so the caller can run this over
 	every row without checking first.
 	"""
-	carried = row.get("carried_quantity")
-	try:
-		carried = float(carried or 0)
-	except (TypeError, ValueError):
-		return None
+	carried = carry_quantity(row)
 	if carried <= 0:
 		return None
 
