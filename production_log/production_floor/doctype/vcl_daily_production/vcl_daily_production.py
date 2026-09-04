@@ -10,6 +10,7 @@ from production_log.production_floor.reporting import (
 	QuantityError,
 	build_report_text,
 	build_whatsapp_text,
+	day_in_progress,
 	exception_summary,
 	parse_quantity,
 	summarise,
@@ -176,13 +177,18 @@ class VCLDailyProduction(Document):
 		return summarise([row.as_dict() for row in self.items])
 
 	def get_exceptions(self):
-		return exception_summary([row.as_dict() for row in self.items])
+		return exception_summary(
+			[row.as_dict() for row in self.items],
+			in_progress=day_in_progress(
+				{"status": self.status, "production_date": self.production_date}
+			),
+		)
 
-	def report_text(self, departments=None):
-		return build_report_text(self.as_report_dict(), departments)
+	def report_text(self, departments=None, to_plan=None):
+		return build_report_text(self.as_report_dict(), departments, to_plan)
 
-	def whatsapp_text(self, departments=None):
-		return build_whatsapp_text(self.as_report_dict(), departments)
+	def whatsapp_text(self, departments=None, to_plan=None):
+		return build_whatsapp_text(self.as_report_dict(), departments, to_plan)
 
 	def close_day(self, force=False):
 		"""Close the day, refusing while critical information is missing."""

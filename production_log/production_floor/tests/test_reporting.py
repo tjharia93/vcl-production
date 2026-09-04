@@ -24,8 +24,10 @@ from production_log.production_floor.reporting import (  # noqa: E402
 	format_unit,
 	build_report_text,
 	build_whatsapp_text,
+	day_in_progress,
 	exception_summary,
 	find_exceptions,
+	to_plan_lines,
 	format_date_long,
 	format_date_short,
 	short_job_name,
@@ -1542,3 +1544,157 @@ class PatchesMustNotInsertTests(unittest.TestCase):
 		names = [r.elts[0].value for r in machines.elts]
 		self.assertIn("Slitter", names)
 
+
+
+class DayInProgressTests(unittest.TestCase):
+	"""When does a day stop being live?
+
+	This is the whole basis of the "no update" warnings, so it is tested on its
+	own rather than only through them.
+	"""
+
+	def test_todays_open_day_is_in_progress(self):
+		self.assertTrue(day_in_progress(
+			{"status": "Open", "production_date": "2026-09-04"}, as_of="2026-09-04"))
+
+	def test_a_past_open_day_is_not(self):
+		# Nobody is going to update Tuesday's board on Friday.
+		self.assertFalse(day_in_progress(
+			{"status": "Open", "production_date": "2026-09-01"}, as_of="2026-09-04"))
+
+	def test_a_closed_day_is_never_in_progress(self):
+		self.assertFalse(day_in_progress(
+			{"status": "Closed", "production_date": "2026-09-04"}, as_of="2026-09-04"))
+
+	def test_tomorrows_plan_is_still_in_progress(self):
+		# Tomorrow's board is planned the night before; it is not late.
+		self.assertTrue(day_in_progress(
+			{"status": "Open", "production_date": "2026-09-05"}, as_of="2026-09-04"))
+
+	def test_a_date_it_cannot_read_is_not_in_progress(self):
+		self.assertFalse(day_in_progress({"status": "Open", "production_date": ""}))
+		self.assertFalse(day_in_progress(None))
+
+
+class InProgressExceptionTests(unittest.TestCase):
+	"""A day still being worked must not be nagged for not being finished.
+
+	Every row starts Planned. Flagging that on the open board meant ATTENTION
+	REQUIRED fired the instant work was planned, which is how a warning section
+	trains people to ignore it.
+	"""
+
+	def rows(self):
+		return [
+			{"idx": 1, "status": "Planned", "machine": "Slitter",
+			 "customer_name": "TIRYO GENERAL MERCHANDISE", "job_name": "Tiryo ETR"},
+			{"idx": 2, "status": "Not Started", "machine": "M1",
+			 "customer_name": "A Tech", "job_name": "4 Part"},
+			{"idx": 3, "status": "Completed", "actual_quantity": None, "machine": "Solna",
+			 "customer_name": "Vimit", "job_name": "A5 Brand"},
+			{"idx": 4, "status": "Paused", "reason": "", "machine": "Kord",
+			 "customer_name": "Vimit", "job_name": "Covers"},
+		]
+
+	def test_a_day_in_progress_drops_only_the_not_finished_warnings(self):
+		codes = {e["code"] for e in find_exceptions(self.rows(), in_progress=True)}
+		self.assertNotIn("planned_no_update", codes)
+		self.assertNotIn("not_started", codes)
+
+	def test_missing_figures_and_reasons_still_fire_mid_shift(self):
+		# These are wrong the second they are saved, not at the end of the day.
+		codes = {e["code"] for e in find_exceptions(self.rows(), in_progress=True)}
+		self.assertIn("completed_no_actual", codes)
+		self.assertIn("paused_no_reason", codes)
+
+	def test_a_finished_day_reports_everything(self):
+		codes = {e["code"] for e in find_exceptions(self.rows(), in_progress=False)}
+		self.assertIn("planned_no_update", codes)
+		self.assertIn("not_started", codes)
+
+	def test_the_default_is_unchanged(self):
+		# Every existing caller that has not been taught about days keeps the
+		# old behaviour rather than quietly losing warnings.
+		self.assertEqual(
+			[e["code"] for e in find_exceptions(self.rows())],
+			[e["code"] for e in find_exceptions(self.rows(), in_progress=False)],
+		)
+
+	def test_summary_passes_the_flag_through(self):
+		summary = exception_summary(self.rows(), in_progress=True)
+		self.assertEqual(summary["warning_count"], 0)
+		self.assertEqual(summary["critical_count"], 2)
+
+	def test_todays_open_report_does_not_nag_about_planned_work(self):
+		day = {
+			"production_date": date.today().isoformat(),
+			"status": "Open",
+			"items": [{"idx": 1, "status": "Planned", "machine": "Slitter",
+					   "customer_name": "TIRYO", "job_name": "Tiryo ETR",
+					   "planned_quantity": 1000, "uom": "pcs"}],
+		}
+		self.assertNotIn("Planned all day with no update", build_report_text(day))
+
+	def test_yesterdays_report_still_says_it(self):
+		day = {
+			"production_date": "2026-09-01",
+			"status": "Open",
+			"items": [{"idx": 1, "status": "Planned", "machine": "Slitter",
+					   "customer_name": "TIRYO", "job_name": "Tiryo ETR"}],
+		}
+		self.assertIn("Planned all day with no update", build_report_text(day))
+
+
+class StillToPlanInEveningReportTests(unittest.TestCase):
+	"""Work with a job card that nobody planned has to appear SOMEWHERE.
+
+	It used to be in the morning message only, so a card nobody planned was
+	printed in no report at all.
+	"""
+
+	CHIPS = [
+		{"job_card": "JC-CPT-2026-00077", "ref": "00077",
+		 "customer_name": "EXCEL CHEMICALS LTD", "job_name": "CASH SALE",
+		 "overdue": True, "days_late": 1},
+		{"job_card": "JC-CORR-2026-0080", "ref": "0080",
+		 "customer_name": "RAPID COSMETICS", "job_name": "TAAM BLEACH",
+		 "overdue": False},
+	]
+
+	def day(self):
+		return {
+			"production_date": "2026-09-04", "status": "Open",
+			"items": [{"idx": 1, "status": "Completed", "machine": "M1",
+					   "customer_name": "A Tech", "job_name": "4 Part",
+					   "actual_quantity": 25, "uom": "cartons"}],
+		}
+
+	def test_the_full_report_lists_them(self):
+		text = build_report_text(self.day(), None, self.CHIPS)
+		self.assertIn("STILL TO PLAN", text)
+		self.assertIn("00077 - EXCEL CHEMICALS LTD CASH SALE", text)
+		self.assertIn("(1 day late)", text)  # not "1 days"
+
+	def test_the_evening_whatsapp_lists_them_in_bold(self):
+		text = build_whatsapp_text(self.day(), None, self.CHIPS)
+		self.assertIn("*STILL TO PLAN*", text)
+		self.assertIn("0080 - RAPID COSMETICS TAAM BLEACH", text)
+
+	def test_a_day_with_no_rows_still_shows_what_is_waiting(self):
+		# The emptiest board is exactly when the queue matters most.
+		empty = {"production_date": "2026-09-04", "status": "Open", "items": []}
+		self.assertIn("STILL TO PLAN", build_report_text(empty, None, self.CHIPS))
+		self.assertIn("*STILL TO PLAN*", build_whatsapp_text(empty, None, self.CHIPS))
+
+	def test_nothing_waiting_adds_no_empty_heading(self):
+		self.assertEqual(to_plan_lines([]), [])
+		self.assertNotIn("STILL TO PLAN", build_report_text(self.day(), None, []))
+
+	def test_late_by_more_than_one_day_is_plural(self):
+		chips = [dict(self.CHIPS[0], days_late=4)]
+		self.assertIn("(4 days late)", build_report_text(self.day(), None, chips))
+
+	def test_the_block_is_capped_and_says_how_many_more(self):
+		many = [dict(self.CHIPS[1], job_card="JC-%d" % n, ref=str(n)) for n in range(15)]
+		lines = to_plan_lines(many)
+		self.assertIn("+ 3 more", lines)

@@ -11,7 +11,7 @@ import frappe
 from frappe import _
 from frappe.utils import today
 
-from production_log.production_floor.reporting import find_exceptions
+from production_log.production_floor.reporting import day_in_progress, find_exceptions
 
 def execute(filters=None):
 	filters = frappe._dict(filters or {})
@@ -60,7 +60,7 @@ def get_data(filters):
 	rows = frappe.db.sql(
 		"""
 		SELECT
-			day.production_date, day.name AS day_name,
+			day.production_date, day.name AS day_name, day.status AS day_status,
 			item.name, item.idx, item.department, item.machine,
 			item.customer_name, item.job_name,
 			item.planned_quantity, item.actual_quantity, item.uom,
@@ -75,10 +75,23 @@ def get_data(filters):
 	)
 
 	# Attention text comes from the same rules the floor screen uses, so the
-	# desk and the phone can never disagree about what is missing.
+	# desk and the phone can never disagree about what is missing. Run PER DAY,
+	# because whether a day is still in progress is a property of that day - a
+	# range that includes today must not flag today's open rows as overdue for
+	# an update while flagging last week's correctly.
+	by_day = {}
+	for row in rows:
+		by_day.setdefault(row["day_name"], []).append(row)
+
 	notes_by_row = {}
-	for exception in find_exceptions([dict(row) for row in rows]):
-		notes_by_row.setdefault(exception["row_name"], []).append(exception["message"])
+	for day_rows in by_day.values():
+		first = day_rows[0]
+		in_progress = day_in_progress({
+			"status": first.get("day_status"),
+			"production_date": first.get("production_date"),
+		})
+		for exception in find_exceptions([dict(r) for r in day_rows], in_progress=in_progress):
+			notes_by_row.setdefault(exception["row_name"], []).append(exception["message"])
 
 	for row in rows:
 		row["attention"] = "; ".join(notes_by_row.get(row["name"], []))

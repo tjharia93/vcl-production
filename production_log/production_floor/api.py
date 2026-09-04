@@ -19,6 +19,7 @@ from production_log.production_floor.reporting import (
 	RECEIVED_JOB_CARD_STATUS,
 	build_report_text,
 	build_whatsapp_text,
+	day_in_progress,
 	build_whatsapp_start_text,
 	exception_summary,
 	job_card_chip,
@@ -88,6 +89,11 @@ def _day_payload(doc):
 		row["job_card_route"] = job_card_route(row.get("production_job_card"))
 
 	departments = get_departments()
+	# A day that is still being worked is not "missing" its updates yet - see
+	# find_exceptions. Today's open board must not flag every row it holds.
+	in_progress = day_in_progress(
+		{"status": doc.status, "production_date": doc.production_date}
+	)
 	return {
 		"name": doc.name,
 		"production_date": str(doc.production_date),
@@ -98,7 +104,7 @@ def _day_payload(doc):
 		"is_demo": cint(doc.is_demo),
 		"items": rows,
 		"summary": summarise(rows),
-		"exceptions": exception_summary(rows),
+		"exceptions": exception_summary(rows, in_progress=in_progress),
 		"departments": departments,
 		"department_order": order_departments(rows, departments),
 	}
@@ -797,8 +803,8 @@ def get_report(production_date=None):
 		return {
 			"exists": False,
 			"production_date": str(production_date),
-			"text": build_report_text(empty, departments),
-			"whatsapp": build_whatsapp_text(empty, departments),
+			"text": build_report_text(empty, departments, waiting),
+			"whatsapp": build_whatsapp_text(empty, departments, waiting),
 			"whatsapp_start": build_whatsapp_start_text(empty, departments, waiting),
 			"summary": summarise([]),
 			"exceptions": exception_summary([]),
@@ -809,8 +815,8 @@ def get_report(production_date=None):
 		"exists": True,
 		"production_date": str(doc.production_date),
 		"status": doc.status,
-		"text": doc.report_text(departments),
-		"whatsapp": doc.whatsapp_text(departments),
+		"text": doc.report_text(departments, waiting),
+		"whatsapp": doc.whatsapp_text(departments, waiting),
 		"whatsapp_start": build_whatsapp_start_text(payload, departments, waiting),
 		"summary": payload["summary"],
 		"exceptions": payload["exceptions"],

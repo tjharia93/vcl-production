@@ -215,16 +215,47 @@ def summarise(rows):
 # exceptions
 # --------------------------------------------------------------------------
 
-def find_exceptions(rows):
+def day_in_progress(day, as_of=None):
+	"""Is this day still being worked - i.e. can it still be updated today?
+
+	A day is in progress while it is open AND its date has not passed. That is
+	the whole test, and it is here rather than inline so the screen, the report
+	and the Query Report cannot disagree about when a day stops being live.
+	"""
+	if not day:
+		return False
+	if (day.get("status") or "Open") == "Closed":
+		return False
+	# Same parsing as every other date rule in this module: something it cannot
+	# read is treated as no date rather than raised at the floor.
+	parsed = _as_date(day.get("production_date"))
+	if not parsed:
+		return False
+	return parsed >= (_as_date(as_of) or date.today())
+
+
+def find_exceptions(rows, in_progress=False):
 	"""What the day is still missing.
 
 	Two severities. `critical` blocks closing the day; `warning` is shown as
-	ATTENTION REQUIRED but never stops anyone mid-shift. Nothing here fires
-	while a row is simply being typed - these run on the day as a whole.
+	ATTENTION REQUIRED but never stops anyone mid-shift.
+
+	⛔ `in_progress` is what stops this nagging about a day that is not over.
+	"Planned all day with no update" and "Planned but never started" are
+	statements about a FINISHED day - on today's open board every row starts
+	Planned, so raising them there flags every job the moment it is planned and
+	teaches the floor to ignore ATTENTION REQUIRED entirely. The missing-figure
+	and missing-reason rules are NOT time-dependent and always fire: a Completed
+	row with no quantity is wrong the second it is saved.
 	"""
 	found = []
 
+	# Statuses that only become a problem once the day is done.
+	end_of_day_only = {"planned_no_update", "not_started"}
+
 	def add(row, index, severity, code, message):
+		if in_progress and code in end_of_day_only:
+			return
 		found.append({
 			"severity": severity,
 			"code": code,
@@ -274,11 +305,12 @@ def find_exceptions(rows):
 
 
 def critical_exceptions(rows):
+	# Never time-dependent: a critical is critical on any day, open or closed.
 	return [e for e in find_exceptions(rows) if e["severity"] == "critical"]
 
 
-def exception_summary(rows):
-	found = find_exceptions(rows)
+def exception_summary(rows, in_progress=False):
+	found = find_exceptions(rows, in_progress=in_progress)
 	critical = [e for e in found if e["severity"] == "critical"]
 	warnings = [e for e in found if e["severity"] == "warning"]
 	return {
@@ -306,7 +338,7 @@ def _end_block(lines):
 		lines.pop()
 
 
-def build_report_text(day, departments=None):
+def build_report_text(day, departments=None, to_plan=None):
 	"""The full-width report, as read on a desktop or printed.
 
 	VCL PRODUCTION REPORT
@@ -324,6 +356,7 @@ def build_report_text(day, departments=None):
 
 	if not rows:
 		lines += ["", "No production entered for this day."]
+		lines += to_plan_lines(to_plan)
 		return "\n".join(lines)
 
 	for dept in order_departments(rows, departments):
@@ -350,7 +383,7 @@ def build_report_text(day, departments=None):
 		if summary.get(status):
 			lines.append("{0}: {1}".format(status, summary[status]))
 
-	exceptions = exception_summary(rows)
+	exceptions = exception_summary(rows, in_progress=day_in_progress(day))
 	if exceptions["all"]:
 		lines += ["", "ATTENTION REQUIRED"]
 		for item in exceptions["all"]:
@@ -360,11 +393,48 @@ def build_report_text(day, departments=None):
 				item["message"],
 			))
 
+	lines += to_plan_lines(to_plan)
+
 	notes = (day.get("notes") or "").strip()
 	if notes:
 		lines += ["", "NOTES", notes]
 
 	return "\n".join(lines)
+
+
+def to_plan_lines(to_plan, bold=False, limit=12):
+	"""The STILL TO PLAN block: job cards received but not on any machine.
+
+	It was originally in the morning message only, on the reasoning that by the
+	evening it is too late to act on. That was wrong in practice: work with a
+	job card that nobody planned appeared in NO report at all, so a card could
+	sit received for days and never once be printed anywhere the floor or the
+	office would read it (Tanuj, 2026-09-04). Being late to plan something is
+	exactly what the end of the day should say out loud.
+
+	`bold` wraps the heading for WhatsApp; the full report wants it plain.
+	"""
+	waiting = list(to_plan or [])
+	if not waiting:
+		return []
+
+	head = "*STILL TO PLAN*" if bold else "STILL TO PLAN"
+	lines = ["", head, ""]
+	for chip in waiting[:limit]:
+		label = "{0} {1}".format(
+			(chip.get("customer_name") or "").strip(),
+			(chip.get("job_name") or "").strip(),
+		).strip()
+		ref = (chip.get("ref") or chip.get("job_card") or "").strip()
+		line = "{0} - {1}".format(ref, label) if ref else label
+		if chip.get("overdue"):
+			days = chip.get("days_late")
+			line += " ({0} day{1} late)".format(days, "" if days == 1 else "s") if days \
+				else " (late)"
+		lines.append(line)
+	if len(waiting) > limit:
+		lines.append("+ {0} more".format(len(waiting) - limit))
+	return lines
 
 
 def build_whatsapp_start_text(day, departments=None, to_plan=None):
@@ -404,24 +474,7 @@ def build_whatsapp_start_text(day, departments=None, to_plan=None):
 
 		_end_block(lines)
 
-	# Received but not yet on a machine. Morning is exactly when this is
-	# actionable; by the evening report it is too late to matter.
-	waiting = list(to_plan or [])
-	if waiting:
-		lines += ["", "*STILL TO PLAN*", ""]
-		for chip in waiting[:12]:
-			label = "{0} {1}".format(
-				(chip.get("customer_name") or "").strip(),
-				(chip.get("job_name") or "").strip(),
-			).strip()
-			ref = (chip.get("ref") or chip.get("job_card") or "").strip()
-			line = "{0} - {1}".format(ref, label) if ref else label
-			if chip.get("overdue"):
-				days = chip.get("days_late")
-				line += " ({0} days late)".format(days) if days else " (late)"
-			lines.append(line)
-		if len(waiting) > 12:
-			lines.append("+ {0} more".format(len(waiting) - 12))
+	lines += to_plan_lines(to_plan, bold=True)
 
 	notes = (day.get("notes") or "").strip()
 	if notes:
@@ -451,7 +504,7 @@ def planned_pair(row):
 	return "{0} {1} planned".format(format_qty(value), unit).strip()
 
 
-def build_whatsapp_text(day, departments=None):
+def build_whatsapp_text(day, departments=None, to_plan=None):
 	"""The message that gets pasted into the group.
 
 	Short lines, WhatsApp bold with single asterisks, no tables, and nothing
@@ -463,6 +516,7 @@ def build_whatsapp_text(day, departments=None):
 
 	if not rows:
 		lines += ["", "No production entered."]
+		lines += to_plan_lines(to_plan, bold=True)
 		return "\n".join(lines)
 
 	for dept in order_departments(rows, departments):
@@ -486,7 +540,7 @@ def build_whatsapp_text(day, departments=None):
 			lines += ["", "*{0}*".format(status.upper()), "{0} {1}".format(
 				summary[status], "job" if summary[status] == 1 else "jobs")]
 
-	exceptions = exception_summary(rows)
+	exceptions = exception_summary(rows, in_progress=day_in_progress(day))
 	needing = exceptions["jobs_needing_attention"]
 	if needing:
 		lines += ["", "*ATTENTION REQUIRED*", "{0} {1} require{2} an update".format(
@@ -494,6 +548,8 @@ def build_whatsapp_text(day, departments=None):
 			"job" if needing == 1 else "jobs",
 			"s" if needing == 1 else "",
 		)]
+
+	lines += to_plan_lines(to_plan, bold=True)
 
 	notes = (day.get("notes") or "").strip()
 	if notes:
