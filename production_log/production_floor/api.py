@@ -688,9 +688,21 @@ def update_item(
 def _carry_forward(doc, row):
 	"""Put the unfinished balance on the next day's board.
 
-	Idempotent by machine + job card + job name: editing today's carry figure
-	twice must not leave two rows waiting tomorrow. The existing row's planned
-	quantity is corrected instead.
+	Idempotent by machine + job card + job name + part label: editing today's
+	carry figure twice must not leave two rows waiting tomorrow.
+
+	Identity is the ONLY test for whether the row already exists. It used to
+	also require that tomorrow's row was still `Planned`, which meant that once
+	somebody pressed Start on it — flipping it to `Running` — a further edit to
+	today's carry figure stopped matching and appended a second row instead of
+	correcting the first. That is not cosmetic: `stage_totals` sums
+	`actual_quantity` across rows per unit with no de-duplication, so two rows
+	for one job inflate the day's output, and `roll_up_stages` carries the same
+	error into that job card's completion against the order.
+
+	What the status now decides is not WHETHER the row is found but whether its
+	planned quantity may be rewritten. A row that has started is left alone: the
+	operator is working to a figure and moving it under them is its own bug.
 	"""
 	values = dict(row.as_dict())
 	values["production_date"] = str(doc.production_date)
@@ -710,9 +722,12 @@ def _carry_forward(doc, row):
 			and (existing.job_name or "") == (template["job_name"] or "")
 			and (existing.part_label or "") == (template["part_label"] or "")
 		)
-		if same_job and existing.status == "Planned":
-			existing.planned_quantity = template["planned_quantity"]
-			tomorrow.save()
+		if same_job:
+			# Never append beside a row that is already there. Only correct the
+			# figure if nobody has started to it yet.
+			if existing.status == "Planned":
+				existing.planned_quantity = template["planned_quantity"]
+				tomorrow.save()
 			return {"date": str(next_date), "created": 0}
 
 	template.pop("production_date", None)
