@@ -103,6 +103,53 @@ class TestPlanMirror(unittest.TestCase):
 		self.assertEqual((plan.targets, plan.refusals, plan.unmappable), ([], [], 0))
 
 
+class TestVatBasis(unittest.TestCase):
+	"""CPS Price is labelled "Rate (net, ex-VAT)" and one live row is not.
+
+	BAHATI's coffee cup sleeve is agreed at 1.70 INCLUSIVE and the Sales Order is
+	raised at 1.70 with VAT included in the print rate, because the ex-VAT 1.4655
+	rounded to 1.47 on submit and billed 73,500 instead of 85,000. The gross rate
+	has to stay on the spec; the price list still has to receive the net one.
+	"""
+
+	def test_a_net_rate_passes_through(self):
+		self.assertEqual(m.to_ex_vat(4000, 0), 4000)
+
+	def test_none_stays_none(self):
+		self.assertIsNone(m.to_ex_vat(None, 1))
+
+	def test_bahati_gross_converts_to_the_invoiced_net(self):
+		self.assertAlmostEqual(m.to_ex_vat(1.70, 1), 1.4655, places=4)
+
+	def test_conversion_survives_the_round_trip(self):
+		self.assertAlmostEqual(m.to_ex_vat(1.70, 1) * 1.16, 1.70, places=9)
+
+	def test_plan_converts_and_records_the_gross(self):
+		plan = m.plan_mirror([
+			dict(spec("CTN-SPEC-00025-1", "BAHATI VENTURES LTD",
+			          "Coffee Cup Sleeve - E Flute Plain", "Nos", 1.70),
+			     vat_inclusive=1),
+		])
+		t = plan.targets[0]
+		self.assertAlmostEqual(t.rate, 1.4655, places=4)
+		# The original is kept so the price-list note can explain the number.
+		self.assertEqual(t.gross, 1.70)
+
+	def test_an_unflagged_rate_records_no_gross(self):
+		plan = m.plan_mirror([spec("A", NPP, CP_ITEM, "Carton", 4000)])
+		self.assertIsNone(plan.targets[0].gross)
+
+	def test_gross_and_net_specs_agreeing_after_conversion_do_not_refuse(self):
+		"""One spec quoting 1.16 gross and another quoting the same net is ONE
+		price, and the price list should carry it rather than refuse."""
+		plan = m.plan_mirror([
+			dict(spec("GROSS", NPP, CP_ITEM, "Nos", 4640.0), vat_inclusive=1),
+			spec("NET", NPP, CP_ITEM, "Nos", 4000.0),
+		])
+		self.assertEqual(plan.refusals, [])
+		self.assertEqual(plan.targets[0].rate, 4000)
+
+
 class TestDecideWrite(unittest.TestCase):
 	def test_no_existing_row_inserts(self):
 		d = m.decide_write(4000, None)
