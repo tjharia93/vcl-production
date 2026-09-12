@@ -11,9 +11,16 @@ def after_install():
 	already says it is done.
 	"""
 	from production_log.patches.v9_0 import setup_monobox
+	from production_log.patches.v10_4 import add_item_price_cps_field
 	from production_log.production_floor import install as production_floor
 
 	setup_monobox.execute()
+
+	# The CPS price mirror's ownership mark on Item Price. Reaches outside the
+	# app's own doctypes, so on a fresh site its patch is stamped done without
+	# ever running — see this function's docstring. Idempotent; both routes may
+	# run on the same site.
+	add_item_price_cps_field.execute()
 
 	# The Production Floor module seeds its own roles, Settings Single, machine
 	# master and Select options. Called here rather than left to its patch for

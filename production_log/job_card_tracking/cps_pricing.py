@@ -151,6 +151,13 @@ def approve_cps_price(cps, row, action="approve", notes=None):
 
 	_log_approval(doc, target, action)
 
+	# The price list follows the specification (decision 2026-09-12). Wrapped so
+	# a mirror fault can never fail an approval that has already happened; the
+	# nightly sweep picks up anything dropped here.
+	from production_log.job_card_tracking import cps_price_mirror
+
+	cps_price_mirror.mirror_after_approval(doc.name)
+
 	return {
 		"cps": doc.name,
 		"row": target.name,

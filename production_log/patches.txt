@@ -144,3 +144,8 @@ production_log.patches.v10_2.reel_to_reel_department
 # entries from the machine list - planning is a process, not something
 # production is recorded against. Updates only; never creates a machine.
 production_log.patches.v10_3.map_presses_and_retire_planning
+# One Custom Field on Item Price recording which specification supplied a
+# rate. It is also the CPS price mirror's ownership mark - the mirror only
+# ever modifies rows carrying it, so the hand-made customer prices that
+# predate it stay untouched. Also in install.py, per the install-stamping trap.
+production_log.patches.v10_4.add_item_price_cps_field
