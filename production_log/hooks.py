@@ -150,6 +150,14 @@ scheduler_events = {
 		"0 13 * * 5": [  # 13:00 UTC Friday = 16:00 EAT
 			"production_log.api.artwork_chase.scheduled_weekly_run",
 		],
+		# Push approved CPS prices into the price list. Before the working day,
+		# so the list is current when anyone opens it. The sweep exists for the
+		# case no event can cover: a price approved today with an effective date
+		# of next Monday changes the spec's rate ON Monday, and nothing fires on
+		# Monday. Mails only when the refusal set actually changes.
+		"30 3 * * *": [  # 03:30 UTC = 06:30 EAT
+			"production_log.job_card_tracking.cps_price_mirror.scheduled_daily_run",
+		],
 	},
 }
 
