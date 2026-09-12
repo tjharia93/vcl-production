@@ -149,3 +149,9 @@ production_log.patches.v10_3.map_presses_and_retire_planning
 # ever modifies rows carrying it, so the hand-made customer prices that
 # predate it stay untouched. Also in install.py, per the install-stamping trap.
 production_log.patches.v10_4.add_item_price_cps_field
+# Declares the ONE CPS Price row that holds a gross figure - BAHATI's coffee cup
+# sleeve at 1.70 inclusive, which is deliberate and documented on the spec (the
+# ex-VAT 1.4655 rounded to 1.47 on submit and billed 73,500 instead of 85,000).
+# Data only; the rate itself is correct and is not touched. Without this the
+# price mirror would publish that customer 16% high.
+production_log.patches.v10_5.flag_bahati_sleeve_vat_inclusive

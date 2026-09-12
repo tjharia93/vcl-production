@@ -34,13 +34,20 @@ from production_log.job_card_tracking import cps_rules
 # works and how ERPNext's own price resolution finds one.
 PRICE_LIST = "Standard Selling"
 
+# Domestic VAT. Every rate VCL agrees is struck at 16%; if that ever stops being
+# true this constant is the place it has to be dealt with, not a silent drift.
+VAT_RATE = 0.16
+
 # A specification that agreed the rate, for a key that more than one spec feeds.
 MirrorKey = namedtuple("MirrorKey", ("customer", "item_code", "uom"))
 
 # ``cps`` is the spec that supplied the rate; ``agreeing`` is every spec that
 # resolves to this key, the supplier included. Stored so the price list row can
 # name its source and the note can name the rest.
-MirrorTarget = namedtuple("MirrorTarget", ("key", "rate", "cps", "agreeing"))
+# ``gross`` is the original figure when the winning spec's rate was VAT-inclusive
+# and had to be converted, otherwise None — so the price-list note can say a
+# conversion happened rather than leaving an unexplained number.
+MirrorTarget = namedtuple("MirrorTarget", ("key", "rate", "cps", "agreeing", "gross"))
 
 # ``rates`` is [(cps, rate), ...] for every spec on the key, so the refusal can
 # say precisely what the price list is unable to express.
@@ -55,6 +62,27 @@ ACTION_UNCHANGED = "unchanged"
 ACTION_SKIP_UNOWNED = "skip_unowned"
 
 WriteDecision = namedtuple("WriteDecision", ("action", "rate", "supersedes"))
+
+
+def to_ex_vat(rate, vat_inclusive):
+	"""Convert a CPS rate to the ex-VAT basis the price list is on.
+
+	CPS Price labels its rate "Rate (net, ex-VAT)" and all but one live row obeys
+	that. The exception is deliberate and documented on the specification:
+	BAHATI VENTURES' coffee cup sleeve is agreed at 1.70 per piece INCLUSIVE, and
+	the Sales Order is raised at 1.70 with VAT "included in print rate" so 50,000
+	pieces bill exactly 85,000. Entering the ex-VAT 1.4655 instead was tried on
+	2026-08-31 and failed — it rounded to 1.47 on submit and billed 73,500.
+
+	So the gross rate has to stay on the specification, and the conversion has to
+	happen here. Item Price is ex-VAT; copying a gross rate into it would publish
+	that customer's price 16% high.
+	"""
+	if rate is None:
+		return None
+	if not vat_inclusive:
+		return cps_rules.round_rate(rate)
+	return cps_rules.round_rate(float(rate) / (1.0 + VAT_RATE))
 
 
 def _sort_key(spec):
@@ -74,7 +102,11 @@ def plan_mirror(priced_specs, unmappable=0):
 	carries both a ``linked_item`` and an approved price in effect on the run
 	date::
 
-		{"cps", "customer", "item_code", "uom", "rate", "valid_from"}
+		{"cps", "customer", "item_code", "uom", "rate", "valid_from", "vat_inclusive"}
+
+	``rate`` is taken on the specification's own basis and converted to ex-VAT
+	here, because the price list has only one basis and the specification does
+	not.
 
 	``unmappable`` starts at the count the caller already knows about — specs
 	with an approved price but no ``linked_item``, which have nowhere in the
@@ -89,7 +121,8 @@ def plan_mirror(priced_specs, unmappable=0):
 		customer = spec.get("customer")
 		item_code = spec.get("item_code")
 		uom = spec.get("uom")
-		rate = cps_rules.round_rate(spec.get("rate"))
+		gross = spec.get("rate") if spec.get("vat_inclusive") else None
+		rate = to_ex_vat(spec.get("rate"), spec.get("vat_inclusive"))
 		# A spec missing any part of the key, or carrying no rate, cannot be
 		# placed in the price list at all. Silently dropping it would overstate
 		# coverage, so it is counted as unmappable rather than ignored.
@@ -97,7 +130,7 @@ def plan_mirror(priced_specs, unmappable=0):
 			unmappable += 1
 			continue
 		buckets.setdefault(MirrorKey(customer, item_code, uom), []).append(
-			dict(spec, rate=rate)
+			dict(spec, rate=rate, gross=gross)
 		)
 
 	targets, refusals = [], []
@@ -118,6 +151,7 @@ def plan_mirror(priced_specs, unmappable=0):
 				winner["rate"],
 				winner.get("cps"),
 				sorted(s.get("cps") for s in specs if s.get("cps")),
+				winner.get("gross"),
 			)
 		)
 

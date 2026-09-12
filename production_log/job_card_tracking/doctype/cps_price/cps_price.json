@@ -7,6 +7,7 @@
  "field_order": [
   "valid_from",
   "rate",
+  "vat_inclusive",
   "uom",
   "column_break_price",
   "source",
@@ -40,6 +41,13 @@
    "label": "Rate (net, ex-VAT)",
    "precision": "9",
    "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "vat_inclusive",
+   "fieldtype": "Check",
+   "label": "Rate is VAT-inclusive",
+   "description": "Leave OFF unless the Rate above is a GROSS figure. A rate is normally net, as the Rate label says. Tick it only where a customer's price was agreed inclusive of VAT and the Sales Order is raised with the VAT row set to 'included in print rate', so the invoice lands on the round gross total the customer agreed. The price list is ex-VAT, so the CPS price mirror divides a ticked rate by 1.16 before writing it there."
   },
   {
    "allow_on_submit": 1,

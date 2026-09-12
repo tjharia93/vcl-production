@@ -65,7 +65,8 @@ def collect(on_date=None):
 			"parentfield": "pricing",
 			"approval_status": cps_rules.APPROVAL_APPROVED,
 		},
-		fields=["name", "parent", "valid_from", "rate", "uom", "approval_status"],
+		fields=["name", "parent", "valid_from", "rate", "uom", "approval_status",
+		        "vat_inclusive"],
 		limit_page_length=0,
 	)
 	by_spec = {}
@@ -90,6 +91,9 @@ def collect(on_date=None):
 			"uom": eligible.get("uom"),
 			"rate": eligible.get("rate"),
 			"valid_from": eligible.get("valid_from"),
+			# The specification's rate may be gross; the price list has one basis
+			# and it is ex-VAT. The conversion happens in the rules.
+			"vat_inclusive": eligible.get("vat_inclusive"),
 		})
 
 	return rules.plan_mirror(priced, unmappable=unmappable)
@@ -133,6 +137,9 @@ def _close_off(name, on_date):
 def _insert(target, on_date, superseded=None):
 	others = [c for c in target.agreeing if c != target.cps]
 	note = f"Mirrored from {target.cps} on {on_date}."
+	if target.gross:
+		note += (f" Converted to ex-VAT from the specification's VAT-inclusive "
+		         f"{target.gross} at {int(rules.VAT_RATE * 100)}%.")
 	if others:
 		note += f" {len(others) + 1} specifications agree this rate: {', '.join(target.agreeing)}."
 	if superseded:
