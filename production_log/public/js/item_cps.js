@@ -143,11 +143,44 @@ function show_linked_specs(frm) {
 	});
 }
 
+// --- The same table, on the form itself -------------------------------------
+//
+// The dialog above answers "what specifications does this Item have" only for
+// someone who already knows the View button exists. For an Item that IS a
+// specification — one Item per CPS, item code equal to spec code — that question
+// is the first thing anyone opening the Item wants answered, so it belongs on
+// the form rather than one click down a menu.
+//
+// Deliberately silent when there is nothing to say: an empty "no specifications"
+// panel on each of the ~2,900 Items that will never have one is noise, and noise
+// is how a section stops being read.
+
+function show_linked_specs_inline(frm) {
+	frappe.call({
+		method: LINKED_SPECS_METHOD,
+		args: { item_code: frm.doc.name },
+		callback(r) {
+			const payload = r.message;
+			if (!payload || !(payload.rows || []).length) return;
+
+			// `refresh` fires more than once per visit and add_section appends,
+			// so an un-cleared section renders the table two and three times.
+			frm.dashboard.wrapper.find(".cps-item-specs").closest(".form-dashboard-section").remove();
+
+			frm.dashboard.add_section(
+				`<div class="cps-item-specs">${linked_specs_html(payload)}</div>`,
+				__("Customer Product Specifications")
+			);
+		},
+	});
+}
+
 frappe.ui.form.on("Item", {
 	refresh(frm) {
 		if (frm.is_new() || !has_control_fields()) return;
 
 		show_control_explanation(frm);
+		show_linked_specs_inline(frm);
 
 		frm.add_custom_button(
 			__("Customer Product Specifications"),
