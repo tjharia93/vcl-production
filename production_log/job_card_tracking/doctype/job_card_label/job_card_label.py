@@ -1,9 +1,9 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt
+from frappe.utils import flt, get_datetime
 
-from production_log.job_card_tracking import cps_rules
+from production_log.job_card_tracking import cps_rules, label_run_rules
 from production_log.job_card_tracking.order_derived import OrderDerivedJobCard
 
 QTY_PRECISION = 3
@@ -57,7 +57,13 @@ class JobCardLabel(OrderDerivedJobCard, Document):
 		self.validate_plate()
 		self.validate_numbering()
 		self.set_sales_rep_info()
+		self.set_run_log()
 		self.set_status()
+
+	def before_update_after_submit(self):
+		# The floor fills the Run Log on a submitted card, and ``validate`` does
+		# not run on an update after submit.
+		self.set_run_log()
 
 	def on_update(self):
 		"""Keep the Sales Order line rollup honest on every draft save.
@@ -253,6 +259,38 @@ class JobCardLabel(OrderDerivedJobCard, Document):
 				self.status = "In Progress"
 		elif self.docstatus == 2:
 			self.status = "Cancelled"
+
+	def set_run_log(self):
+		"""Work out each run's minutes from its stamps, then the card's totals.
+
+		The arithmetic is in ``label_run_rules``; this parses the stamps and
+		refuses a run whose end is before its start.
+		"""
+		rows = self.get("run_log") or []
+
+		for row in rows:
+			stamps = {}
+			for _minutes, start_field, end_field in label_run_rules.SEGMENTS:
+				for f in (start_field, end_field):
+					stamps[f] = get_datetime(row.get(f)) if row.get(f) else None
+
+			minutes, out_of_order = label_run_rules.run_minutes(stamps)
+
+			if out_of_order:
+				start_field, end_field = out_of_order[0]
+				frappe.throw(
+					_("Run Log row {0}: {1} ({2}) is before {3} ({4}). Check the times.").format(
+						row.idx,
+						_(row.meta.get_label(end_field)),
+						row.get(end_field),
+						_(row.meta.get_label(start_field)),
+						row.get(start_field),
+					)
+				)
+
+			row.update(minutes)
+
+		self.update(label_run_rules.run_log_totals(rows))
 
 
 @frappe.whitelist()

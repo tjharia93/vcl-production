@@ -1,0 +1,337 @@
+{
+ "actions": [],
+ "creation": "2026-09-15 11:27:02.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_run",
+  "run_date",
+  "machine",
+  "operator",
+  "shift",
+  "column_break_run",
+  "plate_code",
+  "plate_status",
+  "die",
+  "ganged_with_previous",
+  "section_timings",
+  "setup_start",
+  "first_good_label",
+  "run_end",
+  "washup_end",
+  "column_break_timings",
+  "setup_mins",
+  "run_mins",
+  "washup_mins",
+  "section_material",
+  "material_roll_ref",
+  "setup_waste_m",
+  "column_break_material",
+  "run_m",
+  "material_returned_m",
+  "section_output",
+  "good_labels",
+  "rejected_labels",
+  "labels_per_roll",
+  "column_break_output",
+  "rolls_out",
+  "core_size",
+  "wind_direction",
+  "section_ink",
+  "ink_used_kg",
+  "column_break_ink",
+  "colours_run",
+  "section_downtime",
+  "downtime_mins",
+  "downtime_reason",
+  "column_break_downtime",
+  "first_off_approved_by",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_run",
+   "fieldtype": "Section Break",
+   "label": "Run"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "Today",
+   "fieldname": "run_date",
+   "fieldtype": "Date",
+   "label": "Run Date"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "machine",
+   "fieldtype": "Link",
+   "label": "Machine",
+   "options": "Workstation"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "operator",
+   "fieldtype": "Data",
+   "label": "Operator"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "shift",
+   "fieldtype": "Select",
+   "label": "Shift",
+   "options": "\nDay Shift\nEvening Shift\nNight Shift"
+  },
+  {
+   "fieldname": "column_break_run",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "columns": 2,
+   "fieldname": "plate_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Plate Code"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "plate_status",
+   "fieldtype": "Select",
+   "label": "Plate Status",
+   "options": "\nNew\nOld"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "die",
+   "fieldtype": "Link",
+   "label": "Die",
+   "options": "Dies"
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Tick when this design ran on the previous run's setup — no new make-ready.",
+   "fieldname": "ganged_with_previous",
+   "fieldtype": "Check",
+   "label": "Same setup as previous run"
+  },
+  {
+   "fieldname": "section_timings",
+   "fieldtype": "Section Break",
+   "label": "Timings"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "setup_start",
+   "fieldtype": "Datetime",
+   "label": "Setup Start"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "first_good_label",
+   "fieldtype": "Datetime",
+   "label": "First Good Label"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "run_end",
+   "fieldtype": "Datetime",
+   "label": "Run End"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "washup_end",
+   "fieldtype": "Datetime",
+   "label": "Wash-up End"
+  },
+  {
+   "fieldname": "column_break_timings",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "columns": 2,
+   "description": "Setup Start to First Good Label.",
+   "fieldname": "setup_mins",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Setup (mins)",
+   "precision": "1",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "columns": 2,
+   "description": "First Good Label to Run End.",
+   "fieldname": "run_mins",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Run (mins)",
+   "precision": "1",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "description": "Run End to Wash-up End.",
+   "fieldname": "washup_mins",
+   "fieldtype": "Float",
+   "label": "Wash-up (mins)",
+   "precision": "1",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_material",
+   "fieldtype": "Section Break",
+   "label": "Material"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "material_roll_ref",
+   "fieldtype": "Data",
+   "label": "Material Roll Ref"
+  },
+  {
+   "allow_on_submit": 1,
+   "columns": 2,
+   "fieldname": "setup_waste_m",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Setup waste (m)",
+   "precision": "2"
+  },
+  {
+   "fieldname": "column_break_material",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "run_m",
+   "fieldtype": "Float",
+   "label": "Run material (m)",
+   "precision": "2"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "material_returned_m",
+   "fieldtype": "Float",
+   "label": "Material returned (m)",
+   "precision": "2"
+  },
+  {
+   "fieldname": "section_output",
+   "fieldtype": "Section Break",
+   "label": "Output"
+  },
+  {
+   "allow_on_submit": 1,
+   "columns": 2,
+   "fieldname": "good_labels",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Good Labels (pcs)"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "rejected_labels",
+   "fieldtype": "Int",
+   "label": "Rejected Labels (pcs)"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "labels_per_roll",
+   "fieldtype": "Int",
+   "label": "Labels per Roll (pcs)"
+  },
+  {
+   "fieldname": "column_break_output",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "rolls_out",
+   "fieldtype": "Int",
+   "label": "Rolls Out"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "core_size",
+   "fieldtype": "Data",
+   "label": "Core Size"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "wind_direction",
+   "fieldtype": "Select",
+   "label": "Wind Direction",
+   "options": "\n1 - Outside, top first\n2 - Outside, bottom first\n3 - Outside, right first\n4 - Outside, left first\n5 - Inside, top first\n6 - Inside, bottom first\n7 - Inside, right first\n8 - Inside, left first"
+  },
+  {
+   "fieldname": "section_ink",
+   "fieldtype": "Section Break",
+   "label": "Ink"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "ink_used_kg",
+   "fieldtype": "Float",
+   "label": "Ink Used (kg)",
+   "precision": "3"
+  },
+  {
+   "fieldname": "column_break_ink",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "colours_run",
+   "fieldtype": "Int",
+   "label": "Colours Run"
+  },
+  {
+   "fieldname": "section_downtime",
+   "fieldtype": "Section Break",
+   "label": "Downtime and Sign-off"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "downtime_mins",
+   "fieldtype": "Float",
+   "label": "Downtime (mins)",
+   "precision": "1"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "downtime_reason",
+   "fieldtype": "Small Text",
+   "label": "Downtime Reason"
+  },
+  {
+   "fieldname": "column_break_downtime",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "first_off_approved_by",
+   "fieldtype": "Data",
+   "label": "First-off Approved By"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-15 11:27:02.000000",
+ "modified_by": "Administrator",
+ "module": "Job Card Tracking",
+ "name": "Job Card Label Run",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

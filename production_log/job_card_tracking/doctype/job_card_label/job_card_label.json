@@ -75,7 +75,15 @@
   "job_status",
   "machine",
   "section_break_notes",
-  "production_remarks"
+  "production_remarks",
+  "section_run_log",
+  "run_log",
+  "section_run_log_totals",
+  "total_good_labels",
+  "total_setup_waste_m",
+  "column_break_run_log_totals",
+  "total_setup_mins",
+  "total_run_mins"
  ],
  "fields": [
   {
@@ -543,11 +551,69 @@
    "fieldname": "production_remarks",
    "fieldtype": "Small Text",
    "label": "Production Remarks"
+  },
+  {
+   "description": "One row per design run on the press. Setup, run and wash-up minutes are worked out from the times when the card is saved.",
+   "fieldname": "section_run_log",
+   "fieldtype": "Section Break",
+   "label": "Run Log"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "run_log",
+   "fieldtype": "Table",
+   "label": "Run Log",
+   "no_copy": 1,
+   "options": "Job Card Label Run"
+  },
+  {
+   "fieldname": "section_run_log_totals",
+   "fieldtype": "Section Break",
+   "label": "Run Log Totals"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "total_good_labels",
+   "fieldtype": "Int",
+   "label": "Total Good Labels (pcs)",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "total_setup_waste_m",
+   "fieldtype": "Float",
+   "label": "Total Setup Waste (m)",
+   "no_copy": 1,
+   "precision": "2",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_run_log_totals",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "total_setup_mins",
+   "fieldtype": "Float",
+   "label": "Total Setup (mins)",
+   "no_copy": 1,
+   "precision": "1",
+   "read_only": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "fieldname": "total_run_mins",
+   "fieldtype": "Float",
+   "label": "Total Run (mins)",
+   "no_copy": 1,
+   "precision": "1",
+   "read_only": 1
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-07-23 00:00:00.000000",
+ "modified": "2026-09-15 11:27:02.000000",
  "modified_by": "Administrator",
  "module": "Job Card Tracking",
  "name": "Job Card Label",
