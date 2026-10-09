@@ -44,6 +44,7 @@ import frappe
 
 from production_log.job_card_tracking import cps_carton_board as board
 from production_log.job_card_tracking import cps_cp_rules
+from production_log.job_card_tracking import cps_revise_rules as rules
 
 COMPUTER_PAPER = "Computer Paper"
 CARTON = "Carton"
@@ -68,7 +69,7 @@ def _rows(payload):
 
 
 @frappe.whitelist()
-def revise(spec, reason, parts=None, carton=None):
+def revise(spec, reason, parts=None, carton=None, ink=None, packing=None, price=None):
 	"""Apply a reasoned, versioned revision to a submitted specification.
 
 	Returns ``{"ok": True, "spec": <name>, "changes": [<human summary>, ...]}``.
@@ -103,6 +104,21 @@ def revise(spec, reason, parts=None, carton=None):
 	if carton_in is not None:
 		supplied = True
 		changes.extend(_apply_carton(doc, carton_in))
+
+	ink_in = _rows(ink)
+	if ink_in is not None:
+		supplied = True
+		changes.extend(_apply_ink(doc, ink_in))
+
+	packing_in = _rows(packing)
+	if packing_in is not None:
+		supplied = True
+		changes.extend(_apply_packing(doc, packing_in))
+
+	price_in = _rows(price)
+	if price_in:
+		supplied = True
+		changes.extend(_apply_price(doc, price_in))
 
 	if supplied and not changes:
 		frappe.throw("Nothing changed - revision not recorded.")
@@ -200,6 +216,103 @@ def _apply_carton(doc, requested):
 		)
 		doc.set(field, values[field])
 	return changes
+
+
+def _apply_ink(doc, requested):
+	"""Change the print colours: process inks and the spot colour rows.
+
+	``requested`` may carry any of ``uses_c/m/y/k`` and ``spot_colours`` (a list
+	of ``{"pantone_code": ...}``); anything absent is left alone. The count is
+	recomputed here because the controller's ``recalculate_number_of_colours``
+	does not run on update-after-submit.
+	"""
+	if doc.product_type not in rules.INK_PRODUCT_TYPES:
+		frappe.throw("{0} specifications do not carry print colours.".format(doc.product_type))
+
+	changes = []
+	for field in rules.PROCESS_INKS:
+		if field not in requested:
+			continue
+		new = 1 if requested[field] else 0
+		old = 1 if doc.get(field) else 0
+		if new != old:
+			changes.append("{0}: {1} -> {2}".format(
+				doc.meta.get_label(field) or field, "on" if old else "off", "on" if new else "off"))
+			doc.set(field, new)
+
+	if "spot_colours" in requested:
+		new_codes = [(r.get("pantone_code") or "").strip() for r in requested["spot_colours"] or []]
+		if "" in new_codes:
+			frappe.throw("Every spot colour row needs a Pantone colour.")
+		old_codes = [r.pantone_code for r in doc.spot_colours]
+		if sorted(new_codes) != sorted(old_codes):
+			changes.append("Spot colours: {0} -> {1}".format(
+				", ".join(old_codes) or "none", ", ".join(new_codes) or "none"))
+			doc.set("spot_colours", [])
+			for code in new_codes:
+				doc.append("spot_colours", {"pantone_code": code})
+
+	process = sum(1 for f in rules.PROCESS_INKS if doc.get(f))
+	spots = len(doc.spot_colours)
+	if changes:
+		error = rules.ink_error(doc.print_type, process, spots)
+		if error:
+			frappe.throw(error)
+	count = process + spots
+	if doc.number_of_colours != count:
+		doc.number_of_colours = count
+		if changes:
+			changes.append("Number of colours -> {0}".format(count))
+	return changes
+
+
+def _apply_packing(doc, requested):
+	"""Change the packing fields that belong to this product type."""
+	allowed = rules.packing_fields(doc.product_type)
+	unknown = sorted(set(requested) - set(allowed))
+	if unknown:
+		frappe.throw("{0} cannot be revised on a {1} specification.".format(
+			", ".join(unknown), doc.product_type))
+
+	changes = []
+	for field, kind in allowed.items():
+		if field not in requested:
+			continue
+		new, error = rules.coerce_packing(field, kind, requested[field])
+		if error:
+			frappe.throw(error)
+		old = doc.get(field)
+		same = (str(old or "").strip() == str(new)) if kind == "text" else (float(old or 0) == float(new))
+		if not same:
+			changes.append("{0}: {1} -> {2}".format(doc.meta.get_label(field) or field, old or "empty", new))
+			doc.set(field, new)
+	return changes
+
+
+def _apply_price(doc, row):
+	"""Add a new price row. Never edits one, never approves one.
+
+	A price change is a new row with a later Effective From, not an edit
+	(design 6.2). The row lands as Draft: approval stays with a Sales Master
+	Manager through ``approve_cps_price``, so revising a spec cannot be a way
+	round it. Duplicate effective dates are refused by ``validate_pricing`` in
+	``before_update_after_submit``.
+	"""
+	error = rules.price_row_error(row)
+	if error:
+		frappe.throw(error)
+	doc.append("pricing", {
+		"valid_from": row["valid_from"],
+		"rate": float(row["rate"]),
+		"uom": row["uom"],
+		"vat_inclusive": 1 if row.get("vat_inclusive") else 0,
+		"source": "Manual",
+		"notes": (row.get("notes") or "").strip(),
+		"approval_status": "Draft",
+	})
+	return ["New price {0} per {1}{2} from {3} (Draft - needs approval)".format(
+		float(row["rate"]), row["uom"], ", VAT inclusive" if row.get("vat_inclusive") else "",
+		row["valid_from"])]
 
 
 def _stamp(doc, reason, changes):

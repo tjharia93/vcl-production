@@ -155,3 +155,4 @@ production_log.patches.v10_4.add_item_price_cps_field
 # Data only; the rate itself is correct and is not touched. Without this the
 # price mirror would publish that customer 16% high.
 production_log.patches.v10_5.flag_bahati_sleeve_vat_inclusive
+production_log.patches.v10_6.allow_cps_colours_packing_on_submit

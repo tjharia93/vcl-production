@@ -232,24 +232,28 @@
    "options": "Process Offset\nProcess UV\nWater Based\nSolvent Based"
   },
   {
+   "allow_on_submit": 1,
    "default": "0",
    "fieldname": "uses_c",
    "fieldtype": "Check",
    "label": "C \u2014 Cyan"
   },
   {
+   "allow_on_submit": 1,
    "default": "0",
    "fieldname": "uses_m",
    "fieldtype": "Check",
    "label": "M \u2014 Magenta"
   },
   {
+   "allow_on_submit": 1,
    "default": "0",
    "fieldname": "uses_y",
    "fieldtype": "Check",
    "label": "Y \u2014 Yellow"
   },
   {
+   "allow_on_submit": 1,
    "default": "0",
    "fieldname": "uses_k",
    "fieldtype": "Check",
@@ -260,6 +264,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "allow_on_submit": 1,
    "default": "0",
    "description": "Auto-calculated: ticked CMYK inks + spot colour rows.",
    "fieldname": "number_of_colours",
@@ -280,6 +285,7 @@
    "label": "Spot Colours"
   },
   {
+   "allow_on_submit": 1,
    "description": "Pantone / spot inks. Each row = one additional ink plate. CMYK values are the mixing recipe; edit per row if the customer wants a tweaked recipe.",
    "fieldname": "spot_colours",
    "fieldtype": "Table",
@@ -528,6 +534,7 @@
    "read_only": 1
   },
   {
+   "allow_on_submit": 1,
    "depends_on": "eval:doc.product_type=='Label'",
    "fieldname": "packing_up",
    "fieldtype": "Data",
@@ -542,6 +549,7 @@
    "options": "\nPP White\nPP Clear\nPP Silver\nThermal\nSemi-Gloss"
   },
   {
+   "allow_on_submit": 1,
    "depends_on": "eval:doc.product_type=='Label'",
    "fieldname": "packing_pieces",
    "fieldtype": "Int",
@@ -694,11 +702,13 @@
    "label": "Numbering Required"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "standard_packing",
    "fieldtype": "Data",
    "label": "Standard Packing"
   },
   {
+   "allow_on_submit": 1,
    "fieldname": "standard_weight_per_carton",
    "fieldtype": "Float",
    "label": "Standard Weight Per Carton",
