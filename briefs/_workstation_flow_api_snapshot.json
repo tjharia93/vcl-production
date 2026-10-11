@@ -1,0 +1,342 @@
+{
+  "fetched_for": "VCL-DEV-PROD-001 status report product flows",
+  "source": "https://vimitconverters.frappe.cloud",
+  "workstation_count": 20,
+  "workstation_type_count": 21,
+  "workstation_types": [
+    {
+      "custom_product_line": null,
+      "custom_stage_position": 10,
+      "name": "Design",
+      "tags": [
+        {
+          "process_number": 10,
+          "product_line": "All"
+        }
+      ],
+      "workstations": [
+        "Design Desk"
+      ]
+    },
+    {
+      "custom_product_line": null,
+      "custom_stage_position": 15,
+      "name": "Plate Making",
+      "tags": [
+        {
+          "process_number": 20,
+          "product_line": "Corrugation and Carton Department"
+        },
+        {
+          "process_number": 20,
+          "product_line": "All"
+        }
+      ],
+      "workstations": []
+    },
+    {
+      "custom_product_line": null,
+      "custom_stage_position": 20,
+      "name": "Reel to Reel Printing",
+      "tags": [
+        {
+          "process_number": 30,
+          "product_line": "Computer Paper"
+        },
+        {
+          "process_number": 30,
+          "product_line": "ETR"
+        },
+        {
+          "process_number": 30,
+          "product_line": "R2R"
+        }
+      ],
+      "workstations": [
+        "Miyakoshi 01",
+        "Miyakoshi 2",
+        "Miyakoshi 3",
+        "Miyakoshi 4",
+        "Roland 01"
+      ]
+    },
+    {
+      "custom_product_line": null,
+      "custom_stage_position": 23,
+      "name": "Sheet to Sheet Printing",
+      "tags": [
+        {
+          "process_number": 30,
+          "product_line": "General Stationery and Exercise Book"
+        },
+        {
+          "process_number": 30,
+          "product_line": "Mono Boxes"
+        },
+        {
+          "process_number": 0,
+          "product_line": "Corrugation and Carton Department"
+        }
+      ],
+      "workstations": [
+        "KORD",
+        "Solna 02",
+        "Solna 04"
+      ]
+    },
+    {
+      "custom_product_line": null,
+      "custom_stage_position": 25,
+      "name": "Flexo Label Printing",
+      "tags": [
+        {
+          "process_number": 30,
+          "product_line": "Self Adhesive Label"
+        }
+      ],
+      "workstations": []
+    },
+    {
+      "custom_product_line": null,
+      "custom_stage_position": 26,
+      "name": "Label Printing",
+      "tags": [
+        {
+          "process_number": 30,
+          "product_line": "Self Adhesive Label"
+        }
+      ],
+      "workstations": [
+        "KDO 01",
+        "Profeteer 01"
+      ]
+    },
+    {
+      "custom_product_line": null,
+      "custom_stage_position": 30,
+      "name": "Ruling",
+      "tags": [
+        {
+          "process_number": 40,
+          "product_line": "General Stationery and Exercise Book"
+        }
+      ],
+      "workstations": [
+        "Ruling 02",
+        "Ruling Machine 01"
+      ]
+    },
+    {
+      "custom_product_line": null,
+      "custom_stage_position": 40,
+      "name": "Sheeting",
+      "tags": [
+        {
+          "process_number": 40,
+          "product_line": "Corrugation and Carton Department"
+        },
+        {
+          "process_number": 50,
+          "product_line": "General Stationery and Exercise Book"
+        },
+        {
+          "process_number": 10,
+          "product_line": "Trading"
+        }
+      ],
+      "workstations": [
+        "Sheeting Machine 01",
+        "Sheeting Machine 02"
+      ]
+    },
+    {
+      "custom_product_line": null,
+      "custom_stage_position": 50,
+      "name": "Collation",
+      "tags": [
+        {
+          "process_number": 40,
+          "product_line": "Computer Paper"
+        },
+        {
+          "process_number": 60,
+          "product_line": "General Stationery and Exercise Book"
+        }
+      ],
+      "workstations": [
+        "Collater 01",
+        "Collater 02"
+      ]
+    },
+    {
+      "custom_product_line": null,
+      "custom_stage_position": 60,
+      "name": "Corrugation",
+      "tags": [
+        {
+          "process_number": 30,
+          "product_line": "Corrugation and Carton Department"
+        }
+      ],
+      "workstations": []
+    },
+    {
+      "custom_product_line": null,
+      "custom_stage_position": 70,
+      "name": "Carton Pasting",
+      "tags": [
+        {
+          "process_number": 100,
+          "product_line": "Corrugation and Carton Department"
+        }
+      ],
+      "workstations": []
+    },
+    {
+      "custom_product_line": null,
+      "custom_stage_position": 80,
+      "name": "Creasing",
+      "tags": [
+        {
+          "process_number": 70,
+          "product_line": "Corrugation and Carton Department"
+        }
+      ],
+      "workstations": []
+    },
+    {
+      "custom_product_line": null,
+      "custom_stage_position": 90,
+      "name": "Carton Printing",
+      "tags": [
+        {
+          "process_number": 50,
+          "product_line": "Corrugation and Carton Department"
+        }
+      ],
+      "workstations": []
+    },
+    {
+      "custom_product_line": null,
+      "custom_stage_position": 100,
+      "name": "Lamination",
+      "tags": [
+        {
+          "process_number": 60,
+          "product_line": "Corrugation and Carton Department"
+        },
+        {
+          "process_number": 40,
+          "product_line": "Mono Boxes"
+        }
+      ],
+      "workstations": []
+    },
+    {
+      "custom_product_line": null,
+      "custom_stage_position": 110,
+      "name": "Die Cutting",
+      "tags": [
+        {
+          "process_number": 50,
+          "product_line": "Mono Boxes"
+        },
+        {
+          "process_number": 80,
+          "product_line": "Corrugation and Carton Department"
+        },
+        {
+          "process_number": 40,
+          "product_line": "Self Adhesive Label"
+        }
+      ],
+      "workstations": []
+    },
+    {
+      "custom_product_line": null,
+      "custom_stage_position": 120,
+      "name": "Label Slitting and Re-Winding",
+      "tags": [
+        {
+          "process_number": 50,
+          "product_line": "Self Adhesive Label"
+        },
+        {
+          "process_number": 40,
+          "product_line": "R2R"
+        }
+      ],
+      "workstations": []
+    },
+    {
+      "custom_product_line": null,
+      "custom_stage_position": 130,
+      "name": "ETR Slitting",
+      "tags": [
+        {
+          "process_number": 40,
+          "product_line": "ETR"
+        }
+      ],
+      "workstations": [
+        "Slitter 01"
+      ]
+    },
+    {
+      "custom_product_line": null,
+      "custom_stage_position": 150,
+      "name": "Slotting",
+      "tags": [
+        {
+          "process_number": 90,
+          "product_line": "Corrugation and Carton Department"
+        }
+      ],
+      "workstations": [
+        "Slotter 01"
+      ]
+    },
+    {
+      "custom_product_line": null,
+      "custom_stage_position": 160,
+      "name": "Carton Stitching",
+      "tags": [
+        {
+          "process_number": 110,
+          "product_line": "Corrugation and Carton Department"
+        }
+      ],
+      "workstations": []
+    },
+    {
+      "custom_product_line": null,
+      "custom_stage_position": 165,
+      "name": "Carton Gluing",
+      "tags": [
+        {
+          "process_number": 120,
+          "product_line": "Corrugation and Carton Department"
+        },
+        {
+          "process_number": 60,
+          "product_line": "Mono Boxes"
+        }
+      ],
+      "workstations": []
+    },
+    {
+      "custom_product_line": null,
+      "custom_stage_position": 170,
+      "name": "Bundling",
+      "tags": [
+        {
+          "process_number": 130,
+          "product_line": "Corrugation and Carton Department"
+        }
+      ],
+      "workstations": [
+        "Bundler 01"
+      ]
+    }
+  ]
+}
