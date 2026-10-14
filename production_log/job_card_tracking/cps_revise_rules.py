@@ -82,3 +82,102 @@ def price_row_error(row):
 	if rate <= 0:
 		return "The rate must be greater than zero."
 	return None
+
+
+# ── Carton size and build ────────────────────────────────────────────────────
+#
+# What a carton IS: its three dimensions and the board it is made of. Revising
+# these changes the carton itself, so every one is checked here and the board
+# plan is re-derived from the result by the caller.
+
+LAYER_MATERIALS = ("Test Liner", "Kraft", "White Test Liner")
+
+# field -> ("int", None) or ("select", allowed values). A select may be blank
+# only where the doctype allows it; required selects are in BUILD_REQUIRED.
+CARTON_BUILD_FIELDS = {
+	"ctn_length_mm": ("int", None),
+	"ctn_width_mm": ("int", None),
+	"ctn_height_mm": ("int", None),
+	"idod": ("select", ("", "ID", "OD")),
+	"product_type_carton": ("select", ("", "Tray", "Die Cut", "1 Flap RSC", "2 Flap RSC", "3 Flap RSC")),
+	"ply": ("select", ("SFK", "3", "5")),
+	"flute_type": ("select", ("B", "C", "E")),
+	"joint_type": ("select", ("", "Gluing - Manual", "Gluing - Machine", "Stitched")),
+	"1_ply_top_layer_gsm": ("int", None),
+	"1_ply_top_layer_material": ("select", ("",) + LAYER_MATERIALS),
+	"2_ply_fluting_gsm": ("int", None),
+	"2_ply_top_layer_material": ("select", ("",) + LAYER_MATERIALS),
+	"3_ply_bottom_gsm": ("int", None),
+	"3_ply_top_layer_material": ("select", ("",) + LAYER_MATERIALS),
+	"4_ply_fluting_gsm": ("int", None),
+	"4_ply_top_layer_material": ("select", ("",) + LAYER_MATERIALS),
+	"5_ply_fluting_gsm": ("int", None),
+	"5_ply_top_layer_material": ("select", ("",) + LAYER_MATERIALS),
+}
+
+# Any of these changing moves the blank, so the board plan must be re-derived.
+GEOMETRY_FIELDS = ("ctn_length_mm", "ctn_width_mm", "ctn_height_mm", "product_type_carton", "ply")
+# These move the auto flap; a flap measured for the old carton no longer applies.
+FLAP_FIELDS = ("ctn_width_mm", "product_type_carton")
+
+LAYER_GSM_FIELDS = ("1_ply_top_layer_gsm", "2_ply_fluting_gsm", "3_ply_bottom_gsm", "4_ply_fluting_gsm", "5_ply_fluting_gsm")
+
+
+def coerce_build(field, value):
+	"""``(clean_value, error)`` for one size/build entry."""
+	if field not in CARTON_BUILD_FIELDS:
+		return None, "{0} is not part of a carton's size or build.".format(field)
+	kind, allowed = CARTON_BUILD_FIELDS[field]
+	if kind == "int":
+		try:
+			number = float(value if value not in (None, "") else 0)
+		except (TypeError, ValueError):
+			return None, "{0} must be a whole number.".format(field)
+		if number < 0 or number != int(number):
+			return None, "{0} must be a whole number, not negative.".format(field)
+		return int(number), None
+	text = str(value or "").strip()
+	if text not in allowed:
+		return None, "{0}: '{1}' is not one of {2}.".format(field, text, ", ".join(a for a in allowed if a))
+	return text, None
+
+
+def active_layers(ply):
+	"""The GSM fields a board of this ply actually has (same as total_gsm)."""
+	ply = str(ply or "").strip()
+	if ply == "5":
+		return LAYER_GSM_FIELDS
+	if ply == "3":
+		return LAYER_GSM_FIELDS[:3]
+	return LAYER_GSM_FIELDS[:2]
+
+
+def build_error(spec):
+	"""Why the size/build of ``spec`` (after the revision) is unusable, or None.
+
+	The same rules ``validate_carton`` and the form enforce, restated because
+	validate() does not run on update-after-submit — plus a GSM on every layer
+	the board has, since the weight is struck from them.
+	"""
+	ply = str(spec.get("ply") or "").strip()
+	if not ply:
+		return "Ply is required for a carton."
+	if not str(spec.get("flute_type") or "").strip():
+		return "Flute Type is required for a carton."
+	if int(spec.get("ctn_length_mm") or 0) <= 0:
+		return "Carton Length (mm) must be greater than 0."
+	if int(spec.get("ctn_width_mm") or 0) <= 0:
+		return "Carton Width (mm) must be greater than 0."
+	if ply != "SFK" and int(spec.get("ctn_height_mm") or 0) <= 0:
+		return "Carton Height (mm) must be greater than 0 unless Ply is SFK."
+	for field in active_layers(ply):
+		if int(spec.get(field) or 0) <= 0:
+			return "A {0}-ply board needs a GSM on layer {1}.".format(ply, field[0])
+	return None
+
+
+def job_size_text(length, width, height, ply):
+	"""The Job Size the carton specs are written with: ``L X W X H``."""
+	if str(ply or "").strip() == "SFK" or not int(height or 0):
+		return "{0} X {1}".format(int(length or 0), int(width or 0))
+	return "{0} X {1} X {2}".format(int(length or 0), int(width or 0), int(height or 0))

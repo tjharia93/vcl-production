@@ -365,9 +365,10 @@ frappe.ui.form.on("Spot Colour", {
 	},
 });
 
-// Grid row button: "Find Pantone" on spot colours.
+// Grid row button: "Find Pantone" on spot colours. On refresh, not onload: the
+// grid has not built its button bar at onload and add_custom_button throws.
 frappe.ui.form.on("Customer Product Specification", {
-	onload(frm) {
+	refresh(frm) {
 		if (frm.fields_dict.spot_colours) {
 			frm.fields_dict.spot_colours.grid.add_custom_button(__("Find Pantone from Hex"), () => {
 				const selected = frm.fields_dict.spot_colours.grid.get_selected_children();

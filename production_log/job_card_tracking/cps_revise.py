@@ -69,7 +69,7 @@ def _rows(payload):
 
 
 @frappe.whitelist()
-def revise(spec, reason, parts=None, carton=None, ink=None, packing=None, price=None):
+def revise(spec, reason, parts=None, carton=None, ink=None, packing=None, price=None, build=None):
 	"""Apply a reasoned, versioned revision to a submitted specification.
 
 	Returns ``{"ok": True, "spec": <name>, "changes": [<human summary>, ...]}``.
@@ -100,10 +100,25 @@ def revise(spec, reason, parts=None, carton=None, ink=None, packing=None, price=
 		supplied = True
 		changes.extend(_apply_parts(doc, parts_in))
 
-	carton_in = _rows(carton)
-	if carton_in is not None:
+	# Size and build first: the board plan below is derived from them.
+	build_in = _rows(build)
+	moved = set()
+	if build_in:
 		supplied = True
-		changes.extend(_apply_carton(doc, carton_in))
+		build_changes, moved = _apply_build(doc, build_in)
+		changes.extend(build_changes)
+
+	# Re-derive the board plan whenever the blank or the board weight can have
+	# moved, even if the operator typed nothing in the Board Plan section.
+	carton_in = _rows(carton)
+	replan = bool(moved & set(rules.GEOMETRY_FIELDS + rules.LAYER_GSM_FIELDS))
+	if carton_in is not None or replan:
+		supplied = supplied or carton_in is not None
+		changes.extend(_apply_carton(
+			doc, carton_in or {},
+			rebuilt=replan,
+			new_flap=bool(moved & set(rules.FLAP_FIELDS)),
+		))
 
 	ink_in = _rows(ink)
 	if ink_in is not None:
@@ -187,7 +202,56 @@ def _apply_parts(doc, rows):
 	return changes
 
 
-def _apply_carton(doc, requested):
+def _shown(value):
+	return "empty" if value in (None, "") else value
+
+
+def _apply_build(doc, requested):
+	"""Change a carton's size and build: dimensions, style, ply, flute, joint, layers.
+
+	Each value is coerced and the resulting carton checked as a whole, because
+	validate() does not run on update-after-submit. Job Size is rewritten from
+	the dimensions when they move, so the size a rep sees on an order line is the
+	size the board plan is struck from.
+	"""
+	if doc.product_type != CARTON:
+		frappe.throw("Size and build apply to Carton specifications only.")
+
+	clean = {}
+	for field, value in requested.items():
+		new, error = rules.coerce_build(field, value)
+		if error:
+			frappe.throw(error)
+		clean[field] = new
+
+	after = doc.as_dict()
+	after.update(clean)
+	error = rules.build_error(after)
+	if error:
+		frappe.throw(error)
+
+	changes = []
+	moved = set()
+	for field in rules.CARTON_BUILD_FIELDS:
+		if field not in clean:
+			continue
+		old = doc.get(field)
+		new = clean[field]
+		same = int(old or 0) == new if isinstance(new, int) else (old or "") == new
+		if not same:
+			changes.append("{0}: {1} -> {2}".format(doc.meta.get_label(field) or field, _shown(old), _shown(new)))
+			doc.set(field, new)
+			moved.add(field)
+
+	if changes:
+		size = rules.job_size_text(doc.ctn_length_mm, doc.ctn_width_mm, doc.ctn_height_mm, doc.ply)
+		if any(f in clean for f in ("ctn_length_mm", "ctn_width_mm", "ctn_height_mm", "ply")) and doc.job_size != size:
+			changes.append("Job Size: {0} -> {1}".format(doc.job_size or "empty", size))
+			doc.job_size = size
+	return changes, moved
+
+
+def _apply_carton(doc, requested, rebuilt=False, new_flap=False):
 	"""Fill in the Board Plan of a Carton specification.
 
 	Every derived figure is recomputed here from the specification's own
@@ -198,12 +262,17 @@ def _apply_carton(doc, requested):
 	if doc.product_type != CARTON:
 		frappe.throw("The Board Plan applies to Carton specifications only.")
 
-	values, reason = board.revisable_changes(
-		doc.as_dict(),
-		requested,
-		flap_override=requested.get("ctn_flap_mm"),
-	)
+	flap = requested.get("ctn_flap_mm")
+	# A flap measured for the old width or style does not fit the new carton:
+	# re-derive it unless the operator states one for the new carton.
+	if new_flap and not flap and doc.product_type_carton != board.STYLE_TRAY:
+		flap = board.auto_flap(doc.ctn_width_mm)
+
+	values, reason = board.revisable_changes(doc.as_dict(), requested, flap_override=flap)
 	if reason:
+		if rebuilt and not requested:
+			# The new build has no plannable blank (SFK, Die Cut): nothing to derive.
+			return []
 		frappe.throw(_NOT_APPLICABLE.get(reason, "The board plan cannot be derived."))
 
 	changes = []
