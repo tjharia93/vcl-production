@@ -85,6 +85,79 @@ def seed_machines():
 	return created
 
 
+# Carton standards for stores receiving - read off the printed Daily Stores
+# Receiving Sheet (house standards) and the October 2026 sheets (Green, which
+# is per customer). Tanuj confirmed 17/10/2026 that the payslip colours (Pink,
+# Blue) weigh the same as the normal ones (Yellow, Purple). Red is a rejection
+# and has no standard. Add-only: a standard someone has edited live is never
+# overwritten, so correct a weight on the record, not here.
+#
+# The item is what a carton posts to stock as. The payslip (5.5") items exist
+# for 2 and 3 part only; 4-part payslip falls back to the plain 4 part item
+# until an item is made for it - that is a question for Tanuj, not a guess
+# baked in silently, so it is said on the record's notes.
+_CP = "Computer Paper Plain-9.5 x 11-{parts} Part"
+_PSLIP = "Computer Paper Plain-9.5 x 11 x 5.5-{parts} Part-PSLIP"
+CARTON_STANDARDS = [
+	# (colour, parts, customer, sheets_per_pack, standard_kg, item, notes)
+	("Yellow", 2, None, 500, 3.95, _CP, None),
+	("Yellow", 3, None, 300, 3.55, _CP, None),
+	("Yellow", 4, None, 300, 4.55, _CP, None),
+	("Purple", 2, None, 600, 4.80, _CP, None),
+	("Purple", 3, None, 400, 4.60, _CP, None),
+	("Purple", 4, None, 400, 6.00, _CP, None),
+	("Pink", 2, None, 500, 3.95, _PSLIP, None),
+	("Pink", 3, None, 300, 3.55, _PSLIP, None),
+	("Pink", 4, None, 300, 4.55, _CP, "No 4-part payslip item in ERPNext yet; posts as the plain 4 part item."),
+	("Blue", 2, None, 600, 4.80, _PSLIP, None),
+	("Blue", 3, None, 400, 4.60, _PSLIP, None),
+	("Blue", 4, None, 400, 6.00, _CP, "No 4-part payslip item in ERPNext yet; posts as the plain 4 part item."),
+	# Green: per customer, from the October 2026 sheets. Full Channel is not a
+	# customer in ERPNext yet, so its 3-part 5.70 kg standard waits until the
+	# customer exists - it will be added on the live record, not here.
+	("Green", 2, "MAGUNAS SUPER STORES (K) LTD", None, 6.55, _CP, "From the 13-16 Oct 2026 receiving sheets."),
+]
+
+
+def seed_carton_standards():
+	"""Add any missing carton standard. Never touches one that already exists.
+
+	A standard whose customer or item is not on the site is skipped with a
+	note rather than inserted - an insert that throws inside after_migrate
+	takes the whole migrate down (see install.py).
+	"""
+	if not frappe.db.exists("DocType", "VCL Carton Standard"):
+		return []
+	from production_log.production_floor.receiving import standard_name
+
+	created = []
+	for colour, parts, customer, sheets, kg, item_tpl, notes in CARTON_STANDARDS:
+		name = standard_name(colour, parts, customer)
+		if frappe.db.exists("VCL Carton Standard", name):
+			continue
+		if customer and not frappe.db.exists("Customer", customer):
+			print(f"Carton standard {name}: customer not on this site, skipped")
+			continue
+		item = item_tpl.format(parts=parts) if item_tpl else None
+		if item and not frappe.db.exists("Item", item):
+			print(f"Carton standard {name}: item {item} not on this site, seeded without an item")
+			item = None
+		frappe.get_doc({
+			"doctype": "VCL Carton Standard",
+			"colour": colour,
+			"parts": parts,
+			"customer": customer,
+			"sheets_per_pack": sheets,
+			"standard_kg": kg,
+			"tolerance_pct": 2,
+			"item": item,
+			"active": 1,
+			"notes": notes,
+		}).insert(ignore_permissions=True)
+		created.append(name)
+	return created
+
+
 def _guard_demo(force):
 	if force:
 		return
