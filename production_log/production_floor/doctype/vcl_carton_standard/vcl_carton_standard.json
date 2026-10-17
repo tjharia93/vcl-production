@@ -1,0 +1,196 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-10-17 12:00:00.000000",
+ "custom": 0,
+ "description": "The expected weight of a packed carton of computer paper, by label colour and number of parts. Green is per customer. Red (rejection) has no standard.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "colour",
+  "parts",
+  "customer",
+  "column_break_a",
+  "title",
+  "active",
+  "item",
+  "section_weight",
+  "sheets_per_pack",
+  "standard_kg",
+  "column_break_w",
+  "tolerance_pct",
+  "tolerance_kg",
+  "section_notes",
+  "notes"
+ ],
+ "fields": [
+  {
+   "description": "The carton label colour on the floor legend: Yellow C Pack normal, Purple normal/standard pack, Green per customer, Pink C Pack payslip, Blue payslip standard pack.",
+   "fieldname": "colour",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Label Colour",
+   "options": "Yellow\nPurple\nGreen\nPink\nBlue\nRed",
+   "reqd": 1
+  },
+  {
+   "description": "2, 3 or 4 part",
+   "fieldname": "parts",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Parts",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.colour=='Green'",
+   "description": "Only for a Green (customised) carton - the standard belongs to that customer.",
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Customer",
+   "mandatory_depends_on": "eval:doc.colour=='Green'",
+   "options": "Customer"
+  },
+  {
+   "fieldname": "column_break_a",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Title",
+   "read_only": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "label": "Active"
+  },
+  {
+   "description": "What a carton of this kind is received into stock as. Leave blank and the carton is recorded but cannot be posted.",
+   "fieldname": "item",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "ERPNext Item",
+   "options": "Item"
+  },
+  {
+   "fieldname": "section_weight",
+   "fieldtype": "Section Break",
+   "label": "Weight"
+  },
+  {
+   "description": "Printed on the sheet: 500 / 300 for C Pack, 600 / 400 for standard.",
+   "fieldname": "sheets_per_pack",
+   "fieldtype": "Int",
+   "label": "Sheets per Pack"
+  },
+  {
+   "fieldname": "standard_kg",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Standard Weight (kg)",
+   "precision": "3",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_w",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "2",
+   "description": "Agreed 17/10/2026: 2% either side of the standard.",
+   "fieldname": "tolerance_pct",
+   "fieldtype": "Percent",
+   "label": "Tolerance (%)"
+  },
+  {
+   "fieldname": "tolerance_kg",
+   "fieldtype": "Float",
+   "label": "Tolerance (kg)",
+   "precision": "3",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_notes",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  }
+ ],
+ "links": [],
+ "modified": "2026-10-17 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Production Floor",
+ "name": "VCL Carton Standard",
+ "naming_rule": "By script",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "VCL Production User",
+   "share": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "VCL Production Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Stock User",
+   "share": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Stock Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "search_fields": "colour,parts,customer",
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}

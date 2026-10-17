@@ -12,7 +12,12 @@
   "units",
   "section_behaviour",
   "auto_remember_jobs",
-  "block_close_on_critical"
+  "block_close_on_critical",
+  "section_stores",
+  "stores_weighers",
+  "stores_receivers",
+  "column_break_stores",
+  "stores_receipt_warehouse"
  ],
  "fields": [
   {
@@ -57,12 +62,40 @@
    "fieldname": "block_close_on_critical",
    "fieldtype": "Check",
    "label": "Block Day Closure on Critical Exceptions"
+  },
+  {
+   "fieldname": "section_stores",
+   "fieldtype": "Section Break",
+   "label": "Stores Receiving"
+  },
+  {
+   "description": "The production people who weigh cartons into stores. Shown as name buttons on the Receive tab.",
+   "fieldname": "stores_weighers",
+   "fieldtype": "Small Text",
+   "label": "Weighers (one per line)"
+  },
+  {
+   "description": "The stores people who sign for a receipt.",
+   "fieldname": "stores_receivers",
+   "fieldtype": "Small Text",
+   "label": "Stores Receivers (one per line)"
+  },
+  {
+   "fieldname": "column_break_stores",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Where a received carton is posted. Finished Goods - VCL unless told otherwise.",
+   "fieldname": "stores_receipt_warehouse",
+   "fieldtype": "Link",
+   "label": "Receive Into Warehouse",
+   "options": "Warehouse"
   }
  ],
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-08-26 00:00:00.000000",
+ "modified": "2026-10-17 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Production Floor",
  "name": "VCL Production Settings",
