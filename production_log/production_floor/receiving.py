@@ -171,9 +171,10 @@ def light_streak(rows, streak=RUN_LIGHT_STREAK):
 
 
 def stock_lines(rows):
-	"""What the Stock Entry carries: one line per item, cartons as qty.
+	"""What the Stock Entry carries: one line per item and customer, cartons as qty.
 
-	Returns (lines, skipped). Red cartons are skipped by design. A carton
+	A customer pack (Green) posts to the house item for now, on its own line
+	so the customer name is written on the receipt. Returns (lines, skipped). Red cartons are skipped by design. A carton
 	whose standard names no ERPNext item cannot be posted and is reported
 	back rather than silently dropped.
 	"""
@@ -186,7 +187,8 @@ def stock_lines(rows):
 		if not item:
 			skipped.append(row)
 			continue
-		line = by_item.setdefault(item, {"item": item, "qty": 0, "kg": 0.0})
+		customer = row.get("customer") or None
+		line = by_item.setdefault((item, customer), {"item": item, "customer": customer, "qty": 0, "kg": 0.0})
 		line["qty"] += 1
 		line["kg"] = round(line["kg"] + float(row.get("weight_kg") or 0), 3)
 	return list(by_item.values()), skipped

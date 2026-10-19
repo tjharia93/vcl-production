@@ -159,6 +159,16 @@ class StockLines(unittest.TestCase):
 		self.assertEqual(skipped, [])
 		self.assertEqual(next(l for l in lines if l["item"] == "CP-2P")["kg"], 7.85)
 
+	def test_customer_pack_gets_its_own_line_on_the_house_item(self):
+		rows = [
+			row("Purple", 2, 4.80, FLAG_OK, item="CP-2P"),
+			row("Green", 2, 6.55, FLAG_OK, item="CP-2P", customer="MAGUNAS"),
+			row("Green", 2, 6.50, FLAG_OK, item="CP-2P", customer="MAGUNAS"),
+		]
+		lines, _ = stock_lines(rows)
+		got = sorted((l["item"], l["customer"] or "", l["qty"]) for l in lines)
+		self.assertEqual(got, [("CP-2P", "", 1), ("CP-2P", "MAGUNAS", 2)])
+
 	def test_no_item_is_reported_not_dropped(self):
 		rows = [row("Green", 2, 5.1, FLAG_UNCHECKED, item=None, customer="X")]
 		lines, skipped = stock_lines(rows)

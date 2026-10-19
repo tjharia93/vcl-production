@@ -289,6 +289,10 @@ def receive_receipt(receipt=None, receiver=None):
 	return out
 
 
+def _customer_name(customer):
+	return frappe.db.get_value("Customer", customer, "customer_name") or customer
+
+
 def _make_stock_entry(doc, lines, warehouse, receiver):
 	if not frappe.db.exists("Warehouse", warehouse):
 		frappe.throw(_("Warehouse {0} does not exist. Set the stores receipt warehouse in VCL Production Settings.").format(warehouse))
@@ -305,14 +309,22 @@ def _make_stock_entry(doc, lines, warehouse, receiver):
 		f"Weighed by {doc.weigher}, received by {receiver}. "
 		f"{sum(l['qty'] for l in lines)} carton(s), {sum(l['kg'] for l in lines):.2f} kg."
 	)
+	customers = sorted({_customer_name(l["customer"]) for l in lines if l.get("customer")})
+	if customers:
+		se.remarks += f" Customer packs: {', '.join(customers)}."
 	for line in lines:
-		item = frappe.db.get_value("Item", line["item"], ["stock_uom", "valuation_rate", "disabled"], as_dict=True)
+		item = frappe.db.get_value("Item", line["item"], ["item_name", "stock_uom", "valuation_rate", "disabled"], as_dict=True)
 		if not item:
 			frappe.throw(_("Item {0} on the carton standard does not exist.").format(line["item"]))
 		if item.disabled:
 			frappe.throw(_("Item {0} is disabled. Fix the carton standard.").format(line["item"]))
 		rate = flt(item.valuation_rate)
+		detail = {}
+		if line.get("customer"):
+			# Posted to the house item for now; the customer is written on the line.
+			detail["description"] = f"{item.item_name} - {_customer_name(line['customer'])} pack"
 		se.append("items", {
+			**detail,
 			"item_code": line["item"],
 			"qty": line["qty"],
 			"uom": item.stock_uom,
