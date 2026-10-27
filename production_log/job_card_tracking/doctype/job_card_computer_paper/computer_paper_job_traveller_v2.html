@@ -92,6 +92,14 @@
 
     .sig-cell { height: 65px; vertical-align: bottom !important; padding-bottom: 5px !important; }
     .sig-line { border-top: 0.8pt solid #000; width: 90%; margin: 0 auto; font-size: 7pt; text-align: center; }
+    /* TRK-00142: the rep sign line carries no rule. */
+    .sig-line.no-rule { border-top: none; }
+
+    /* TRK-00142: page one reads at a larger size than the production log pages. */
+    .page-one .vcl-table-compact { font-size: 9pt; }
+    .page-one .section-header-compact { font-size: 9pt; }
+    .page-one .sig-line { font-size: 8pt; }
+    .created-by { margin-top: 6px; font-size: 7.5pt; color: #444; text-align: right; }
 
     .colour-chip {
         display: inline-block;
@@ -118,7 +126,7 @@
     <!-- ============================================================
          PAGE 1 · JOB INFORMATION + SPEC + PLATE + AUTHORISATION
          ============================================================ -->
-    <div class="page-container">
+    <div class="page-container page-one">
         <table class="vcl-header-table">
             <tr>
                 <td>
@@ -146,7 +154,18 @@
                 <td class="label-cell">LPO / Ref:</td>
                 <td>{{ doc.lpo_number or "N/A" }}</td>
                 <td class="label-cell">Sales Rep:</td>
-                <td>{{ doc.sales_rep or "" }}</td>
+                {#- TRK-00142: the rep is the customer's CSRA rep on the order date (the golden source),
+                    falling back to the card's own sales_rep user when CSRA names nobody. -#}
+                {%- set _od = (doc.order_date or frappe.utils.nowdate()) | string -%}
+                {%- set _reps = [] -%}
+                {%- for r in frappe.get_all("Customer Sales Rep Assignment",
+                        filters={"customer": doc.customer, "status": "Active", "effective_from": ["<=", _od]},
+                        fields=["sales_representative", "effective_to"], order_by="effective_from desc") -%}
+                    {%- if (not r.effective_to or (r.effective_to | string) >= _od) and r.sales_representative not in _reps -%}
+                        {%- set _ = _reps.append(r.sales_representative) -%}
+                    {%- endif -%}
+                {%- endfor %}
+                <td>{{ _reps | join(", ") if _reps else ((frappe.db.get_value("User", doc.sales_rep, "full_name") or doc.sales_rep) if doc.sales_rep else "") }}</td>
             </tr>
         </table>
 
@@ -170,7 +189,10 @@
             </tr>
             <tr>
                 <td class="label-cell">Packing:</td>
-                <td>{{ doc.packing if doc.packing else "" }}</td>
+                {#- TRK-00142: packing prints divided by 10 (400 shows as 40). Weights and the
+                    Section 2 set maths still use the stored figure. Non-numeric text prints as typed. -#}
+                {%- set _pk = (doc.packing or "") | float(0) %}
+                <td>{% if _pk %}{% set _pk10 = _pk / 10 %}{{ "{:,}".format(_pk10 | int) if _pk10 == (_pk10 | int) else "{:,}".format(_pk10 | round(1)) }}{% else %}{{ doc.packing or "" }}{% endif %}</td>
                 <td class="label-cell">Weight/Ctn:</td>
                 <td>{{ doc.weight_per_carton }} kg</td>
             </tr>
@@ -275,7 +297,7 @@
             <tr>
                 <td class="label-cell" style="height: 65px; vertical-align: top;">Sales Rep Sign:</td>
                 <td class="sig-cell">
-                    <div class="sig-line">SIGNATURE &amp; DATE</div>
+                    <div class="sig-line no-rule">SIGNATURE &amp; DATE</div>
                 </td>
                 <td class="label-cell" style="height: 65px; vertical-align: top;">Management Sign:</td>
                 <td class="sig-cell">
@@ -287,6 +309,8 @@
                 <td colspan="3" style="min-height: 30px; vertical-align: top; padding: 5px;">{{ doc.order_comments or doc.management_comments or "" }}</td>
             </tr>
         </table>
+        {#- TRK-00142: who raised the card, in the footer. -#}
+        <div class="created-by">Created by <strong>{{ frappe.db.get_value("User", doc.owner, "full_name") or doc.owner }}</strong> on {{ frappe.utils.formatdate(doc.creation, "dd-MMM-yy") }}</div>
     </div>
 
     <!-- ============================================================
