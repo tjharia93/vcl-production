@@ -386,14 +386,25 @@ def get_receipt(receipt=None):
 
 
 @frappe.whitelist()
-def list_receipts(receipt_date=None, limit=20):
-	"""Today's receipts for the hand-over screen, newest first."""
+def list_receipts(receipt_date=None, limit=20, status=None):
+	"""Receipts for the hand-over screen, newest first.
+
+	By date (today when none is given). With a status and no date, every
+	receipt in that status whatever its day: the phone asks for status=Open to
+	list receipts still waiting to be finished, including any left open on an
+	earlier day (SR-2026-01367, 28 Oct 2026).
+	"""
 	_require()
+	filters = {}
+	if status:
+		filters["status"] = status
+	if receipt_date or not status:
+		filters["receipt_date"] = receipt_date or today()
 	rows = frappe.get_all(
 		"VCL Stores Receipt",
-		filters={"receipt_date": receipt_date or today()},
+		filters=filters,
 		fields=[
-			"name", "machine", "job_card", "weigher", "receiver", "status", "stock_entry", "started_at", "received_at",
+			"name", "receipt_date", "machine", "job_card", "weigher", "receiver", "status", "stock_entry", "started_at", "received_at",
 			"carton_count", "ok_count", "light_count", "heavy_count", "unchecked_count", "reject_count",
 			"received_cartons", "total_kg", "received_kg",
 		],
@@ -401,6 +412,7 @@ def list_receipts(receipt_date=None, limit=20):
 		limit=cint(limit) or 20,
 	)
 	for r in rows:
+		r["receipt_date"] = str(r["receipt_date"]) if r.get("receipt_date") else None
 		r["started_at"] = str(r["started_at"]) if r["started_at"] else None
 		r["received_at"] = str(r["received_at"]) if r["received_at"] else None
 	return rows
