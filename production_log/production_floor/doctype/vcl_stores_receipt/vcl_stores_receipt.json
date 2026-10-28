@@ -11,6 +11,7 @@
   "receipt_date",
   "product_type",
   "machine",
+  "job_card",
   "column_break_who",
   "weigher",
   "receiver",
@@ -64,7 +65,15 @@
    "in_standard_filter": 1,
    "label": "Machine",
    "options": "VCL Production Machine",
-   "reqd": 1
+   "reqd": 0,
+   "description": "Optional. The phone weighs without a machine (28 Oct 2026)."
+  },
+  {
+   "fieldname": "job_card",
+   "fieldtype": "Data",
+   "label": "Job Card",
+   "description": "Optional. The CP job card these cartons are for, when the weigher knows it.",
+   "in_list_view": 0
   },
   {
    "fieldname": "column_break_who",
@@ -237,7 +246,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-17 12:00:00.000000",
+ "modified": "2026-10-28 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Production Floor",
  "name": "VCL Stores Receipt",

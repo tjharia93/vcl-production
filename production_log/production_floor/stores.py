@@ -108,6 +108,7 @@ def _payload(doc):
 		"name": doc.name,
 		"receipt_date": str(doc.receipt_date),
 		"machine": doc.machine,
+		"job_card": doc.job_card,
 		"weigher": doc.weigher,
 		"receiver": doc.receiver,
 		"status": doc.status,
@@ -148,28 +149,30 @@ def get_setup():
 
 
 @frappe.whitelist()
-def start_receipt(machine=None, weigher=None, product_type=PRODUCT_TYPE):
-	"""Today's open receipt for this machine, or a new one.
+def start_receipt(machine=None, weigher=None, product_type=PRODUCT_TYPE, job_card=None):
+	"""Today's open receipt for this weigher (and machine, when one is given), or a new one.
 
-	One machine, one day, one receipt: if the weigher puts the phone down
-	and comes back, they carry on where they were.
+	The phone weighs without a machine (Tanuj, 28 Oct 2026): the board and the
+	weighing are not connected yet, so the machine is optional and an open
+	receipt is found by weigher and day. If the weigher puts the phone down and
+	comes back, they carry on where they were.
 	"""
 	_require()
-	machine = (machine or "").strip()
+	machine = (machine or "").strip() or None
 	weigher = (weigher or "").strip()
-	if not machine or not frappe.db.exists("VCL Production Machine", machine):
-		frappe.throw(_("Which machine?"))
+	job_card = (job_card or "").strip() or None
+	if machine and not frappe.db.exists("VCL Production Machine", machine):
+		frappe.throw(_("{0} is not a machine.").format(machine))
 	if not weigher:
 		frappe.throw(_("Who is weighing?"))
-	existing = frappe.db.get_value(
-		"VCL Stores Receipt",
-		{"receipt_date": today(), "machine": machine, "status": "Open"},
-		"name",
-	)
+	filters = {"receipt_date": today(), "weigher": weigher, "status": "Open"}
+	if machine:
+		filters["machine"] = machine
+	existing = frappe.db.get_value("VCL Stores Receipt", filters, "name", order_by="creation desc")
 	if existing:
 		doc = frappe.get_doc("VCL Stores Receipt", existing)
-		if doc.weigher != weigher:
-			doc.weigher = weigher
+		if job_card and doc.job_card != job_card:
+			doc.job_card = job_card
 			doc.save(ignore_permissions=True)
 		return _payload(doc)
 	doc = frappe.get_doc({
@@ -177,11 +180,22 @@ def start_receipt(machine=None, weigher=None, product_type=PRODUCT_TYPE):
 		"receipt_date": today(),
 		"product_type": product_type or PRODUCT_TYPE,
 		"machine": machine,
+		"job_card": job_card,
 		"weigher": weigher,
 		"status": "Open",
 		"started_at": now_datetime(),
 	})
 	doc.insert(ignore_permissions=True)
+	return _payload(doc)
+
+
+@frappe.whitelist()
+def set_job_card(receipt=None, job_card=None):
+	"""Attach (or clear) the job card on an open receipt, later in the day."""
+	_require()
+	doc = _open_receipt(receipt)
+	doc.job_card = (job_card or "").strip() or None
+	doc.save(ignore_permissions=True)
 	return _payload(doc)
 
 
@@ -305,7 +319,8 @@ def _make_stock_entry(doc, lines, warehouse, receiver):
 	se.posting_date = doc.receipt_date
 	se.set_posting_time = 1
 	se.remarks = (
-		f"Stores receipt {doc.name}: {doc.machine}, {doc.product_type}. "
+		f"Stores receipt {doc.name}: {doc.machine or 'no machine'}, {doc.product_type}"
+		f"{', job card ' + doc.job_card if doc.job_card else ''}. "
 		f"Weighed by {doc.weigher}, received by {receiver}. "
 		f"{sum(l['qty'] for l in lines)} carton(s), {sum(l['kg'] for l in lines):.2f} kg."
 	)
@@ -378,7 +393,7 @@ def list_receipts(receipt_date=None, limit=20):
 		"VCL Stores Receipt",
 		filters={"receipt_date": receipt_date or today()},
 		fields=[
-			"name", "machine", "weigher", "receiver", "status", "stock_entry", "started_at", "received_at",
+			"name", "machine", "job_card", "weigher", "receiver", "status", "stock_entry", "started_at", "received_at",
 			"carton_count", "ok_count", "light_count", "heavy_count", "unchecked_count", "reject_count",
 			"received_cartons", "total_kg", "received_kg",
 		],
