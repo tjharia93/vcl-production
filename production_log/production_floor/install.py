@@ -9,7 +9,7 @@ the Select options driven by Settings.
 import frappe
 
 from production_log.production_floor.setup.alignment import align_machines
-from production_log.production_floor.setup.seed import seed_machines
+from production_log.production_floor.setup.seed import seed_carton_standards, seed_machines
 
 ROLES = [
 	("VCL Production User", "Enters and updates today's production."),
@@ -41,6 +41,8 @@ def after_install():
 	# After seeding, so a machine created this run is mapped too - the patches
 	# cannot do it, because they run before the department Select is widened.
 	align_machines()
+	# Stores receiving standards: add-only, same contract as the machines.
+	seed_carton_standards()
 	frappe.db.commit()
 
 
@@ -57,6 +59,8 @@ def after_migrate():
 	# After seeding, so a machine created this run is mapped too - the patches
 	# cannot do it, because they run before the department Select is widened.
 	align_machines()
+	# Stores receiving standards: add-only, same contract as the machines.
+	seed_carton_standards()
 	frappe.db.commit()
 
 
@@ -77,7 +81,23 @@ def ensure_settings():
 	if not frappe.db.exists("DocType", "VCL Production Settings"):
 		return
 	settings = frappe.get_single("VCL Production Settings")
-	if not settings.departments or not settings.units:
+	dirty = not settings.departments or not settings.units
+	# Stores receiving defaults (2026-10). Only filled when blank, so a list
+	# someone has edited live stays theirs.
+	if settings.meta.has_field("stores_weighers") and not settings.stores_weighers:
+		settings.stores_weighers = "Gloria\nPeter Kombo\nNadeem"
+		dirty = True
+	if settings.meta.has_field("stores_receivers") and not settings.stores_receivers:
+		settings.stores_receivers = "Richard"
+		dirty = True
+	if (
+		settings.meta.has_field("stores_receipt_warehouse")
+		and not settings.stores_receipt_warehouse
+		and frappe.db.exists("Warehouse", "Finished Goods - VCL")
+	):
+		settings.stores_receipt_warehouse = "Finished Goods - VCL"
+		dirty = True
+	if dirty:
 		settings.save(ignore_permissions=True)
 
 

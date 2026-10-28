@@ -1,0 +1,308 @@
+{
+ "actions": [],
+ "autoname": "format:SR-{YYYY}-{#####}",
+ "creation": "2026-10-17 12:00:00.000000",
+ "custom": 0,
+ "description": "One machine's cartons weighed into stores on one day. On Received the non-Red cartons post to Finished Goods as a Stock Entry (Material Receipt).",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "receipt_date",
+  "product_type",
+  "machine",
+  "column_break_who",
+  "weigher",
+  "receiver",
+  "title",
+  "section_status",
+  "status",
+  "started_at",
+  "received_at",
+  "column_break_se",
+  "stock_entry",
+  "warehouse",
+  "section_cartons",
+  "cartons",
+  "section_totals",
+  "carton_count",
+  "ok_count",
+  "light_count",
+  "heavy_count",
+  "column_break_t2",
+  "unchecked_count",
+  "reject_count",
+  "received_cartons",
+  "column_break_t3",
+  "total_kg",
+  "received_kg",
+  "section_notes",
+  "notes",
+  "unposted_note"
+ ],
+ "fields": [
+  {
+   "fieldname": "receipt_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Date",
+   "reqd": 1
+  },
+  {
+   "default": "Computer paper",
+   "fieldname": "product_type",
+   "fieldtype": "Select",
+   "label": "Product Type",
+   "options": "Computer paper",
+   "reqd": 1
+  },
+  {
+   "fieldname": "machine",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Machine",
+   "options": "VCL Production Machine",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_who",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "weigher",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Weighed By",
+   "reqd": 1
+  },
+  {
+   "fieldname": "receiver",
+   "fieldtype": "Data",
+   "label": "Received By (Stores)"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Title",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_status",
+   "fieldtype": "Section Break",
+   "label": "Status"
+  },
+  {
+   "default": "Open",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Open\nReceived\nCancelled",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "started_at",
+   "fieldtype": "Datetime",
+   "label": "Started",
+   "read_only": 1
+  },
+  {
+   "fieldname": "received_at",
+   "fieldtype": "Datetime",
+   "label": "Received",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_se",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "stock_entry",
+   "fieldtype": "Link",
+   "label": "Stock Entry",
+   "options": "Stock Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "warehouse",
+   "fieldtype": "Link",
+   "label": "Received Into",
+   "options": "Warehouse",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_cartons",
+   "fieldtype": "Section Break",
+   "label": "Cartons"
+  },
+  {
+   "fieldname": "cartons",
+   "fieldtype": "Table",
+   "label": "Cartons",
+   "options": "VCL Stores Receipt Carton"
+  },
+  {
+   "fieldname": "section_totals",
+   "fieldtype": "Section Break",
+   "label": "Totals"
+  },
+  {
+   "fieldname": "carton_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Cartons",
+   "read_only": 1
+  },
+  {
+   "fieldname": "ok_count",
+   "fieldtype": "Int",
+   "label": "OK",
+   "read_only": 1
+  },
+  {
+   "fieldname": "light_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Light",
+   "read_only": 1
+  },
+  {
+   "fieldname": "heavy_count",
+   "fieldtype": "Int",
+   "label": "Heavy",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_t2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "unchecked_count",
+   "fieldtype": "Int",
+   "label": "Unchecked",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reject_count",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Rejected (Red)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "received_cartons",
+   "fieldtype": "Int",
+   "label": "Received to Stock",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_t3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_kg",
+   "fieldtype": "Float",
+   "label": "Total kg",
+   "precision": "3",
+   "read_only": 1
+  },
+  {
+   "fieldname": "received_kg",
+   "fieldtype": "Float",
+   "label": "Received kg",
+   "precision": "3",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_notes",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Notes"
+  },
+  {
+   "description": "Cartons whose standard names no ERPNext item. They are on this receipt but not in the Stock Entry.",
+   "fieldname": "unposted_note",
+   "fieldtype": "Small Text",
+   "label": "Not Posted",
+   "read_only": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-10-17 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Production Floor",
+ "name": "VCL Stores Receipt",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "VCL Production User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "VCL Production Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Stock User",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Stock Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "search_fields": "machine,weigher,receiver,status",
+ "show_title_field_in_link": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "title",
+ "track_changes": 1
+}
