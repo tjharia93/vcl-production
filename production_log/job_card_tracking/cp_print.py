@@ -98,7 +98,49 @@ def spec_print_values(snapshot, spec):
 	return out
 
 
+# D5 (TRK-00350): what the printed side reads as. The card's own values win, but
+# a card still saying Plain/N/A against a Printed specification (38 of 86 live
+# cards, 29/10/2026) shows the specification's values instead. A Printed job with
+# no side on either record says so, rather than reading as Plain.
+PRINT_SIDE_UNSET = "Printed (side not set on spec)"
+
+
+def print_side_display(card_type, card_side, spec_type=None, spec_side=None):
+	"""``(print_type, side_label)`` for the sales page.
+
+	Pure: takes plain values, so it is tested without a bench.
+	"""
+	ctype = (card_type or "").strip()
+	cside = (card_side or "").strip()
+	stype = (spec_type or "").strip()
+	sside = (spec_side or "").strip()
+	effective = ctype
+	if ctype in ("", "Plain") and stype == "Printed":
+		effective = "Printed"
+	if effective == "Printed":
+		side = cside if cside not in ("", "N/A") else sside
+		if side in ("", "N/A"):
+			return "Printed", PRINT_SIDE_UNSET
+		return "Printed", side
+	return "Plain", "Plain (not printed)"
+
+
 # --- Frappe-bound, registered as Jinja methods ------------------------------
+
+def cp_print_side(doc):
+	"""Jinja: ``(print_type, side_label)`` for a card, with the spec fallback."""
+	import frappe
+
+	spec = {}
+	if doc.get("customer_product_spec"):
+		spec = frappe.db.get_value(
+			"Customer Product Specification",
+			doc.customer_product_spec,
+			["print_type", "print_side"],
+			as_dict=True,
+		) or {}
+	return print_side_display(doc.get("print_type"), doc.get("print_side"), spec.get("print_type"), spec.get("print_side"))
+
 
 
 def pick_rep_user(sales_person_name, candidates):

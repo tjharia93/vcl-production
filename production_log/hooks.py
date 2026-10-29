@@ -61,6 +61,7 @@ jinja = {
         "production_log.job_card_tracking.cp_print.cp_csra_rep",
         "production_log.job_card_tracking.cp_print.cp_production_copy_allowed",
         "production_log.job_card_tracking.cp_print.cp_print_user",
+        "production_log.job_card_tracking.cp_print.cp_print_side",
     ]
 }
 
