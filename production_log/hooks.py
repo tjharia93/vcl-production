@@ -55,7 +55,12 @@ app_include_css = "/assets/production_log/css/production_floor.css?v=20260904"
 # add methods and filters to jinja environment
 jinja = {
     "methods": [
-        "production_log.utils.get_carton_svg"
+        "production_log.utils.get_carton_svg",
+        # Computer Paper job card prints (TRK-00342): CSRA rep, and who may see
+        # the Production Copy. See job_card_tracking/cp_print.py.
+        "production_log.job_card_tracking.cp_print.cp_csra_rep",
+        "production_log.job_card_tracking.cp_print.cp_production_copy_allowed",
+        "production_log.job_card_tracking.cp_print.cp_print_user",
     ]
 }
 

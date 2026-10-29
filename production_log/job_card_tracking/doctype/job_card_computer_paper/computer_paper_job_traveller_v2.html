@@ -92,14 +92,12 @@
 
     .sig-cell { height: 65px; vertical-align: bottom !important; padding-bottom: 5px !important; }
     .sig-line { border-top: 0.8pt solid #000; width: 90%; margin: 0 auto; font-size: 7pt; text-align: center; }
-    /* TRK-00142: the rep sign line carries no rule. */
-    .sig-line.no-rule { border-top: none; }
 
-    /* TRK-00142: page one reads at a larger size than the production log pages. */
-    .page-one .vcl-table-compact { font-size: 9pt; }
-    .page-one .section-header-compact { font-size: 9pt; }
-    .page-one .sig-line { font-size: 8pt; }
-    .created-by { margin-top: 6px; font-size: 7.5pt; color: #444; text-align: right; }
+    /* Pages 1-2 have spare height: give them room to write in */
+    .roomy .vcl-table-compact td, .roomy .vcl-table-compact th { padding: 5px 6px; }
+    .roomy .vcl-table-compact { font-size: 8.6pt; }
+    .roomy .section-header-compact { margin-top: 10px; padding: 4px 8px; font-size: 8.6pt; }
+    .roomy .manual-row { height: 30px; }
 
     .colour-chip {
         display: inline-block;
@@ -121,12 +119,13 @@
     }
 </style>
 
+{% set ns = namespace(pg=0, avail=0) %}
 <div class="print-format">
 
     <!-- ============================================================
          PAGE 1 · JOB INFORMATION + SPEC + PLATE + AUTHORISATION
          ============================================================ -->
-    <div class="page-container page-one">
+    {% set ns.pg = ns.pg + 1 %}<div class="page-container roomy">
         <table class="vcl-header-table">
             <tr>
                 <td>
@@ -154,18 +153,10 @@
                 <td class="label-cell">LPO / Ref:</td>
                 <td>{{ doc.lpo_number or "N/A" }}</td>
                 <td class="label-cell">Sales Rep:</td>
-                {#- TRK-00142: the rep is the customer's CSRA rep on the order date (the golden source),
-                    falling back to the card's own sales_rep user when CSRA names nobody. -#}
-                {%- set _od = (doc.order_date or frappe.utils.nowdate()) | string -%}
-                {%- set _reps = [] -%}
-                {%- for r in frappe.get_all("Customer Sales Rep Assignment",
-                        filters={"customer": doc.customer, "status": "Active", "effective_from": ["<=", _od]},
-                        fields=["sales_representative", "effective_to"], order_by="effective_from desc") -%}
-                    {%- if (not r.effective_to or (r.effective_to | string) >= _od) and r.sales_representative not in _reps -%}
-                        {%- set _ = _reps.append(r.sales_representative) -%}
-                    {%- endif -%}
-                {%- endfor %}
-                <td>{{ _reps | join(", ") if _reps else ((frappe.db.get_value("User", doc.sales_rep, "full_name") or doc.sales_rep) if doc.sales_rep else "") }}</td>
+                {#- D3: the rep is the customer's CSRA rep on the order date, never whoever raised the card.
+                    Resolved in production_log.job_card_tracking.cp_print.cp_csra_rep. -#}
+                {%- set _rep = cp_csra_rep(doc.customer, doc.order_date) %}
+                <td>{% if _rep %}{{ _rep }}{% else %}<span class="alert-text">NO CSRA REP</span>{% endif %}</td>
             </tr>
         </table>
 
@@ -189,10 +180,7 @@
             </tr>
             <tr>
                 <td class="label-cell">Packing:</td>
-                {#- TRK-00142: packing prints divided by 10 (400 shows as 40). Weights and the
-                    Section 2 set maths still use the stored figure. Non-numeric text prints as typed. -#}
-                {%- set _pk = (doc.packing or "") | float(0) %}
-                <td>{% if _pk %}{% set _pk10 = _pk / 10 %}{{ "{:,}".format(_pk10 | int) if _pk10 == (_pk10 | int) else "{:,}".format(_pk10 | round(1)) }}{% else %}{{ doc.packing or "" }}{% endif %}</td>
+                <td>{{ doc.packing if doc.packing else "" }}</td>
                 <td class="label-cell">Weight/Ctn:</td>
                 <td>{{ doc.weight_per_carton }} kg</td>
             </tr>
@@ -297,7 +285,7 @@
             <tr>
                 <td class="label-cell" style="height: 65px; vertical-align: top;">Sales Rep Sign:</td>
                 <td class="sig-cell">
-                    <div class="sig-line no-rule">SIGNATURE &amp; DATE</div>
+                    <div class="sig-line">SIGNATURE &amp; DATE</div>
                 </td>
                 <td class="label-cell" style="height: 65px; vertical-align: top;">Management Sign:</td>
                 <td class="sig-cell">
@@ -309,17 +297,151 @@
                 <td colspan="3" style="min-height: 30px; vertical-align: top; padding: 5px;">{{ doc.order_comments or doc.management_comments or "" }}</td>
             </tr>
         </table>
-        {#- TRK-00142: who raised the card, in the footer. -#}
-        <div class="created-by">Created by <strong>{{ frappe.db.get_value("User", doc.owner, "full_name") or doc.owner }}</strong> on {{ frappe.utils.formatdate(doc.creation, "dd-MMM-yy") }}</div>
     </div>
 
     <!-- ============================================================
-         PAGE 2 · PRODUCTION LOG
+         PAGE 2 · CLOSE-OUT — PRODUCTION, SALES ORDER & INVOICING
          ============================================================ -->
-    <div class="page-container">
+    {% set ns.pg = ns.pg + 1 %}<div class="page-container roomy">
         <table class="vcl-header-table">
             <tr>
-                <td><div class="company-title">STORE RELEASE &amp; RETURNS (PAGE 2)</div></td>
+                <td><div class="company-title">CLOSE-OUT &mdash; PRODUCTION, SO &amp; INVOICING (PAGE {{ ns.pg }})</div></td>
+                <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
+            </tr>
+        </table>
+
+        <div class="guide-note">
+            <b>Who fills this page</b>
+            <ol>
+                <li><b>Production</b> completes section B when the job comes off the floor &mdash; the actual cartons, plus any printed material that was never made into cartons.</li>
+                <li><b>Accounts</b> completes section C as each invoice is raised &mdash; one line per invoice.</li>
+                <li><b>Whoever closes the order</b> completes section D and signs. Close the Sales Order in ERPNext only once this page is signed.</li>
+                <li>If the <b>Sales Order</b> boxes in A are empty, the order was not linked when this card printed &mdash; write it in.</li>
+            </ol>
+        </div>
+
+        <div class="section-header-compact">A &middot; ORDER REFERENCE</div>
+        <table class="vcl-table-compact">
+            <tr class="manual-row">
+                <td class="label-cell">Sales Order:</td>
+                <td style="width: 32%;">{% if doc.sales_order %}<strong>{{ doc.sales_order }}</strong>{% endif %}</td>
+                <td class="label-cell">SO Line Qty:</td>
+                <td style="width: 32%;">{% if doc.so_qty %}<strong>{{ "{:,.0f}".format(doc.so_qty) }}</strong>{% endif %}</td>
+            </tr>
+            <tr class="manual-row">
+                <td class="label-cell">LPO / Ref:</td>
+                <td>{{ doc.lpo_number or "" }}</td>
+                <td class="label-cell">Cartons Ordered:</td>
+                <td><strong>{{ "{:,}".format(doc.quantity_ordered) if doc.quantity_ordered else "" }}</strong></td>
+            </tr>
+            <tr>
+                <td class="label-cell">Customer:</td>
+                <td colspan="3">{{ doc.customer }}</td>
+            </tr>
+        </table>
+
+        <div class="section-header-compact">B &middot; PRODUCTION CONFIRMATION</div>
+        <table class="vcl-table-compact">
+            <tr class="manual-row">
+                <td class="label-cell" style="width: 26%;">Actual Cartons Produced:</td>
+                <td style="width: 24%;"></td>
+                <td class="label-cell" style="width: 26%;">Weight per Carton (kg):</td>
+                <td></td>
+            </tr>
+        </table>
+        <div class="band-head" style="margin-top: 4px;">Extra printed material &mdash; produced but NOT made into cartons &middot; by part colour</div>
+        <table class="vcl-table-compact" style="text-align: center;">
+            <tr style="background: #F4F4F4; font-weight: bold; font-size: 7.4pt;">
+                <td style="width: 6%;">PT</td>
+                <td style="width: 26%;">COLOUR / PAPER / GSM</td>
+                <td style="width: 34%;">DESCRIPTION</td>
+                <td style="width: 14%;">SHEETS</td>
+                <td>WEIGHT (KG)</td>
+            </tr>
+            {% set _bnp = doc.number_of_parts or (doc.colour_of_parts|length) or 1 %}
+            {% for i in range(0, _bnp) %}
+            <tr class="manual-row">
+                <td><strong>{{ i + 1 }}</strong></td>
+                <td class="greyed-out" style="text-align: left;">{% if doc.colour_of_parts|length > i %}{{ doc.colour_of_parts[i].colour }} &middot; {{ doc.colour_of_parts[i].paper_type }} &middot; {{ doc.colour_of_parts[i].gsm }}{% endif %}</td>
+                <td></td><td></td><td></td>
+            </tr>
+            {% endfor %}
+            <tr class="manual-row" style="font-weight: bold;">
+                <td colspan="4" style="text-align: right; background: #FFF8E1;">TOTAL EXTRA (KG)</td>
+                <td style="background: #FFF8E1;"></td>
+            </tr>
+        </table>
+        <table class="vcl-table-compact" style="margin-top: 2px;">
+            <tr class="manual-row">
+                <td class="label-cell" style="width: 26%;">Confirmed By:</td>
+                <td style="width: 24%;"></td>
+                <td class="label-cell" style="width: 26%;">Date:</td>
+                <td></td>
+            </tr>
+        </table>
+
+        <div class="section-header-compact">C &middot; INVOICING</div>
+        <table class="vcl-table-compact" style="text-align: center;">
+            <tr style="background: #F4F4F4; font-weight: bold; font-size: 7.2pt;">
+                <td style="width: 28%;">INVOICE NO.</td>
+                <td style="width: 18%;">DATE</td>
+                <td style="width: 22%;">CARTONS INVOICED</td>
+                <td>SIGN</td>
+            </tr>
+            {% for r in range(0, 4) %}
+            <tr class="manual-row" style="height: 26px;"><td></td><td></td><td></td><td></td></tr>
+            {% endfor %}
+        </table>
+        <table class="vcl-table-compact" style="text-align: center; margin-top: 2px;">
+            <tr style="font-weight: bold; font-size: 7pt;">
+                <td style="width: 34%; background: #FFF8E1;">TOTAL INVOICED (cartons)</td>
+                <td style="width: 33%; background: #FFF8E1;">ACTUAL CARTONS PRODUCED</td>
+                <td style="background: #FFF8E1;">DIFFERENCE (over / short)</td>
+            </tr>
+            <tr class="manual-row" style="height: 32px;"><td></td><td></td><td></td></tr>
+        </table>
+
+        <div class="section-header-compact">D &middot; SALES ORDER CLOSE-OUT</div>
+        <table class="vcl-table-compact" style="text-align: center;">
+            <tr style="background: #F4F4F4; font-weight: bold; font-size: 7.2pt;">
+                <td style="width: 25%;">SO LINE QTY</td>
+                <td style="width: 25%;">TOTAL PRODUCED</td>
+                <td style="width: 25%;">TOTAL INVOICED</td>
+                <td>BALANCE TO CLOSE</td>
+            </tr>
+            <tr class="manual-row" style="height: 32px;">
+                <td{% if doc.so_qty %} class="greyed-out"{% endif %}>{% if doc.so_qty %}{{ "{:,.0f}".format(doc.so_qty) }}{% endif %}</td>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+        </table>
+        <table class="vcl-table-compact" style="margin-top: 2px;">
+            <tr class="manual-row" style="height: 28px;">
+                <td class="label-cell" style="width: 26%;">SO fully satisfied?</td>
+                <td colspan="3">
+                    <span style="display: inline-block; width: 11px; height: 11px; border: 0.8pt solid #000; vertical-align: middle; margin-right: 4px;"></span><b>YES</b>
+                    &nbsp;&nbsp;&nbsp;
+                    <span style="display: inline-block; width: 11px; height: 11px; border: 0.8pt solid #000; vertical-align: middle; margin-right: 4px;"></span><b>NO</b>
+                    &nbsp;&mdash;&nbsp; reason:
+                </td>
+            </tr>
+            <tr class="manual-row" style="height: 34px;">
+                <td class="label-cell">SO Closed in ERPNext &mdash; By:</td>
+                <td style="width: 30%;"></td>
+                <td class="label-cell" style="width: 12%;">Date:</td>
+                <td></td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- ============================================================
+         PAGE 3 · PRODUCTION LOG
+         ============================================================ -->
+    {% set ns.pg = ns.pg + 1 %}<div class="page-container">
+        <table class="vcl-header-table">
+            <tr>
+                <td><div class="company-title">STORE RELEASE &amp; RETURNS (PAGE {{ ns.pg }})</div></td>
                 <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
             </tr>
         </table>
@@ -394,12 +516,12 @@
     </div>
 
     <!-- ============================================================
-         PAGE 3 · PRINTING & LABOUR
+         PAGE 4 · PRINTING & LABOUR
          ============================================================ -->
-    <div class="page-container">
+    {% set ns.pg = ns.pg + 1 %}<div class="page-container">
         <table class="vcl-header-table">
             <tr>
-                <td><div class="company-title">PRINTING &mdash; SETS &amp; WEIGHTS (PAGE 3)</div></td>
+                <td><div class="company-title">PRINTING &mdash; SETS &amp; WEIGHTS (PAGE {{ ns.pg }})</div></td>
                 <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
             </tr>
         </table>
@@ -457,8 +579,8 @@
         <div class="guide-note" style="margin-top:2px;">
             <b>How to fill this section</b>
             <ol>
-                <li>One <b>SET / BOX</b> = 2000 sheets. The grey <i>Planned</i> rows are printed for you.</li>
-                <li>Weigh every box and write its weight in that part's matrix below.</li>
+                <li>A standard <b>SET / BOX</b> is 2000 sheets &mdash; the grey <i>Planned</i> rows above are worked out on that basis. Record what you <b>actually</b> produced.</li>
+                <li>For every box, enter its <b>No. of Sheets</b> and its <b>Weight</b> in that part's matrix below &mdash; both rows, same column.</li>
                 <li>Boxes past the planned count are <b>spares</b> &mdash; only fill them if you produced them.</li>
                 <li>Complete the <b>Actual</b> rows <u>column by column, one per part</u>, then add across into TOTAL. Each part must reconcile on its own.</li>
             </ol>
@@ -470,16 +592,62 @@
         </div>
         {% endif %}
 
+        {#  ---- printing pagination (measured mm budget; see spec) ----  #}
+        {% set _PGH = 287.0 %}{% set _SAFE = 8.0 %}
+        {#  re-measured 29/10/2026 in Chrome print: intro 78, band 4.7+gap, grid 17.0, totals 12.6+gap (mm)  #}
+        {% set _INTRO_FIRST = 82.0 %}{% set _INTRO_CONT = 20.0 %}
+        {% set _HBAND = 6.2 %}{% set _HBLK = 18.0 %}{% set _HTOT = 14.5 %}
+        {% set ns.avail = _PGH - _SAFE - _INTRO_FIRST - (11.0 if _want > _maxblocks else 0.0) %}
         {% for i in range(0, _np) %}
-        <div style="background:#2B3990; color:#FFF; font-weight:bold; text-align:left; letter-spacing:.03em; font-size:7.8pt; padding:3px 6px; margin-top:6px;">PART {{ i + 1 }}{% if doc.colour_of_parts|length > i %} &middot; {{ doc.colour_of_parts[i].colour }} &middot; {{ doc.colour_of_parts[i].paper_type }} &middot; {{ doc.colour_of_parts[i].gsm }} gsm{% endif %}{% if _sets %} &nbsp;&mdash;&nbsp; {{ _sets }} set{{ 's' if _sets != 1 else '' }} &times; 2000 = {{ "{:,}".format(_sets * 2000) }} sheets{% endif %}</div>
+        {% if ns.avail < (_HBAND + _HBLK + _HTOT) %}
+    </div>
+    {% set ns.pg = ns.pg + 1 %}<div class="page-container">
+        <table class="vcl-header-table">
+            <tr>
+                <td><div class="company-title">PRINTING &mdash; SETS &amp; WEIGHTS (PAGE {{ ns.pg }})</div></td>
+                <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
+            </tr>
+        </table>
+        <div class="section-header-compact">SECTION 2 (CONTINUED) &mdash; PRINTING SETS</div>
+        {% set ns.avail = _PGH - _SAFE - _INTRO_CONT %}
+        {% endif %}
+        <div style="background:#2B3990; color:#FFF; font-weight:bold; text-align:left; letter-spacing:.03em; font-size:7.8pt; padding:3px 6px; margin-top:6px;">PART {{ i + 1 }}{% if doc.colour_of_parts|length > i %} &middot; {{ doc.colour_of_parts[i].colour }} &middot; {{ doc.colour_of_parts[i].paper_type }} &middot; {{ doc.colour_of_parts[i].gsm }} gsm{% endif %}</div>
+        {% set ns.avail = ns.avail - _HBAND %}
         {% for b in range(0, _nblocks) %}
+        {% if ns.avail < _HBLK %}
+    </div>
+    {% set ns.pg = ns.pg + 1 %}<div class="page-container">
+        <table class="vcl-header-table">
+            <tr>
+                <td><div class="company-title">PRINTING &mdash; SETS &amp; WEIGHTS (PAGE {{ ns.pg }})</div></td>
+                <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
+            </tr>
+        </table>
+        <div class="section-header-compact">SECTION 2 (CONTINUED) &mdash; PRINTING SETS</div>
+        {% set ns.avail = _PGH - _SAFE - _INTRO_CONT - _HBAND %}
+        <div style="background:#2B3990; color:#FFF; font-weight:bold; text-align:left; letter-spacing:.03em; font-size:7.8pt; padding:3px 6px; margin-top:6px;">PART {{ i + 1 }}{% if doc.colour_of_parts|length > i %} &middot; {{ doc.colour_of_parts[i].colour }} &middot; {{ doc.colour_of_parts[i].paper_type }} &middot; {{ doc.colour_of_parts[i].gsm }} gsm{% endif %} &nbsp;&mdash;&nbsp; CONTINUED</div>
+        {% endif %}
         {% set _lo = b * _ncols %}
         <table class="vcl-table-compact" style="width:auto; text-align:center; font-size:7.4pt; margin-top:1px;">
             <tr style="background:#F4F4F4; font-weight:bold;"><td style="width:108px; text-align:left;">SET #</td>{% for s in range(_lo, _lo + _ncols) %}{% if s < _show %}<td style="width:44px;">{{ s + 1 }}</td>{% endif %}{% endfor %}</tr>
-            <tr class="greyed-out"><td style="text-align:left;">No. of Sheets</td>{% for s in range(_lo, _lo + _ncols) %}{% if s < _show %}<td>{% if s < _sets %}2000{% endif %}</td>{% endif %}{% endfor %}</tr>
+            <tr class="manual-row"><td class="label-cell" style="text-align:left;">No. of Sheets</td>{% for s in range(_lo, _lo + _ncols) %}{% if s < _show %}<td></td>{% endif %}{% endfor %}</tr>
             <tr class="manual-row"><td class="label-cell" style="text-align:left;">Weight (kg)</td>{% for s in range(_lo, _lo + _ncols) %}{% if s < _show %}<td></td>{% endif %}{% endfor %}</tr>
         </table>
+        {% set ns.avail = ns.avail - _HBLK %}
         {% endfor %}
+        {% if ns.avail < _HTOT %}
+    </div>
+    {% set ns.pg = ns.pg + 1 %}<div class="page-container">
+        <table class="vcl-header-table">
+            <tr>
+                <td><div class="company-title">PRINTING &mdash; SETS &amp; WEIGHTS (PAGE {{ ns.pg }})</div></td>
+                <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
+            </tr>
+        </table>
+        <div class="section-header-compact">SECTION 2 (CONTINUED) &mdash; PRINTING SETS</div>
+        {% set ns.avail = _PGH - _SAFE - _INTRO_CONT - _HBAND %}
+        <div style="background:#2B3990; color:#FFF; font-weight:bold; text-align:left; letter-spacing:.03em; font-size:7.8pt; padding:3px 6px; margin-top:6px;">PART {{ i + 1 }}{% if doc.colour_of_parts|length > i %} &middot; {{ doc.colour_of_parts[i].colour }} &middot; {{ doc.colour_of_parts[i].paper_type }} &middot; {{ doc.colour_of_parts[i].gsm }} gsm{% endif %} &nbsp;&mdash;&nbsp; TOTALS</div>
+        {% endif %}
         <table class="vcl-table-compact" style="text-align:center; font-size:7.4pt; margin-top:0;">
             <tr style="background:#FFF8E1; font-weight:bold; font-size:6.8pt;">
                 <td style="width:19%; text-align:left; background:#FFF8E1;">PART {{ i + 1 }} TOTALS</td>
@@ -498,17 +666,18 @@
                 <td></td>
             </tr>
         </table>
+        {% set ns.avail = ns.avail - _HTOT %}
         {% endfor %}
 
     </div>
 
     <!-- ============================================================
-         PAGE 4 · PRINTING LABOUR
+         PAGE 5 · PRINTING LABOUR
          ============================================================ -->
-    <div class="page-container">
+    {% set ns.pg = ns.pg + 1 %}<div class="page-container">
         <table class="vcl-header-table">
             <tr>
-                <td><div class="company-title">PRINTING LABOUR (PAGE 4)</div></td>
+                <td><div class="company-title">PRINTING LABOUR (PAGE {{ ns.pg }})</div></td>
                 <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
             </tr>
         </table>
@@ -532,12 +701,12 @@
     </div>
 
     <!-- ============================================================
-         PAGE 5 · COLLECTION & FINISHING
+         PAGE 6 · COLLECTION & FINISHING
          ============================================================ -->
-    <div class="page-container">
+    {% set ns.pg = ns.pg + 1 %}<div class="page-container">
         <table class="vcl-header-table">
             <tr>
-                <td><div class="company-title">COLLECTION &amp; FINISHING (PAGE 5)</div></td>
+                <td><div class="company-title">COLLECTION &amp; FINISHING (PAGE {{ ns.pg }})</div></td>
                 <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
             </tr>
         </table>
@@ -573,3 +742,4 @@
         </table>
     </div>
 </div>
+
