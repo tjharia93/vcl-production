@@ -169,3 +169,8 @@ production_log.patches.v10_7.add_release_to_production_role
 # install.after_install. Mirrored in fixtures/custom_field.json, because
 # fixtures sync after this patch runs.
 production_log.patches.v10_7.restrict_cp_packing_fields
+# D5 (TRK-00350): existing Computer Paper cards raised Plain/N/A from a Printed
+# specification (38 of 86 live, 29/10/2026). Sets print type, side and printed
+# weight from the spec, and fills a blank side on a Printed card. Leaves a
+# Comment on each card. Cancelled and spec-less cards are untouched. Idempotent.
+production_log.patches.v10_8.correct_cp_print_fields
