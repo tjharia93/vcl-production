@@ -1125,10 +1125,27 @@ CARTON_SNAPSHOT_SCALARS = (
 	"5_ply_top_layer_material",
 )
 
-# Computer Paper's own fields were already inside the version-1 set, so it adds
-# nothing here. Named anyway, so "which fields does this product type freeze"
-# has one answer per type rather than one answer and one silence.
-COMPUTER_PAPER_SNAPSHOT_SCALARS = ("pay_slip_size", "number_of_parts")
+# Computer Paper's own fields. pay_slip_size and number_of_parts were already
+# inside the version-1 set. print_type, print_side and printed_weight were not
+# frozen at all until D4 (TRK-00350): JC-CPT-2026-00092 was raised "Plain / N/A
+# / 0" from a spec that says "Printed / Front Only / 0.3". This is a widening
+# only, so the write version stays 2 (see SNAPSHOT_BASE_WRITE_VERSION):
+# readers map only the keys they know, and a v2 snapshot without these keys is
+# still complete for everything it does hold. The job card falls back to the
+# live specification for a key an older snapshot lacks
+# (JobCardComputerPaper.mirror_spec_print_fields).
+#
+# empty_carton_weight (the carton tare) is deliberately NOT frozen. The
+# snapshot lives on the Sales Order line, which sales roles can read, and the
+# tare is a packing fact (CR21). The job card reads it server-side from the
+# specification instead.
+COMPUTER_PAPER_SNAPSHOT_SCALARS = (
+	"pay_slip_size",
+	"number_of_parts",
+	"print_type",
+	"print_side",
+	"printed_weight",
+)
 
 # Everything on the specification that says what a *label* is. Version 2 froze
 # not one of them, so a Label order captured the customer, the name, the job

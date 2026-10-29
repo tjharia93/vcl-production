@@ -542,7 +542,9 @@ class TestLabelSnapshotShape(unittest.TestCase):
 			if not k.startswith("_") and k not in ("colour_of_parts", "spot_colours")
 		}
 
-		self.assertEqual(scalars, set(V1_SNAPSHOT_KEYS))
+		# D4 (TRK-00350) deliberately widened Computer Paper by the print block
+		# and nothing else: the version-one set plus exactly these three.
+		self.assertEqual(scalars, set(V1_SNAPSHOT_KEYS) | {"print_type", "print_side", "printed_weight"})
 
 	def test_an_unknown_product_type_still_gets_the_version_one_set_only(self):
 		self.assertEqual(

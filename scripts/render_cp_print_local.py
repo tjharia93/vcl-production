@@ -51,6 +51,8 @@ S.headers["Authorization"] = f"token {cfg['ERPNEXT_API_KEY']}:{cfg['ERPNEXT_API_
 def rest_get_all(doctype, filters=None, fields=None, order_by=None, limit_page_length=0, pluck=None, **_):
 	if isinstance(filters, dict):
 		filters = [[k] + (v if isinstance(v, list) else ["=", v]) for k, v in filters.items()]
+	if pluck and not fields:
+		fields = [pluck]
 	params = {"fields": json.dumps(fields or ["name"]), "filters": json.dumps(filters or []),
 	          "limit_page_length": limit_page_length or 0}
 	if order_by:

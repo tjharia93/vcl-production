@@ -2,6 +2,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from production_log.job_card_tracking.cp_print import SPEC_PRINT_FIELDS, spec_print_values
 from production_log.job_card_tracking.order_derived import (
 	SO_LINE_BASE_FIELDS,
 	SO_LINE_CONTROL_FIELDS,
@@ -46,6 +47,7 @@ class JobCardComputerPaper(OrderDerivedJobCard, Document):
 		self.validate_sales_order()
 		self.validate_customer_product_spec()
 		self.fill_packing_from_spec()
+		self.mirror_spec_print_fields()
 		self.validate_spec_fields()
 		self.validate_numbering()
 		self.validate_plate()
@@ -126,6 +128,38 @@ class JobCardComputerPaper(OrderDerivedJobCard, Document):
 				snapshot.get("standard_weight_per_carton") or spec.get("standard_weight_per_carton") or self.weight_per_carton
 			)
 
+	def mirror_spec_print_fields(self):
+		"""Copy print type, print side and printed weight from the spec onto a NEW card.
+
+		JC-CPT-2026-00092 was raised "Plain / N/A / 0" from CPT-SPEC-00082,
+		which says "Printed / Front Only / 0.3". Neither the snapshot nor the
+		Compass job card builder carried these fields, so the card kept its
+		Select defaults. This runs on insert only, so an existing card is never
+		rewritten. The carton tare (empty_carton_weight) is filled here too, if
+		blank, from the live spec only: it is a packing fact (CR21) and is kept
+		out of the sales-readable snapshot.
+		"""
+		if not self.is_new() or not self.customer_product_spec:
+			return
+
+		snapshot = {}
+		raw = (self.get("spec_snapshot") or "").strip()
+		if raw:
+			try:
+				snapshot = frappe.parse_json(raw) or {}
+			except Exception:
+				snapshot = {}
+
+		fields = SPEC_PRINT_FIELDS + ("empty_carton_weight",)
+		spec = frappe.db.get_value(
+			"Customer Product Specification", self.customer_product_spec, list(fields), as_dict=True
+		) or {}
+
+		for f, value in spec_print_values(snapshot, spec).items():
+			self.set(f, value)
+		if not self.get("empty_carton_weight") and spec.get("empty_carton_weight"):
+			self.set("empty_carton_weight", spec.get("empty_carton_weight"))
+
 	def validate_spec_fields(self):
 		if self.customer_product_spec and not self.job_size:
 			frappe.throw("Job Size is required. Please re-select the Customer Product Specification.")
@@ -196,15 +230,23 @@ class JobCardComputerPaper(OrderDerivedJobCard, Document):
 		self.validate_quantity_against_sales_order_line()
 
 	def set_sales_rep_info(self):
-		if self.sales_rep:
+		"""Stamp the customer's CSRA rep, as at the order date, on a new card (D4).
+
+		This used to stamp whoever raised the card, which put the order desk
+		(judy.test@vimit.com) on JC-CPT-2026-00092 instead of AMRUTT's rep,
+		Neema. The raiser is still on the card as ``owner``. A rep chosen
+		explicitly is kept. When CSRA has no rep, or the rep's User cannot be
+		identified for certain (see cp_print.pick_rep_user), the field stays
+		blank rather than naming the wrong person.
+
+		Existing cards are not touched: only a new card is stamped.
+		"""
+		if self.sales_rep or not self.is_new():
 			return
 
-		current_user = frappe.session.user
-		user_roles = frappe.get_roles(current_user)
+		from production_log.job_card_tracking.cp_print import csra_rep_user
 
-		if "Sales User" in user_roles or "Sales Manager" in user_roles:
-			self.sales_rep = current_user
-			self.sales_rep_approval_date = frappe.utils.today()
+		self.sales_rep = csra_rep_user(self.customer, self.order_date)
 
 	def get_production_stage_route(self):
 		route = ["Design", "Pending Films", "Printing", "Collation"]

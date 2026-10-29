@@ -77,7 +77,95 @@ def pick_csra_rep(rows, on_date):
 	return live[0][1]
 
 
+# D4 (TRK-00350): CP spec fields a job card mirrors outside the order-derived map.
+SPEC_PRINT_FIELDS = ("print_type", "print_side", "printed_weight")
+
+
+def spec_print_values(snapshot, spec):
+	"""``{field: value}`` to copy onto a new job card for SPEC_PRINT_FIELDS.
+
+	The frozen snapshot wins when it has the key (even a falsy value, which
+	was what was sold). Otherwise the live specification, because snapshots
+	before D4 never froze these. A value missing from both is left out, so
+	the card keeps its own default.
+	"""
+	snapshot, spec = snapshot or {}, spec or {}
+	out = {}
+	for f in SPEC_PRINT_FIELDS:
+		value = snapshot[f] if f in snapshot else spec.get(f)
+		if value is not None and value != "":
+			out[f] = value
+	return out
+
+
 # --- Frappe-bound, registered as Jinja methods ------------------------------
+
+
+def pick_rep_user(sales_person_name, candidates):
+	"""The one User who is this sales person, or None when it is not certain.
+
+	``candidates`` are ``{"user", "full_name"}`` mappings, taken from the users
+	holding a User Permission on the Sales Person. That link is NOT one-to-one
+	at VCL: Neema's Sales Person is permitted to neema@, neema.test@,
+	judy.test@ and judith.avuzika@ (the order desk sees her book). So:
+	exactly one candidate wins outright; otherwise narrow to full names
+	containing the sales person's name, then prefer non-test accounts. Still
+	ambiguous means None, never a guess.
+	"""
+	cands = [c for c in candidates or () if c.get("user")]
+	if len(cands) == 1:
+		return cands[0]["user"]
+	name = (sales_person_name or "").strip().lower()
+	if name:
+		cands = [c for c in cands if name in (c.get("full_name") or "").lower()]
+	real = [c for c in cands if ".test@" not in c["user"]]
+	cands = real or cands
+	return cands[0]["user"] if len(cands) == 1 else None
+
+
+def csra_sales_person(customer, on_date=None):
+	"""The CSRA Sales Person (record name) for ``customer`` on ``on_date``, or None."""
+	import frappe
+	from frappe.utils import getdate, nowdate
+
+	if not customer:
+		return None
+	d = str(getdate(on_date or nowdate()))
+	rows = frappe.get_all(
+		"Customer Sales Rep Assignment",
+		filters={"customer": customer, "status": "Active", "effective_from": ["<=", d]},
+		fields=["sales_representative", "effective_from", "effective_to"],
+		order_by="effective_from desc",
+	)
+	return pick_csra_rep(rows, d)
+
+
+def csra_rep_user(customer, on_date=None):
+	"""The User to stamp as a job card's ``sales_rep``, from CSRA, or None.
+
+	The Sales Person's Employee ``user_id`` is preferred, since it is
+	one-to-one. Otherwise the User Permission holders, narrowed by
+	:func:`pick_rep_user`.
+	"""
+	import frappe
+
+	rep = csra_sales_person(customer, on_date)
+	if not rep:
+		return None
+	sp = frappe.db.get_value("Sales Person", rep, ["sales_person_name", "employee"], as_dict=True) or {}
+	if sp.get("employee"):
+		user = frappe.db.get_value("Employee", sp["employee"], "user_id")
+		if user and frappe.db.get_value("User", user, "enabled"):
+			return user
+	users = frappe.get_all(
+		"User Permission", filters={"allow": "Sales Person", "for_value": rep}, pluck="user"
+	)
+	candidates = []
+	for u in dict.fromkeys(users):
+		info = frappe.db.get_value("User", u, ["full_name", "enabled"], as_dict=True)
+		if info and info.enabled:
+			candidates.append({"user": u, "full_name": info.full_name})
+	return pick_rep_user(sp.get("sales_person_name") or rep, candidates)
 
 
 def cp_csra_rep(customer, on_date=None):
@@ -87,18 +175,8 @@ def cp_csra_rep(customer, on_date=None):
 	it is chased, rather than falling back to whoever raised the card.
 	"""
 	import frappe
-	from frappe.utils import getdate, nowdate
 
-	if not customer:
-		return ""
-	d = str(getdate(on_date or nowdate()))
-	rows = frappe.get_all(
-		"Customer Sales Rep Assignment",
-		filters={"customer": customer, "status": "Active", "effective_from": ["<=", d]},
-		fields=["sales_representative", "effective_from", "effective_to"],
-		order_by="effective_from desc",
-	)
-	rep = pick_csra_rep(rows, d)
+	rep = csra_sales_person(customer, on_date)
 	if not rep:
 		return ""
 	return frappe.db.get_value("Sales Person", rep, "sales_person_name") or rep
