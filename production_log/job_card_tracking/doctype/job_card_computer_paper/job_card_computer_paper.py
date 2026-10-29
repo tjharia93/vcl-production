@@ -45,6 +45,7 @@ class JobCardComputerPaper(OrderDerivedJobCard, Document):
 		# order-derived card really does come from the order it names.
 		self.validate_sales_order()
 		self.validate_customer_product_spec()
+		self.fill_packing_from_spec()
 		self.validate_spec_fields()
 		self.validate_numbering()
 		self.validate_plate()
@@ -90,6 +91,40 @@ class JobCardComputerPaper(OrderDerivedJobCard, Document):
 				self.status = "In Progress"
 		elif self.docstatus == 2:
 			self.status = "Cancelled"
+
+	def fill_packing_from_spec(self):
+		"""Fill blank packing and weight per carton from the specification.
+
+		Both are permlevel 1 (CR21): a sales user can neither read nor write
+		them, so Frappe resets whatever the form sent before ``validate`` runs,
+		and the form cannot even read the spec's packing to send. Values set
+		here, server-side and after that reset, are kept. Only blanks are
+		filled, so a figure production has entered is never overwritten. The
+		frozen order snapshot is preferred over the live specification.
+		"""
+		if not self.customer_product_spec or (self.packing and self.weight_per_carton):
+			return
+
+		snapshot = {}
+		raw = (self.get("spec_snapshot") or "").strip()
+		if raw:
+			try:
+				snapshot = frappe.parse_json(raw) or {}
+			except Exception:
+				snapshot = {}
+		spec = frappe.db.get_value(
+			"Customer Product Specification",
+			self.customer_product_spec,
+			["standard_packing", "standard_weight_per_carton"],
+			as_dict=True,
+		) or {}
+
+		if not self.packing:
+			self.packing = snapshot.get("standard_packing") or spec.get("standard_packing") or self.packing
+		if not self.weight_per_carton:
+			self.weight_per_carton = (
+				snapshot.get("standard_weight_per_carton") or spec.get("standard_weight_per_carton") or self.weight_per_carton
+			)
 
 	def validate_spec_fields(self):
 		if self.customer_product_spec and not self.job_size:

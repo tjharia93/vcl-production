@@ -160,3 +160,12 @@ production_log.patches.v10_6.allow_cps_colours_packing_on_submit
 # delegates) release a CP job card and may print its Production Copy. Creates
 # the role only and grants it to nobody. Also in install.after_install.
 production_log.patches.v10_7.add_release_to_production_role
+# CR21 (TRK-00342): packing, weight per carton and carton tare go to permlevel 1
+# on Job Card Computer Paper and the CP fields of Customer Product
+# Specification. Read is limited to management, Release to Production and
+# production roles, through Custom DocPerm rows (the site already uses Custom
+# DocPerm, so the JSON rows alone would be ignored). Also disables the two
+# older CP print formats that print packing. Add-only and idempotent. Also in
+# install.after_install. Mirrored in fixtures/custom_field.json, because
+# fixtures sync after this patch runs.
+production_log.patches.v10_7.restrict_cp_packing_fields

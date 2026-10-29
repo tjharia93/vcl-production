@@ -371,13 +371,15 @@
   {
    "fieldname": "packing",
    "fieldtype": "Data",
-   "label": "Packing"
+   "label": "Packing",
+   "permlevel": 1
   },
   {
    "fieldname": "weight_per_carton",
    "fieldtype": "Float",
    "label": "Weight Per Carton",
-   "precision": "2"
+   "precision": "2",
+   "permlevel": 1
   },
   {
    "fieldname": "order_comments",
@@ -714,6 +716,24 @@
    "read": 1,
    "report": 1,
    "role": "Manufacturing User"
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "Manufacturing Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "Manufacturing User",
+   "write": 0
   }
  ],
  "sort_field": "modified",

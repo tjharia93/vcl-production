@@ -34,6 +34,11 @@ def after_install():
 
 	add_release_to_production_role.execute()
 
+	# CR21: packing permlevel rules. Needs the role above, so it runs after it.
+	from production_log.patches.v10_7 import restrict_cp_packing_fields
+
+	restrict_cp_packing_fields.execute()
+
 	frappe.msgprint(
 		"Production Log installed. "
 		"Open the VCL Production workspace to start creating Customer "

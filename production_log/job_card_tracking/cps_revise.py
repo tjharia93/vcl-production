@@ -127,6 +127,7 @@ def revise(spec, reason, parts=None, carton=None, ink=None, packing=None, price=
 
 	packing_in = _rows(packing)
 	if packing_in is not None:
+		_require_packing_write(doc)
 		supplied = True
 		changes.extend(_apply_packing(doc, packing_in))
 
@@ -391,3 +392,16 @@ def _stamp(doc, reason, changes):
 		frappe.utils.now()[:16], frappe.session.user, reason, summary
 	)
 	doc.revision_notes = ((doc.revision_notes or "") + "\n\n" + entry).strip()
+
+
+def _require_packing_write(doc):
+	"""Refuse a packing revision from a user who cannot write packing.
+
+	Packing is permlevel 1 (CR21). Without this check, Frappe would silently
+	put the old value back on save while the revision log recorded a change
+	that never happened.
+	"""
+	if not doc.has_permlevel_access_to("standard_packing", permission_type="write"):
+		frappe.throw(
+			"Packing can only be revised by VCL Management, Release to Production or a manufacturing manager."
+		)
