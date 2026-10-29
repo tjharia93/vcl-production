@@ -28,6 +28,12 @@ def after_install():
 	# stamped done without running.
 	production_floor.after_install()
 
+	# TRK-00342: the Release to Production role. Reaches outside the app's
+	# doctypes (Role), so it is called here as well as from its patch.
+	from production_log.patches.v10_7 import add_release_to_production_role
+
+	add_release_to_production_role.execute()
+
 	frappe.msgprint(
 		"Production Log installed. "
 		"Open the VCL Production workspace to start creating Customer "

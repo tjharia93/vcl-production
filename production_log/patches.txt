@@ -156,3 +156,7 @@ production_log.patches.v10_4.add_item_price_cps_field
 # price mirror would publish that customer 16% high.
 production_log.patches.v10_5.flag_bahati_sleeve_vat_inclusive
 production_log.patches.v10_6.allow_cps_colours_packing_on_submit
+# TRK-00342: the "Release to Production" role. Holders (VCL Management and named
+# delegates) release a CP job card and may print its Production Copy. Creates
+# the role only and grants it to nobody. Also in install.after_install.
+production_log.patches.v10_7.add_release_to_production_role
