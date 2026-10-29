@@ -49,5 +49,23 @@ class ProductionCopyAccess(unittest.TestCase):
 		self.assertTrue(p.may_print_production_copy("Administrator", []))
 
 
+class Releaser(unittest.TestCase):
+	def test_release_role_is_releaser(self):
+		self.assertTrue(p.is_releaser("x@vimit.com", ["Release to Production"]))
+
+	def test_production_reprint_is_not_releaser(self):
+		self.assertFalse(p.is_releaser("x@vimit.com", ["Manufacturing User"]))
+
+
+class JsRoleListInStep(unittest.TestCase):
+	def test_form_script_lists_the_same_roles(self):
+		import pathlib
+		import re
+
+		js = (pathlib.Path(p.__file__).parent / "doctype/job_card_computer_paper/job_card_computer_paper.js").read_text()
+		block = re.search(r"CP_PRODUCTION_COPY_ROLES = \[(.*?)\];", js, re.S).group(1)
+		self.assertEqual(set(re.findall(r'"([^"]+)"', block)), set(p.PRODUCTION_COPY_ROLES))
+
+
 if __name__ == "__main__":
 	unittest.main()

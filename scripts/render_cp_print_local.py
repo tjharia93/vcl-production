@@ -93,6 +93,9 @@ def formatdate(v, fmt=None):
 	return d.strftime("%d/%m/%Y")
 
 
+PREVIEW_NAMES = {"Administrator": "Administrator"}
+
+
 def make_frappe(user, roles):
 	f = types.ModuleType("frappe")
 	f.session = _dict(user=user)
@@ -104,7 +107,8 @@ def make_frappe(user, roles):
 	utils.nowdate = lambda: dt.date.today().isoformat()
 	utils.formatdate = formatdate
 	utils.now_datetime = dt.datetime.now
-	utils.get_fullname = lambda u: {"Administrator": "Administrator"}.get(u, rest_get_value("User", u, "full_name") or u)
+	utils.get_fullname = lambda u: PREVIEW_NAMES.get(u) or rest_get_value("User", u, "full_name") or u
+	f.get_fullname = utils.get_fullname
 	f.utils = utils
 	sys.modules["frappe"] = f
 	sys.modules["frappe.utils"] = utils
@@ -130,6 +134,10 @@ def wrapper(jc):
 	q = urllib.parse.urlencode({"doctype": "Job Card Computer Paper", "name": jc,
 	                            "format": "Standard", "no_letterhead": "1", "_lang": "en"})
 	html = S.get(f"{BASE}/printview?{q}", timeout=300).text
+	# The "Print / Get PDF" banner is hidden by print CSS this file cannot load.
+	b = html.find('<div class="action-banner print-hide">')
+	if b != -1:
+		html = html[:b] + html[html.index("</div>", b) + len("</div>"):]
 	start = html.index('<div class="print-format">') + len('<div class="print-format">')
 	end = html.index("<script", start)
 	end = html.rindex("</div>", start, html.rindex("</div>", start, end))
@@ -144,10 +152,12 @@ def main():
 	ap.add_argument("--format", default="both", choices=["sales", "production", "both"])
 	args = ap.parse_args()
 
+	# Preview identities only; nothing is looked up for them on the site.
 	if args.as_sales:
 		user, roles = "sales.preview@vimit.com", ["Sales User", "All", "Guest"]
 	else:
 		user, roles = "release.preview@vimit.com", ["Release to Production", "All", "Guest"]
+	PREVIEW_NAMES[user] = "Release Holder (preview)" if not args.as_sales else "Sales User (preview)"
 	frappe = make_frappe(user, roles)
 	from production_log.job_card_tracking import cp_print
 

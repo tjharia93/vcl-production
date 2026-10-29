@@ -112,8 +112,24 @@ def cp_production_copy_allowed():
 	return may_print_production_copy(user, frappe.get_roles(user))
 
 
+def is_releaser(user, roles):
+	"""May ``user`` release a card, i.e. stand as "Released by" on the print?
+
+	Production roles may print the Production Copy (a reprint on the floor),
+	but printing it does not make them the releaser.
+	"""
+	if user == "Administrator":
+		return False
+	return bool(set(roles or ()) & {RELEASE_ROLE, MANAGEMENT_ROLE})
+
+
 def cp_print_user():
-	"""``{"name", "date", "time"}`` for the Production Copy release block."""
+	"""Who is printing, for the Production Copy release block.
+
+	``{"name", "date", "time", "is_releaser"}``. The block pre-fills "Released
+	by" only when the printer holds Release to Production or VCL Management
+	Team. A production user's reprint leaves it as a write-in.
+	"""
 	import frappe
 	from frappe.utils import now_datetime
 
@@ -123,4 +139,5 @@ def cp_print_user():
 		"name": frappe.utils.get_fullname(user) or user,
 		"date": stamp.strftime("%d/%m/%Y"),
 		"time": stamp.strftime("%H:%M"),
+		"is_releaser": is_releaser(user, frappe.get_roles(user)),
 	}

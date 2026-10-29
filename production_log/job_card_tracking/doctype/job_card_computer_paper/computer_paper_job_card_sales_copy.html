@@ -1,0 +1,235 @@
+<style>
+    {#- Computer Paper Job Card - Sales Copy (CR22, TRK-00342 Option A).
+        One page, the order as sold. By design it NEVER references packing, weight per
+        carton, carton count or carton tare. They are not hidden, they are absent: the
+        value is never in the HTML. The Production Copy is "Computer Paper Job Traveller v2".
+        Deploy: scripts/deploy_cp_job_card_prints.py. -#}
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    @media print {
+        .print-format { padding: 0px !important; margin: 0px !important; }
+        @page { size: A4; margin: 5mm; }
+    }
+
+    .print-format {
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        font-size: 8.6pt;
+        color: #000;
+        line-height: 1.15;
+        background: #FFF;
+    }
+
+    .page-container { width: 100%; display: block; padding: 1mm 0mm; }
+
+    .copy-band {
+        background: #D9D9D9;
+        border: 1pt solid #7F7F7F;
+        padding: 6px 10px;
+        margin-bottom: 6px;
+    }
+    .copy-band table { width: 100%; border-collapse: collapse; }
+    .copy-band .copy-word { font-size: 18pt; font-weight: 800; letter-spacing: .12em; color: #000; }
+    .copy-band .copy-note { font-size: 7.4pt; color: #333; margin-top: 2px; }
+    .copy-band .copy-jc { font-size: 14pt; font-weight: 800; text-align: right; color: #000; }
+
+    .vcl-header-table { width: 100%; border-bottom: 2pt solid #2B3990; margin-bottom: 4px; padding-bottom: 2px; }
+    .company-title { font-size: 14pt; font-weight: 800; color: #2B3990; }
+
+    .section-header-compact {
+        background-color: #2B3990;
+        color: #FFF;
+        padding: 4px 8px;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-top: 10px;
+        font-size: 8.6pt;
+    }
+
+    .vcl-table-compact { width: 100%; border-collapse: collapse; margin-top: 1px; table-layout: fixed; }
+    .vcl-table-compact td, .vcl-table-compact th {
+        border: 0.7pt solid #000;
+        padding: 5px 6px;
+        vertical-align: middle;
+        word-wrap: break-word;
+    }
+    .label-cell { background-color: #F4F4F4; font-weight: bold; width: 18%; }
+    .alert-text { color: #CC0000; font-weight: bold; }
+
+    .colour-chip { display: inline-block; width: 10px; height: 10px; border: 0.7pt solid #555; border-radius: 2px; vertical-align: middle; margin-right: 3px; }
+    .colour-pill { display: inline-block; padding: 1px 5px 1px 3px; margin: 1px 2px; border: 0.5pt solid #999; border-radius: 7px; font-size: 7.8pt; background: #FAFAFA; }
+
+    .sig-cell { height: 60px; vertical-align: bottom !important; padding-bottom: 5px !important; }
+    .sig-line { border-top: 0.8pt solid #000; width: 90%; margin: 0 auto; font-size: 7pt; text-align: center; }
+    .footer-note { margin-top: 8px; font-size: 7.2pt; color: #444; }
+</style>
+
+<div class="print-format">
+<div class="page-container">
+
+    <div class="copy-band">
+        <table>
+            <tr>
+                <td>
+                    <div class="copy-word">SALES COPY</div>
+                    <div class="copy-note">Order as sold. Packing and press details are on the Production Copy, issued on release to production.</div>
+                </td>
+                <td class="copy-jc">{{ doc.name }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <table class="vcl-header-table">
+        <tr>
+            <td>
+                <div class="company-title">VIMIT CONVERTERS LIMITED</div>
+                <div style="font-weight: bold; font-size: 10pt;">COMPUTER PAPER JOB CARD: {{ doc.name }}</div>
+            </td>
+            <td style="text-align: right; width: 34%; font-size: 9pt;">
+                Order Date: <strong>{{ frappe.utils.formatdate(doc.order_date, "dd/MM/yyyy") if doc.order_date else "" }}</strong><br>
+                Delivery Date: <span class="alert-text">{{ frappe.utils.formatdate(doc.due_date, "dd/MM/yyyy") if doc.due_date else "" }}</span>
+            </td>
+        </tr>
+    </table>
+
+    <div class="section-header-compact">ORDER</div>
+    <table class="vcl-table-compact">
+        <tr>
+            <td class="label-cell">Job Card No:</td>
+            <td style="width: 32%;"><strong>{{ doc.name }}</strong></td>
+            <td class="label-cell">Customer:</td>
+            <td style="width: 32%;"><strong>{{ doc.customer or "" }}</strong></td>
+        </tr>
+        <tr>
+            <td class="label-cell">Sales Rep:</td>
+            {#- D3: the customer's CSRA rep on the order date, never whoever raised the card. -#}
+            {%- set _rep = cp_csra_rep(doc.customer, doc.order_date) %}
+            <td>{% if _rep %}{{ _rep }}{% else %}<span class="alert-text">NO CSRA REP</span>{% endif %}</td>
+            <td class="label-cell">Sales Order:</td>
+            <td>{{ doc.sales_order or "" }}</td>
+        </tr>
+        <tr>
+            <td class="label-cell">Customer PO:</td>
+            <td>{{ doc.lpo_number or "" }}</td>
+            <td class="label-cell">Order / Delivery:</td>
+            <td>{{ frappe.utils.formatdate(doc.order_date, "dd/MM/yyyy") if doc.order_date else "" }} &rarr; {{ frappe.utils.formatdate(doc.due_date, "dd/MM/yyyy") if doc.due_date else "" }}</td>
+        </tr>
+    </table>
+
+    <div class="section-header-compact">PRODUCT</div>
+    <table class="vcl-table-compact">
+        <tr>
+            <td class="label-cell">Item:</td>
+            {%- set _item_name = frappe.db.get_value("Item", doc.item_code, "item_name") if doc.item_code else "" %}
+            <td colspan="3"><strong>{{ doc.item_code or "" }}</strong>{% if _item_name and _item_name != doc.item_code %} &middot; {{ _item_name }}{% endif %}</td>
+        </tr>
+        <tr>
+            <td class="label-cell">Specification:</td>
+            <td colspan="3"><strong>{{ doc.specification_name or "" }}</strong>{% if doc.customer_product_spec %} &middot; {{ doc.customer_product_spec }}{% endif %}</td>
+        </tr>
+        <tr>
+            <td class="label-cell">Job Size:</td>
+            <td style="width: 32%;">{{ doc.job_size or "" }}</td>
+            <td class="label-cell">Qty Ordered:</td>
+            <td style="width: 32%;"><strong>{{ "{:,}".format(doc.quantity_ordered) if doc.quantity_ordered else 0 }}</strong></td>
+        </tr>
+        <tr>
+            <td class="label-cell">Parts:</td>
+            <td>{{ doc.number_of_parts or (doc.colour_of_parts | length) }}</td>
+            <td class="label-cell">Printed Side:</td>
+            <td>{% if doc.print_type == "Plain" %}Plain (not printed){% else %}{{ doc.print_side or "" }}{% endif %}</td>
+        </tr>
+    </table>
+
+    <div class="section-header-compact">PARTS &mdash; PAPER COLOUR AND USE</div>
+    <table class="vcl-table-compact">
+        <tr style="background-color: #F4F4F4; font-weight: bold; text-align: center;">
+            <td style="width: 8%;">Part</td>
+            <td style="width: 22%;">Paper Colour</td>
+            <td style="width: 26%;">Paper Type / GSM</td>
+            <td>Used For</td>
+        </tr>
+        {% for part in doc.colour_of_parts or [] %}
+        <tr style="text-align: center;">
+            <td><strong>{{ part.part_number or loop.index }}</strong></td>
+            <td>{{ part.colour or "" }}</td>
+            <td>{{ part.paper_type or "" }}{% if part.gsm %} &middot; {{ part.gsm }} gsm{% endif %}</td>
+            <td style="text-align: left;">{{ part.purpose or "" }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="text-align: center;"><em>No parts recorded</em></td></tr>
+        {% endfor %}
+    </table>
+
+    <div class="section-header-compact">PRINT COLOURS</div>
+    <table class="vcl-table-compact">
+        {% set _cmyk = [] %}
+        {% if doc.uses_c %}{% set _ = _cmyk.append("C") %}{% endif %}
+        {% if doc.uses_m %}{% set _ = _cmyk.append("M") %}{% endif %}
+        {% if doc.uses_y %}{% set _ = _cmyk.append("Y") %}{% endif %}
+        {% if doc.uses_k %}{% set _ = _cmyk.append("K") %}{% endif %}
+        <tr>
+            <td class="label-cell">Ink Type:</td>
+            <td style="width: 32%;">{{ doc.ink_type or "—" }}</td>
+            <td class="label-cell">Colours:</td>
+            <td style="width: 32%;"><strong>{{ doc.number_of_colours or 0 }}</strong>{% if _cmyk %} &middot; Process {{ _cmyk | join("") }}{% endif %}</td>
+        </tr>
+        <tr>
+            <td class="label-cell">Spot Inks:</td>
+            <td colspan="3">
+                {% set _spots = doc.spot_colours or [] %}
+                {% for s in _spots %}
+                    <span class="colour-pill"><span class="colour-chip" style="background: {{ s.hex_preview or '#FFF' }};"></span><strong>{{ s.pantone_name or s.pantone_code or "—" }}</strong></span>
+                {% else %}
+                    <em>No spot inks</em>
+                {% endfor %}
+            </td>
+        </tr>
+        {% if doc.colour_notes %}
+        <tr>
+            <td class="label-cell">Colour Notes:</td>
+            <td colspan="3" style="font-style: italic;">{{ doc.colour_notes }}</td>
+        </tr>
+        {% endif %}
+    </table>
+
+    <div class="section-header-compact">NUMBERING</div>
+    <table class="vcl-table-compact">
+        <tr>
+            <td class="label-cell">Numbering:</td>
+            <td style="width: 32%;"><strong>{{ "YES" if doc.numbering_required else "NO" }}</strong></td>
+            <td class="label-cell">Prefix:</td>
+            <td style="width: 32%;">{{ doc.numbering_prefix or ("—" if not doc.numbering_required else "") }}</td>
+        </tr>
+        {% if doc.numbering_required %}
+        <tr>
+            <td class="label-cell">Start Number:</td>
+            <td><strong>{{ doc.numbering_start or "" }}</strong></td>
+            <td class="label-cell">End Number:</td>
+            <td><strong>{{ doc.numbering_end or "" }}</strong></td>
+        </tr>
+        {% endif %}
+    </table>
+
+    <div class="section-header-compact">CUSTOMER NOTES</div>
+    <table class="vcl-table-compact">
+        <tr>
+            <td style="height: 48px; vertical-align: top;">{{ doc.order_comments or "" }}</td>
+        </tr>
+    </table>
+
+    <div class="section-header-compact">SIGN-OFF</div>
+    <table class="vcl-table-compact">
+        <tr>
+            <td class="label-cell" style="vertical-align: top;">Sales Rep:</td>
+            <td class="sig-cell"><div class="sig-line">SIGNATURE &amp; DATE</div></td>
+            <td class="label-cell" style="vertical-align: top;">Prepared By:</td>
+            <td style="vertical-align: top;">
+                <strong>{{ frappe.get_fullname(doc.owner) if doc.owner else "" }}</strong><br>
+                <span style="font-size: 7.4pt;">{{ frappe.utils.formatdate(doc.creation, "dd/MM/yyyy") if doc.creation else "" }}</span>
+            </td>
+        </tr>
+    </table>
+
+    <div class="footer-note">{{ doc.name }} &middot; Sales Copy &middot; the same job card number is on the Production Copy.</div>
+</div>
+</div>

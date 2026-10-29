@@ -1,6 +1,27 @@
 const PRINT_COLOUR_FIELDS = ["ink_type", "uses_c", "uses_m", "uses_y", "uses_k", "number_of_colours", "colour_notes"];
 const SPOT_COLOUR_FIELDS  = ["pantone_code", "pantone_name", "hex_preview", "cmyk_c", "cmyk_m", "cmyk_y", "cmyk_k", "notes"];
 
+// CR22 (TRK-00342): the doctype default print format stays the Production Copy
+// ("Computer Paper Job Traveller v2") for the floor. A user without a production
+// or release role is offered the Sales Copy first instead. This is a convenience
+// only: the Production Copy itself renders "access denied" for them
+// (production_log.job_card_tracking.cp_print). Keep this role list in step with
+// cp_print.PRODUCTION_COPY_ROLES.
+const CP_SALES_COPY_FORMAT = "Computer Paper Job Card - Sales Copy";
+const CP_PRODUCTION_COPY_ROLES = [
+	"System Manager", "VCL Management Team", "Release to Production",
+	"Manufacturing Manager", "Manufacturing User", "Production Manager", "Production Supervisor",
+	"Production User", "VCL Production Manager", "VCL Production User", "PPC Planner",
+];
+
+function _default_print_format_by_role(frm) {
+	if (frappe.session.user === "Administrator" || frappe.user.has_role(CP_PRODUCTION_COPY_ROLES)) return;
+	frm.meta.default_print_format = CP_SALES_COPY_FORMAT;
+	if (locals.DocType && locals.DocType[frm.doctype]) {
+		locals.DocType[frm.doctype].default_print_format = CP_SALES_COPY_FORMAT;
+	}
+}
+
 frappe.ui.form.on("Job Card Computer Paper", {
 	refresh(frm) {
 		frm.set_query("customer_product_spec", function () {
@@ -18,6 +39,7 @@ frappe.ui.form.on("Job Card Computer Paper", {
 	},
 
 	onload(frm) {
+		_default_print_format_by_role(frm);
 		if (!frm.doc.order_date) {
 			frm.set_value("order_date", frappe.datetime.get_today());
 		}

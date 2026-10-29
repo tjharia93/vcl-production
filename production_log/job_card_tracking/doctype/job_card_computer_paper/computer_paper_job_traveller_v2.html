@@ -99,6 +99,15 @@
     .roomy .section-header-compact { margin-top: 10px; padding: 4px 8px; font-size: 8.6pt; }
     .roomy .manual-row { height: 30px; }
 
+    /* CR22 (TRK-00342): this is the PRODUCTION COPY. The words are the signal and the
+       yellow is a second one. Header tags sit inline, so no page gains height. */
+    .prod-band { background: #FFE600; border: 1pt solid #8A7A00; padding: 4px 10px; margin-bottom: 4px; }
+    .prod-band table { width: 100%; border-collapse: collapse; }
+    .prod-band .copy-word { font-size: 15pt; font-weight: 800; letter-spacing: .12em; color: #000; }
+    .prod-band .copy-jc { font-size: 12pt; font-weight: 800; text-align: right; color: #000; }
+    .prod-tag { background: #FFE600; border: 0.6pt solid #8A7A00; padding: 0 4px; font-size: 7pt; font-weight: 800; letter-spacing: .06em; margin-right: 6px; }
+    .release-block td { height: 26px; }
+
     .colour-chip {
         display: inline-block;
         width: 10px;
@@ -119,6 +128,21 @@
     }
 </style>
 
+{#- CR22 (TRK-00342): the Production Copy carries packing and press detail. It renders only
+    for Release to Production, VCL Management Team and production roles (cp_print.PRODUCTION_COPY_ROLES).
+    Frappe does not role-gate print formats, so the gate lives here. Anyone else gets this notice,
+    and not one field of the card. -#}
+{% if not cp_production_copy_allowed() %}
+<div class="print-format">
+    <div class="page-container" style="page-break-after: auto;">
+        <div style="border: 2pt solid #CC0000; padding: 18px; margin-top: 30px; text-align: center;">
+            <div style="font-size: 16pt; font-weight: 800; color: #CC0000;">PRODUCTION COPY &mdash; ACCESS DENIED</div>
+            <div style="margin-top: 10px; font-size: 10pt;">The Production Copy of {{ doc.name }} is issued only on release to production.</div>
+            <div style="margin-top: 6px; font-size: 10pt;">Print <strong>Computer Paper Job Card - Sales Copy</strong> instead.</div>
+        </div>
+    </div>
+</div>
+{% else %}
 {% set ns = namespace(pg=0, avail=0) %}
 <div class="print-format">
 
@@ -126,6 +150,14 @@
          PAGE 1 · JOB INFORMATION + SPEC + PLATE + AUTHORISATION
          ============================================================ -->
     {% set ns.pg = ns.pg + 1 %}<div class="page-container roomy">
+        <div class="prod-band">
+            <table>
+                <tr>
+                    <td class="copy-word">PRODUCTION COPY</td>
+                    <td class="copy-jc">{{ doc.name }}</td>
+                </tr>
+            </table>
+        </div>
         <table class="vcl-header-table">
             <tr>
                 <td>
@@ -297,6 +329,25 @@
                 <td colspan="3" style="min-height: 30px; vertical-align: top; padding: 5px;">{{ doc.order_comments or doc.management_comments or "" }}</td>
             </tr>
         </table>
+
+        {#- CR22: the release hand-over. "Released by" is pre-filled only when the person printing
+            holds Release to Production or VCL Management Team; a production reprint leaves it to write in. -#}
+        {%- set _pu = cp_print_user() %}
+        <div class="section-header-compact">RELEASE TO PRODUCTION</div>
+        <table class="vcl-table-compact release-block">
+            <tr>
+                <td class="label-cell">Released By:</td>
+                <td style="width: 32%;">{% if _pu.is_releaser %}<strong>{{ _pu.name }}</strong>{% endif %}</td>
+                <td class="label-cell">Date / Time:</td>
+                <td style="width: 32%;">{% if _pu.is_releaser %}{{ _pu.date }} &middot; {{ _pu.time }}{% endif %}</td>
+            </tr>
+            <tr>
+                <td class="label-cell">Received By Production:</td>
+                <td></td>
+                <td class="label-cell">Date / Time:</td>
+                <td></td>
+            </tr>
+        </table>
     </div>
 
     <!-- ============================================================
@@ -306,7 +357,7 @@
         <table class="vcl-header-table">
             <tr>
                 <td><div class="company-title">CLOSE-OUT &mdash; PRODUCTION, SO &amp; INVOICING (PAGE {{ ns.pg }})</div></td>
-                <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
+                <td style="text-align: right;"><span class="prod-tag">PRODUCTION COPY</span><strong>{{ doc.name }}</strong></td>
             </tr>
         </table>
 
@@ -442,7 +493,7 @@
         <table class="vcl-header-table">
             <tr>
                 <td><div class="company-title">STORE RELEASE &amp; RETURNS (PAGE {{ ns.pg }})</div></td>
-                <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
+                <td style="text-align: right;"><span class="prod-tag">PRODUCTION COPY</span><strong>{{ doc.name }}</strong></td>
             </tr>
         </table>
 
@@ -522,7 +573,7 @@
         <table class="vcl-header-table">
             <tr>
                 <td><div class="company-title">PRINTING &mdash; SETS &amp; WEIGHTS (PAGE {{ ns.pg }})</div></td>
-                <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
+                <td style="text-align: right;"><span class="prod-tag">PRODUCTION COPY</span><strong>{{ doc.name }}</strong></td>
             </tr>
         </table>
 
@@ -605,7 +656,7 @@
         <table class="vcl-header-table">
             <tr>
                 <td><div class="company-title">PRINTING &mdash; SETS &amp; WEIGHTS (PAGE {{ ns.pg }})</div></td>
-                <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
+                <td style="text-align: right;"><span class="prod-tag">PRODUCTION COPY</span><strong>{{ doc.name }}</strong></td>
             </tr>
         </table>
         <div class="section-header-compact">SECTION 2 (CONTINUED) &mdash; PRINTING SETS</div>
@@ -620,7 +671,7 @@
         <table class="vcl-header-table">
             <tr>
                 <td><div class="company-title">PRINTING &mdash; SETS &amp; WEIGHTS (PAGE {{ ns.pg }})</div></td>
-                <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
+                <td style="text-align: right;"><span class="prod-tag">PRODUCTION COPY</span><strong>{{ doc.name }}</strong></td>
             </tr>
         </table>
         <div class="section-header-compact">SECTION 2 (CONTINUED) &mdash; PRINTING SETS</div>
@@ -641,7 +692,7 @@
         <table class="vcl-header-table">
             <tr>
                 <td><div class="company-title">PRINTING &mdash; SETS &amp; WEIGHTS (PAGE {{ ns.pg }})</div></td>
-                <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
+                <td style="text-align: right;"><span class="prod-tag">PRODUCTION COPY</span><strong>{{ doc.name }}</strong></td>
             </tr>
         </table>
         <div class="section-header-compact">SECTION 2 (CONTINUED) &mdash; PRINTING SETS</div>
@@ -678,7 +729,7 @@
         <table class="vcl-header-table">
             <tr>
                 <td><div class="company-title">PRINTING LABOUR (PAGE {{ ns.pg }})</div></td>
-                <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
+                <td style="text-align: right;"><span class="prod-tag">PRODUCTION COPY</span><strong>{{ doc.name }}</strong></td>
             </tr>
         </table>
 
@@ -707,7 +758,7 @@
         <table class="vcl-header-table">
             <tr>
                 <td><div class="company-title">COLLECTION &amp; FINISHING (PAGE {{ ns.pg }})</div></td>
-                <td style="text-align: right;"><strong>{{ doc.name }}</strong></td>
+                <td style="text-align: right;"><span class="prod-tag">PRODUCTION COPY</span><strong>{{ doc.name }}</strong></td>
             </tr>
         </table>
 
@@ -742,4 +793,4 @@
         </table>
     </div>
 </div>
-
+{% endif %}
