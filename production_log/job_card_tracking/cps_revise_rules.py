@@ -1,4 +1,4 @@
-"""Pure rules for the colour, packing and price sections of a CPS revision.
+"""Pure rules for the sections of a CPS revision: colour, packing, price, size, build and details.
 
 No Frappe import, so these are unit testable without a bench. ``cps_revise``
 applies them; it owns every write.
@@ -181,3 +181,108 @@ def job_size_text(length, width, height, ply):
 	if str(ply or "").strip() == "SFK" or not int(height or 0):
 		return "{0} X {1}".format(int(length or 0), int(width or 0))
 	return "{0} X {1} X {2}".format(int(length or 0), int(width or 0), int(height or 0))
+
+
+# ── Finished size (Computer Paper) and Job Size ─────────────────────────────
+#
+# The finished size is what the paper weight per set is struck from, so the
+# caller recomputes every weight after writing it. Job Size is the label a rep
+# reads on an order line; any product type may correct it, though a carton's is
+# rewritten from its dimensions whenever they move.
+
+COMPUTER_PAPER = "Computer Paper"
+CARTON = "Carton"
+
+SIZE_FIELDS = ("finished_width_in", "finished_length_in", "job_size")
+_CP_SIZE_FIELDS = ("finished_width_in", "finished_length_in")
+TEXT_MAX = 140
+
+
+def coerce_size(field, value, product_type):
+	"""``(clean_value, error)`` for one size entry."""
+	if field not in SIZE_FIELDS:
+		return None, "{0} is not part of a specification's size.".format(field)
+	if field in _CP_SIZE_FIELDS:
+		if product_type != COMPUTER_PAPER:
+			return None, "The finished size in inches applies to Computer Paper specifications only."
+		try:
+			number = float(value)
+		except (TypeError, ValueError):
+			return None, "{0} must be a number of inches.".format(field)
+		if number <= 0:
+			return None, "{0} must be more than zero.".format(field)
+		return number, None
+	text = str(value or "").strip()
+	if not text:
+		return None, "Job Size cannot be blank."
+	if len(text) > TEXT_MAX:
+		return None, "Job Size is longer than {0} characters.".format(TEXT_MAX)
+	return text, None
+
+
+# ── The record's own details ────────────────────────────────────────────────
+#
+# Name, item, notes, numbering, printed side and the artwork link: what the
+# specification is called and how it is read, rather than what it is made of.
+# Print Type is deliberately absent. Plain and Printed are different products
+# with different items, inks and sides; that is a new specification.
+
+PRINT_SIDE_NONE = "N/A"
+PRINT_SIDES = (PRINT_SIDE_NONE, "Front Only", "Front and Back", "Back Only")
+NUMBERING_ANSWERS = ("Yes", "No")
+
+# field -> kind. "name"/"link" may not be blank (except artwork_tracker, which
+# may be unlinked); "notes" is free text and may be cleared.
+DETAIL_FIELDS = {
+	"specification_name": "name",
+	"linked_item": "link",
+	"artwork_tracker": "link",
+	"numbering_answer": "numbering",
+	"print_side": "side",
+	"colour_notes": "notes",
+	"special_instructions_carton": "notes",
+}
+_CP_ONLY_DETAILS = ("artwork_tracker", "numbering_answer", "print_side")
+_CARTON_ONLY_DETAILS = ("special_instructions_carton",)
+_MAY_BE_BLANK = ("artwork_tracker",)
+
+
+def coerce_detail(field, value, product_type, print_type):
+	"""``(clean_value, error)`` for one detail entry."""
+	kind = DETAIL_FIELDS.get(field)
+	if kind is None:
+		return None, "{0} cannot be revised on a submitted specification.".format(field)
+	if field in _CP_ONLY_DETAILS and product_type != COMPUTER_PAPER:
+		return None, "{0} applies to Computer Paper specifications only.".format(field)
+	if field in _CARTON_ONLY_DETAILS and product_type != CARTON:
+		return None, "{0} applies to Carton specifications only.".format(field)
+
+	text = str(value if value is not None else "").strip()
+	if kind == "notes":
+		return text, None
+	if kind == "numbering":
+		if text not in NUMBERING_ANSWERS:
+			return None, "Numbering must be answered Yes or No."
+		return text, None
+	if kind == "side":
+		if text not in PRINT_SIDES:
+			return None, "Printed side must be one of {0}.".format(", ".join(PRINT_SIDES))
+		if print_type == PRINT_TYPE_PRINTED and text == PRINT_SIDE_NONE:
+			return None, "A Printed specification needs a printed side, not N/A."
+		if print_type == PRINT_TYPE_PLAIN and text != PRINT_SIDE_NONE:
+			return None, "A Plain specification is not printed, so its printed side stays N/A."
+		return text, None
+	if not text and field not in _MAY_BE_BLANK:
+		return None, "{0} cannot be blank.".format(field)
+	if len(text) > TEXT_MAX:
+		return None, "{0} is longer than {1} characters.".format(field, TEXT_MAX)
+	return text, None
+
+
+def part_count_error(count, max_parts):
+	"""Why a revised number of parts is unusable, or None."""
+	if count < 1:
+		return "A Computer Paper specification needs at least one part."
+	if count > max_parts:
+		return "{0} parts is more than VCL runs (at most {1}).".format(count, max_parts)
+	return None

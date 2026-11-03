@@ -114,3 +114,62 @@ class CartonBuild(unittest.TestCase):
 	def test_job_size(self):
 		self.assertEqual(r.job_size_text(425, 305, 285, "3"), "425 X 305 X 285")
 		self.assertEqual(r.job_size_text(270, 61, 0, "SFK"), "270 X 61")
+
+
+CP = "Computer Paper"
+
+
+class Size(unittest.TestCase):
+	def test_inches_must_be_positive(self):
+		self.assertEqual(r.coerce_size("finished_width_in", "9.5", CP), (9.5, None))
+		self.assertIsNotNone(r.coerce_size("finished_width_in", 0, CP)[1])
+		self.assertIsNotNone(r.coerce_size("finished_length_in", "abc", CP)[1])
+
+	def test_inches_are_computer_paper_only(self):
+		self.assertIsNotNone(r.coerce_size("finished_width_in", 9.5, "Carton")[1])
+
+	def test_job_size_any_type_not_blank(self):
+		self.assertEqual(r.coerce_size("job_size", " 9.5 X 11 ", CP), ("9.5 X 11", None))
+		self.assertEqual(r.coerce_size("job_size", "400 X 300", "Carton"), ("400 X 300", None))
+		self.assertIsNotNone(r.coerce_size("job_size", "  ", CP)[1])
+
+	def test_unknown_field_refused(self):
+		self.assertIsNotNone(r.coerce_size("number_of_parts", 3, CP)[1])
+
+
+class Details(unittest.TestCase):
+	def test_print_type_is_not_revisable(self):
+		self.assertIsNotNone(r.coerce_detail("print_type", "Plain", CP, "Printed")[1])
+
+	def test_name_and_item_cannot_be_blank(self):
+		self.assertIsNotNone(r.coerce_detail("specification_name", " ", CP, "Printed")[1])
+		self.assertIsNotNone(r.coerce_detail("linked_item", "", CP, "Printed")[1])
+		self.assertEqual(r.coerce_detail("linked_item", " CP 9.5X11 3P ", CP, "Printed"), ("CP 9.5X11 3P", None))
+
+	def test_artwork_may_be_unlinked(self):
+		self.assertEqual(r.coerce_detail("artwork_tracker", "", CP, "Printed"), ("", None))
+
+	def test_notes_may_be_cleared(self):
+		self.assertEqual(r.coerce_detail("colour_notes", None, CP, "Printed"), ("", None))
+
+	def test_numbering_yes_or_no(self):
+		self.assertEqual(r.coerce_detail("numbering_answer", "Yes", CP, "Printed"), ("Yes", None))
+		self.assertIsNotNone(r.coerce_detail("numbering_answer", "", CP, "Printed")[1])
+
+	def test_print_side_follows_print_type(self):
+		self.assertEqual(r.coerce_detail("print_side", "Front and Back", CP, "Printed"), ("Front and Back", None))
+		self.assertIsNotNone(r.coerce_detail("print_side", "N/A", CP, "Printed")[1])
+		self.assertIsNotNone(r.coerce_detail("print_side", "Front Only", CP, "Plain")[1])
+		self.assertEqual(r.coerce_detail("print_side", "N/A", CP, "Plain"), ("N/A", None))
+
+	def test_product_type_only_fields(self):
+		self.assertIsNotNone(r.coerce_detail("numbering_answer", "Yes", "Carton", "Printed")[1])
+		self.assertIsNotNone(r.coerce_detail("special_instructions_carton", "x", CP, "Printed")[1])
+		self.assertEqual(r.coerce_detail("special_instructions_carton", "x", "Carton", "Printed"), ("x", None))
+
+
+class PartCount(unittest.TestCase):
+	def test_bounds(self):
+		self.assertIsNotNone(r.part_count_error(0, 8))
+		self.assertIsNotNone(r.part_count_error(9, 8))
+		self.assertIsNone(r.part_count_error(4, 8))

@@ -174,3 +174,8 @@ production_log.patches.v10_7.restrict_cp_packing_fields
 # weight from the spec, and fills a blank side on a Printed card. Leaves a
 # Comment on each card. Cancelled and spec-less cards are untouched. Idempotent.
 production_log.patches.v10_8.correct_cp_print_fields
+# Revise can now change size, number of parts, "Used for" and the details
+# (name, item, numbering, printed side, notes, artwork link) on a submitted
+# Customer Product Specification. Sets allow_on_submit on those fields and the
+# Colour of Parts child fields. Print Type stays fixed. Idempotent.
+production_log.patches.v10_9.allow_cps_size_parts_details_on_submit
