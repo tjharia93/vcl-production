@@ -308,7 +308,7 @@ tr.flag td{background:var(--warn-tint)}
 <section class="panel" id="p-walk" data-tab="walk">
   <h2>Station by station</h2>
   <p class="lede">Each station on the floor, the screen someone enters it on, what that entry posts to ERPNext, and how the item maps on to the next station. Click a station, or use Next. One worked example runs all the way through: a run of Prince A5 120-page single-line books.</p>
-  <div class="callout"><p><strong>Example run <code>EBR-0001</code>:</strong> 1,000 cover sheets (A5, 3-up) → 3,000 folds → 1,000 insert sets = 3,000 books → 16 cartons of 186 + 24 loose books → into <code>Finished Goods - VCL</code> → allotted to ESGA's order. The run number is carried on every entry, so yield and waste can be read per run (see the Build spec, decision P6).</p></div>
+  <div class="callout"><p><strong>Example run <code>EBR-0001</code>:</strong> 1,000 cover sheets (A5, 3-up) + 1,000 fold sets → 1,000 insert sets = 3,000 books → 16 cartons of 186 + 24 loose books → into <code>Finished Goods - VCL</code> → allotted to ESGA's order. The run number is carried on every entry, so yield and waste can be read per run (see the Build spec, decision P6).</p></div>
 
   <figure class="fwrap" aria-label="Exercise Book Production page header">
     <p class="label">Top of the Exercise Book Production page after this push (approved 04 Nov)</p>
@@ -361,8 +361,8 @@ tr.flag td{background:var(--warn-tint)}
     <thead><tr><th>Station / screen</th><th>Today</th><th>What to do</th><th>Reuse</th></tr></thead>
     <tbody>
       <tr><td>Covers</td><td><span class="chip part">Change</span></td><td>Run number, spoilage, remove dead code and the unused 9-up/4-up options</td><td>Cover quick entry</td></tr>
-      <tr><td>Folds</td><td><span class="chip no">Missing</span></td><td>New tab: Material Receipt of FLD- (needs the 80 FLD- items)</td><td>Copy of the cover quick entry</td></tr>
-      <tr><td>Inserts</td><td><span class="chip part">Change</span></td><td>Folds row (sets × up-count), stock checked on the server, run number</td><td>The Repack posting</td></tr>
+      <tr><td>Folds</td><td><span class="chip part">Items done, screen missing</span></td><td>New tab: Material Receipt of FLD- (the 80 FLD- items were created 04 Nov)</td><td>Copy of the cover quick entry</td></tr>
+      <tr><td>Inserts</td><td><span class="chip part">Change</span></td><td>Folds row (1 fold set per insert set), stock checked on the server, run number</td><td>The Repack posting</td></tr>
       <tr><td>Packing</td><td><span class="chip part">Change, mostly missing</span></td><td>Server-side Manufacture into Finished Goods, cartons out, loose books, spot-weigh 1 in 20 at ±5%</td><td>Its checks, carton factor, the weigh keypad; backend a84ef92</td></tr>
       <tr><td>Finished Goods</td><td><span class="chip part">Change</span></td><td>Read Finished Goods - VCL only (today: every warehouse)</td><td>Finished Stock tab</td></tr>
       <tr><td>Exercise Book Orders</td><td><span class="chip part">Duplicate</span></td><td>Compass version (not deployed) vs the dev page's Orders Pending: keep one</td><td>Either</td></tr>
@@ -442,17 +442,17 @@ var S=[
  where:'Exercise Book Production dev page › Cover Stock › Quick entry (exists today)',
  mock:{title:'Cover Stock · Quick entry',sub:'existing',f:[['Date','04 Nov 2026'],['Run number','EBR-0001',1],['Brand','Prince'],['Size','A5 (3-up)'],['Pages','120'],['Ruling','Single line'],['Printed sheets','1,000'],['= covers','3,000',1]],btn:'Add to stock'}},
 {k:'Station 2',t:'Folds',side:'p',chip:['no','New screen'],
- what:'Ruled inner paper is folded into the book\'s inner section, one fold per book. Folds are an input to inserts, the same way covers are.',
- facts:[['Today on the dev page','Missing: Nothing exists: no FLD- items, no screen. Copy the cover quick entry as a Material Receipt of FLD-.'],['Who','Folding supervisor (to confirm)'],['Item in','FLD-PNC-A5-120PG-SL (new), in folds = books'],['Maps to next by','The same key as covers: PNC | A5 | 120 | SL'],['Phase 1','Folds are received as counted. Paper and ruling going out of stock comes in Phase 2/3.']],
+ what:'Ruled inner paper is folded into the book\'s inner section, counted in sets like covers (one A5 fold set = 3 books\' inners). Folds are an input to inserts, the same way covers are.',
+ facts:[['Today on the dev page','Missing screen: the 80 FLD- items exist (04 Nov, no stock yet), but there is no screen. Copy the cover quick entry as a Material Receipt of FLD-.'],['Who','Folding supervisor (to confirm)'],['Item in','FLD-PNC-A5-120PG-SL (new), in folds = books'],['Maps to next by','The same key as covers: PNC | A5 | 120 | SL'],['Phase 1','Folds are received as counted. Paper and ruling going out of stock comes in Phase 2/3.']],
  posts:[['IN','FLD-PNC-A5-120PG-SL','+3,000 folds','Stores - VCL'],['DOC','Stock Entry: Material Receipt','run EBR-0001','']],
  where:'Exercise Book Production dev page › new Folds tab',
- mock:{title:'Folds · Entry',sub:'new',f:[['Date','04 Nov 2026'],['Run number','EBR-0001',1],['Brand','Prince'],['Size','A5'],['Pages','120'],['Ruling','Single line'],['Folds counted','3,000'],['Rejects','12']],btn:'Save folds'}},
+ mock:{title:'Folds · Entry',sub:'new',f:[['Date','04 Nov 2026'],['Run number','EBR-0001',1],['Brand','Prince'],['Size','A5'],['Pages','120'],['Ruling','Single line'],['Fold sets counted','1,000'],['= books','3,000',1],['Rejects','4 sets']],btn:'Save folds'}},
 {k:'Station 3',t:'Inserts',side:'p',chip:['part','Existing screen, changed'],
  what:'Covers and folds are inserted together. One cover sheet becomes one insert set, which is 3 A5 books, so it uses 3 folds.',
- facts:[['Today on the dev page','Change: The Repack exists (COV- out, INS- in, 1:1). Add the FLD- row (sets × up-count), a server-side stock check and the run number.'],['Who','Binding supervisor (to confirm)'],['Today','Takes out the cover only (COV out, INS in, 1:1)'],['Change','Also take out folds: sets × up-count'],['Unit','Per set, as today (Tanuj, 04 Nov): 1 cover sheet = 1 set = 2 (A4) or 3 (A5) books']],
- posts:[['OUT','COV-PNC-A5-120PG-SL','−1,000 sheets','Stores - VCL'],['OUT','FLD-PNC-A5-120PG-SL','−3,000 folds','Stores - VCL'],['IN','INS-PNC-A5-120PG-SL','+1,000 sets (3,000 books)','Stores - VCL'],['DOC','Stock Entry: Repack','run EBR-0001','']],
+ facts:[['Today on the dev page','Change: The Repack exists (COV- out, INS- in, 1:1). Add the FLD- row (1 fold set per insert set), a server-side stock check and the run number. The 80 FLD- items exist (04 Nov) but hold no stock yet.'],['Who','Binding supervisor (to confirm)'],['Today','Takes out the cover only (COV out, INS in, 1:1)'],['Change','Also take out folds: 1 fold set per insert set'],['Unit','Per set, as today (Tanuj, 04 Nov): 1 cover sheet = 1 set = 2 (A4) or 3 (A5) books']],
+ posts:[['OUT','COV-PNC-A5-120PG-SL','−1,000 sheets','Stores - VCL'],['OUT','FLD-PNC-A5-120PG-SL','−1,000 sets','Stores - VCL'],['IN','INS-PNC-A5-120PG-SL','+1,000 sets (3,000 books)','Stores - VCL'],['DOC','Stock Entry: Repack','run EBR-0001','']],
  where:'Exercise Book Production dev page › Inserts tab (exists, needs the folds row added)',
- mock:{title:'Inserts · Make sets',sub:'changed',f:[['Run number','EBR-0001',1],['Group','Prince · A5 · 120 · SL'],['Sets made','1,000'],['Covers used','1,000 sheets',1],['Folds used','3,000',1],['= books','3,000',1]],btn:'Post repack'}},
+ mock:{title:'Inserts · Make sets',sub:'changed',f:[['Run number','EBR-0001',1],['Group','Prince · A5 · 120 · SL'],['Sets made','1,000'],['Covers used','1,000 sheets',1],['Folds used','1,000 sets',1],['= books','3,000',1]],btn:'Post repack'}},
 {k:'Station 4',t:'Packing',side:'p',chip:['part','Existing screen, changed'],
  what:'Books are counted into cartons and received as finished stock. This is where production meets sales.',
  facts:[['Today on the dev page','Change, mostly missing: The tab saves to the browser only. Needs a server-side Manufacture: INS- and cartons out, books into Finished Goods, loose books, spot-weigh. Reuse its checks, the carton factor, the weigh keypad, and the receiving backend a84ef92.'],['Who','Packing and stores (Nadeem / Peter, to confirm)'],['Today','Saved in the browser only. Nothing reaches ERPNext.'],['Change','Post the receipt into Finished Goods, take out inserts and empty cartons, and spot-weigh about 5% of cartons (backend a84ef92).'],['Maps to next by','The book item PNCEB-A5-120PGS-CB-BP-SL (cover and paper are added here)']],
@@ -550,23 +550,23 @@ var G=[
 {id:'runs',n:'Run tracker',st:['no','New'],where:'Exercise Book Production dev page › Runs',who:'Production manager',reads:'Stock Entries carrying the run number',writes:'Nothing. Closing a run only stamps it closed.',why:'<b>Today on the dev page: Missing.</b> Follows one run across every station, so yield and waste can be read per run.',
  path:'Production › Exercise Books › Runs › EBR-0001',b:[
  {t:'chips',items:[['ok','Prince · A5 · 120 · SL'],['part','In progress'],['wait','Target 1,000 sheets']]},
- {t:'flow',items:[['Covers','1,000 sheets','= 3,000 books'],['Folds','2,988','12 rejected'],['Inserts','996 sets','= 2,988 books'],['Packing','16 ctn + 12','= 2,988 books'],['Finished Goods','2,988','received']]},
+ {t:'flow',items:[['Covers','1,000 sheets','= 3,000 books'],['Folds','996 sets','4 sets rejected'],['Inserts','996 sets','= 2,988 books'],['Packing','16 ctn + 12','= 2,988 books'],['Finished Goods','2,988','received']]},
  {t:'tiles',items:[['Yield, covers → books','99.6%','','ok'],['Waste','12 folds','0.4%',''],['Days open','2','',''],['Cartons used','17','A5 common','']]},
- {t:'table',head:['Date','Station','Entry','Qty','By'],num:[3],rows:[['04 Nov','Covers','MAT-STE-…','1,000 sheets','Printing'],['04 Nov','Folds','MAT-STE-…','2,988','Folding'],['05 Nov','Inserts','Repack','996 sets','Binding'],['05 Nov','Packing','Manufacture','2,988 books','Stores']]}]}
+ {t:'table',head:['Date','Station','Entry','Qty','By'],num:[3],rows:[['04 Nov','Covers','MAT-STE-…','1,000 sheets','Printing'],['04 Nov','Folds','MAT-STE-…','996 sets','Folding'],['05 Nov','Inserts','Repack','996 sets','Binding'],['05 Nov','Packing','Manufacture','2,988 books','Stores']]}]}
 ]],
 ['Floor entry',[
 {id:'covers',n:'Covers: quick entry',st:['part','Existing, changed'],where:'Exercise Book Production dev page › Cover Stock',who:'Printing supervisor',reads:'COV- items',writes:'Material Receipt of COV- sheets into Stores - VCL (later: a Manufacture that uses board and ink)',why:'<b>Today on the dev page: Change: add run number and spoilage.</b> Records printed cover sheets per run. Change: add the run number.',
  path:'Exercise Book Production › Cover Stock › Quick entry',b:[
  {t:'form',f:[['Date','04 Nov 2026'],['Run number','EBR-0001 ▾'],['Brand','Prince'],['Size','A5 (3-up)'],['Pages','120'],['Ruling','Single line'],['Printed sheets','1,000'],['= books','3,000',1],['Spoiled sheets','8']],btn:'Add to stock'},
  {t:'alert',k:'ok',x:'Saved: MAT-STE-2026-00061 · +1,000 COV-PNC-A5-120PG-SL · run EBR-0001'}]},
-{id:'folds',n:'Folds: entry',st:['no','New'],where:'Exercise Book Production dev page › new Folds tab',who:'Folding supervisor',reads:'FLD- items (to be created)',writes:'Material Receipt of FLD- folds into Stores - VCL. Paper goes out of stock in Phase 2/3.',why:'<b>Today on the dev page: Missing.</b> Folds are an input to inserts, the same way covers are.',
+{id:'folds',n:'Folds: entry',st:['no','New'],where:'Exercise Book Production dev page › new Folds tab',who:'Folding supervisor',reads:'FLD- items (80 created 04 Nov, Item Group Folds)',writes:'Material Receipt of FLD- fold sets into Stores - VCL. Paper goes out of stock in Phase 2/3.',why:'<b>Today on the dev page: Missing.</b> Folds are an input to inserts, the same way covers are.',
  path:'Exercise Book Production › Folds',b:[
- {t:'form',f:[['Date','04 Nov 2026'],['Run number','EBR-0001 ▾'],['Brand','Prince'],['Size','A5'],['Pages','120'],['Ruling','Single line'],['Folds counted','2,988'],['Rejected','12'],['Item','FLD-PNC-A5-120PG-SL',1]],btn:'Save folds'}]},
-{id:'inserts',n:'Inserts: make sets',st:['part','Existing, changed'],where:'Exercise Book Production dev page › Inserts',who:'Binding supervisor',reads:'COV- and FLD- on hand',writes:'Repack: COV- out, FLD- out (sets × up-count), INS- in',why:'<b>Today on the dev page: Change: add the folds row and server stock check.</b> Covers + folds = inserts. Today only the cover is taken out.',
+ {t:'form',f:[['Date','04 Nov 2026'],['Run number','EBR-0001 ▾'],['Brand','Prince'],['Size','A5'],['Pages','120'],['Ruling','Single line'],['Fold sets counted','996'],['Rejected','4 sets'],['Item','FLD-PNC-A5-120PG-SL',1]],btn:'Save folds'}]},
+{id:'inserts',n:'Inserts: make sets',st:['part','Existing, changed'],where:'Exercise Book Production dev page › Inserts',who:'Binding supervisor',reads:'COV- and FLD- on hand',writes:'Repack: COV- out, FLD- out (1 set each), INS- in',why:'<b>Today on the dev page: Change: add the folds row and server stock check.</b> Covers + folds = inserts. Today only the cover is taken out.',
  path:'Exercise Book Production › Inserts',b:[
- {t:'form',f:[['Run number','EBR-0001 ▾'],['Group','Prince · A5 · 120 · SL',1],['Sets made','996'],['Covers used','996 sheets',1],['Folds used','2,988',1],['= books','2,988',1]],btn:'Post repack'},
+ {t:'form',f:[['Run number','EBR-0001 ▾'],['Group','Prince · A5 · 120 · SL',1],['Sets made','996'],['Covers used','996 sheets',1],['Folds used','996 sets',1],['= books','2,988',1]],btn:'Post repack'},
  {t:'table',head:['On hand after','Covers','Folds','Inserts'],num:[1,2,3],rows:[['Prince A5 120 SL','4 sheets','0','996 sets']]},
- {t:'alert',k:'warn',x:'If folds on hand are fewer than sets × 3, the screen stops: "Only 2,400 folds on hand, enough for 800 sets."'}]},
+ {t:'alert',k:'warn',x:'If fold sets on hand are fewer than the sets being made, the screen stops: "Only 800 fold sets on hand." Until the first fold count, this check is held off.'}]},
 {id:'packing',n:'Packing: receive finished books',st:['part','Existing, changed'],where:'Exercise Book Production dev page › Packing + receiving backend (a84ef92)',who:'Packing and stores',reads:'INS- on hand, the book item\'s Carton conversion, empty cartons',writes:'Manufacture: INS- out, empty cartons out, book item in to Finished Goods - VCL',why:'<b>Today on the dev page: Change: today browser-only.</b> Today packing is saved in the browser only. This is where production meets sales.',
  path:'Exercise Book Production › Packing',b:[
  {t:'form',f:[['Run number','EBR-0001 ▾'],['Book','PNCEB-A5-120PGS-CB-BP-SL',1],['Full cartons','16'],['Books per carton','186',1],['Loose books','12'],['Rejects','0'],['Carton used','A5 common ▾'],['= books in','2,988',1]],btn:'Receive into Finished Goods'},
@@ -594,7 +594,7 @@ var G=[
 {id:'d-floor',n:'Floor today',st:['no','New'],where:'Exercise Book Production dev page › Today (on a floor screen)',who:'Supervisors, production manager',reads:'Today\'s Stock Entries by station and run',writes:'Nothing',why:'<b>Today on the dev page: Missing.</b> Shows at a glance whether every station has entered today, and what each produced.',
  path:'Exercise Book Production › Today · 04 Nov',b:[
  {t:'tiles',items:[['Covers printed','2,400 sh','= 6,000 books','ok'],['Folds','5,820','','ok'],['Inserts','1,940 sets','= 5,820 books','ok'],['Packed','0','No entry yet','no']]},
- {t:'table',head:['Run','Group','Covers','Folds','Inserts','Packed','Yield'],num:[2,3,4,5],rows:[['EBR-0001','Prince A5 120 SL','1,000','2,988','996','2,988','99.6%'],['EBR-0002','Swara A4 120 SL','1,400','2,832','944','0','-']]},
+ {t:'table',head:['Run','Group','Covers','Folds','Inserts','Packed','Yield'],num:[2,3,4,5],rows:[['EBR-0001','Prince A5 120 SL','1,000','996','996','2,988','99.6%'],['EBR-0002','Swara A4 120 SL','1,400','2,832','944','0','-']]},
  {t:'alert',k:'warn',x:'Packing has no entry today. Cartons on hand for A5: 1,875 (disabled item).'}]},
 {id:'d-plan',n:'Stock and shortfall',st:['no','New'],where:'Compass › Exercise Books › Dashboard',who:'Planner, sales manager',reads:'The Data flow netting, live',writes:'Nothing',why:'<b>Today on the dev page: Change: Order & stock after fixes.</b> Where production and sales meet: stock at each stage against open orders, by group, with brand and customer filters.',
  path:'Compass › Exercise Books › Dashboard',b:[
@@ -615,7 +615,7 @@ var G=[
 ['Masters',[
 {id:'itemset',n:'Item set per book',st:['no','New'],where:'Desk Item (a "Production set" section) or Compass',who:'IT Development, production',reads:'COV-, FLD-, INS-, book items, cartons',writes:'Links only (creates missing twins in after_migrate)',why:'<b>Today on the dev page: Missing.</b> Shows one book\'s full chain of items, so the mapping between stations is visible and gaps stand out.',
  path:'Item › PNCEB-A5-120PGS-CB-BP-SL › Production set',b:[
- {t:'table',head:['Stage','Item','Unit','Status'],rows:[['Covers','COV-PNC-A5-120PG-SL','Sheet (3-up)','<span class="chip ok">Exists</span>'],['Folds','FLD-PNC-A5-120PG-SL','Fold (1 per book)','<span class="chip no">To create</span>'],['Inserts','INS-PNC-A5-120PG-SL','Set (3 books)','<span class="chip ok">Exists</span>'],['Finished book','PNCEB-A5-120PGS-CB-BP-SL','Nos, Carton = 186','<span class="chip ok">Exists</span>'],['Carton','A5 common','Nos','<span class="chip wait">Item disabled</span>'],['School twin','SCH-BP-EB-A5-120PGS-CB-BP-SL','Nos','<span class="chip ok">Exists</span>']]}]}
+ {t:'table',head:['Stage','Item','Unit','Status'],rows:[['Covers','COV-PNC-A5-120PG-SL','Sheet (3-up)','<span class="chip ok">Exists</span>'],['Folds','FLD-PNC-A5-120PG-SL','Set (3-up), Item Group Folds','<span class="chip ok">Created 04 Nov</span>'],['Inserts','INS-PNC-A5-120PG-SL','Set (3 books)','<span class="chip ok">Exists</span>'],['Finished book','PNCEB-A5-120PGS-CB-BP-SL','Nos, Carton = 186','<span class="chip ok">Exists</span>'],['Carton','A5 common','Nos','<span class="chip wait">Item disabled</span>'],['School twin','SCH-BP-EB-A5-120PGS-CB-BP-SL','Nos','<span class="chip ok">Exists</span>']]}]}
 ]]
 ];
 var all=[];G.forEach(function(g){g[1].forEach(function(s){s.g=g[0];all.push(s)})});

@@ -423,7 +423,7 @@ nav.tabs .grp:first-child{border-left:0;padding-left:0}
     <div class="st prod gap"><span class="nm">Paper</span><span class="v">Phase 2/3</span><span class="u">Not tied to books yet. Planned for a later phase.</span></div>
     <div class="st prod gap"><span class="nm">Ruling</span><span class="v">Phase 2/3</span><span class="u">No ruled-sheet stock yet. Later phase, together with school and customised orders.</span></div>
     <div class="st prod"><span class="nm">Covers <code>COV-</code></span><span class="v">508,510</span><span class="u">sheets on hand (533,894 received 30 Oct–3 Nov)<br>= 1,260,230 books</span></div>
-    <div class="st prod gap"><span class="nm">Folds</span><span class="v">0</span><span class="u">No folds item exists. Folds should go into inserts together with covers.</span></div>
+    <div class="st prod gap"><span class="nm">Folds</span><span class="v">0</span><span class="u">80 FLD- items created 04 Nov, no stock yet. Folds go into inserts together with covers.</span></div>
     <div class="st prod"><span class="nm">Inserts <code>INS-</code></span><span class="v">25,384</span><span class="u">sets, from 25,384 cover sheets<br>= 62,378 books. None used.</span></div>
     <div class="st prod gap"><span class="nm">Packing</span><span class="v">0</span><span class="u">No receipt has ever been posted. Empty cartons on the books: A4 19,104, A5 1,875.</span></div>
     <div class="st mid"><span class="nm">Finished Goods - VCL</span><span class="v">516,918</span><span class="u">books = 3,566 cartons, 29 SKUs. From today's count only (<code>MAT-RECO-2026-00003</code>), nothing has moved since.</span></div>
@@ -455,7 +455,7 @@ nav.tabs .grp:first-child{border-left:0;padding-left:0}
     <div class="card"><h3>Where the chain breaks</h3>
       <ul class="tight">
         <li><strong>Paper → ruling:</strong> <span class="chip wait">Phase 2/3</span> Deferred to a later phase, together with school and customised exercise-book orders. Separately, <code>WF/BP - Reel-610-47-IN-0-C</code> shows 1,000,000 tonnes, which is a data error to fix.</li>
-        <li><strong>Covers + folds → inserts:</strong> half modelled. Today the dev page's Repack takes out <em>only</em> the cover sheet and puts in one insert set, 1:1. No folds item exists, so the folded inner is never taken out of stock and the paper inside every insert is invisible. The fix is to add a Folds stage (an input), so that covers + folds together make an insert.</li>
+        <li><strong>Covers + folds → inserts:</strong> half modelled. Today the dev page's Repack takes out <em>only</em> the cover sheet and puts in one insert set, 1:1. Until the folds row is added (the 80 FLD- items were created on 04 Nov), the folded inner is never taken out of stock and the paper inside every insert is invisible. The fix is to add a Folds stage (an input), so that covers + folds together make an insert.</li>
         <li><strong>Inserts → finished stock:</strong> broken. No insert has ever been used and no book has been received from production.</li>
         <li><strong>Finished stock → delivery:</strong> "Stock" means any warehouse. <code>Finished Goods - VCL</code> is the warehouse for packed books ready to sell. <code>Stores - VCL</code> holds materials and part-made stock (paper, covers, inserts, cartons). Daily production hasn't been recorded, so the 4 deliveries had no books in the system. Each was covered by booking that day's quantity into Stores and shipping it from there (<code>MAT-STE-2026-00019</code> to <code>00022</code>). That workaround fills the data gap. From today's count, books should be received into Finished Goods when they are packed and delivered from there.</li>
         <li><strong>Orders:</strong> <code>SAL-ORD-2026-00199</code> (Mahavir), 8,000 cartons of <code>SWREB-A4-120PGS-CB-NP-SL</code>, is confirmed as real demand. It is 52% of everything on order. The legacy item "Prince Exe A5 120pgs Bank CB" is still on an order.</li>
@@ -481,7 +481,7 @@ nav.tabs .grp:first-child{border-left:0;padding-left:0}
     <tbody>
       <tr><td>Paper <span class="chip wait">Phase 2/3</span></td><td>Raw paper</td><td><code>NP-Reels-610-42-…</code>, <code>WF/BP - Reel-…</code></td><td>Kg / Tonne / Ream</td><td><code>Stores - VCL</code></td><td>paper, width, gsm</td><td class="num">32 (15)</td><td>Ruled sheets</td></tr>
       <tr><td>Ruling <span class="chip wait">Phase 2/3</span></td><td>Ruled sheet</td><td><code>RL - SL - A4 - BP</code> (the only one, no stock)</td><td>Sheets</td><td>-</td><td>ruling, size, paper</td><td class="num">1 (0)</td><td>Folds</td></tr>
-      <tr><td>Folds <span class="chip no">Missing</span></td><td>Folded inner (proposed)</td><td><code>FLD-&lt;PNC|SWR&gt;-&lt;A4|A5&gt;-&lt;PPP&gt;PG-&lt;RULING&gt;</code> (approved 04 Nov, twin of COV/INS)</td><td>Nos (one per book)</td><td><code>Stores - VCL</code></td><td>size, pages, paper, ruling</td><td class="num">0. None exists</td><td>Inserts</td></tr>
+      <tr><td>Folds <span class="chip ok">Created 04 Nov</span></td><td>Folded inner</td><td><code>FLD-PNC-A5-120PG-SL</code> (twin of COV/INS), Item Group Folds</td><td>Sets (same up-count as COV/INS)</td><td><code>Stores - VCL</code></td><td>size, pages, paper, ruling</td><td class="num">80 (0)</td><td>Inserts</td></tr>
       <tr><td>Covers</td><td>Printed cover sheet</td><td><code>COV-PNC-A5-120PG-SL</code></td><td>Sheets (A5 3-up, A4 2-up)</td><td><code>Stores - VCL</code></td><td>brand, size, pages, ruling</td><td class="num">80 (68)</td><td>Inserts</td></tr>
       <tr><td>Inserts</td><td>Cover + inner, not yet packed</td><td><code>INS-PNC-A5-120PG-SL</code></td><td>Sets (1 set = 1 cover sheet)</td><td><code>Stores - VCL</code></td><td>brand, size, pages, ruling</td><td class="num">80 (6)</td><td>Finished book</td></tr>
       <tr><td>Packing / finished</td><td>Finished book</td><td><code>PNCEB-A5-120PGS-CB-BP-SL</code></td><td>Nos, sold in Carton</td><td><code>Finished Goods - VCL</code></td><td>brand, size, pages, cover, paper, ruling</td><td class="num">1,302 (29)</td><td>Delivery</td></tr>
@@ -733,7 +733,7 @@ nav.tabs .grp:first-child{border-left:0;padding-left:0}
     <tbody>
       <tr><td>Paper <span class="chip wait">Phase 2/3</span></td><td>Raw paper</td><td><code>NP-Reels-610-42-…</code>, <code>WF/BP - Reel-…</code></td><td>Kg / Tonne / Ream</td><td><code>Stores - VCL</code></td><td>paper, width, gsm</td><td class="num">32 (15)</td><td>Ruled sheets</td></tr>
       <tr><td>Ruling <span class="chip wait">Phase 2/3</span></td><td>Ruled sheet</td><td><code>RL - SL - A4 - BP</code> (the only one, no stock)</td><td>Sheets</td><td>-</td><td>ruling, size, paper</td><td class="num">1 (0)</td><td>Folds</td></tr>
-      <tr><td>Folds <span class="chip no">Missing</span></td><td>Folded inner (proposed)</td><td><code>FLD-&lt;PNC|SWR&gt;-&lt;A4|A5&gt;-&lt;PPP&gt;PG-&lt;RULING&gt;</code> (approved 04 Nov, twin of COV/INS)</td><td>Nos (one per book)</td><td><code>Stores - VCL</code></td><td>size, pages, paper, ruling</td><td class="num">0. None exists</td><td>Inserts</td></tr>
+      <tr><td>Folds <span class="chip ok">Created 04 Nov</span></td><td>Folded inner</td><td><code>FLD-PNC-A5-120PG-SL</code> (twin of COV/INS), Item Group Folds</td><td>Sets (same up-count as COV/INS)</td><td><code>Stores - VCL</code></td><td>size, pages, paper, ruling</td><td class="num">80 (0)</td><td>Inserts</td></tr>
       <tr><td>Covers</td><td>Printed cover sheet</td><td><code>COV-PNC-A5-120PG-SL</code></td><td>Sheets (A5 3-up, A4 2-up)</td><td><code>Stores - VCL</code></td><td>brand, size, pages, ruling</td><td class="num">80 (68)</td><td>Inserts</td></tr>
       <tr><td>Inserts</td><td>Cover + inner, not yet packed</td><td><code>INS-PNC-A5-120PG-SL</code></td><td>Sets (1 set = 1 cover sheet)</td><td><code>Stores - VCL</code></td><td>brand, size, pages, ruling</td><td class="num">80 (6)</td><td>Finished book</td></tr>
       <tr><td>Packing / finished</td><td>Finished book</td><td><code>PNCEB-A5-120PGS-CB-BP-SL</code></td><td>Nos, sold in Carton</td><td><code>Finished Goods - VCL</code></td><td>brand, size, pages, cover, paper, ruling</td><td class="num">1,302 (29)</td><td>Delivery</td></tr>
@@ -747,7 +747,7 @@ nav.tabs .grp:first-child{border-left:0;padding-left:0}
     <tbody>
       <tr><td>Cover sheet → books</td><td>A4 = 2, A5 = 3 (the up-count is read from the cover item name)</td></tr>
       <tr><td>Cover sheet → insert set</td><td>1 : 1. One set = 2 (A4) or 3 (A5) books</td></tr>
-      <tr><td>Folds per insert set</td><td>Sets × up-count (one fold per book)</td></tr>
+      <tr><td>Folds per insert set</td><td>1 : 1. FLD- is counted in sets, like COV- and INS- (one A5 fold set = 3 books' inners)</td></tr>
       <tr><td>Books per carton</td><td>From the book item's Carton conversion, e.g. A4: 200pg 66 · 120pg 102 · 96pg 120 · 80pg 144 · 64pg 162 · 48pg 204. A5 cartons hold more (e.g. A5 120pg 186). 100-page books: blank, still to set</td></tr>
       <tr><td>Default selling unit</td><td>Carton (already set on the 455 items that have a Carton conversion)</td></tr>
     </tbody>
@@ -762,8 +762,8 @@ nav.tabs .grp:first-child{border-left:0;padding-left:0}
     <thead><tr><th>Station</th><th>Document</th><th>Out</th><th>In</th><th>Warehouse</th><th>Checks</th><th>Status</th></tr></thead>
     <tbody>
       <tr><td>Covers</td><td>Material Receipt (Phase 2: Manufacture)</td><td>- (Phase 2: board and ink)</td><td><code>COV-x</code>, sheets</td><td><code>Stores - VCL</code></td><td>Run number required; spoiled sheets recorded</td><td><span class="chip part">Exists, add run no.</span></td></tr>
-      <tr><td>Folds</td><td>Material Receipt (Phase 3: from ruled sheets)</td><td>- (Phase 3: ruled sheets)</td><td><code>FLD-x</code>, folds</td><td><code>Stores - VCL</code></td><td>Rejects recorded</td><td><span class="chip no">New</span></td></tr>
-      <tr><td>Inserts</td><td>Repack</td><td><code>COV-x</code> × sets; <code>FLD-x</code> × sets × up-count</td><td><code>INS-x</code>, sets</td><td><code>Stores - VCL</code></td><td>Stops if covers or folds on hand are short</td><td><span class="chip part">Exists, add folds row</span></td></tr>
+      <tr><td>Folds</td><td>Material Receipt (Phase 3: from ruled sheets)</td><td>- (Phase 3: ruled sheets)</td><td><code>FLD-x</code>, sets</td><td><code>Stores - VCL</code></td><td>Rejects recorded</td><td><span class="chip part">Items created 04 Nov; screen new</span></td></tr>
+      <tr><td>Inserts</td><td>Repack</td><td><code>COV-x</code> × sets; <code>FLD-x</code> × sets</td><td><code>INS-x</code>, sets</td><td><code>Stores - VCL</code></td><td>Stops if covers or folds on hand are short</td><td><span class="chip part">Exists, add folds row</span></td></tr>
       <tr><td>Packing</td><td>Manufacture</td><td><code>INS-x</code> sets; empty cartons</td><td>Book item, books (cartons × conversion + loose)</td><td><code>Finished Goods - VCL</code></td><td>Spot-weigh about 1 in 20 cartons, flag beyond ±5%%</td><td><span class="chip part">Browser only today; backend a84ef92</span></td></tr>
       <tr><td>Empty cartons</td><td>Stock Reconciliation (draft)</td><td colspan="2">Counted quantity per carton item</td><td><code>Stores - VCL</code></td><td>Tanuj submits</td><td><span class="chip part">Count 05 Nov</span></td></tr>
       <tr><td>Delivery</td><td>Delivery Note</td><td>Book item</td><td>-</td><td>from <code>Finished Goods - VCL</code></td><td>Order checks (see Order controls)</td><td><span class="chip part">Change the default warehouse</span></td></tr>
@@ -771,7 +771,7 @@ nav.tabs .grp:first-child{border-left:0;padding-left:0}
   </table></div>
   <div class="card"><h3>New fields and records</h3><ul class="tight">
     <li><code>custom_eb_run</code> (Data or Link) on Stock Entry, shown on every floor screen.</li>
-    <li>80 <code>FLD-</code> items, twins of the 80 COV/INS items, Item Group to be named.</li>
+    <li><span class="chip ok">Done 04 Nov</span> 80 <code>FLD-</code> items in Item Group <strong>Folds</strong>, twins of the COV/INS items. Named "&lt;Brand&gt; Fold - &lt;Size&gt; - &lt;Pages&gt; Pages - &lt;Ruling&gt; - &lt;N&gt; up", stock UOM Nos counted in sets, default warehouse <code>Stores - VCL</code>, valuation 0, can be sold, not purchased. Created over REST on Tanuj's direction (an exception to the after_migrate rule; later code must match these values). <strong>No fold stock yet:</strong> the first Repacks need an opening count of folds, or the shortage check held off until one exists.</li>
     <li>A run record, if P6 decides one (a Work Order per group run, or a light run doctype).</li>
     <li>VCL Stores Receipt Book Line (from the receiving backend a84ef92) for packing.</li>
   </ul></div>
@@ -930,7 +930,7 @@ nav.tabs .grp:first-child{border-left:0;padding-left:0}
     <thead><tr><th>Step</th><th>What</th><th>Where it's built</th><th>Depends on</th></tr></thead>
     <tbody>
       <tr><td class="num">1</td><td>Put the dev pages in git, so sessions stop overwriting each other</td><td>Repo of their own, or <code>vcl-production</code></td><td>-</td></tr>
-      <tr><td class="num">2</td><td>Create the 80 <code>FLD-</code> items (twins of COV/INS) and a <code>custom_eb_run</code> field on Stock Entry</td><td>vcl-production, in <code>after_migrate</code></td><td>FLD naming approved 04 Nov</td></tr>
+      <tr><td class="num">2</td><td><s>Create the 80 <code>FLD-</code> items</s> <span class="chip ok">Done 04 Nov</span> and a <code>custom_eb_run</code> field on Stock Entry. Opening count of folds before the first Repack</td><td>vcl-production, in <code>after_migrate</code></td><td>FLD naming approved 04 Nov</td></tr>
       <tr><td class="num">2a</td><td><strong>Process flowchart at the top of the Exercise Book Production page</strong> (approved 04 Nov): Ruling → Folds, and Covers → Inserts → Packing → Finished stock. Each step is live or greyed out, from a setting, so steps light up as they go live (Ruling stays grey until Phase 2/3)</td><td>Exercise Book Production dev page</td><td>1</td></tr>
       <tr><td class="num">2b</td><td><strong>Floor route to match the flow.</strong> For product line "General Stationery and Exercise Book", the Workstation Product Line Tag rows become: Ruling 10, Sheet to Sheet Printing (covers) 20, Folding 30, Inserting 40, Packing 50. The Folding, Inserting and Packing Workstation Types (and their workstations) are created in <code>after_migrate</code>, and the Sheeting and Collation tags for this line are removed, in a patch that only changes existing rows</td><td>vcl-production</td><td>-</td></tr>
       <tr><td class="num">3</td><td>New Folds screen. Inserts screen changed to take out covers and folds</td><td>Exercise Book Production dev page</td><td>2</td></tr>
@@ -976,7 +976,7 @@ nav.tabs .grp:first-child{border-left:0;padding-left:0}
       <tr><td>Finished Stock</td><td>Finished Goods balance (opening count of 04 Nov)</td><td><span class="chip c-keep">Keep</span> as the read-only Finished Goods view, fed by Packing</td><td>1b</td></tr>
       <tr><td>Cover Stock + Quick entry</td><td>Material Receipt of COV- sheets</td><td><span class="chip c-change">Changed</span> Covers: adds the run number. Phase 2: uses up board and ink</td><td>1b</td></tr>
       <tr><td>-</td><td>-</td><td><span class="chip c-new">New</span> Folds: FLD- receipt (naming approved)</td><td>1b</td></tr>
-      <tr><td>Inserts</td><td>Repack COV- → INS-, 1:1</td><td><span class="chip c-change">Changed</span> Takes out covers and folds (sets × up-count)</td><td>1b</td></tr>
+      <tr><td>Inserts</td><td>Repack COV- → INS-, 1:1</td><td><span class="chip c-change">Changed</span> Takes out covers and folds (1 set each per insert set)</td><td>1b</td></tr>
       <tr><td>Packing</td><td>Saved in the browser only</td><td><span class="chip c-change">Changed</span> Posts to Finished Goods: INS- and cartons out, books in, spot-weigh</td><td>1b</td></tr>
       <tr><td>Empty Cartons</td><td>Book balances from 2024–25 purchases</td><td><span class="chip c-change">Changed</span> Count screen → draft Stock Reconciliation. Cartons used up at Packing</td><td>1a</td></tr>
       <tr><td>-</td><td>-</td><td><span class="chip c-new">New</span> Plan (what to make), Runs (one run across stations), Today (floor board)</td><td>1b</td></tr>
@@ -1225,7 +1225,7 @@ var S=[
  {w:'Phase 1b',t:'Full floor flow',d:'Every station records stock, by run',url:'/exercise-book-production-dev',code:'Same page, now calling whitelisted methods in production_floor, with tests',
   groups:[['Plan',[['plan','new'],['runs','new'],['today','new']]],['Stations',[['covers','change'],['folds','new'],['inserts','change'],['packing','change'],['cartons','change']]],['Views',[['fstock','keep'],['orders','move'],['ostock','move']]],['Elsewhere',[['recv','retire'],['cebo','keep'],['cdash','new']]]],
   posts:[['Covers','Material Receipt COV- + run number'],['Folds','Material Receipt FLD-'],['Inserts','Repack: COV- and FLD- out, INS- in'],['Packing','Manufacture: INS- and cartons out, books into Finished Goods'],['Delivery','From Finished Goods; same-day receipts stop']],
-  users:'Printing, folding, binding, packing supervisors; planner',done:['80 FLD- items and the run field created','Every station posts, with the run number','Deliveries come from Finished Goods','Yield and waste readable per run'],
+  users:'Printing, folding, binding, packing supervisors; planner',done:['The run field created (the 80 FLD- items were created on 04 Nov)','Every station posts, with the run number','Deliveries come from Finished Goods','Yield and waste readable per run'],
   gate:['Who enters each station (P7)','How rejects, loose books and reversals work (P8)','Push and deploy the receiving backend (a84ef92)']},
  {w:'Phase 2',t:'Into the app',d:'Floor app + Compass dashboards, with cost',url:'/app/exercise-book-production',code:'A page of the vcl-production app; dashboards in vcl_compass',
   groups:[['Floor app',[['plan','keep'],['runs','keep'],['today','keep'],['covers','change'],['folds','keep'],['inserts','keep'],['packing','keep'],['cartons','keep']]],['Compass',[['cebo','keep'],['cdash','keep'],['cmgmt','new'],['chealth','new']]],['Retired',[['orders','retire'],['ostock','retire']]]],

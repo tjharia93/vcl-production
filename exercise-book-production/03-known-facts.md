@@ -56,3 +56,9 @@ Taken on 04/11/2026 from the second-brain notes `exercise-book-naming-standard-2
 - Not created yet. They will be created in vcl-production `after_migrate` (build plan step 2).
 - Approved the same day: correct the MAT-STE-2026-00007 remark (done by the PC session; see the reply).
 - Done 04/11 20:24: a correcting Comment was added on MAT-STE-2026-00007 (remarks can't be edited after submit, and the entry was not cancelled). The dev-page comment on exercise-book-production-v2-dev was fixed (a comment only, no change in behaviour).
+
+## Folds items (created live 04/11/2026, PC session, on Tanuj's instruction)
+- Item Group **Folds** (parent All Item Groups). 80 `FLD-` items, one per INS- twin: code `FLD-` + the INS code after `INS-` (e.g. `FLD-PNC-A5-120PG-SL`). Name: "<Brand> Fold - <Size> - <Pages> Pages - <Ruling> - <N> up".
+- Stock UOM Nos, **counted in sets** (same up-count as COV/INS): 1 cover sheet + 1 fold set → 1 insert set. Stock item, include in manufacturing, default warehouse Stores - VCL, valuation 0. Can be sold (rarely), not purchased.
+- Created over REST, an exception to the after_migrate rule. Any later after_migrate code must match these values.
+- No fold stock yet: the first Repacks need an opening fold count, or the shortage check held off.
