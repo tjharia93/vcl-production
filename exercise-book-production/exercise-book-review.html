@@ -1,3 +1,4 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Exercise Book Production</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -57,6 +58,28 @@ ul.tight{margin:0;padding-left:20px;display:grid;gap:4px}
 .flow .n{font-family:var(--mono);color:var(--brand-text);font-weight:700}
 .flow .t{font-weight:700}
 @media (max-width:720px){.flow{grid-template-columns:1fr}}
+/* process flowchart */
+.fwrap{margin:0;display:grid;gap:10px;background:var(--raised);border:1px solid var(--border);border-radius:4px;padding:16px}
+.fchart{width:100%;height:auto;display:block;font-family:var(--sans)}
+.fh-narrow{display:none;max-width:400px;margin:0 auto}
+@media (max-width:640px){.fh-wide{display:none}.fh-narrow{display:block}}
+.fa{fill:none;stroke:var(--muted);stroke-width:1.5}
+.fah{fill:var(--muted)}
+.fn rect{stroke-width:2}
+.fn.ok rect{fill:var(--ok-tint);stroke:var(--ok-text)}
+.fn.no rect{fill:var(--surface);stroke:var(--warn-text);stroke-dasharray:5 4}
+.fn.end rect{fill:var(--brand);stroke:var(--brand)}
+.fn.end text{fill:var(--on-brand)}
+.fn text{fill:var(--ink)}
+.fh{font-size:15px;font-weight:700}
+.fnum{font-family:var(--mono);fill:var(--brand-text)}
+.fs{font-size:12px;fill:var(--muted)!important}
+.fn.end .fs{fill:var(--on-brand)!important;opacity:.85}
+.fst{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.fn.ok .fst{fill:var(--ok-text)}
+.fn.no .fst{fill:var(--warn-text)}
+a.fn:hover rect{filter:brightness(.95)}
+a.fn:focus-visible rect{stroke:var(--focus);stroke-width:3}
 /* step detail */
 .step{scroll-margin-top:64px}
 .step header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
@@ -170,13 +193,11 @@ tr.flag td{background:var(--warn-tint)}
   <h2>Where exercise books stand</h2>
   <p class="lede">The products are standardised in ERPNext, and since today they have an opening finished stock. The production behind them is only partly modelled. A dev page records covers and inserts as stock moves. Ruling, folding and packing post nothing to ERPNext, and the floor route doesn't match the five steps the factory actually follows.</p>
 
-  <div class="flow" aria-label="Production process">
-    <a href="#process"><span class="n">1</span><span class="t">Ruling</span><span class="label">Inner papers</span></a>
-    <a href="#process"><span class="n">2</span><span class="t">Covers</span><span class="label">Printed sheets</span></a>
-    <a href="#process"><span class="n">3</span><span class="t">Folds</span><span class="label">Folded inner, an input</span></a>
-    <a href="#process"><span class="n">4</span><span class="t">Inserts</span><span class="label">Covers + folds</span></a>
-    <a href="#process"><span class="n">5</span><span class="t">Packing</span><span class="label">Cartons</span></a>
-  </div>
+  <figure class="fwrap" aria-label="Production process">
+    <svg class="fchart fh-wide" viewBox="0 0 840 196" role="img" aria-labelledby="fct1"><title id="fct1">Production flow: ruling to folds, and covers, both feed inserts, then packing into finished stock</title><defs><marker id="fa1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fah"/></marker></defs><path d="M132 48H172" class="fa" marker-end="url(#fa1)"/><path d="M304 48H336V86H366" class="fa" marker-end="url(#fa1)"/><path d="M218 152H336V114H366" class="fa" marker-end="url(#fa1)"/><path d="M498 100H542" class="fa" marker-end="url(#fa1)"/><path d="M674 100H714" class="fa" marker-end="url(#fa1)"/><a href="#process" class="fn no"><rect x="4" y="10" width="128" height="76" rx="4"/><text x="16" y="34" class="fh"><tspan class="fnum">1</tspan>  Ruling</text><text x="16" y="54" class="fs">Inner papers</text><text x="16" y="73" class="fst">Not in ERPNext</text></a><a href="#process" class="fn no"><rect x="176" y="10" width="128" height="76" rx="4"/><text x="188" y="34" class="fh"><tspan class="fnum">3</tspan>  Folds</text><text x="188" y="54" class="fs">Folded inner</text><text x="188" y="73" class="fst">Not in ERPNext</text></a><a href="#process" class="fn ok"><rect x="90" y="114" width="128" height="76" rx="4"/><text x="102" y="138" class="fh"><tspan class="fnum">2</tspan>  Covers</text><text x="102" y="158" class="fs">Printed sheets</text><text x="102" y="177" class="fst">Posts stock</text></a><a href="#process" class="fn ok"><rect x="370" y="62" width="128" height="76" rx="4"/><text x="382" y="86" class="fh"><tspan class="fnum">4</tspan>  Inserts</text><text x="382" y="106" class="fs">Covers + folds</text><text x="382" y="125" class="fst">Posts stock</text></a><a href="#process" class="fn no"><rect x="546" y="62" width="128" height="76" rx="4"/><text x="558" y="86" class="fh"><tspan class="fnum">5</tspan>  Packing</text><text x="558" y="106" class="fs">Cartons</text><text x="558" y="125" class="fst">Browser only</text></a><g class="fn end"><rect x="718" y="72" width="118" height="56" rx="28"/><text x="777.0" y="96" text-anchor="middle" class="fh">Finished stock</text><text x="777.0" y="114" text-anchor="middle" class="fs">Finished Goods - VCL</text></g></svg>
+    <svg class="fchart fh-narrow" viewBox="0 0 340 500" role="img" aria-labelledby="fct2"><title id="fct2">Production flow: ruling to folds, and covers, both feed inserts, then packing into finished stock</title><defs><marker id="fa2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fah"/></marker></defs><path d="M85 86V110" class="fa" marker-end="url(#fa2)"/><path d="M85 190V208H140V226" class="fa" marker-end="url(#fa2)"/><path d="M255 190V208H200V226" class="fa" marker-end="url(#fa2)"/><path d="M170 306V330" class="fa" marker-end="url(#fa2)"/><path d="M170 410V434" class="fa" marker-end="url(#fa2)"/><a href="#process" class="fn no"><rect x="10" y="10" width="150" height="76" rx="4"/><text x="22" y="34" class="fh"><tspan class="fnum">1</tspan>  Ruling</text><text x="22" y="54" class="fs">Inner papers</text><text x="22" y="73" class="fst">Not in ERPNext</text></a><a href="#process" class="fn no"><rect x="10" y="114" width="150" height="76" rx="4"/><text x="22" y="138" class="fh"><tspan class="fnum">3</tspan>  Folds</text><text x="22" y="158" class="fs">Folded inner</text><text x="22" y="177" class="fst">Not in ERPNext</text></a><a href="#process" class="fn ok"><rect x="180" y="114" width="150" height="76" rx="4"/><text x="192" y="138" class="fh"><tspan class="fnum">2</tspan>  Covers</text><text x="192" y="158" class="fs">Printed sheets</text><text x="192" y="177" class="fst">Posts stock</text></a><a href="#process" class="fn ok"><rect x="95" y="230" width="150" height="76" rx="4"/><text x="107" y="254" class="fh"><tspan class="fnum">4</tspan>  Inserts</text><text x="107" y="274" class="fs">Covers + folds</text><text x="107" y="293" class="fst">Posts stock</text></a><a href="#process" class="fn no"><rect x="95" y="334" width="150" height="76" rx="4"/><text x="107" y="358" class="fh"><tspan class="fnum">5</tspan>  Packing</text><text x="107" y="378" class="fs">Cartons</text><text x="107" y="397" class="fst">Browser only</text></a><g class="fn end"><rect x="95" y="438" width="150" height="56" rx="28"/><text x="170.0" y="462" text-anchor="middle" class="fh">Finished stock</text><text x="170.0" y="480" text-anchor="middle" class="fs">Finished Goods - VCL</text></g></svg>
+    <div class="legend"><span><i style="background:var(--ok-tint);border:2px solid var(--ok-text)"></i>Posts stock in ERPNext</span><span><i style="background:var(--surface);border:2px dashed var(--warn-text)"></i>Not recorded in ERPNext</span><span class="label">Tap a step for detail</span></div>
+  </figure>
 
   <div class="grid2">
     <div class="card">
@@ -637,7 +658,7 @@ tr.flag td{background:var(--warn-tint)}
       <tr><td class="num">6</td><td>By SKU · method note</td><td>"We need the flow by item type from each stage so that it can be mapped properly."</td><td>Added "Flow by item type, stage to stage": item type, code pattern, unit, warehouse, key fields, how many items exist (with stock), and what each becomes. Added "Flow by group" with all 75 groups (brand | size | pages | ruling) and their quantities at each stage: covers, inserts, finished, orders, the shortfall after each stage, and surplus. 34 groups have stock but no orders.</td><td><span class="chip ok">Done</span></td></tr>
     </tbody>
   </table></div>
-  <div class="callout"><p><strong>Cover unit settled (04 Nov):</strong> all cover stock is in printed sheets, including the 30 Oct opening. A4 = 2 books per sheet and A5 = 3. The "Covers counted as" switch has been removed, and the figures use sheets × up-count. Still to make (all orders): 1,085,336 books. Approved 04 Nov: correct the remark on <code>MAT-STE-2026-00007</code> (sent to the PC session to do). Still open: fix the dev page code comment that says "1 cover = 1 book".</p></div>
+  <div class="callout"><p><strong>Cover unit settled (04 Nov):</strong> all cover stock is in printed sheets, including the 30 Oct opening. A4 = 2 books per sheet and A5 = 3. The "Covers counted as" switch has been removed, and the figures use sheets × up-count. Still to make (all orders): 1,085,336 books. Both fixes approved and done on 04 Nov. <code>MAT-STE-2026-00007</code> now carries a correcting comment. Its remark field can't be edited once submitted, and the entry wasn't cancelled, so no stock moved. The dev page comment now reads "1 cover SHEET = 1 insert set = ups books", and the page works exactly as before.</p></div>
   <p class="lede">The comment threads on the page itself are still open. Claude can only reply to or resolve a thread once you send it to Claude, so resolve them in the page, or send them to Claude and I'll resolve them.</p>
 </section>
 
@@ -790,3 +811,5 @@ document.getElementById('w-next').addEventListener('click',function(){if(cur<S.l
 show(0);
 })();
 </script>
+
+</body></html>

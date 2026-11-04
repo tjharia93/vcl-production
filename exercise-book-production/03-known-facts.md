@@ -55,3 +55,4 @@ Taken on 04/11/2026 from the second-brain notes `exercise-book-naming-standard-2
 - Naming: `FLD-<PNC|SWR>-<A4|A5>-<PPP>PG-<RULING>`, the twin of `COV-` and `INS-` (e.g. `FLD-PNC-A5-120PG-SL`).
 - Not created yet. They will be created in vcl-production `after_migrate` (build plan step 2).
 - Approved the same day: correct the MAT-STE-2026-00007 remark (done by the PC session; see the reply).
+- Done 04/11 20:24: a correcting Comment was added on MAT-STE-2026-00007 (remarks can't be edited after submit, and the entry was not cancelled). The dev-page comment on exercise-book-production-v2-dev was fixed (a comment only, no change in behaviour).
