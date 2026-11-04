@@ -428,7 +428,7 @@ tr.flag td{background:var(--warn-tint)}
 <!-- ============ ORDER CONTROLS ============ -->
 <section class="panel" id="p-controls" data-tab="controls" hidden>
   <h2>Order controls: right item, right unit, right price</h2>
-  <p class="lede">Three checks stop the two most common order mistakes: a school book picked when the brand book was meant, and a carton price typed against one book. Each check runs on the server, so it catches every way a line gets in (Desk, Compass, Android, API, import), and also shows on screen where there is one. Status: the dry-run pack is ready and with you for approval (04 Nov). Nothing has been written live, committed or pushed.</p>
+  <p class="lede">Three checks stop the two most common order mistakes: a school book picked when the brand book was meant, and a carton price typed against one book. Each check runs on the server, so it catches every way a line gets in (Desk, Compass, Android, API, import), and also shows on screen where there is one. Status (04 Nov, evening): the school rename is <strong>live</strong>. All the checks are built on branches in four repos, not yet committed, pushed or deployed.</p>
 
   <div class="grid2">
     <div class="card"><h3>1. School or brand?</h3>
@@ -448,7 +448,7 @@ tr.flag td{background:var(--warn-tint)}
         <tr><td>Have a brand twin to switch to</td><td class="num">448 (60 twins disabled)</td></tr>
         <tr><td>No brand twin (mostly Newsprint 100pg HSL/HSQ)</td><td class="num">99</td></tr>
       </tbody></table></div>
-      <p><span class="chip wait">Ready, awaiting your approval</span> The server check runs on Opportunity, Quotation, Sales Order, Delivery Note and Sales Invoice. It only checks lines a save adds or changes, so old documents aren't blocked, and lines copied from an earlier document are trusted. The pop-up is on Desk and on Compass Orders and Quotations. Backup and rollback are ready.</p>
+      <p><span class="chip ok">Rename live 04 Nov</span> <span class="chip part">Checks built, not deployed</span> 547 school items renamed (codes unchanged; rollback ready). The server check runs on Opportunity, Quotation, Sales Order, Delivery Note and Sales Invoice. It only checks lines a save adds or changes, so old documents aren't blocked, and lines copied from an earlier document are trusted. The pop-up is on Desk and on Compass Orders and Quotations. Backup and rollback are ready.</p>
     </div>
 
     <div class="card"><h3>2. Sell in cartons by default</h3>
@@ -484,20 +484,21 @@ tr.flag td{background:var(--warn-tint)}
     </div>
     <p>One band of 3–150/= per book for every size catches the same lines as separate bands per size, so the simpler rule is proposed. <strong>Check before approving:</strong> is 150/= enough headroom for your dearest single book (200-page A4)? If any is sold above 150/= per book, raise the ceiling.</p>
     <p><strong>Price-list clean-up needed first:</strong> 13 carton prices entered against Nos, 7 doubtful Nos prices on MGC/MNL covers, and 809 enabled items with no current price. Separately, <strong>937 of 989 Carton invoice lines have a conversion factor of 1</strong>. Those invoices count a carton as one book, so the stock and per-book figures behind them are wrong. That needs its own fix.</p>
-    <p><span class="chip wait">Ready, awaiting your approval</span></p>
+    <p><span class="chip part">Built, not deployed</span> The price check is wired into Desk, Compass, vcl_sales and the Android app.</p>
   </div>
 
   <h3>Where each check applies</h3>
   <div class="tw"><table><thead><tr><th>Entry point</th><th>Server check</th><th>Pop-up / hint on screen</th></tr></thead><tbody>
     <tr><td>Desk: Opportunity, Quotation, Sales Order, Delivery Note, Sales Invoice</td><td><span class="chip ok">Yes</span></td><td><span class="chip ok">Yes</span></td></tr>
     <tr><td>Compass Orders and Quotations</td><td><span class="chip ok">Yes</span></td><td><span class="chip ok">Yes</span></td></tr>
-    <tr><td>Compass stock lines, deals, audit, capture</td><td><span class="chip ok">Yes</span></td><td><span class="chip wait">Still to wire</span></td></tr>
-    <tr><td>Android app</td><td><span class="chip ok">Yes</span></td><td><span class="chip wait">Needs an app release</span></td></tr>
-    <tr><td>vcl_sales enquiry page</td><td><span class="chip ok">Yes</span></td><td><span class="chip wait">Still to wire</span></td></tr>
+    <tr><td>Compass stock lines (Carton, Label, CP), deals, audit invoice lines</td><td><span class="chip ok">Yes</span></td><td><span class="chip ok">Built</span> Unit required on quotations and deal lines; save is held while a line is blocked</td></tr>
+    <tr><td>Android app</td><td><span class="chip ok">Yes</span></td><td><span class="chip part">Built, tests not run</span> New order (unit required), deal lines, photo proposal, audit. Still to do: audit submit flag, deal flag read-back. Needs an app release</td></tr>
+    <tr><td>vcl_sales enquiry page</td><td><span class="chip ok">Yes</span></td><td><span class="chip ok">Built</span> Pop-up and price check</td></tr>
     <tr><td>API and imports</td><td><span class="chip ok">Yes</span></td><td>-</td></tr>
   </tbody></table></div>
   <p class="lede">The server check covers everything, so a screen without the pop-up still can't save a wrong line. It just shows the message on save instead of when the item is picked.</p>
-  <div class="callout"><p><strong>The pack, for your approval:</strong> <code>C:\Second_Brain\output\selling_line_guards_pack_2026-11-04.md</code> on the PC. The code is on branch <code>feat/school-item-guard</code> in vcl-production and vcl_compass (local, not pushed). Tests: vcl-production's 16 new tests pass. Compass type checks are clean and all 495 tests pass. To go live: approve, then push, deploy and run a migrate (the new field and settings are created on migrate). Nothing is written until you say go.</p></div>
+  <div class="callout"><p><strong>Where the code is:</strong> branch <code>feat/school-item-guard</code> in local copies of vcl-production, vcl_compass, vcl_sales and vcl-android-app on the PC. Nothing is committed or pushed. <strong>Tests:</strong> vcl-production's new tests pass. Compass type checks are clean, all 495 frontend tests pass, and 838 of 839 server tests pass (the one failure, a QR capture test, fails the same way on main). vcl_sales has no tests. The 13 new Android tests haven't been run because the PC has no Android toolchain; the cloud session can run them once the branch is pushed. <strong>Not yet tried on a site:</strong> the Desk pop-ups, the server check and the Compass prompts.</p></div>
+  <div class="callout warn"><p><strong>Deploy order, once you approve:</strong> 1. vcl-production (deploy + migrate: creates the field and makes the unit column required). 2. Compass. 3. vcl_sales. 4. Android (new app release). Test on the site after step 1 before going on.</p></div>
 </section>
 
 <!-- ============ CLEAN-UP ============ -->
@@ -544,7 +545,7 @@ tr.flag td{background:var(--warn-tint)}
     <li><strong>Now:</strong> the dev page is a Web Page edited live over REST, not in git. Pull the live page before any change.</li>
     <li><strong>Phase 1:</strong> the page source in vcl-production, with a deploy script that refuses to overwrite a newer live page. Stock moves go through whitelisted methods in <code>production_floor</code>.</li>
     <li><strong>Phase 2:</strong> the floor screens become a page of the vcl-production app, and the dashboards live in Compass. The dev page is retired.</li>
-    <li><strong>Order checks:</strong> branch <code>feat/school-item-guard</code> in vcl-production and vcl_compass (on the PC, awaiting approval).</li>
+    <li><strong>Order checks:</strong> branch <code>feat/school-item-guard</code> in vcl-production, vcl_compass, vcl_sales and vcl-android-app (on the PC, not pushed). The school rename is already live.</li>
   </ul><p>Stage by stage: <a href="https://claude.ai/artifact/UzRSVKSmc1oPW8TKP6BRZb" style="color:var(--brand-text)">the Roadmap ↗</a>.</p></div>
 </section>
 

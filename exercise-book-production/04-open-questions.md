@@ -53,3 +53,8 @@ The school prompt also applies everywhere an item is picked (Opportunity, Quotat
 - Rate band 3–150/= per book: it would have caught 72 Opportunity + 74 Quotation + 1 SO lines since 06/08. Check that 150 leaves headroom for the 200pg A4 price.
 - Price list: 13 carton prices on Nos, 7 suspect MGC/MNL, 809 items with no price. **937 of 989 Carton invoice lines have conversion factor 1**, which needs its own fix.
 - Still to wire for the UI prompt: Compass stock lines, deals, audit, capture; Android (app release); the vcl_sales enquiry page.
+
+## Selling-line guards: status 04/11/2026 (evening)
+- **School rename APPLIED live** (Tanuj approved): 547 items renamed "School Exercise Book - <Paper> - …", codes unchanged. Rollback: PC `C:\Second_Brain\output\school_rename_2026-11-04\apply_school_rename.js --rollback`.
+- Checks built on branch `feat/school-item-guard` in vcl-production, vcl_compass, vcl_sales and vcl-android-app (PC, uncommitted). Compass: tsc clean, 495 frontend tests pass, pytest 838/839 (one failure, also failing on main). Android: 13 tests not run (no SDK on the PC).
+- Deploy order: vcl-production (migrate) → Compass → vcl_sales → Android release. Not yet tried on a site.
