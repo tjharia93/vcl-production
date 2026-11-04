@@ -71,7 +71,7 @@ The school prompt also applies everywhere an item is picked (Opportunity, Quotat
 - Numbers: the dev page computes in the browser (undercounts covers, misses Repacks). Compass EB Orders isn't deployed. The Data flow tab uses one-off pulls. No report exists.
 - Recommendation: store the chain on Item (eb_cover_item, eb_fold_item, eb_insert_item, eb_ups; and eb_insert_item on books), or an "Exercise Book Set" doctype. One server-side report in vcl-production feeds the page, Compass and the dashboards.
 
-## BOMs (PC check, 04/11/2026), P11, for Tanuj's decision
+## BOMs (P11): DECIDED by Tanuj 04/11/2026: no BOM for inserts, BOM per book for packing
 - Site is ERPNext 16.53 / Frappe 16.54. No exercise-book BOMs exist (162 BOMs, all CP/labels). The 18/10 BOM master is only in the workbook (195 SKUs).
 - On v16, Repack can use a BOM too. Valuation is identical for Repack and Manufacture (FIFO, zero today).
 - Recommendation: NO BOM for inserts (fixed 1:1:1; the Repack adds the FLD row). YES a packing BOM per book (qty = books per carton ← INS sets + 1 carton), used as the reference, with a Manufacture of the actual counts.
