@@ -43,3 +43,10 @@ Taken on 04/11/2026 from the second-brain notes `exercise-book-naming-standard-2
 - Production and sales are two loops that meet at finished stock. Production runs by SKU, sales
   draws stock down by order. The link between them is the shortfall per SKU (open demand −
   finished stock − pipeline).
+
+## Cover and insert units (Tanuj, 04/11/2026)
+- All cover stock is counted in **printed sheets**, including the 30/10 opening `MAT-STE-2026-00007`
+  (its remark "counts treated as single covers" is wrong; the quantity is right).
+- A4 = 2-up (2 books per sheet), A5 = 3-up (3 books per sheet).
+- 1 cover sheet → 1 insert set = 2 (A4) or 3 (A5) books. The dev-page comment "1 cover = 1 insert set = 1 book" is wrong.
+- Pending Tanuj's approval: correct the MAT-STE-2026-00007 remark, and fix that code comment.

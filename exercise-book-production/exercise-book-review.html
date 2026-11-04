@@ -113,6 +113,35 @@ footer{color:var(--muted);font-size:13px}
 .filters{display:flex;flex-wrap:wrap;gap:8px 16px}.filters label{display:grid;gap:2px;font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}.filters select{font:14px var(--sans);padding:6px 8px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);color:var(--ink);max-width:100%}
 tfoot td{font-weight:700;background:var(--raised)}
 tr.flag td{background:var(--warn-tint)}
+
+/* click-through */
+.stations{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch}
+.stations button{flex:1 1 120px;display:grid;gap:2px;text-align:left;padding:10px;border:1px solid var(--border);border-top:4px solid var(--border-strong);border-radius:4px;background:var(--raised);color:var(--ink);font:inherit;cursor:pointer;min-width:0}
+.stations button .k{font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.stations button .t{font-weight:700}
+.stations button.side-p{border-top-color:var(--brand)} .stations button.side-s{border-top-color:var(--info)} .stations button.side-d{border-top-color:var(--success)}
+.stations button[aria-pressed="true"]{background:var(--brand-tint);outline:2px solid var(--focus);outline-offset:-2px}
+.wgrid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px}
+@media (max-width:860px){.wgrid{grid-template-columns:1fr}}
+.mock{border:1px solid var(--border-strong);border-radius:8px;background:var(--surface);overflow:hidden}
+.mock .bar{background:var(--brand);color:var(--on-brand);padding:8px 12px;font-weight:700;font-size:14px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.mock .bar span{font-weight:400;opacity:.85;font-size:12px}
+.mock .body{padding:12px;display:grid;gap:10px}
+.fld{display:grid;gap:3px}
+.fld .lb{font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.fld .in{border:1px solid var(--border-strong);border-radius:4px;padding:7px 10px;background:var(--raised);font-size:14px;min-height:34px}
+.fld .in.auto{background:var(--sunken);color:var(--muted)}
+.frow{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.btnmock{justify-self:start;background:var(--brand);color:var(--on-brand);border-radius:4px;padding:8px 14px;font-weight:700;font-size:14px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.tile{border:1px solid var(--border);border-radius:4px;padding:10px;background:var(--raised);display:grid;gap:2px}
+.tile .v{font-family:var(--mono);font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.posts{display:grid;gap:6px}
+.post{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:13px;padding:6px 8px;border-radius:4px;background:var(--raised);border:1px solid var(--border)}
+.post .dir{font-family:var(--mono);font-weight:700}
+.post .out{color:var(--warn-text)} .post .in{color:var(--ok-text)}
+.navrow{display:flex;justify-content:space-between;gap:8px}
+.navrow button{font:inherit;font-weight:700;padding:8px 14px;border-radius:4px;border:1px solid var(--border-strong);background:var(--surface);color:var(--brand-text);cursor:pointer}
 </style>
 
 <header class="bar"><div class="wrap">
@@ -123,6 +152,7 @@ tr.flag td{background:var(--warn-tint)}
 <nav class="tabs" aria-label="Sections"><div class="wrap" id="tabs">
   <a href="#overview">Overview</a>
   <a href="#flow">Data flow</a>
+  <a href="#walk">Click-through</a>
   <a href="#process">Process</a>
   <a href="#erpnext">ERPNext today</a>
   <a href="#model">Proposed flow</a>
@@ -203,7 +233,6 @@ tr.flag td{background:var(--warn-tint)}
     <div class="filters">
       <label for="fbrand">Brand <select id="fbrand"><option value="">All brands</option><option>Prince</option><option>Swara</option></select></label>
       <label for="fcust">Customer <select id="fcust"><option value="">All customers</option></select></label>
-      <label for="fcov">Covers counted as <select id="fcov"><option value="rec">Sheets, as recorded (× 2 or 3 books)</option><option value="single">30 Oct opening as single covers</option></select></label>
     </div>
     <p>Open orders, less finished stock, less inserts on hand, less printed covers. Whatever is left still has to be ruled, printed and made. Stock is given to orders by earliest delivery date first, within each group (brand | size | pages | ruling), so a customer's figures show what they get after the orders due before theirs. <span id="fnote"></span></p>
     <div class="cascade" id="cascade"></div>
@@ -253,7 +282,7 @@ tr.flag td{background:var(--warn-tint)}
       <tr><td>Packing material</td><td>Empty carton</td><td><code>PNC-EMPTY-CARTON-A4-EXBK-COMMON-425x305x260</code></td><td>Nos</td><td><code>Stores - VCL</code></td><td>brand, size (height ≈ pages, not mapped)</td><td class="num">90 (19)</td><td>Used up at packing</td></tr>
     </tbody>
   </table></div>
-  <div class="callout warn"><p><strong>Covers: which unit was counted?</strong> The 30 Oct opening of cover stock (<code>MAT-STE-2026-00007</code>, 483,600, 91% of all cover receipts) says "counts treated as single covers". Later receipts say "1 Nos = 1 sheet", and the Inserts tab counts 1 sheet as 2 or 3 books. As recorded, covers make 1,260,230 books. If the opening was single covers, they make 539,580, and the books still to make rise from 1,085,336 to 1,155,976. Please confirm which unit the 30 Oct count used. The "Covers counted as" filter above shows both.</p></div>
+  <div class="callout"><p><strong>Rule (Tanuj, 04 Nov):</strong> all cover stock is counted in <strong>printed sheets</strong>, including the 30 Oct opening (<code>MAT-STE-2026-00007</code>, whose remark "counts treated as single covers" is wrong). An A4 sheet makes 2 books and an A5 sheet makes 3. One cover sheet becomes one insert set, which is 2 or 3 books.</p></div>
   <div class="callout"><p><strong>How Inserts work today (live dev page):</strong> one Repack in <code>Stores - VCL</code> with exactly two rows: <code>COV-x</code> out and its twin <code>INS-x</code> in, the same quantity, at zero cost. Nothing else is taken out. ERPNext agrees: 14 Repacks, only COV out and INS in, 25,384 = 25,384. No fold, inner, signature or section item exists anywhere. A Folds stage needs a new item set that mirrors COV and INS, such as <code>FLD-PNC-A5-120PG-SL</code>.</p></div>
 
   <h3>Flow by group: every brand | size | pages | ruling</h3>
@@ -264,6 +293,45 @@ tr.flag td{background:var(--warn-tint)}
     <tfoot id="pooltot"></tfoot>
   </table></div>
   <p class="lede">Data: <code>exercise-book-production/data/flow-lines-2026-11-04.json</code> (69 order lines, 75 groups, pulled read-only from ERPNext 04 Nov 20:13). Today's count matches the live <code>Finished Goods - VCL</code> balance exactly. The SFS lines on the legacy item "Prince Exe A5 120pgs Bank CB" have no ruling, so they form their own group (Prince | A5 | 120 | ?).</p>
+</section>
+
+<!-- ============ CLICK-THROUGH ============ -->
+<section class="panel" id="p-walk" data-tab="walk" hidden>
+  <h2>Click-through: station by station</h2>
+  <p class="lede">Each station on the floor, the screen someone enters it on, what that entry posts to ERPNext, and how the item maps on to the next station. Click a station, or use Next. One worked example runs all the way through: a run of Prince A5 120-page single-line books.</p>
+  <div class="callout"><p><strong>Example run <code>EBR-0001</code>:</strong> 1,000 cover sheets (A5, 3-up) → 3,000 folds → 1,000 insert sets = 3,000 books → 16 cartons of 186 + 24 loose books → into <code>Finished Goods - VCL</code> → allotted to ESGA's order. The run number is carried on every entry, so yield and waste can be read per run (see Open decisions, P6).</p></div>
+
+  <div class="stations" id="stations" role="group" aria-label="Stations"></div>
+
+  <div class="wgrid">
+    <div class="card" style="align-content:start">
+      <header style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><h3 id="w-title"></h3><span id="w-chip"></span></header>
+      <p id="w-what"></p>
+      <dl class="facts" id="w-facts"></dl>
+      <div><p class="label" style="margin-bottom:6px">On save, ERPNext posts</p><div class="posts" id="w-posts"></div></div>
+      <div class="navrow"><button type="button" id="w-prev">← Previous</button><button type="button" id="w-next">Next →</button></div>
+    </div>
+    <div style="display:grid;gap:8px;align-content:start;min-width:0">
+      <p class="label">Entry screen (mock-up)</p>
+      <div class="mock" id="w-mock"></div>
+      <p class="label" id="w-where"></p>
+    </div>
+  </div>
+
+  <h3>How to build it out</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Step</th><th>What</th><th>Where it's built</th><th>Depends on</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>Put the dev pages in git, so sessions stop overwriting each other</td><td>Repo of their own, or <code>vcl-production</code></td><td>-</td></tr>
+      <tr><td class="num">2</td><td>Create the 80 <code>FLD-</code> items (twins of COV/INS) and a <code>custom_eb_run</code> field on Stock Entry</td><td>vcl-production, in <code>after_migrate</code></td><td>Approval of the FLD naming</td></tr>
+      <tr><td class="num">3</td><td>New Folds screen. Inserts screen changed to take out covers and folds</td><td>Exercise Book Production dev page</td><td>2</td></tr>
+      <tr><td class="num">4</td><td>Packing screen posts to <code>Finished Goods - VCL</code>, takes out inserts and empty cartons, spot-weighs</td><td>Dev page + the receiving backend (<code>a84ef92</code>, push it)</td><td>2, plus the carton count</td></tr>
+      <tr><td class="num">5</td><td>Deliver from Finished Goods. Stop the same-day "book in to deliver" receipts</td><td>Existing Delivery Note, default warehouse</td><td>4</td></tr>
+      <tr><td class="num">6</td><td>Dashboard: the Data flow tab, made live</td><td>Compass <code>/compass/exercise-books</code> (deploy it, then extend)</td><td>3–5 posting real entries</td></tr>
+      <tr><td class="num">7</td><td>Phase 2/3: paper and ruling stations, and school and customised orders</td><td>Same pattern</td><td>Phase 1 running</td></tr>
+    </tbody>
+  </table></div>
+  <p class="lede">Recommendation: the floor keeps entering on the Exercise Book Production dev page it already uses, with the changes above, so nobody learns a new tool. The dashboard lives in Compass, next to the orders. Once the screens settle, they move from the dev page into the vcl-production app, in git.</p>
 </section>
 
 <!-- ============ PROCESS ============ -->
@@ -568,7 +636,7 @@ tr.flag td{background:var(--warn-tint)}
       <tr><td class="num">6</td><td>By SKU · method note</td><td>"We need the flow by item type from each stage so that it can be mapped properly."</td><td>Added "Flow by item type, stage to stage": item type, code pattern, unit, warehouse, key fields, how many items exist (with stock), and what each becomes. Added "Flow by group" with all 75 groups (brand | size | pages | ruling) and their quantities at each stage: covers, inserts, finished, orders, the shortfall after each stage, and surplus. 34 groups have stock but no orders.</td><td><span class="chip ok">Done</span></td></tr>
     </tbody>
   </table></div>
-  <div class="callout warn"><p><strong>New question from the data (not from a comment):</strong> what unit did the 30 Oct cover count use? It's 91% of cover stock and is labelled "single covers", while later entries count sheets. It moves the books still to make from 1,085,336 to 1,155,976. The "Covers counted as" filter shows both.</p></div>
+  <div class="callout"><p><strong>Cover unit settled (04 Nov):</strong> all cover stock is in printed sheets, including the 30 Oct opening. A4 = 2 books per sheet and A5 = 3. The "Covers counted as" switch has been removed, and the figures use sheets × up-count. Still to make (all orders): 1,085,336 books. Two follow-ups are yours to approve: correct the remark on <code>MAT-STE-2026-00007</code>, and fix the dev page code comment that says "1 cover = 1 book".</p></div>
   <p class="lede">The comment threads on the page itself are still open. Claude can only reply to or resolve a thread once you send it to Claude, so resolve them in the page, or send them to Claude and I'll resolve them.</p>
 </section>
 
@@ -621,7 +689,7 @@ var custs=[];L.forEach(function(r){if(r[16]>0&&custs.indexOf(r[1])<0)custs.push(
 var cs=document.getElementById('fcust');custs.forEach(function(c){var o=document.createElement('option');o.value=c;o.textContent=c.replace(/ LIMITED| LTD/,'').toLowerCase().replace(/\b\w/g,function(x){return x.toUpperCase()});cs.appendChild(o)});
 function key(r){return r[6]+'|'+r[7]+'|'+r[8]+'|'+r[9]}
 function run(){
-  var brand=document.getElementById('fbrand').value, cust=cs.value, single=document.getElementById('fcov').value==='single';
+  var brand=document.getElementById('fbrand').value, cust=cs.value, single=false;
   var pools={};P.forEach(function(p){pools[p[0]]={p:p,fg:p[10],ins:p[8],cov:single?p[5]:p[4],d:0,a:0,b:0,c:0,sh:0,show:false}});
   var lines=L.filter(function(r){return r[16]>0}).slice().sort(function(x,y){return (x[3]+x[0]).localeCompare(y[3]+y[0])});
   lines.forEach(function(r){var q=pools[key(r)];if(!q){q=pools[key(r)]={p:[key(r),[],0,null,0,0,[],0,0,[],0,0],fg:0,ins:0,cov:0,d:0,a:0,b:0,c:0,sh:0};}
@@ -649,6 +717,75 @@ function run(){
   var sel=[brand||'all brands',cust?cs.options[cs.selectedIndex].textContent:'all customers'];
   document.getElementById('fnote').textContent='Showing '+sel.join(', ')+'.';
 }
-['fbrand','fcust','fcov'].forEach(function(id){document.getElementById(id).addEventListener('change',run)});run();
+['fbrand','fcust'].forEach(function(id){document.getElementById(id).addEventListener('change',run)});run();
+})();
+</script>
+<script>
+(function(){
+var S=[
+{k:'Station 1',t:'Covers',side:'p',chip:['ok','Existing screen'],
+ what:'Cover sheets come off the press and are counted in printed sheets. A5 sheets carry 3 covers and A4 sheets carry 2.',
+ facts:[['Who','Printing supervisor (to confirm)'],['Item in','COV-PNC-A5-120PG-SL, in sheets'],['Maps to next by','brand | size | pages | ruling: PNC | A5 | 120 | SL'],['Change','Add the run number. Later, take out board and ink so covers get a cost.']],
+ posts:[['IN','COV-PNC-A5-120PG-SL','+1,000 sheets','Stores - VCL'],['DOC','Stock Entry: Material Receipt','run EBR-0001','']],
+ where:'Exercise Book Production dev page › Cover Stock › Quick entry (exists today)',
+ mock:{title:'Cover Stock · Quick entry',sub:'existing',f:[['Date','04 Nov 2026'],['Run number','EBR-0001',1],['Brand','Prince'],['Size','A5 (3-up)'],['Pages','120'],['Ruling','Single line'],['Printed sheets','1,000'],['= covers','3,000',1]],btn:'Add to stock'}},
+{k:'Station 2',t:'Folds',side:'p',chip:['no','New screen'],
+ what:'Ruled inner paper is folded into the book\'s inner section, one fold per book. Folds are an input to inserts, the same way covers are.',
+ facts:[['Who','Folding supervisor (to confirm)'],['Item in','FLD-PNC-A5-120PG-SL (new), in folds = books'],['Maps to next by','The same key as covers: PNC | A5 | 120 | SL'],['Phase 1','Folds are received as counted. Paper and ruling going out of stock comes in Phase 2/3.']],
+ posts:[['IN','FLD-PNC-A5-120PG-SL','+3,000 folds','Stores - VCL'],['DOC','Stock Entry: Material Receipt','run EBR-0001','']],
+ where:'Exercise Book Production dev page › new Folds tab',
+ mock:{title:'Folds · Entry',sub:'new',f:[['Date','04 Nov 2026'],['Run number','EBR-0001',1],['Brand','Prince'],['Size','A5'],['Pages','120'],['Ruling','Single line'],['Folds counted','3,000'],['Rejects','12']],btn:'Save folds'}},
+{k:'Station 3',t:'Inserts',side:'p',chip:['part','Existing screen, changed'],
+ what:'Covers and folds are inserted together. One cover sheet becomes one insert set, which is 3 A5 books, so it uses 3 folds.',
+ facts:[['Who','Binding supervisor (to confirm)'],['Today','Takes out the cover only (COV out, INS in, 1:1)'],['Change','Also take out folds: sets × up-count'],['Unit','Per set, as today (Tanuj, 04 Nov): 1 cover sheet = 1 set = 2 (A4) or 3 (A5) books']],
+ posts:[['OUT','COV-PNC-A5-120PG-SL','−1,000 sheets','Stores - VCL'],['OUT','FLD-PNC-A5-120PG-SL','−3,000 folds','Stores - VCL'],['IN','INS-PNC-A5-120PG-SL','+1,000 sets (3,000 books)','Stores - VCL'],['DOC','Stock Entry: Repack','run EBR-0001','']],
+ where:'Exercise Book Production dev page › Inserts tab (exists, needs the folds row added)',
+ mock:{title:'Inserts · Make sets',sub:'changed',f:[['Run number','EBR-0001',1],['Group','Prince · A5 · 120 · SL'],['Sets made','1,000'],['Covers used','1,000 sheets',1],['Folds used','3,000',1],['= books','3,000',1]],btn:'Post repack'}},
+{k:'Station 4',t:'Packing',side:'p',chip:['part','Existing screen, changed'],
+ what:'Books are counted into cartons and received as finished stock. This is where production meets sales.',
+ facts:[['Who','Packing and stores (Nadeem / Peter, to confirm)'],['Today','Saved in the browser only. Nothing reaches ERPNext.'],['Change','Post the receipt into Finished Goods, take out inserts and empty cartons, and spot-weigh about 5% of cartons (backend a84ef92).'],['Maps to next by','The book item PNCEB-A5-120PGS-CB-BP-SL (cover and paper are added here)']],
+ posts:[['OUT','INS-PNC-A5-120PG-SL','−1,000 sets','Stores - VCL'],['OUT','Empty carton, A5 common','−17 cartons','Stores - VCL'],['IN','PNCEB-A5-120PGS-CB-BP-SL','+3,000 books (16 ctn + 24 loose)','Finished Goods - VCL'],['DOC','Stock Entry: Manufacture (or Repack)','run EBR-0001','']],
+ where:'Exercise Book Production dev page › Packing tab (exists, browser-only today)',
+ mock:{title:'Packing · Receive finished books',sub:'changed',f:[['Run number','EBR-0001',1],['Book','PNCEB-A5-120PGS-CB-BP-SL'],['Full cartons','16'],['Books per carton','186',1],['Loose books','24'],['Rejects','6'],['Spot-weigh (1 of 16)','4.92 kg ✓ within 5%'],['= books in','3,000',1]],btn:'Receive into Finished Goods'}},
+{k:'Meet',t:'Finished Goods',side:'d',chip:['ok','Existing'],
+ what:'Production fills finished stock by group. Sales draws it down by order. Compass allots stock to open orders by earliest delivery first.',
+ facts:[['Today','516,918 books (count of 04 Nov). Nothing moves in or out.'],['After step 4','Every packing entry adds to it, and every delivery takes from it'],['Shortfall','Open orders − finished − inserts − covers, per group (the Data flow chart)']],
+ posts:[['READ','Bin: Finished Goods - VCL','per book item',''],['READ','Open Sales Orders','per line','']],
+ where:'Compass › Exercise Book Orders (built, not deployed)',
+ mock:{title:'Exercise Book Orders',sub:'existing, not deployed',f:[['Order','SAL-ORD-2026-00195-2 · ESGA'],['Line','A5 120 SL · 80 ctn'],['Allotted from stock','34 ctn',1],['Still to make','46 ctn',1],['Stage','In production']],btn:'Set stage'}},
+{k:'Sales',t:'Delivery',side:'s',chip:['part','Existing, changed'],
+ what:'The Delivery Note ships from Finished Goods against the Sales Order.',
+ facts:[['Today','Shipped from Stores, after a same-day receipt of the same quantity (a workaround while production isn\'t recorded)'],['Change','Default warehouse = Finished Goods - VCL. Stop the same-day receipts once packing posts.']],
+ posts:[['OUT','PNCEB-A5-120PGS-CB-BP-SL','−2,976 books (16 ctn)','Finished Goods - VCL'],['DOC','Delivery Note','against SAL-ORD-2026-00195-2','']],
+ where:'ERPNext Delivery Note, or Compass',
+ mock:{title:'Delivery Note',sub:'existing',f:[['Customer','ESGA Enterprises'],['Sales Order','SAL-ORD-2026-00195-2'],['Item','PNCEB-A5-120PGS-CB-BP-SL'],['Qty','16 Carton'],['From warehouse','Finished Goods - VCL',1]],btn:'Submit'}},
+{k:'Watch',t:'Dashboard',side:'d',chip:['no','New, in Compass'],
+ what:'One screen for the day: what is on order, what is in stock at each stage, what is short, and what each station posted today.',
+ facts:[['Filters','Brand, customer, size'],['Built from','The same order lines and stage stock as the Data flow tab, read live'],['Alerts','Groups short with no covers. Stations with no entry today. Cartons running low.']],
+ posts:[['READ','Sales Order lines, Bins, Stock Entries by run','live','']],
+ where:'Compass › Exercise Books › Dashboard (new tab beside Orders)',
+ dash:true}
+];
+var cur=0, box=document.getElementById('stations');
+S.forEach(function(st,i){var b=document.createElement('button');b.type='button';b.className='side-'+st.side;b.innerHTML='<span class="k">'+st.k+'</span><span class="t">'+st.t+'</span>';b.addEventListener('click',function(){show(i)});box.appendChild(b)});
+function esc(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+function show(i){cur=i;var st=S[i];
+ [].forEach.call(box.children,function(b,j){b.setAttribute('aria-pressed',j===i?'true':'false')});
+ document.getElementById('w-title').textContent=st.t;
+ document.getElementById('w-chip').innerHTML='<span class="chip '+st.chip[0]+'">'+st.chip[1]+'</span>';
+ document.getElementById('w-what').textContent=st.what;
+ document.getElementById('w-facts').innerHTML=st.facts.map(function(f){return '<dt>'+esc(f[0])+'</dt><dd>'+esc(f[1])+'</dd>'}).join('');
+ document.getElementById('w-posts').innerHTML=st.posts.map(function(p){var c=p[0]==='OUT'?'out':p[0]==='IN'?'in':'';return '<div class="post"><span class="dir '+c+'">'+p[0]+'</span><span><code>'+esc(p[1])+'</code>'+(p[3]?' · '+esc(p[3]):'')+'</span><span class="mono">'+esc(p[2])+'</span></div>'}).join('');
+ document.getElementById('w-where').textContent='Where: '+st.where;
+ var m=document.getElementById('w-mock');
+ if(st.dash){m.innerHTML='<div class="bar">Exercise Books · Dashboard <span>Prince + Swara · all customers</span></div><div class="body"><div class="tiles">'+
+  [['Open orders','1,546,590','books'],['Finished','516,918','books'],['Inserts','62,378','books'],['Covers','1,260,230','books'],['Still to make','1,085,336','books']].map(function(t){return '<div class="tile"><span class="label">'+t[0]+'</span><span class="v">'+t[1]+'</span><span class="label" style="text-transform:none">'+t[2]+'</span></div>'}).join('')+
+  '</div><div class="tw"><table><thead><tr><th>Group</th><th>Orders</th><th>Finished</th><th>Short</th></tr></thead><tbody><tr><td>Swara A4 120 SL</td><td class="num">893,010</td><td class="num">8,772</td><td class="num">815,138</td></tr><tr><td>Swara A4 120 SQ</td><td class="num">105,060</td><td class="num">5,406</td><td class="num">85,206</td></tr><tr><td>Swara A4 96 SL</td><td class="num">66,000</td><td class="num">600</td><td class="num">39,400</td></tr></tbody></table></div>'+
+  '<div class="tw"><table><thead><tr><th>Today by station</th><th>Entries</th><th>Qty</th></tr></thead><tbody><tr><td>Covers</td><td class="num">2</td><td class="num">1,000 sheets</td></tr><tr><td>Folds</td><td class="num">1</td><td class="num">3,000</td></tr><tr><td>Inserts</td><td class="num">1</td><td class="num">1,000 sets</td></tr><tr><td>Packing</td><td class="num">0</td><td><span class="chip no">No entry yet</span></td></tr></tbody></table></div></div>';}
+ else{var mk=st.mock;m.innerHTML='<div class="bar">'+esc(mk.title)+' <span>'+esc(mk.sub)+'</span></div><div class="body"><div class="frow">'+mk.f.map(function(f){return '<div class="fld"><span class="lb">'+esc(f[0])+'</span><span class="in'+(f[2]?' auto':'')+'">'+esc(f[1])+'</span></div>'}).join('')+'</div><span class="btnmock">'+esc(mk.btn)+'</span><p class="label" style="text-transform:none;letter-spacing:0">Grey fields are filled in by the screen.</p></div>';}
+ document.getElementById('w-prev').disabled=i===0;document.getElementById('w-next').disabled=i===S.length-1;}
+document.getElementById('w-prev').addEventListener('click',function(){if(cur>0)show(cur-1)});
+document.getElementById('w-next').addEventListener('click',function(){if(cur<S.length-1)show(cur+1)});
+show(0);
 })();
 </script>
