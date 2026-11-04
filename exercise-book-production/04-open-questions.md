@@ -58,3 +58,9 @@ The school prompt also applies everywhere an item is picked (Opportunity, Quotat
 - **School rename APPLIED live** (Tanuj approved): 547 items renamed "School Exercise Book - <Paper> - …", codes unchanged. Rollback: PC `C:\Second_Brain\output\school_rename_2026-11-04\apply_school_rename.js --rollback`.
 - Checks built on branch `feat/school-item-guard` in vcl-production, vcl_compass, vcl_sales and vcl-android-app (PC, uncommitted). Compass: tsc clean, 495 frontend tests pass, pytest 838/839 (one failure, also failing on main). Android: 13 tests not run (no SDK on the PC).
 - Deploy order: vcl-production (migrate) → Compass → vcl_sales → Android release. Not yet tried on a site.
+
+## Dev page inventory (PC, 04/11/2026)
+- Snapshot + INVENTORY.md on branch `dev-pages/eb-snapshot-2026-11-04` (PC worktree, NOT pushed; awaiting Tanuj's go, same as the four feat/school-item-guard branches).
+- Live now and wrong: `/production-dev?mod=exercise` still writes (Material Issue "used in binding", 9-up/4-up options). Order & stock understates cover capacity 2× (A4) and 3× (A5) and can't see Repack inserts.
+- Porting order: (1) git + deploy script `scripts/deploy_eb_dev_page.py`, retire the EB module on /production-dev; (2) bug fixes; (3) FLD + run number + Folds + server methods; (4) Packing Manufacture (a84ef92); (5) carton count; (6) plan/tracker/floor today, Compass dashboards; (7) tidy.
+- Gap map: on the click-through's Porting tab.
