@@ -287,22 +287,86 @@ tr.flag td{background:var(--warn-tint)}
 .related a b{color:var(--brand-text)}
 .related a span{font-size:13px;color:var(--muted)}
 .related a.here{border-top-color:var(--border-strong);pointer-events:none}
+
+/* roadmap (scoped) */
+#p-roadmap .rmsec{display:grid;gap:14px}
+#p-roadmap .chip.c-keep{background:var(--ok-tint);color:var(--ok-text)}#p-roadmap .chip.c-change{background:var(--info-tint);color:var(--info-text)}#p-roadmap .chip.c-new{background:var(--brand-tint);color:var(--brand-text)}#p-roadmap .chip.c-move{background:var(--sunken);color:var(--ink)}#p-roadmap .chip.c-retire{background:var(--warn-tint);color:var(--warn-text)}
+#p-roadmap .post{display:grid;grid-template-columns:auto 1fr;gap:8px;font-size:13px;padding:6px 8px;border-radius:4px;background:var(--surface);border:1px solid var(--border)}
+#p-roadmap .post b{font-family:var(--mono)}
+#p-roadmap .posts{display:grid;gap:4px}
+nav.tabs .grp{flex:none;align-self:center;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);padding:0 4px 0 12px;border-left:1px solid var(--border)}
+nav.tabs .grp:first-child{border-left:0;padding-left:0}
+
+/* stage rail */
+.rail{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;counter-reset:st}
+#p-roadmap .rail button{display:grid;gap:2px;text-align:left;font:inherit;padding:10px 12px;border:1px solid var(--border);border-top:4px solid var(--border-strong);border-radius:4px;background:var(--raised);color:var(--ink);cursor:pointer;min-width:0}
+#p-roadmap .rail button .w{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+#p-roadmap .rail button .t{font-weight:700}
+#p-roadmap .rail button .d{font-size:13px;color:var(--muted);line-height:18px}
+#p-roadmap .rail button[aria-pressed="true"]{border-top-color:var(--brand);background:var(--brand-tint);outline:2px solid var(--focus);outline-offset:-2px}
+#p-roadmap .rail button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+#p-roadmap @media (max-width:820px){.rail{grid-template-columns:1fr 1fr}}
+#p-roadmap @media (max-width:440px){.rail{grid-template-columns:1fr}}
+#p-roadmap .stage{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:start}
+#p-roadmap @media (max-width:900px){.stage{grid-template-columns:1fr}}
+/* site map */
+.site{border:1px solid var(--border-strong);border-radius:8px;overflow:hidden;background:var(--surface)}
+#p-roadmap .site .top{background:var(--brand);color:var(--on-brand);padding:8px 12px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:13px}
+#p-roadmap .site .top b{font-family:var(--mono);font-weight:700;overflow-wrap:anywhere}
+#p-roadmap .site .groups{padding:12px;display:grid;gap:12px}
+#p-roadmap .grp{display:grid;gap:6px}
+#p-roadmap .mods{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+#p-roadmap .mod{border:1px solid var(--border);border-radius:4px;padding:8px 10px;background:var(--raised);display:grid;gap:3px;min-width:0}
+#p-roadmap .mod .n{font-weight:700;font-size:14px;line-height:18px}
+#p-roadmap .mod .s{font-size:12px;color:var(--muted);line-height:16px}
+#p-roadmap .mod.retire{opacity:.7;border-style:dashed}
+#p-roadmap .mod.retire .n{text-decoration:line-through}
+#p-roadmap .mod.new{border-color:var(--brand)}
+#p-roadmap dl.facts{display:grid;grid-template-columns:minmax(110px,150px) 1fr;gap:8px 14px;margin:0}
+#p-roadmap dl.facts dt{font-size:12px;line-height:20px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+#p-roadmap dl.facts dd{margin:0;min-width:0}
+#p-roadmap @media (max-width:520px){dl.facts{grid-template-columns:1fr}}
+#p-roadmap ul.tight{margin:0;padding-left:20px;display:grid;gap:4px}
+#p-roadmap .posts{display:grid;gap:4px}
+#p-roadmap .post{display:grid;grid-template-columns:auto 1fr;gap:8px;font-size:13px;padding:6px 8px;border-radius:4px;background:var(--surface);border:1px solid var(--border)}
+#p-roadmap .post b{font-family:var(--mono)}
+#p-roadmap .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;align-items:center}
+/* architecture path */
+.arch{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+#p-roadmap @media (max-width:820px){.arch{grid-template-columns:1fr}}
+#p-roadmap .arch .card h3{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media (max-width:820px){#p-roadmap .rail{grid-template-columns:1fr 1fr}#p-roadmap .arch{grid-template-columns:1fr}}
+@media (max-width:440px){#p-roadmap .rail{grid-template-columns:1fr}}
+@media (max-width:900px){#p-roadmap .stage{grid-template-columns:1fr}}
+@media (max-width:520px){#p-roadmap dl.facts{grid-template-columns:1fr}}
 </style>
 
 <header class="bar"><div class="wrap">
-  <h1>Exercise book production</h1>
-  <p>Review pack for tidying up the ERPNext model · as at 04 Nov 2026, with the PC session's findings · IT Development, Vimit Converters Limited</p>
+  <h1>Exercise book production: build spec</h1>
+  <p>Today's data, what gets built and why, the roadmap and the decisions · as at 04 Nov 2026 · IT Development, Vimit Converters Limited. What it will look like in ERPNext: <a href="https://claude.ai/artifact/Y9A9EELmbJBt7tQoaKU4An" style="color:inherit">the Click-through ↗</a></p>
 </div></header>
 
 <nav class="tabs" aria-label="Sections"><div class="wrap" id="tabs">
   <a href="#overview">Overview</a>
+  <span class="grp">Today</span>
   <a href="#flow">Data flow</a>
   <a href="#process">Process</a>
   <a href="#erpnext">ERPNext today</a>
   <a href="#built">Built so far</a>
   <a href="#orders">Items &amp; orders</a>
-  <a href="#sources">Sources</a>
+  <span class="grp">Build</span>
+  <a href="#scope">Scope and rules</a>
+  <a href="#items">Item model</a>
+  <a href="#stations">Stations</a>
+  <a href="#model">Order to stock</a>
+  <a href="#controls">Order controls</a>
+  <a href="#cleanup">Data clean-up</a>
+  <a href="#plan">Build plan</a>
+  <a href="#roadmap">Roadmap</a>
+  <span class="grp">Track</span>
+  <a href="#decisions">Decisions</a>
   <a href="#comments">Your comments</a>
+  <a href="#sources">Sources</a>
 </div></nav>
 
 <main><div class="wrap">
@@ -318,7 +382,7 @@ tr.flag td{background:var(--warn-tint)}
     <div class="legend"><span><i style="background:var(--ok-tint);border:2px solid var(--ok-text)"></i>Posts stock in ERPNext</span><span><i style="background:var(--surface);border:2px dashed var(--warn-text)"></i>Not recorded in ERPNext</span><span class="label">Tap a step for detail</span></div>
   </figure>
  
-  <div class="card"><h3>This work is now in four pages</h3><div class="related"><a href="https://claude.ai/artifact/DtTjNC15VeSb9cneqqK16o" class="here"><b>Review (this page)</b><span>Analysis: data flow, ERPNext today, what is built, your comments</span></a><a href="https://claude.ai/artifact/Y9A9EELmbJBt7tQoaKU4An"><b>Click-through ↗</b><span>What people see: each station and every screen and dashboard</span></a><a href="https://claude.ai/artifact/2W8SCEBSJ6MLonkZSznNsE"><b>Build spec ↗</b><span>What gets built: items, postings, order checks, clean-up, plan, decisions</span></a><a href="https://claude.ai/artifact/UzRSVKSmc1oPW8TKP6BRZb"><b>Roadmap ↗</b><span>How the dev site grows, stage by stage</span></a></div></div>
+  <div class="card"><h3>Two pages</h3><div class="related"><a href="https://claude.ai/artifact/DtTjNC15VeSb9cneqqK16o" class="here"><b>Build spec (this page)</b><span>Why and what: today's data, the item model, what each station records, order checks, clean-up, roadmap, decisions</span></a><a href="https://claude.ai/artifact/Y9A9EELmbJBt7tQoaKU4An"><b>Click-through ↗</b><span>What it will look like in ERPNext: each station and every screen and dashboard</span></a></div></div>
 
   <div class="grid2">
     <div class="card">
@@ -642,6 +706,368 @@ tr.flag td{background:var(--warn-tint)}
 </section>
 
 
+<!-- ============ SCOPE ============ -->
+<section class="panel" id="p-scope" data-tab="scope" hidden>
+  <h2>Scope and rules</h2>
+  <p class="lede">The build for Phase 1: stock exercise books (Prince, Swara, Hi5), from printed covers and folds to packed cartons in Finished Goods, plus the checks on every selling document. Paper, ruling, school and customised orders come in Phase 2/3 (see Roadmap). Every rule here was agreed with Tanuj on 04 Nov 2026 unless it is marked open.</p>
+  <div class="card"><h3>Rules the build keeps</h3><ul class="tight">
+    <li><strong>Made to stock.</strong> Runs are planned by group (brand, size, pages, ruling), never one per Sales Order.</li>
+    <li><strong>One place to enter each station.</strong> The duplicate tracker on <code>/production-dev</code> goes.</li>
+    <li><strong>Every floor entry records stock</strong> in ERPNext. Nothing important lives only in a browser.</li>
+    <li><strong>Covers are counted in printed sheets.</strong> A4 = 2 books per sheet, A5 = 3. One sheet makes one insert set.</li>
+    <li><strong>Covers + folds = inserts.</strong> Folds are an input, named <code>FLD-&lt;PNC|SWR&gt;-&lt;A4|A5&gt;-&lt;PPP&gt;PG-&lt;RULING&gt;</code> (approved).</li>
+    <li><strong>The run number travels on every entry</strong> (<code>custom_eb_run</code> on Stock Entry).</li>
+    <li><strong>Checks run on the server</strong> (school or brand, unit and price), so every screen, import and API call is covered.</li>
+    <li><strong>Code lives in git.</strong> Items, fields and settings are created in <code>after_migrate</code>, never in a patch. No live-only scripts.</li>
+  </ul></div>
+</section>
+
+<!-- ============ ITEM MODEL ============ -->
+<section class="panel" id="p-items" data-tab="items" hidden>
+  <h2>Item model</h2>
+  <p class="lede">One item type per stage. The group key <code>brand | size | pages | ruling</code> runs from covers to the finished book, so each stage can be matched to the next.</p>
+  <h3>Flow by item type, stage to stage</h3>
+  <p>Each stage keeps its own item type. The key fields carried by each code let one stage be matched to the next. The pool key <code>brand | size | pages | ruling</code> is shared from covers through to the finished book.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Stage</th><th>Item type</th><th>Code pattern (example)</th><th>Unit</th><th>Warehouse</th><th>Key it carries</th><th>Items (with stock)</th><th>Becomes</th></tr></thead>
+    <tbody>
+      <tr><td>Paper <span class="chip wait">Phase 2/3</span></td><td>Raw paper</td><td><code>NP-Reels-610-42-…</code>, <code>WF/BP - Reel-…</code></td><td>Kg / Tonne / Ream</td><td><code>Stores - VCL</code></td><td>paper, width, gsm</td><td class="num">32 (15)</td><td>Ruled sheets</td></tr>
+      <tr><td>Ruling <span class="chip wait">Phase 2/3</span></td><td>Ruled sheet</td><td><code>RL - SL - A4 - BP</code> (the only one, no stock)</td><td>Sheets</td><td>-</td><td>ruling, size, paper</td><td class="num">1 (0)</td><td>Folds</td></tr>
+      <tr><td>Folds <span class="chip no">Missing</span></td><td>Folded inner (proposed)</td><td><code>FLD-&lt;PNC|SWR&gt;-&lt;A4|A5&gt;-&lt;PPP&gt;PG-&lt;RULING&gt;</code> (approved 04 Nov, twin of COV/INS)</td><td>Nos (one per book)</td><td><code>Stores - VCL</code></td><td>size, pages, paper, ruling</td><td class="num">0. None exists</td><td>Inserts</td></tr>
+      <tr><td>Covers</td><td>Printed cover sheet</td><td><code>COV-PNC-A5-120PG-SL</code></td><td>Sheets (A5 3-up, A4 2-up)</td><td><code>Stores - VCL</code></td><td>brand, size, pages, ruling</td><td class="num">80 (68)</td><td>Inserts</td></tr>
+      <tr><td>Inserts</td><td>Cover + inner, not yet packed</td><td><code>INS-PNC-A5-120PG-SL</code></td><td>Sets (1 set = 1 cover sheet)</td><td><code>Stores - VCL</code></td><td>brand, size, pages, ruling</td><td class="num">80 (6)</td><td>Finished book</td></tr>
+      <tr><td>Packing / finished</td><td>Finished book</td><td><code>PNCEB-A5-120PGS-CB-BP-SL</code></td><td>Nos, sold in Carton</td><td><code>Finished Goods - VCL</code></td><td>brand, size, pages, cover, paper, ruling</td><td class="num">1,302 (29)</td><td>Delivery</td></tr>
+      <tr><td>Packing material</td><td>Empty carton</td><td><code>PNC-EMPTY-CARTON-A4-EXBK-COMMON-425x305x260</code></td><td>Nos</td><td><code>Stores - VCL</code></td><td>brand, size (height ≈ pages, not mapped)</td><td class="num">90 (19)</td><td>Used up at packing</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout"><p><strong>Rule (Tanuj, 04 Nov):</strong> all cover stock is counted in <strong>printed sheets</strong>, including the 30 Oct opening (<code>MAT-STE-2026-00007</code>, whose remark "counts treated as single covers" is wrong). An A4 sheet makes 2 books and an A5 sheet makes 3. One cover sheet becomes one insert set, which is 2 or 3 books.</p></div>
+  <div class="callout"><p><strong>How Inserts work today (live dev page):</strong> one Repack in <code>Stores - VCL</code> with exactly two rows: <code>COV-x</code> out and its twin <code>INS-x</code> in, the same quantity, at zero cost. Nothing else is taken out. ERPNext agrees: 14 Repacks, only COV out and INS in, 25,384 = 25,384. No fold, inner, signature or section item exists anywhere. A Folds stage needs a new item set that mirrors COV and INS, such as <code>FLD-PNC-A5-120PG-SL</code>.</p></div>
+  <div class="tw"><table>
+    <thead><tr><th>Unit rule</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Cover sheet → books</td><td>A4 = 2, A5 = 3 (the up-count is read from the cover item name)</td></tr>
+      <tr><td>Cover sheet → insert set</td><td>1 : 1. One set = 2 (A4) or 3 (A5) books</td></tr>
+      <tr><td>Folds per insert set</td><td>Sets × up-count (one fold per book)</td></tr>
+      <tr><td>Books per carton</td><td>From the book item's Carton conversion, e.g. A4: 200pg 66 · 120pg 102 · 96pg 120 · 80pg 144 · 64pg 162 · 48pg 204. A5 cartons hold more (e.g. A5 120pg 186). 100-page books: blank, still to set</td></tr>
+      <tr><td>Default selling unit</td><td>Carton (already set on the 455 items that have a Carton conversion)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ STATIONS ============ -->
+<section class="panel" id="p-stations" data-tab="stations" hidden>
+  <h2>What each station records</h2>
+  <p class="lede">Every entry is a submitted Stock Entry that carries the run number. The screens call whitelisted methods in <code>production_floor</code> (like <code>stores.py</code>), with tests, not raw REST writes. Valuation is zero in Phase 1; covers and books get a cost in Phase 2.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Station</th><th>Document</th><th>Out</th><th>In</th><th>Warehouse</th><th>Checks</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Covers</td><td>Material Receipt (Phase 2: Manufacture)</td><td>- (Phase 2: board and ink)</td><td><code>COV-x</code>, sheets</td><td><code>Stores - VCL</code></td><td>Run number required; spoiled sheets recorded</td><td><span class="chip part">Exists, add run no.</span></td></tr>
+      <tr><td>Folds</td><td>Material Receipt (Phase 3: from ruled sheets)</td><td>- (Phase 3: ruled sheets)</td><td><code>FLD-x</code>, folds</td><td><code>Stores - VCL</code></td><td>Rejects recorded</td><td><span class="chip no">New</span></td></tr>
+      <tr><td>Inserts</td><td>Repack</td><td><code>COV-x</code> × sets; <code>FLD-x</code> × sets × up-count</td><td><code>INS-x</code>, sets</td><td><code>Stores - VCL</code></td><td>Stops if covers or folds on hand are short</td><td><span class="chip part">Exists, add folds row</span></td></tr>
+      <tr><td>Packing</td><td>Manufacture</td><td><code>INS-x</code> sets; empty cartons</td><td>Book item, books (cartons × conversion + loose)</td><td><code>Finished Goods - VCL</code></td><td>Spot-weigh about 1 in 20 cartons, flag beyond ±5%%</td><td><span class="chip part">Browser only today; backend a84ef92</span></td></tr>
+      <tr><td>Empty cartons</td><td>Stock Reconciliation (draft)</td><td colspan="2">Counted quantity per carton item</td><td><code>Stores - VCL</code></td><td>Tanuj submits</td><td><span class="chip part">Count 05 Nov</span></td></tr>
+      <tr><td>Delivery</td><td>Delivery Note</td><td>Book item</td><td>-</td><td>from <code>Finished Goods - VCL</code></td><td>Order checks (see Order controls)</td><td><span class="chip part">Change the default warehouse</span></td></tr>
+    </tbody>
+  </table></div>
+  <div class="card"><h3>New fields and records</h3><ul class="tight">
+    <li><code>custom_eb_run</code> (Data or Link) on Stock Entry, shown on every floor screen.</li>
+    <li>80 <code>FLD-</code> items, twins of the 80 COV/INS items, Item Group to be named.</li>
+    <li>A run record, if P6 decides one (a Work Order per group run, or a light run doctype).</li>
+    <li>VCL Stores Receipt Book Line (from the receiving backend a84ef92) for packing.</li>
+  </ul></div>
+</section>
+
+<!-- ============ PROPOSED FLOW ============ -->
+<section class="panel" id="p-model" data-tab="model" hidden>
+  <h2>Order to stock flow</h2>
+  <div class="callout warn"><p><strong>Draft for discussion.</strong> Nothing here is decided or built. It's a starting point that maps each floor step to a record ERPNext already has, so the review has something concrete to change.</p></div>
+
+  <div class="callout"><p><strong>Made to stock, not to order.</strong> A work order can't be raised for every Sales Order. Production and sales run as two separate loops that meet at finished stock. Production fills stock by SKU, in runs. Sales draws stock down, order by order.</p></div>
+
+  <h3>Production loop (by SKU, in runs)</h3>
+  <div class="chain">
+    <span class="box new">Run plan per SKU (from total open demand − stock, or a minimum level)</span><span class="arr">→</span>
+    <span class="box new">Ruling</span><span class="arr">→</span>
+    <span class="box">Covers (COV-)</span><span class="arr">→</span>
+    <span class="box new">Folding</span><span class="arr">→</span>
+    <span class="box">Inserts (INS-)</span><span class="arr">→</span>
+    <span class="box new">Packing receipt</span><span class="arr">→</span>
+    <span class="box">Finished Goods - VCL</span>
+  </div>
+
+  <h3>Sales loop (by order)</h3>
+  <div class="chain">
+    <span class="box">Sales Order (Carton)</span><span class="arr">→</span>
+    <span class="box new">Allot from stock (earliest delivery first)</span><span class="arr">→</span>
+    <span class="box">Delivery Note</span><span class="arr">→</span>
+    <span class="box">Sales Invoice</span>
+  </div>
+  <p>A dashed box is a record or step that isn't used for exercise books today. The only link between the loops is the shortfall per SKU: when open demand exceeds finished stock plus what's in the pipeline, that SKU gets a run. A run is planned by SKU, never by order.</p>
+
+  <h3>Each floor step mapped to a record</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Step</th><th>Stock in</th><th>Stock out (proposed item)</th><th>Record</th><th>Who enters it</th></tr></thead>
+    <tbody>
+      <tr><td>1 · Ruling</td><td>Paper NP / BP (kg or sheets)</td><td>Ruled sheet, per paper and ruling</td><td>Stock Entry (Manufacture) from the daily ruling log</td><td>To decide</td></tr>
+      <tr><td>2 · Covers</td><td>Cover board, ink (not consumed today)</td><td><code>COV-…</code> printed sheet <span class="chip ok">Exists</span></td><td>Material Receipt today. Could become a Manufacture that consumes the board.</td><td>To decide</td></tr>
+      <tr><td>3 · Folds</td><td>Ruled sheets (phase 2/3)</td><td><code>FLD-…</code>, per size, pages, paper and ruling</td><td>Stock item, so inserts can take it out</td><td>To decide</td></tr>
+      <tr><td colspan="5">Every record in this table belongs to a production run for one SKU. None of them points to a Sales Order.</td></tr>
+      <tr><td>4 · Inserts</td><td><code>COV-…</code> + <code>FLD-…</code></td><td><code>INS-…</code> insert set <span class="chip ok">Exists</span></td><td>Repack today</td><td>To decide</td></tr>
+      <tr><td>5 · Packing</td><td><code>INS-…</code> + carton</td><td>The book item (<code>PNCEB-…</code>) in <code>Finished Goods - VCL</code>, in <code>Carton</code></td><td>Manufacture against the BOM, from the receiving record (<code>a84ef92</code>)</td><td>To decide</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="grid2">
+    <div class="card"><h3>The smallest version</h3><p>Keep the cover and insert moves as they are. Add one receipt per packed batch at step 5 that consumes <code>INS-…</code> and puts books into <code>Finished Goods - VCL</code>. That keeps stock current after today's opening balance and lets Compass allot orders.</p></div>
+    <div class="card"><h3>The fuller version</h3><p>Ruled sheets and printed covers become stock items, so each step has a count, and yield and waste show up at every stage. It needs more items, a BOM per stage, and someone on the floor who enters every step.</p></div>
+  </div>
+</section>
+
+<!-- ============ ORDER CONTROLS ============ -->
+<section class="panel" id="p-controls" data-tab="controls" hidden>
+  <h2>Order controls: right item, right unit, right price</h2>
+  <p class="lede">Three checks stop the two most common order mistakes: a school book picked when the brand book was meant, and a carton price typed against one book. Each check runs on the server, so it catches every way a line gets in (Desk, Compass, Android, API, import), and also shows on screen where there is one. Status (04 Nov, evening): the school rename is <strong>live</strong>. All the checks are built on branches in four repos, not yet committed, pushed or deployed.</p>
+
+  <div class="grid2">
+    <div class="card"><h3>1. School or brand?</h3>
+      <p>Picking a school item (Bank Paper, Newsprint, Brilliant White) asks the user to confirm. One more click, but the data stays accurate.</p>
+      <div class="mock"><div class="bar">School exercise book <span>pop-up</span></div><div class="body">
+        <p>This is a <strong>SCHOOL</strong> exercise book (no brand). Is this a school order? If you meant the Prince book, switch to it.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:8px"><span class="btnmock">Yes, school order</span><span class="btnmock" style="background:var(--surface);color:var(--brand-text);border:1px solid var(--border-strong)">Switch to PNCEB-A4-96PGS-CB-BP-SL</span></div>
+      </div></div>
+      <ul class="tight">
+        <li>"Yes" ticks <strong>School order confirmed</strong> on the document. The server refuses to save school lines without it.</li>
+        <li>The matching brand item: <code>SCH-BP-EB-…</code> → <code>PNCEB-…</code>, <code>SCH-NP-EB-…</code> → <code>SWREB-…</code>, with the same size, pages, ruling and cover.</li>
+        <li>The school item names are renamed to start "School Exercise Book - …". The codes stay as they are.</li>
+      </ul>
+      <div class="tw"><table><thead><tr><th>Rename dry run</th><th>Items</th></tr></thead><tbody>
+        <tr><td>Renamed to "School Exercise Book - &lt;Paper&gt; - …"</td><td class="num">547 of 554</td></tr>
+        <tr><td>Left alone (codes that don't follow the pattern)</td><td class="num">7</td></tr>
+        <tr><td>Have a brand twin to switch to</td><td class="num">448 (60 twins disabled)</td></tr>
+        <tr><td>No brand twin (mostly Newsprint 100pg HSL/HSQ)</td><td class="num">99</td></tr>
+      </tbody></table></div>
+      <p><span class="chip ok">Rename live 04 Nov</span> <span class="chip part">Checks built, not deployed</span> 547 school items renamed (codes unchanged; rollback ready). The server check runs on Opportunity, Quotation, Sales Order, Delivery Note and Sales Invoice. It only checks lines a save adds or changes, so old documents aren't blocked, and lines copied from an earlier document are trusted. The pop-up is on Desk and on Compass Orders and Quotations. Backup and rollback are ready.</p>
+    </div>
+
+    <div class="card"><h3>2. Sell in cartons by default</h3>
+      <p>Exercise books default to <strong>Carton</strong> as the selling unit, and the unit column is shown and required on every line.</p>
+      <div class="tw"><table><thead><tr><th>Line</th><th>Before</th><th>After</th></tr></thead><tbody>
+        <tr><td>New line, Prince A4 96pg</td><td>1 Nos (blank unit easy to miss)</td><td>1 Carton (= 120 books)</td></tr>
+        <tr><td>Unit column</td><td>Hidden or optional</td><td>Visible and required</td></tr>
+      </tbody></table></div>
+      <p><span class="chip ok">Already in place</span> All 455 exercise-book items that have a Carton conversion already sell in Cartons by default. There's nothing to apply. <strong>847 items have no Carton conversion</strong> (807 enabled), so they can't default to Carton until their pieces per carton are filled in.</p>
+      <p><strong>"Show the UOM":</strong> checked across all repos and the live site. It was <strong>not done</strong>, except one live setting (02 Nov) that shows the unit in the Sales Order item list. The pack makes the unit visible <em>and required</em> on all five documents, set up through the app, not as a live-only setting.</p>
+    </div>
+  </div>
+
+  <div class="card"><h3>3. Does the price fit the unit?</h3>
+    <p>One book is about 100/=, and a carton is many times that. The price on a line has to fall in the range for its unit.</p>
+    <div class="tw"><table><thead><tr><th>Unit on the line</th><th>Price entered</th><th>What happens</th></tr></thead><tbody>
+      <tr><td>Nos</td><td>Within the per-book range (about 100/=)</td><td><span class="chip ok">Saves</span></td></tr>
+      <tr><td>Nos</td><td>In the carton range (e.g. 3,000/=)</td><td><span class="chip no">Stops</span> "This looks like a carton price. Did you mean Carton?"</td></tr>
+      <tr><td>Carton</td><td>In the per-book range (e.g. 100/=)</td><td><span class="chip no">Stops</span> "This looks like a price for one book. Did you mean Nos?"</td></tr>
+      <tr><td>Carton</td><td>Per-book range × books per carton</td><td><span class="chip ok">Saves</span></td></tr>
+    </tbody></table></div>
+    <div class="grid2">
+      <div class="tw"><table><thead><tr><th>Proposed rule</th><th>Action</th></tr></thead><tbody>
+        <tr><td>Nos, above <strong>150/= per book</strong></td><td><span class="chip no">Blocks</span> "Did you mean 1 Carton?"</td></tr>
+        <tr><td>Carton, below <strong>3/= per book</strong> (rate ÷ books per carton)</td><td><span class="chip no">Blocks</span> "Did you mean Nos?"</td></tr>
+        <tr><td>More than 3× away from a clean price-list price</td><td><span class="chip wait">Warns</span></td></tr>
+      </tbody></table></div>
+      <div class="tw"><table><thead><tr><th>Would have caught since 06 Aug</th><th>Lines</th></tr></thead><tbody>
+        <tr><td>Opportunity (enquiries)</td><td class="num">72</td></tr>
+        <tr><td>Quotation</td><td class="num">74</td></tr>
+        <tr><td>Sales Order</td><td class="num">1</td></tr>
+      </tbody></table></div>
+    </div>
+    <p>One band of 3–150/= per book for every size catches the same lines as separate bands per size, so the simpler rule is proposed. <strong>Check before approving:</strong> is 150/= enough headroom for your dearest single book (200-page A4)? If any is sold above 150/= per book, raise the ceiling.</p>
+    <p><strong>Price-list clean-up needed first:</strong> 13 carton prices entered against Nos, 7 doubtful Nos prices on MGC/MNL covers, and 809 enabled items with no current price. Separately, <strong>937 of 989 Carton invoice lines have a conversion factor of 1</strong>. Those invoices count a carton as one book, so the stock and per-book figures behind them are wrong. That needs its own fix.</p>
+    <p><span class="chip part">Built, not deployed</span> The price check is wired into Desk, Compass, vcl_sales and the Android app.</p>
+  </div>
+
+  <h3>Where each check applies</h3>
+  <div class="tw"><table><thead><tr><th>Entry point</th><th>Server check</th><th>Pop-up / hint on screen</th></tr></thead><tbody>
+    <tr><td>Desk: Opportunity, Quotation, Sales Order, Delivery Note, Sales Invoice</td><td><span class="chip ok">Yes</span></td><td><span class="chip ok">Yes</span></td></tr>
+    <tr><td>Compass Orders and Quotations</td><td><span class="chip ok">Yes</span></td><td><span class="chip ok">Yes</span></td></tr>
+    <tr><td>Compass stock lines (Carton, Label, CP), deals, audit invoice lines</td><td><span class="chip ok">Yes</span></td><td><span class="chip ok">Built</span> Unit required on quotations and deal lines; save is held while a line is blocked</td></tr>
+    <tr><td>Android app</td><td><span class="chip ok">Yes</span></td><td><span class="chip part">Built, tests not run</span> New order (unit required), deal lines, photo proposal, audit. Still to do: audit submit flag, deal flag read-back. Needs an app release</td></tr>
+    <tr><td>vcl_sales enquiry page</td><td><span class="chip ok">Yes</span></td><td><span class="chip ok">Built</span> Pop-up and price check</td></tr>
+    <tr><td>API and imports</td><td><span class="chip ok">Yes</span></td><td>-</td></tr>
+  </tbody></table></div>
+  <p class="lede">The server check covers everything, so a screen without the pop-up still can't save a wrong line. It just shows the message on save instead of when the item is picked.</p>
+  <div class="callout"><p><strong>Where the code is:</strong> branch <code>feat/school-item-guard</code> in local copies of vcl-production, vcl_compass, vcl_sales and vcl-android-app on the PC. Nothing is committed or pushed. <strong>Tests:</strong> vcl-production's new tests pass. Compass type checks are clean, all 495 frontend tests pass, and 838 of 839 server tests pass (the one failure, a QR capture test, fails the same way on main). vcl_sales has no tests. The 13 new Android tests haven't been run because the PC has no Android toolchain; the cloud session can run them once the branch is pushed. <strong>Not yet tried on a site:</strong> the Desk pop-ups, the server check and the Compass prompts.</p></div>
+  <div class="callout warn"><p><strong>Deploy order, once you approve:</strong> 1. vcl-production (deploy + migrate: creates the field and makes the unit column required). 2. Compass. 3. vcl_sales. 4. Android (new app release). Test on the site after step 1 before going on.</p></div>
+</section>
+
+<!-- ============ CLEAN-UP ============ -->
+<section class="panel" id="p-cleanup" data-tab="cleanup" hidden>
+  <h2>Data clean-up needed first</h2>
+  <p class="lede">The checks and stock postings depend on clean master data. These are the known gaps as at 04 Nov.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Issue</th><th>Count</th><th>Why it matters</th><th>Blocks</th></tr></thead>
+    <tbody>
+      <tr><td>Carton prices entered against Nos</td><td class="num">13</td><td>The price check would compare against a wrong price</td><td>Price check (warn rule)</td></tr>
+      <tr><td>Doubtful Nos prices on MGC/MNL covers</td><td class="num">7</td><td>Same</td><td>Price check</td></tr>
+      <tr><td>Enabled items with no current price</td><td class="num">809</td><td>The check falls back to the 3–150/= band</td><td>Price check</td></tr>
+      <tr><td>Items with no Carton conversion</td><td class="num">847 (807 enabled)</td><td>Can't default to Carton, can't pack in cartons</td><td>Carton default, Packing</td></tr>
+      <tr><td>Carton invoice lines with conversion factor 1</td><td class="num">937 of 989</td><td>A carton counted as one book: stock and per-book figures are wrong</td><td>Reporting, stock</td></tr>
+      <tr><td>100-page books with no packing</td><td class="num">45</td><td>Can't convert cartons to books</td><td>Packing</td></tr>
+      <tr><td>A5 empty carton item disabled</td><td class="num">1</td><td>A5 packing can't take out cartons</td><td>Packing (A5)</td></tr>
+      <tr><td>CR10 renames left</td><td class="num">216 of 781</td><td>Names don't follow the standard</td><td>School rename</td></tr>
+      <tr><td>Legacy generic items on open orders</td><td class="num">2</td><td>No ruling, can't be matched to a group</td><td>Allocation</td></tr>
+      <tr><td>CPS ruling and cover options outdated</td><td class="num">2 fields</td><td>Specs can't record SL/SQ/GPH… or CB/MNL/MGC</td><td>Phase 3 (school/custom)</td></tr>
+      <tr><td>Paper reel showing 1,000,000 tonnes</td><td class="num">1</td><td>Paper stock is wrong</td><td>Phase 3 (paper)</td></tr>
+      <tr><td>Opening stock at zero valuation</td><td class="num">516,918 books</td><td>Books carry no cost</td><td>Phase 2 (cost)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ BUILD PLAN ============ -->
+<section class="panel" id="p-plan" data-tab="plan" hidden>
+  <h2>Build plan</h2>
+  <h3>How to build it out</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Step</th><th>What</th><th>Where it's built</th><th>Depends on</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>Put the dev pages in git, so sessions stop overwriting each other</td><td>Repo of their own, or <code>vcl-production</code></td><td>-</td></tr>
+      <tr><td class="num">2</td><td>Create the 80 <code>FLD-</code> items (twins of COV/INS) and a <code>custom_eb_run</code> field on Stock Entry</td><td>vcl-production, in <code>after_migrate</code></td><td>FLD naming approved 04 Nov</td></tr>
+      <tr><td class="num">3</td><td>New Folds screen. Inserts screen changed to take out covers and folds</td><td>Exercise Book Production dev page</td><td>2</td></tr>
+      <tr><td class="num">4</td><td>Packing screen posts to <code>Finished Goods - VCL</code>, takes out inserts and empty cartons, spot-weighs</td><td>Dev page + the receiving backend (<code>a84ef92</code>, push it)</td><td>2, plus the carton count</td></tr>
+      <tr><td class="num">5</td><td>Deliver from Finished Goods. Stop the same-day "book in to deliver" receipts</td><td>Existing Delivery Note, default warehouse</td><td>4</td></tr>
+      <tr><td class="num">6</td><td>Dashboard: the Data flow tab, made live</td><td>Compass <code>/compass/exercise-books</code> (deploy it, then extend)</td><td>3–5 posting real entries</td></tr>
+      <tr><td class="num">7</td><td>Phase 2/3: paper and ruling stations, and school and customised orders</td><td>Same pattern</td><td>Phase 1 running</td></tr>
+    </tbody>
+  </table></div>
+  <p class="lede">Recommendation: the floor keeps entering on the Exercise Book Production dev page it already uses, with the changes above, so nobody learns a new tool. The dashboard lives in Compass, next to the orders. Once the screens settle, they move from the dev page into the vcl-production app, in git.</p>
+  <div class="card"><h3>Where the code lives</h3><ul class="tight">
+    <li><strong>Now:</strong> the dev page is a Web Page edited live over REST, not in git. Pull the live page before any change.</li>
+    <li><strong>Phase 1:</strong> the page source in vcl-production, with a deploy script that refuses to overwrite a newer live page. Stock moves go through whitelisted methods in <code>production_floor</code>.</li>
+    <li><strong>Phase 2:</strong> the floor screens become a page of the vcl-production app, and the dashboards live in Compass. The dev page is retired.</li>
+    <li><strong>Order checks:</strong> branch <code>feat/school-item-guard</code> in vcl-production, vcl_compass, vcl_sales and vcl-android-app (on the PC, not pushed). The school rename is already live.</li>
+  </ul><p>Stage by stage: see the Roadmap tab.</p></div>
+</section>
+
+<!-- ============ ROADMAP ============ -->
+<section class="panel" id="p-roadmap" data-tab="roadmap" hidden>
+  <h2>Roadmap: where the dev site is going</h2>
+  <p class="lede">From today's Exercise Book Production dev page to one floor app that records every station, meets sales at finished stock, and lives in git.</p>
+
+
+<div class="rmsec">
+  <h3>Pick a stage</h3>
+  <p class="lede">Each stage shows the site's map, where the code lives, what it records in ERPNext, and what has to be true before moving on. Click a stage.</p>
+  <div class="rail" id="rail" role="group" aria-label="Stages"></div>
+  <div class="legend"><span class="chip c-keep">Keep</span><span class="chip c-change">Changed</span><span class="chip c-new">New</span><span class="chip c-move">Moves</span><span class="chip c-retire">Retired</span></div>
+  <div class="stage">
+    <div class="site" id="site"></div>
+    <div class="card" id="detail"></div>
+  </div>
+</div>
+
+<div class="rmsec">
+  <h3>Every module, today and where it goes</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Today (dev page tab)</th><th>What it does today</th><th>Becomes</th><th>Stage</th></tr></thead>
+    <tbody>
+      <tr><td>Orders Pending</td><td>Open exercise-book orders, with exports</td><td><span class="chip c-move">Moves</span> Compass › Exercise Books › Orders (built, not deployed)</td><td>1a</td></tr>
+      <tr><td>Order &amp; stock</td><td>Orders against finished stock</td><td><span class="chip c-move">Moves</span> Compass › Exercise Books › Stock and shortfall dashboard</td><td>1b</td></tr>
+      <tr><td>Finished Stock</td><td>Finished Goods balance (opening count of 04 Nov)</td><td><span class="chip c-keep">Keep</span> as the read-only Finished Goods view, fed by Packing</td><td>1b</td></tr>
+      <tr><td>Cover Stock + Quick entry</td><td>Material Receipt of COV- sheets</td><td><span class="chip c-change">Changed</span> Covers: adds the run number. Phase 2: uses up board and ink</td><td>1b</td></tr>
+      <tr><td>-</td><td>-</td><td><span class="chip c-new">New</span> Folds: FLD- receipt (naming approved)</td><td>1b</td></tr>
+      <tr><td>Inserts</td><td>Repack COV- → INS-, 1:1</td><td><span class="chip c-change">Changed</span> Takes out covers and folds (sets × up-count)</td><td>1b</td></tr>
+      <tr><td>Packing</td><td>Saved in the browser only</td><td><span class="chip c-change">Changed</span> Posts to Finished Goods: INS- and cartons out, books in, spot-weigh</td><td>1b</td></tr>
+      <tr><td>Empty Cartons</td><td>Book balances from 2024–25 purchases</td><td><span class="chip c-change">Changed</span> Count screen → draft Stock Reconciliation. Cartons used up at Packing</td><td>1a</td></tr>
+      <tr><td>-</td><td>-</td><td><span class="chip c-new">New</span> Plan (what to make), Runs (one run across stations), Today (floor board)</td><td>1b</td></tr>
+      <tr><td>-</td><td>-</td><td><span class="chip c-new">New</span> Data health, Management summary (Compass)</td><td>2</td></tr>
+      <tr><td>Excel / PDF exports</td><td>Order and production sheets</td><td><span class="chip c-keep">Keep</span> on Orders and Plan</td><td>All</td></tr>
+      <tr><td>/production-dev EB tracker</td><td>A second copy of covers and inserts</td><td><span class="chip c-retire">Retired</span> One place to enter. Its copy overwrote Receive three times</td><td>1a</td></tr>
+      <tr><td>/receiving-dev "Exercise books: coming later"</td><td>Computer paper only</td><td><span class="chip c-retire">Retired</span> for books: book receiving is Packing (backend a84ef92)</td><td>1b</td></tr>
+      <tr><td>-</td><td>-</td><td><span class="chip c-new">New</span> Paper and Ruling stations, school and customised orders</td><td>3</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<div class="rmsec">
+  <h3>Where the code lives</h3>
+  <div class="arch">
+    <div class="card"><h3>Today <span class="chip c-retire">Fragile</span></h3>
+      <ul class="tight">
+        <li>A Frappe Web Page (<code>exercise-book-production-v2-dev</code>), edited live over REST.</li>
+        <li>Not in git. Several sessions edit it, and stale copies have overwritten newer ones.</li>
+        <li>The page calls ERPNext's generic REST API directly.</li>
+      </ul></div>
+    <div class="card"><h3>Phase 1 <span class="chip c-change">In git</span></h3>
+      <ul class="tight">
+        <li>The page source sits in vcl-production. A deploy script pulls the live page first and refuses to overwrite a newer one.</li>
+        <li>Stock moves go through whitelisted methods in <code>production_floor</code> (like <code>stores.py</code>), with tests, not raw REST writes.</li>
+        <li>Items, fields and settings are created in <code>after_migrate</code>.</li>
+      </ul></div>
+    <div class="card"><h3>Phase 2 <span class="chip c-new">In the app</span></h3>
+      <ul class="tight">
+        <li>The floor screens become a page of the vcl-production app, next to Production Floor (<code>/app/vcl-production-lite</code>), on floor tablets.</li>
+        <li>Dashboards and order screens live in Compass, beside the orders.</li>
+        <li>The dev page is retired.</li>
+      </ul></div>
+  </div>
+</div>
+
+<div class="rmsec">
+  <h3>Rules the site keeps at every stage</h3>
+  <div class="card"><ul class="tight">
+    <li><strong>Made to stock.</strong> Runs are planned by group (brand, size, pages, ruling), never one per Sales Order.</li>
+    <li><strong>One place to enter each station.</strong> No second copy on another page.</li>
+    <li><strong>Every floor entry records stock.</strong> If it matters, it's in ERPNext, not in a browser.</li>
+    <li><strong>Covers are counted in printed sheets.</strong> A4 = 2 books per sheet, A5 = 3. One sheet makes one insert set.</li>
+    <li><strong>The run number travels on every entry</strong>, so yield and waste can be read per run.</li>
+    <li><strong>Checks run on the server</strong> (school or brand, unit and price), so every screen and import is covered.</li>
+    <li><strong>Floor screens are large and touch-first</strong>, with picks instead of typing and a keypad for quantities.</li>
+  </ul></div>
+</div>
+
+
+</section>
+
+<!-- ============ DECISIONS ============ -->
+<section class="panel" id="p-decisions" data-tab="decisions" hidden>
+  <h2>Open decisions</h2>
+  <p class="lede">Grouped by the part of the model they unblock. The first group decides how production is recorded. The rest are clean-up.</p>
+
+  <div class="card"><h3>Process and recording</h3>
+    <div class="q"><span class="n">P1</span><span>Confirm the five steps and where stitching and trimming sit (inside Inserts?).</span>
+    <span class="n">P2</span><span>Add Folding, Inserts and Packing stages to the exercise-book route, and decide what Sheeting and Collation mean for this line.</span>
+    <span class="n">P3</span><span>Smallest or fuller model (see Proposed flow): which steps post stock?</span>
+    <span class="n">P4</span><span>Who on the floor enters each step, and on which screen.</span>
+    <span class="n">P5</span><span>Does the daily ruling log feed ERPNext, or stay in CSV and Slack?</span>
+    <span class="n">P6</span><span>Settled: no work order per Sales Order. Still open: what a production run is recorded on (a run-level job card, a Work Order per SKU run, or just the stage stock entries), and what triggers a run (shortfall against open demand, a minimum stock level, or both).</span>
+    <span class="n">P7</span><span>Who owns each handover (Nadeem and Peter are candidates), and where the run reference travels on the floor.</span>
+    <span class="n">P8</span><span>How rejects, loose books and reversals are handled.</span>
+    <span class="n">P10</span><span>Settled 04 Nov: folds items are named <code>FLD-&lt;PNC|SWR&gt;-&lt;A4|A5&gt;-&lt;PPP&gt;PG-&lt;RULING&gt;</code>, twins of COV and INS. They will be created through the vcl-production app (step 2 of the build plan).</span>
+    <span class="n">P9</span><span>Put the dev pages in git, so sessions stop overwriting each other.</span></div>
+  </div>
+  <div class="card"><h3>Stock and orders</h3>
+    <div class="q"><span class="n">S1</span><span>How finished books are received into stock, and into which warehouse.</span>
+    <span class="n">S2</span><span>Who sets the order stage on Compass (the role list currently includes every sales rep).</span>
+    <span class="n">S3</span><span>When to deploy Exercise Book Orders (it needs a migrate and the <code>compass_exercise_books</code> config).</span>
+    <span class="n">S4</span><span>Are the three On Hold orders still live?</span>
+    <span class="n">S5</span><span>Valuation: the opening stock is at zero cost. When and how do books get a cost?</span>
+    <span class="n">S6</span><span>Make the packing record shared, not browser-only: push <code>a84ef92</code> and build its screen.</span>
+    <span class="n">S7</span><span>Should "Required" reserve stock per order rather than read all physical stock?</span>
+    <span class="n">S8</span><span>SFS is in Nos and carries legacy generic items. Convert it?</span></div>
+  </div>
+  <div class="card"><h3>Item master and specification</h3>
+    <div class="q"><span class="n">M1</span><span>CR10: finish the last 216 renames, or roll them back.</span>
+    <span class="n">M2</span><span>Pieces per carton for 100-page books (45 items) and A4 60-page Hi5 school.</span>
+    <span class="n">M3</span><span>FNB ruling (14 items) and the Prince A5 48 half-line price.</span>
+    <span class="n">M4</span><span>Standardise covers that aren't chipboard (MNL, MGC).</span>
+    <span class="n">M5</span><span>Update the CPS ruling and cover options to match the real codes.</span>
+    <span class="n">M6</span><span>BOM master: Graph row, keep or park Hi5, grammage and cover sheet sizes, and an owner on the floor.</span></div>
+  </div>
+  <div class="card"><h3>Phasing (from your comments, 04 Nov)</h3>
+    <div class="q"><span class="n">Ph1</span><span>Stock books: covers, folds, inserts, packing into Finished Goods, and deliveries from Finished Goods. Flow by item type, with brand and customer filters.</span>
+    <span class="n">Ph2/3</span><span>Paper and ruling, linked to books. School and customised exercise-book orders.</span></div>
+  </div>
+</section>
+
 <!-- ============ YOUR COMMENTS ============ -->
 <section class="panel" id="p-comments" data-tab="comments" hidden>
   <h2>Your comments and what was done</h2>
@@ -650,7 +1076,7 @@ tr.flag td{background:var(--warn-tint)}
   <div class="tw"><table>
     <thead><tr><th>#</th><th>Your request</th><th>What was done</th><th>Status</th></tr></thead>
     <tbody>
-      <tr><td class="num">9</td><td>The school check should apply everywhere the item is picked: Compass or anywhere else. One more click is fine for accuracy.</td><td>Built and in the pack. The server check is on all five documents plus API and imports, with pop-ups on Desk and Compass orders and quotations. Android and a few Compass screens get the pop-up later. See the Build spec (Order controls).</td><td><span class="chip part">Built, not deployed</span></td></tr>
+      <tr><td class="num">9</td><td>The school check should apply everywhere the item is picked: Compass or anywhere else. One more click is fine for accuracy.</td><td>Built and in the pack. The server check is on all five documents plus API and imports, with pop-ups on Desk and Compass orders and quotations. Android and a few Compass screens get the pop-up later. See the Order controls tab.</td><td><span class="chip part">Built, not deployed</span></td></tr>
       <tr><td class="num">10</td><td>Users enter 3,000/= for one Nos instead of one carton. Was "show the UOM" ever hard-implemented?</td><td>Answer: it was <strong>not hard-implemented</strong>. Only one live setting shows the unit in the Sales Order item list. The pack makes the unit visible and required on all five documents, plus the price-range check.</td><td><span class="chip part">Built, not deployed</span></td></tr>
       <tr><td class="num">11</td><td>Check all the git repos. Agreed: default to cartons. One Nos is about 100/=, a carton much higher. Apply that logic.</td><td>All repos checked. The Carton default was already set on all 455 items with a carton conversion, while 847 items lack one. The price rule is 3–150/= per book: it would have caught 147 lines since August.</td><td><span class="chip part">Built, not deployed</span></td></tr>
     </tbody>
@@ -672,7 +1098,7 @@ tr.flag td{background:var(--warn-tint)}
       <tr><td class="num">1</td><td>Meeting in the middle</td><td>"This is a good visual to keep for actual data as well, but can we add in filters here by brand and by customer? Maya or the order is confirmed."</td><td>The chart stays and now runs on the order lines from ERPNext (69 lines, re-pulled 04 Nov 20:13). It has <strong>Brand</strong> and <strong>Customer</strong> filters, and the group table below follows them. Stock goes to the earliest delivery first, so each customer sees what's left after the orders due before theirs. "Maya or the order" was read as <strong>the Mahavir order is confirmed</strong>, so it counts as real demand and the old "without Mahavir" switch has been removed (choose a customer to see any order on its own). Tell me if the comment meant something else.</td><td><span class="chip ok">Done</span></td></tr>
       <tr><td class="num">2</td><td>Where the chain breaks · covers → inserts</td><td>"But how is this model working at the moment? Also we need a step called folds that is input - and the covers+folds inserted together = inserts."</td><td><strong>How it works today</strong> (confirmed from the live dev page and ERPNext): one Repack with two rows, <code>COV-x</code> out and its twin <code>INS-x</code> in, same quantity, zero cost. 14 Repacks, 25,384 = 25,384, and no inner paper is ever taken out. No fold, inner or signature item exists. <strong>Changed:</strong> step 3 is now <strong>Folds (an input)</strong> and Inserts = covers + folds, on every tab. Proposed items <code>FLD-&lt;PNC|SWR&gt;-&lt;A4|A5&gt;-&lt;PPP&gt;PG-&lt;RULING&gt;</code>, twins of COV and INS, with the Repack taking out covers and folds together.</td><td><span class="chip ok">Done</span></td></tr>
       <tr><td class="num">3</td><td>Where the chain breaks · finished stock → delivery</td><td>"What's the difference between finished goods and stock? Remember there is a data gap at the moment because we have not been recording daily production."</td><td>Answered on the Data flow tab. "Stock" is any warehouse. <code>Finished Goods - VCL</code> is for packed books ready to sell, and <code>Stores - VCL</code> is for materials and part-made stock. The data gap is now stated: with no daily production recorded, deliveries were covered by booking stock into Stores on the same day. That's a workaround, not an error. From today's count, books should come into Finished Goods when packed and be delivered from there.</td><td><span class="chip ok">Done</span></td></tr>
-      <tr><td class="num">4</td><td>Where the chain breaks · paper → ruling</td><td>"This goes to phase 2 or phase 3 - and it will include school exercise book/ customized exercise book orders."</td><td>Paper and ruling are marked Phase 2/3 on the Data flow and item-type tables. A Phasing card in the Build spec (Decisions) puts paper, ruling, and school and customised orders in Phase 2/3, and stock books in Phase 1. The 1,000,000-tonne reel is still listed as a data error to fix.</td><td><span class="chip ok">Done</span></td></tr>
+      <tr><td class="num">4</td><td>Where the chain breaks · paper → ruling</td><td>"This goes to phase 2 or phase 3 - and it will include school exercise book/ customized exercise book orders."</td><td>Paper and ruling are marked Phase 2/3 on the Data flow and item-type tables. A Phasing card on the Decisions tab puts paper, ruling, and school and customised orders in Phase 2/3, and stock books in Phase 1. The 1,000,000-tonne reel is still listed as a data error to fix.</td><td><span class="chip ok">Done</span></td></tr>
       <tr><td class="num">5</td><td>Packing capacity</td><td>"This will be updated tomorrow as we get the stock from the team."</td><td>The section is marked "Count due 05 Nov", and it says the figures will be replaced by the team's count. Send the count and I'll update it.</td><td><span class="chip wait">Waiting on count</span></td></tr>
       <tr><td class="num">6</td><td>By SKU · method note</td><td>"We need the flow by item type from each stage so that it can be mapped properly."</td><td>Added "Flow by item type, stage to stage": item type, code pattern, unit, warehouse, key fields, how many items exist (with stock), and what each becomes. Added "Flow by group" with all 75 groups (brand | size | pages | ruling) and their quantities at each stage: covers, inserts, finished, orders, the shortfall after each stage, and surplus. 34 groups have stock but no orders.</td><td><span class="chip ok">Done</span></td></tr>
     </tbody>
@@ -761,4 +1187,55 @@ function run(){
 ['fbrand','fcust'].forEach(function(id){document.getElementById(id).addEventListener('change',run)});run();
 })();
 </script>
-
+<script>
+(function(){
+var M={
+ orders:['Orders Pending','Open orders and exports'],ostock:['Order & stock','Orders against stock'],fstock:['Finished Stock','Finished Goods balance'],
+ covers:['Covers','COV- sheets in'],folds:['Folds','FLD- folds in'],inserts:['Inserts','Covers + folds → sets'],packing:['Packing','Books into Finished Goods'],
+ cartons:['Empty cartons','Count and use'],plan:['Plan','What to make, by group'],runs:['Runs','One run across stations'],today:['Today','Floor board'],
+ ebtrack:['/production-dev EB tracker','Duplicate entry'],recv:['/receiving-dev books','"Coming later"'],
+ cebo:['Exercise Book Orders','Compass'],cdash:['Stock and shortfall','Compass dashboard'],cmgmt:['Management summary','Compass'],chealth:['Data health','Compass'],
+ paper:['Paper','Reels issued to ruling'],ruling:['Ruling','Ruled sheets'],school:['School and custom orders','Spec, job, delivery'],guards:['Order checks','School or brand, unit and price']
+};
+var S=[
+ {w:'Today',t:'04 Nov 2026',d:'Dev page, live edits, partly in ERPNext',url:'/exercise-book-production-dev',code:'Web Page, edited live, not in git',
+  groups:[['Dev page tabs',[['orders','keep'],['ostock','keep'],['fstock','keep'],['covers','keep'],['inserts','keep'],['packing','keep'],['cartons','keep']]],['Elsewhere',[['ebtrack','keep'],['recv','keep'],['cebo','move']]]],
+  posts:[['Covers','Material Receipt COV-'],['Inserts','Repack COV- → INS- (1:1)'],['Packing','Nothing (browser only)'],['Finished Goods','Opening count only: 516,918 books']],
+  users:'Tanuj, production office',done:['Covers and inserts record stock','Opening finished stock counted (MAT-RECO-2026-00003)','Cover unit settled: printed sheets'],
+  gate:['Dev pages overwrite each other','Packing, folds and ruling not recorded','Deliveries booked in the same day as a workaround']},
+ {w:'Phase 1a',t:'Make it safe',d:'Git, one entry point, order checks',url:'/exercise-book-production-dev',code:'Page source in vcl-production. Deploy script refuses to overwrite a newer live page',
+  groups:[['Dev page tabs',[['orders','keep'],['ostock','keep'],['fstock','keep'],['covers','keep'],['inserts','keep'],['packing','keep'],['cartons','change']]],['Elsewhere',[['ebtrack','retire'],['recv','keep'],['cebo','new'],['guards','new']]]],
+  posts:[['Order checks','School or brand + unit/price, on every selling document (pack awaiting approval)'],['Empty cartons','Count → draft Stock Reconciliation'],['Compass','Exercise Book Orders deployed (migrate)']],
+  users:'Sales reps (checks), stores (carton count)',done:['Dev page in git with a safe deploy','Order checks live everywhere','Exercise Book Orders deployed','Empty cartons counted (05 Nov)','The duplicate tracker on /production-dev removed'],
+  gate:['Approve the selling-line guards pack','Clean the price list (13 carton prices on Nos, 809 items with no price)']},
+ {w:'Phase 1b',t:'Full floor flow',d:'Every station records stock, by run',url:'/exercise-book-production-dev',code:'Same page, now calling whitelisted methods in production_floor, with tests',
+  groups:[['Plan',[['plan','new'],['runs','new'],['today','new']]],['Stations',[['covers','change'],['folds','new'],['inserts','change'],['packing','change'],['cartons','change']]],['Views',[['fstock','keep'],['orders','move'],['ostock','move']]],['Elsewhere',[['recv','retire'],['cebo','keep'],['cdash','new']]]],
+  posts:[['Covers','Material Receipt COV- + run number'],['Folds','Material Receipt FLD-'],['Inserts','Repack: COV- and FLD- out, INS- in'],['Packing','Manufacture: INS- and cartons out, books into Finished Goods'],['Delivery','From Finished Goods; same-day receipts stop']],
+  users:'Printing, folding, binding, packing supervisors; planner',done:['80 FLD- items and the run field created','Every station posts, with the run number','Deliveries come from Finished Goods','Yield and waste readable per run'],
+  gate:['Who enters each station (P7)','How rejects, loose books and reversals work (P8)','Push and deploy the receiving backend (a84ef92)']},
+ {w:'Phase 2',t:'Into the app',d:'Floor app + Compass dashboards, with cost',url:'/app/exercise-book-production',code:'A page of the vcl-production app; dashboards in vcl_compass',
+  groups:[['Floor app',[['plan','keep'],['runs','keep'],['today','keep'],['covers','change'],['folds','keep'],['inserts','keep'],['packing','keep'],['cartons','keep']]],['Compass',[['cebo','keep'],['cdash','keep'],['cmgmt','new'],['chealth','new']]],['Retired',[['orders','retire'],['ostock','retire']]]],
+  posts:[['Covers','Manufacture: board and ink out, COV- in (covers get a cost)'],['Packing','Manufacture against the book BOM (books get a cost)'],['Runs','A run record or Work Order per group run (decision P6)']],
+  users:'Floor tablets; Tanuj and sales in Compass',done:['The dev page is retired','Books carry a cost (no more zero valuation)','Management summary and data health live'],
+  gate:['P6: what a run is recorded on','The BOM master (54 rows) approved']},
+ {w:'Phase 3',t:'Paper to book',d:'Paper and ruling; school and custom orders',url:'/app/exercise-book-production',code:'Same app, more stations',
+  groups:[['Floor app',[['paper','new'],['ruling','new'],['folds','change'],['covers','keep'],['inserts','keep'],['packing','keep'],['runs','keep']]],['Orders',[['school','new'],['cebo','keep']]]],
+  posts:[['Paper','Reels issued to ruling (Kg / Tonne)'],['Ruling','Ruled sheets in, from the daily ruling log'],['Folds','Ruled sheets out, FLD- in'],['School / custom','Specification (CPS) → job → delivery']],
+  users:'Ruling department, school-order desk',done:['Paper to book traceable per run','The daily ruling log in ERPNext (not only CSV and Slack)','School and customised orders on their own flow'],
+  gate:['Ruled-sheet items per paper, size and ruling','The 1,000,000-tonne reel data error fixed']}
+];
+var cls={keep:'c-keep',change:'c-change',new:'c-new',move:'c-move',retire:'c-retire'},lab={keep:'Keep',change:'Changed',new:'New',move:'Moves',retire:'Retired'};
+var rail=document.getElementById('rail');
+S.forEach(function(s,i){var b=document.createElement('button');b.type='button';b.innerHTML='<span class="w">'+s.w+'</span><span class="t">'+s.t+'</span><span class="d">'+s.d+'</span>';b.addEventListener('click',function(){show(i)});rail.appendChild(b)});
+function show(i){var s=S[i];
+ [].forEach.call(rail.children,function(b,j){b.setAttribute('aria-pressed',j===i?'true':'false')});
+ document.getElementById('site').innerHTML='<div class="top"><span>Site map · '+s.w+'</span><b>'+s.url+'</b></div><div class="groups">'+s.groups.map(function(g){return '<div class="grp"><span class="label">'+g[0]+'</span><div class="mods">'+g[1].map(function(m){var x=M[m[0]];return '<div class="mod'+(m[1]==='retire'?' retire':m[1]==='new'?' new':'')+'"><span class="n">'+x[0]+'</span><span class="s">'+x[1]+'</span><span><span class="chip '+cls[m[1]]+'">'+lab[m[1]]+'</span></span></div>'}).join('')+'</div></div>'}).join('')+'</div>';
+ document.getElementById('detail').innerHTML='<h3>'+s.w+': '+s.t+'</h3><dl class="facts"><dt>Code</dt><dd>'+s.code+'</dd><dt>Used by</dt><dd>'+s.users+'</dd></dl>'+
+ '<div><p class="label" style="margin-bottom:6px">Records in ERPNext</p><div class="posts">'+s.posts.map(function(p){return '<div class="post"><b>'+p[0]+'</b><span>'+p[1]+'</span></div>'}).join('')+'</div></div>'+
+ '<div><p class="label" style="margin-bottom:6px">'+(i===0?'In place':'Done when')+'</p><ul class="tight">'+s.done.map(function(x){return '<li>'+x+'</li>'}).join('')+'</ul></div>'+
+ '<div class="callout'+(i===0?' warn':'')+'"><p class="label" style="margin-bottom:4px">'+(i===0?'Problems today':'Needs first')+'</p><ul class="tight">'+s.gate.map(function(x){return '<li>'+x+'</li>'}).join('')+'</ul></div>';
+ try{localStorage.setItem('eb-roadmap-stage',String(i))}catch(e){}}
+var start=2;try{var v=parseInt(localStorage.getItem('eb-roadmap-stage'),10);if(v>=0&&v<S.length)start=v}catch(e){}
+show(start);
+})();
+</script>

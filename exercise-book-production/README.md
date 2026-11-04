@@ -17,19 +17,10 @@ Copies kept elsewhere:
 - second-brain: `brain_inbox/exercise-book-production-process.md` (on the Windows PC working copy only, not yet committed; see the chief of staff note)
 - tanuj_chief_of_staff: `docs/exercise-book-production.md`
 
-## Review page
-`exercise-book-review.html` is the source of the tabbed review artifact:
-https://claude.ai/artifact/DtTjNC15VeSb9cneqqK16o. To add a tab, add a link in the tab strip
-and a `section.panel` with a matching `data-tab`, then republish.
-
-## Dev site roadmap
-`dev-site-roadmap.html` is the source of the roadmap artifact: what the Exercise Book Production dev page
-becomes, stage by stage (Today, 1a make it safe, 1b full floor flow, 2 into the app, 3 paper to book).
-
-## The four pages (04/11/2026)
+## The two pages (04/11/2026)
 | Page | Source | Link |
 |---|---|---|
-| Review (analysis, data flow, comments) | `exercise-book-review.html` | https://claude.ai/artifact/DtTjNC15VeSb9cneqqK16o |
-| Click-through (stations, screens, dashboards) | `click-through.html` | https://claude.ai/artifact/Y9A9EELmbJBt7tQoaKU4An |
-| Build spec (items, postings, checks, clean-up, plan, decisions) | `build-spec.html` | https://claude.ai/artifact/2W8SCEBSJ6MLonkZSznNsE |
-| Roadmap | `dev-site-roadmap.html` | https://claude.ai/artifact/UzRSVKSmc1oPW8TKP6BRZb |
+| Build spec: today's data, item model, stations, order checks, clean-up, build plan, roadmap, decisions, comments | `exercise-book-review.html` | https://claude.ai/artifact/DtTjNC15VeSb9cneqqK16o |
+| Click-through: what it will look like in ERPNext (stations, screens, dashboards); the build target | `click-through.html` | https://claude.ai/artifact/Y9A9EELmbJBt7tQoaKU4An |
+
+The separate Build spec and Roadmap pages were merged into the first page and deleted. Their content is in git history.
