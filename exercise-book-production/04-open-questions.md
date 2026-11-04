@@ -43,3 +43,13 @@ The school prompt also applies everywhere an item is picked (Opportunity, Quotat
 - **Decided (Tanuj, 04/11):** the default sales UOM for exercise books is **Carton**. The PC is preparing the change (dry-run count + backup) and applies it when Tanuj says go.
 - **Rate band logic (Tanuj):** 1 book is about 100/=, and a carton is much higher. A Nos line priced in the carton range should prompt "Did you mean Carton?", and a Carton line priced in the per-book range should prompt "Did you mean Nos?". The bands come from real invoiced and price-list rates by size and pages, and act as a fallback while the price list is being cleaned.
 - The PC is checking ALL git repos for the earlier "show UOM" change, every place lines are entered, and any existing price/UOM validation.
+
+## Selling-line guards pack (PC, 04/11/2026), awaiting Tanuj's approval
+- Pack: PC `C:\Second_Brain\output\selling_line_guards_pack_2026-11-04.md`. Code on branch `feat/school-item-guard` in vcl-production (from 2fc760d) and vcl_compass (from 35019c3), local and unpushed.
+- School rename: 547/554 items; 448 have a brand twin (60 of those twins disabled), 99 have none.
+- Guards on Opportunity, Quotation, SO, DN, SI (only new or changed lines are checked). The custom field and Property Setters are created in after_migrate.
+- "Show UOM" was NOT done before (only a 02/11 Property Setter on the SO Item list view).
+- Carton default: already set on all 455 items with a Carton row. 847 items have no Carton row.
+- Rate band 3–150/= per book: it would have caught 72 Opportunity + 74 Quotation + 1 SO lines since 06/08. Check that 150 leaves headroom for the 200pg A4 price.
+- Price list: 13 carton prices on Nos, 7 suspect MGC/MNL, 809 items with no price. **937 of 989 Carton invoice lines have conversion factor 1**, which needs its own fix.
+- Still to wire for the UI prompt: Compass stock lines, deals, audit, capture; Android (app release); the vcl_sales enquiry page.
