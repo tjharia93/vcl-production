@@ -40,3 +40,6 @@ Proposed control (sent to the PC as a dry-run pack together with the school guar
 3. The same check in Compass and Android.
 4. Clean the Standard Selling price list first (duplicate Carton rows, Nos prices at carton level). Related: TRK-00363.
 The school prompt also applies everywhere an item is picked (Opportunity, Quotation, SO, Invoice, DN, Compass, Android, API), with a server guard as the backstop.
+- **Decided (Tanuj, 04/11):** the default sales UOM for exercise books is **Carton**. The PC is preparing the change (dry-run count + backup) and applies it when Tanuj says go.
+- **Rate band logic (Tanuj):** 1 book is about 100/=, and a carton is much higher. A Nos line priced in the carton range should prompt "Did you mean Carton?", and a Carton line priced in the per-book range should prompt "Did you mean Nos?". The bands come from real invoiced and price-list rates by size and pages, and act as a fallback while the price list is being cleaned.
+- The PC is checking ALL git repos for the earlier "show UOM" change, every place lines are entered, and any existing price/UOM validation.
