@@ -77,3 +77,8 @@ The school prompt also applies everywhere an item is picked (Opportunity, Quotat
 - Recommendation: NO BOM for inserts (fixed 1:1:1; the Repack adds the FLD row). YES a packing BOM per book (qty = books per carton ← INS sets + 1 carton), used as the reference, with a Manufacture of the actual counts.
 - First: Carton UOM on the books being made (847 lack one), and a carton item per book or per size and brand (the A5 common carton is disabled).
 - Chain stored as Item fields: eb_ups, eb_cover_item, eb_fold_item, eb_insert_item, eb_carton_item.
+
+## For 05/11/2026
+- Review Capture v3 (click-through, first tab): a working model of Covers → Folds → Inserts → Packing with stock impact per entry.
+- P12 packing BOMs (PC dry run): 31 ready, +49 once the A5 carton item is enabled. Decide carton per size+brand vs per book, A4 Prince height (260 vs 275 for 200pg), enable the A5 carton, the 87 books without COV/FLD/INS sets, and carton UOM on 14 MNL/MGC books. Files: PC C:\Second_Brain\output\packing_bom_dryrun_2026-11-04\.
+- Still waiting: the push of the five branches (snapshot + feat/school-item-guard ×4); the opening fold count; the carton count; retiring the /production-dev EB module.

@@ -288,14 +288,68 @@ tr.flag td{background:var(--warn-tint)}
 .related a span{font-size:13px;color:var(--muted)}
 .related a.here{border-top-color:var(--border-strong);pointer-events:none}
 .fn.grey rect{fill:var(--sunken);stroke:var(--border);stroke-width:2}.fn.grey text{fill:var(--muted)}.fn.grey .fst{fill:var(--muted)}
+/* capture v3 (floor mode, Lightning-style cards) */
+.cap{display:grid;gap:14px;background:var(--sunken);border:1px solid var(--border);border-radius:8px;padding:14px}
+.cap-top{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+.cap-grp{display:grid;gap:4px;min-width:0;flex:1 1 220px}
+.cap-grp .lb,.cap .lb{font-size:13px;font-weight:700;color:var(--muted)}
+.cap select,.cap input{font:18px var(--sans);min-height:48px;padding:0 12px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);color:var(--ink);width:100%;box-sizing:border-box}
+.cap input.qty{font-family:var(--mono);font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;min-height:58px}
+.cap-actions{display:flex;gap:8px;flex-wrap:wrap}
+.cap-sec{font:inherit;font-weight:700;min-height:44px;padding:0 14px;border-radius:4px;border:1px solid var(--border-strong);background:var(--surface);color:var(--brand-text);cursor:pointer}
+.cap-steps{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.cap-steps button{flex:1 1 120px;display:grid;gap:2px;text-align:left;font:inherit;padding:10px 12px;border:1px solid var(--border);border-top:4px solid var(--brand);border-radius:4px;background:var(--raised);color:var(--ink);cursor:pointer;min-width:0}
+.cap-steps button .k{font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.cap-steps button .t{font-weight:700;font-size:16px}
+.cap-steps button.fg{border-top-color:var(--success)}
+.cap-steps button[aria-selected="true"]{background:var(--brand);color:var(--on-brand);border-color:var(--brand)}
+.cap-steps button[aria-selected="true"] .k{color:var(--on-brand);opacity:.85}
+.cap-steps .arr{color:var(--muted);flex:none}
+.cap-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media (max-width:860px){.cap-grid{grid-template-columns:1fr}.cap-steps .arr{display:none}}
+.cap-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;display:grid;gap:12px;min-width:0;align-content:start}
+.cap-h{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline;justify-content:space-between}
+.cap-note{font-size:13px;color:var(--muted)}
+.cap-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.cap-f{display:grid;gap:4px;min-width:0}
+.cap-ro{min-height:48px;display:flex;align-items:center;font-weight:700;font-size:16px;overflow-wrap:anywhere}
+.cap-ro.mono{font-family:var(--mono)}
+.cap-check{display:flex;gap:10px;align-items:center;font-size:15px}
+.cap-check input{width:24px;min-height:24px;height:24px}
+.cap-post{font:inherit;font-weight:700;font-size:18px;min-height:56px;border:0;border-radius:4px;background:var(--brand);color:var(--on-brand);cursor:pointer;width:100%}
+.cap-post:disabled{background:var(--border-strong);cursor:not-allowed;opacity:.7}
+.cap-rows{display:grid;gap:6px}
+.cap-row{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border-radius:4px;border:1px solid var(--border);background:var(--raised)}
+.cap-row .d{font-family:var(--mono);font-weight:700;font-size:13px;text-align:center;padding:2px 0;border-radius:2px}
+.cap-row.out .d{background:var(--warn-tint);color:var(--warn-text)}
+.cap-row.in .d{background:var(--ok-tint);color:var(--ok-text)}
+.cap-row .it{min-width:0}
+.cap-row .it code{display:block;overflow-wrap:anywhere}
+.cap-row .it span{font-size:12px;color:var(--muted)}
+.cap-row .q{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.cap-row .q b{font-size:16px}
+.cap-row .q small{display:block;color:var(--muted);font-size:12px}
+.cap-msg{padding:10px 12px;border-radius:4px;font-size:14px}
+.cap-msg.bad{background:var(--warn-tint);color:var(--warn-text);font-weight:700}
+.cap-msg.ok{background:var(--ok-tint);color:var(--ok-text);font-weight:700}
+.cap-msg.info{background:var(--info-tint);color:var(--info-text)}
+.cap-stock{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.cap-stock div{border:1px solid var(--border);border-radius:4px;padding:10px;background:var(--raised);display:grid;gap:2px}
+.cap-stock .n{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.cap-stock .v{font-family:var(--mono);font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.cap-stock .s{font-size:12px;color:var(--muted)}
+.cap-stock .chg{font-family:var(--mono);font-size:13px;font-weight:700}
+.cap-stock .chg.up{color:var(--ok-text)}.cap-stock .chg.down{color:var(--warn-text)}
+@media (prefers-reduced-motion:no-preference){.cap-stock div.flash{animation:capf 1.2s ease-out}@keyframes capf{from{background:var(--brand-tint)}to{background:var(--raised)}}}
 </style>
 
 <header class="bar"><div class="wrap">
-  <h1>Exercise book click-through</h1>
+  <h1>Exercise book click-through · v3</h1>
   <p>Prototype of every station, screen and dashboard · as at 04 Nov 2026 · IT Development, Vimit Converters Limited</p>
 </div></header>
 
 <nav class="tabs" aria-label="Sections"><div class="wrap" id="tabs">
+  <a href="#v3">Capture v3</a>
   <a href="#walk">Stations</a>
   <a href="#screens">Screens and dashboards</a>
   <a href="#port">Porting</a>
@@ -304,8 +358,50 @@ tr.flag td{background:var(--warn-tint)}
 
 <main><div class="wrap">
 
+<!-- ============ CAPTURE V3 ============ -->
+<section class="panel" id="p-v3" data-tab="v3">
+  <h2>Capture v3: try the floor screens</h2>
+  <p class="lede">A working model of the capture screens, Covers to Packing. It starts from today's real stock (ERPNext, 04 Nov). Pick a group, enter what the floor counted, and the preview shows exactly what each entry takes out of stock and puts in before you post. Posting updates the stock and adds the entry to the ledger below. It's a simulation: nothing is sent to ERPNext. Your entries are kept in this browser until you press Reset.</p>
+
+  <div class="cap">
+    <div class="cap-top">
+      <label class="cap-grp" for="v3-group"><span class="lb">Working on</span>
+        <select id="v3-group"></select></label>
+      <label class="cap-grp" for="v3-run"><span class="lb">Run number</span>
+        <input id="v3-run" value="EBR-0001" autocomplete="off"></label>
+      <div class="cap-actions"><button type="button" class="cap-sec" id="v3-undo">Undo last entry</button><button type="button" class="cap-sec" id="v3-reset">Reset to today's stock</button></div>
+    </div>
+
+    <div class="cap-steps" id="v3-steps" role="tablist" aria-label="Stations"></div>
+
+    <div class="cap-grid">
+      <div class="cap-card" id="v3-form"></div>
+      <div class="cap-card" id="v3-preview"></div>
+    </div>
+
+    <div class="cap-card">
+      <div class="cap-h"><h3>Stock for this group</h3><span class="cap-note" id="v3-stocknote"></span></div>
+      <div class="cap-stock" id="v3-stock"></div>
+    </div>
+
+    <div class="cap-card">
+      <div class="cap-h"><h3>Entries posted (this session)</h3><span class="cap-note">Newest first. In ERPNext each is a submitted Stock Entry carrying the run number.</span></div>
+      <div class="tw"><table><thead><tr><th>#</th><th>Run</th><th>Station</th><th>Entry type</th><th>Out</th><th>In</th></tr></thead><tbody id="v3-ledger"></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="card"><h3>The rules this model follows</h3><ul class="tight">
+    <li><strong>Covers, folds and inserts count in sets.</strong> A4 = 2 books per set, A5 = 3. One cover sheet + one fold set = one insert set. Only packing counts single books.</li>
+    <li><strong>Covers</strong>: Material Receipt, cover sheets into <code>Stores - VCL</code>. Spoiled sheets are recorded but not added.</li>
+    <li><strong>Folds</strong>: Material Receipt, fold sets into <code>Stores - VCL</code> (paper is taken out in Phase 2/3).</li>
+    <li><strong>Inserts</strong>: Repack (no BOM). Out: covers × sets and folds × sets. In: inserts × sets. Blocked if either is short, because the site doesn't allow negative stock. There's no fold stock yet, so the first inserts need a fold count first, or the fold check held off.</li>
+    <li><strong>Packing</strong>: Manufacture against the book's packing BOM. Books = full cartons × books per carton + loose books. Out: inserts (books + rejects ÷ up-count, rounded up to whole sets) and empty cartons. In: books into <code>Finished Goods - VCL</code>. Blocked if inserts or cartons are short.</li>
+    <li><strong>Cartons</strong> (PC proposal, for your decision): one common carton per size and brand. A4 Prince <code>PNC-EMPTY-CARTON-A4-EXBK-COMMON-425 x 305 x 260</code> (4,425), A4 Swara <code>SWR- COMMON CARTON 280 MM</code> (2,078), A5 <code>PNCSWR-EMPTY-CARTON-A5-PLAINF-DPL</code> (1,875, item disabled today). Book balances from 2024–25; the team counts on 05 Nov.</li>
+  </ul></div>
+</section>
+
 <!-- ============ CLICK-THROUGH ============ -->
-<section class="panel" id="p-walk" data-tab="walk">
+<section class="panel" id="p-walk" data-tab="walk" hidden>
   <h2>Station by station</h2>
   <p class="lede">Each station on the floor, the screen someone enters it on, what that entry posts to ERPNext, and how the item maps on to the next station. Click a station, or use Next. One worked example runs all the way through: a run of Prince A5 120-page single-line books.</p>
   <div class="callout"><p><strong>Example run <code>EBR-0001</code>:</strong> 1,000 cover sheets (A5, 3-up) + 1,000 fold sets → 1,000 insert sets = 3,000 books → 16 cartons of 186 + 24 loose books → into <code>Finished Goods - VCL</code> → allotted to ESGA's order. The run number is carried on every entry, so yield and waste can be read per run (see the Build spec, decision P6).</p></div>
@@ -424,7 +520,7 @@ tr.flag td{background:var(--warn-tint)}
   var panels=[].slice.call(document.querySelectorAll('section.panel'));
   var names=panels.map(function(p){return p.dataset.tab});
   function show(){
-    var h=(location.hash||'').slice(1); if(names.indexOf(h)<0) h='walk';
+    var h=(location.hash||'').slice(1); if(names.indexOf(h)<0) h='v3';
     panels.forEach(function(p){p.hidden=p.dataset.tab!==h});
     links.forEach(function(a){ if(a.getAttribute('href')==='#'+h) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
   }
@@ -643,3 +739,111 @@ function show(id){var s=all.filter(function(x){return x.id===id})[0]||all[0];sel
 show('plan');
 })();
 </script>
+<script>
+(function(){
+var D={"groups":[{"k":"Swara|A4|120|SL","b":"Swara","s":"A4","p":120,"r":"SL","u":2,"cov":25070,"ins":9480,"fg":8772,"book":"SWREB-A4-120PGS-CB-NP-SL","dem":893010,"cpc":102},{"k":"Swara|A4|120|SQ","b":"Swara","s":"A4","p":120,"r":"SQ","u":2,"cov":6000,"ins":1224,"fg":5406,"book":"SWREB-A4-120PGS-CB-NP-SQ","dem":105060,"cpc":102},{"k":"Swara|A4|96|SL","b":"Swara","s":"A4","p":96,"r":"SL","u":2,"cov":13000,"ins":0,"fg":600,"book":"SWREB-A4-96PGS-CB-NP-SL","dem":66000,"cpc":120},{"k":"Prince|A5|64|SL","b":"Prince","s":"A5","p":64,"r":"SL","u":3,"cov":6000,"ins":0,"fg":17052,"book":"PNCEB-A5-64PGS-CB-BP-SL","dem":52200,"cpc":348},{"k":"Swara|A4|200|SL","b":"Swara","s":"A4","p":200,"r":"SL","u":2,"cov":13000,"ins":0,"fg":1518,"book":"SWREB-A4-200PGS-CB-NP-SL","dem":46200,"cpc":66},{"k":"Swara|A4|48|SL","b":"Swara","s":"A4","p":48,"r":"SL","u":2,"cov":6000,"ins":0,"fg":0,"book":"SWREB-A4-48PGS-CB-NP-SL","dem":40800,"cpc":204},{"k":"Prince|A5|80|SL","b":"Prince","s":"A5","p":80,"r":"SL","u":3,"cov":6500,"ins":0,"fg":41580,"book":"PNCEB-A5-80PGS-CB-BP-SL","dem":39060,"cpc":252},{"k":"Swara|A4|64|SL","b":"Swara","s":"A4","p":64,"r":"SL","u":2,"cov":5000,"ins":0,"fg":14256,"book":"SWREB-A4-64PGS-CB-NP-SL","dem":35640,"cpc":162},{"k":"Prince|A5|100|SL","b":"Prince","s":"A5","p":100,"r":"SL","u":3,"cov":6600,"ins":0,"fg":0,"book":"PNCEB-A5-100PGS-CB-BP-SL","dem":32400,"cpc":216},{"k":"Prince|A5|48|SL","b":"Prince","s":"A5","p":48,"r":"SL","u":3,"cov":0,"ins":0,"fg":0,"book":"PNCEB-A5-48PGS-CB-BP-SL","dem":30720,"cpc":384},{"k":"Prince|A5|32|SL","b":"Prince","s":"A5","p":32,"r":"SL","u":3,"cov":20000,"ins":0,"fg":11592,"book":"PNCEB-A5-32PGS-CB-BP-SL","dem":30240,"cpc":504},{"k":"Prince|A4|120|SL","b":"Prince","s":"A4","p":120,"r":"SL","u":2,"cov":0,"ins":0,"fg":14484,"book":"PNCEB-A4-120PGS-CB-BP-SL","dem":17900,"cpc":102},{"k":"Prince|A4|64|SL","b":"Prince","s":"A4","p":64,"r":"SL","u":2,"cov":5000,"ins":0,"fg":3078,"book":"PNCEB-A4-64PGS-CB-BP-SL","dem":16200,"cpc":162},{"k":"Prince|A4|96|SL","b":"Prince","s":"A4","p":96,"r":"SL","u":2,"cov":0,"ins":0,"fg":137160,"book":"PNCEB-A4-96PGS-CB-BP-SL","dem":15240,"cpc":120},{"k":"Prince|A5|120|SL","b":"Prince","s":"A5","p":120,"r":"SL","u":3,"cov":22910,"ins":3090,"fg":3348,"book":"PNCEB-A5-120PGS-CB-BP-SL","dem":14880,"cpc":186},{"k":"Prince|A4|80|SL","b":"Prince","s":"A4","p":80,"r":"SL","u":2,"cov":13000,"ins":0,"fg":2880,"book":"PNCEB-A4-80PGS-CB-BP-SL","dem":10800,"cpc":144},{"k":"Swara|A4|48|SQ","b":"Swara","s":"A4","p":48,"r":"SQ","u":2,"cov":0,"ins":0,"fg":0,"book":"SWREB-A4-48PGS-CB-NP-SQ","dem":10200,"cpc":204},{"k":"Swara|A4|64|SQ","b":"Swara","s":"A4","p":64,"r":"SQ","u":2,"cov":1000,"ins":0,"fg":0,"book":"SWREB-A4-64PGS-CB-NP-SQ","dem":9720,"cpc":162},{"k":"Prince|A5|100|SQ","b":"Prince","s":"A5","p":100,"r":"SQ","u":3,"cov":6500,"ins":0,"fg":0,"book":"PNCEB-A5-100PGS-CB-BP-SQ","dem":8640,"cpc":216},{"k":"Prince|A5|48|PLN","b":"Prince","s":"A5","p":48,"r":"PLN","u":3,"cov":10000,"ins":0,"fg":0,"book":"PNCEB-A5-48PGS-CB-BP-PLN","dem":7680,"cpc":384},{"k":"Prince|A5|48|GPH","b":"Prince","s":"A5","p":48,"r":"GPH","u":3,"cov":8500,"ins":0,"fg":4224,"book":"PNCEB-A5-48PGS-CB-BP-GPH","dem":7680,"cpc":384},{"k":"Prince|A5|96|SL","b":"Prince","s":"A5","p":96,"r":"SL","u":3,"cov":24000,"ins":0,"fg":50160,"book":"PNCEB-A5-96PGS-CB-BP-SL","dem":6840,"cpc":228},{"k":"Prince|A4|96|GPH","b":"Prince","s":"A4","p":96,"r":"GPH","u":2,"cov":6000,"ins":0,"fg":0,"book":"PNCEB-A4-96PGS-CB-BP-GPH","dem":6300,"cpc":120},{"k":"Prince|A4|96|PLN","b":"Prince","s":"A4","p":96,"r":"PLN","u":2,"cov":10000,"ins":0,"fg":0,"book":"PNCEB-A4-96PGS-CB-BP-PLN","dem":6000,"cpc":120},{"k":"Prince|A5|48|SQ","b":"Prince","s":"A5","p":48,"r":"SQ","u":3,"cov":2000,"ins":0,"fg":26112,"book":"PNCEB-A5-48PGS-CB-BP-SQ","dem":5760,"cpc":384},{"k":"Prince|A4|96|SQ","b":"Prince","s":"A4","p":96,"r":"SQ","u":2,"cov":8000,"ins":0,"fg":28440,"book":"PNCEB-A4-96PGS-CB-BP-SQ","dem":4560,"cpc":120},{"k":"Prince|A5|200|SL","b":"Prince","s":"A5","p":200,"r":"SL","u":3,"cov":24000,"ins":0,"fg":35910,"book":"PNCEB-A5-200PGS-CB-BP-SL","dem":3780,"cpc":126},{"k":"Prince|A5|64|SQ","b":"Prince","s":"A5","p":64,"r":"SQ","u":3,"cov":6600,"ins":0,"fg":1044,"book":"PNCEB-A5-64PGS-CB-BP-SQ","dem":3480,"cpc":348},{"k":"Prince|A4|200|SL","b":"Prince","s":"A4","p":200,"r":"SL","u":2,"cov":24000,"ins":0,"fg":8910,"book":"PNCEB-A4-200PGS-CB-BP-SL","dem":3420,"cpc":66},{"k":"Swara|A4|200|SQ","b":"Swara","s":"A4","p":200,"r":"SQ","u":2,"cov":5000,"ins":0,"fg":6336,"book":"SWREB-A4-200PGS-CB-NP-SQ","dem":2640,"cpc":66},{"k":"Prince|A5|32|SQ","b":"Prince","s":"A5","p":32,"r":"SQ","u":3,"cov":800,"ins":0,"fg":6048,"book":"PNCEB-A5-32PGS-CB-BP-SQ","dem":2520,"cpc":504},{"k":"Prince|A5|200|SQ","b":"Prince","s":"A5","p":200,"r":"SQ","u":3,"cov":0,"ins":0,"fg":12600,"book":"PNCEB-A5-200PGS-CB-BP-SQ","dem":2520,"cpc":126},{"k":"Swara|A4|96|SQ","b":"Swara","s":"A4","p":96,"r":"SQ","u":2,"cov":800,"ins":0,"fg":5400,"book":"SWREB-A4-96PGS-CB-NP-SQ","dem":2400,"cpc":120},{"k":"Prince|A5|120|SQ","b":"Prince","s":"A5","p":120,"r":"SQ","u":3,"cov":0,"ins":8520,"fg":10416,"book":"PNCEB-A5-120PGS-CB-BP-SQ","dem":1860,"cpc":186},{"k":"Prince|A4|120|SQ","b":"Prince","s":"A4","p":120,"r":"SQ","u":2,"cov":18000,"ins":0,"fg":10302,"book":"PNCEB-A4-120PGS-CB-BP-SQ","dem":1520,"cpc":102},{"k":"Prince|A4|200|SQ","b":"Prince","s":"A4","p":200,"r":"SQ","u":2,"cov":13000,"ins":0,"fg":14322,"book":"PNCEB-A4-200PGS-CB-BP-SQ","dem":480,"cpc":66},{"k":"Prince|A4|120|PLN","b":"Prince","s":"A4","p":120,"r":"PLN","u":2,"cov":1200,"ins":300,"fg":0,"book":"PNCEB-A4-120PGS-CB-BP-PLN","dem":250,"cpc":102},{"k":"Prince|A5|48|IRS","b":"Prince","s":"A5","p":48,"r":"IRS","u":3,"cov":5000,"ins":0,"fg":0,"book":"PNCEB-A5-48PGS-CB-BP-IRS","dem":100,"cpc":384},{"k":"Prince|A5|48|HSL","b":"Prince","s":"A5","p":48,"r":"HSL","u":3,"cov":9000,"ins":0,"fg":0,"book":"PNCEB-A5-48PGS-CB-BP-HSL","dem":60,"cpc":384},{"k":"Prince|A5|48|HSQ","b":"Prince","s":"A5","p":48,"r":"HSQ","u":3,"cov":1000,"ins":0,"fg":0,"book":"PNCEB-A5-48PGS-CB-BP-HSQ","dem":30,"cpc":384},{"k":"Prince|A4|48|SQ","b":"Prince","s":"A4","p":48,"r":"SQ","u":2,"cov":18000,"ins":0,"fg":0,"book":"PNCEB-A4-48PGS-CB-BP-SQ","dem":0,"cpc":204},{"k":"Prince|A4|64|SQ","b":"Prince","s":"A4","p":64,"r":"SQ","u":2,"cov":14000,"ins":0,"fg":0,"book":"PNCEB-A4-64PGS-CB-BP-SQ","dem":0,"cpc":162},{"k":"Prince|A4|48|SL","b":"Prince","s":"A4","p":48,"r":"SL","u":2,"cov":13000,"ins":0,"fg":0,"book":"PNCEB-A4-48PGS-CB-BP-SL","dem":0,"cpc":204},{"k":"Prince|A4|80|SQ","b":"Prince","s":"A4","p":80,"r":"SQ","u":2,"cov":13000,"ins":0,"fg":0,"book":"PNCEB-A4-80PGS-CB-BP-SQ","dem":0,"cpc":144},{"k":"Swara|A5|48|SL","b":"Swara","s":"A5","p":48,"r":"SL","u":3,"cov":9000,"ins":0,"fg":0,"book":"SWREB-A5-48PGS-CB-NP-SL","dem":0,"cpc":384},{"k":"Prince|A4|48|GPH","b":"Prince","s":"A4","p":48,"r":"GPH","u":2,"cov":8000,"ins":0,"fg":0,"book":"PNCEB-A4-48PGS-CB-BP-GPH","dem":0,"cpc":204},{"k":"Swara|A4|80|SQ","b":"Swara","s":"A4","p":80,"r":"SQ","u":2,"cov":7230,"ins":2770,"fg":0,"book":"SWREB-A4-80PGS-CB-NP-SQ","dem":0,"cpc":144},{"k":"Swara|A5|80|SL","b":"Swara","s":"A5","p":80,"r":"SL","u":3,"cov":6500,"ins":0,"fg":0,"book":"SWREB-A5-80PGS-CB-NP-SL","dem":0,"cpc":252},{"k":"Swara|A5|200|SL","b":"Swara","s":"A5","p":200,"r":"SL","u":3,"cov":6500,"ins":0,"fg":0,"book":"SWREB-A5-200PGS-CB-NP-SL","dem":0,"cpc":126},{"k":"Prince|A5|96|GPH","b":"Prince","s":"A5","p":96,"r":"GPH","u":3,"cov":6000,"ins":0,"fg":0,"book":"PNCEB-A5-96PGS-CB-BP-GPH","dem":0,"cpc":228},{"k":"Prince|A5|96|PLN","b":"Prince","s":"A5","p":96,"r":"PLN","u":3,"cov":6000,"ins":0,"fg":0,"book":"PNCEB-A5-96PGS-CB-BP-PLN","dem":0,"cpc":228},{"k":"Swara|A5|120|SL","b":"Swara","s":"A5","p":120,"r":"SL","u":3,"cov":6000,"ins":0,"fg":0,"book":"SWREB-A5-120PGS-CB-NP-SL","dem":0,"cpc":186},{"k":"Prince|A5|80|SQ","b":"Prince","s":"A5","p":80,"r":"SQ","u":3,"cov":4000,"ins":0,"fg":17640,"book":"PNCEB-A5-80PGS-CB-BP-SQ","dem":0,"cpc":252},{"k":"Prince|A5|96|HSL","b":"Prince","s":"A5","p":96,"r":"HSL","u":3,"cov":4000,"ins":0,"fg":0,"book":"PNCEB-A5-96PGS-CB-BP-HSL","dem":0,"cpc":228},{"k":"Swara|A5|96|SL","b":"Swara","s":"A5","p":96,"r":"SL","u":3,"cov":4000,"ins":0,"fg":0,"book":"SWREB-A5-96PGS-CB-NP-SL","dem":0,"cpc":228},{"k":"Prince|A4|48|PLN","b":"Prince","s":"A4","p":48,"r":"PLN","u":2,"cov":4000,"ins":0,"fg":0,"book":"PNCEB-A4-48PGS-CB-BP-PLN","dem":0,"cpc":204},{"k":"Prince|A5|96|SQ","b":"Prince","s":"A5","p":96,"r":"SQ","u":3,"cov":3000,"ins":0,"fg":17328,"book":"PNCEB-A5-96PGS-CB-BP-SQ","dem":0,"cpc":228},{"k":"Swara|A5|64|SL","b":"Swara","s":"A5","p":64,"r":"SL","u":3,"cov":3000,"ins":0,"fg":0,"book":"SWREB-A5-64PGS-CB-NP-SL","dem":0,"cpc":348},{"k":"Swara|A5|80|SQ","b":"Swara","s":"A5","p":80,"r":"SQ","u":3,"cov":3000,"ins":0,"fg":0,"book":"SWREB-A5-80PGS-CB-NP-SQ","dem":0,"cpc":252},{"k":"Swara|A5|200|SQ","b":"Swara","s":"A5","p":200,"r":"SQ","u":3,"cov":3000,"ins":0,"fg":0,"book":"SWREB-A5-200PGS-CB-NP-SQ","dem":0,"cpc":126},{"k":"Prince|A5|96|IRS","b":"Prince","s":"A5","p":96,"r":"IRS","u":3,"cov":2500,"ins":0,"fg":0,"book":"PNCEB-A5-96PGS-CB-BP-IRS","dem":0,"cpc":228},{"k":"Swara|A5|48|SQ","b":"Swara","s":"A5","p":48,"r":"SQ","u":3,"cov":2500,"ins":0,"fg":0,"book":"SWREB-A5-48PGS-CB-NP-SQ","dem":0,"cpc":384},{"k":"Swara|A5|120|SQ","b":"Swara","s":"A5","p":120,"r":"SQ","u":3,"cov":2500,"ins":0,"fg":0,"book":"SWREB-A5-120PGS-CB-NP-SQ","dem":0,"cpc":186},{"k":"Prince|A5|120|GPH","b":"Prince","s":"A5","p":120,"r":"GPH","u":3,"cov":2000,"ins":0,"fg":0,"book":"PNCEB-A5-120PGS-CB-BP-GPH","dem":0,"cpc":186},{"k":"Prince|A5|120|PLN","b":"Prince","s":"A5","p":120,"r":"PLN","u":3,"cov":2000,"ins":0,"fg":0,"book":"PNCEB-A5-120PGS-CB-BP-PLN","dem":0,"cpc":186},{"k":"Swara|A5|32|SL","b":"Swara","s":"A5","p":32,"r":"SL","u":3,"cov":2000,"ins":0,"fg":0,"book":"SWREB-A5-32PGS-CB-NP-SL","dem":0,"cpc":504},{"k":"Prince|A4|120|GPH","b":"Prince","s":"A4","p":120,"r":"GPH","u":2,"cov":2000,"ins":0,"fg":0,"book":"PNCEB-A4-120PGS-CB-BP-GPH","dem":0,"cpc":102},{"k":"Swara|A5|96|SQ","b":"Swara","s":"A5","p":96,"r":"SQ","u":3,"cov":1600,"ins":0,"fg":0,"book":"SWREB-A5-96PGS-CB-NP-SQ","dem":0,"cpc":228},{"k":"Swara|A5|32|SQ","b":"Swara","s":"A5","p":32,"r":"SQ","u":3,"cov":1000,"ins":0,"fg":0,"book":"SWREB-A5-32PGS-CB-NP-SQ","dem":0,"cpc":504},{"k":"Swara|A5|64|SQ","b":"Swara","s":"A5","p":64,"r":"SQ","u":3,"cov":900,"ins":0,"fg":0,"book":"SWREB-A5-64PGS-CB-NP-SQ","dem":0,"cpc":348},{"k":"Prince|A5|96|HSQ","b":"Prince","s":"A5","p":96,"r":"HSQ","u":3,"cov":800,"ins":0,"fg":0,"book":"PNCEB-A5-96PGS-CB-BP-HSQ","dem":0,"cpc":228},{"k":"Swara|A4|80|SL","b":"Swara","s":"A4","p":80,"r":"SL","u":2,"cov":0,"ins":0,"fg":0,"book":"SWREB-A4-80PGS-CB-NP-SL","dem":0,"cpc":144}],"cartons":{"A4|Prince":4425,"A4|Swara":2078,"A5":1875},"ctnames":{"A4|Prince":"PNC-EMPTY-CARTON-A4-EXBK-COMMON-425 x 305 x 260","A4|Swara":"SWR- COMMON CARTON 280 MM","A5":"PNCSWR-EMPTY-CARTON-A5-PLAINF-DPL"}};
+var KEY='eb-v3-sim-2';
+function ck(g){return g.s==='A5'?'A5':g.s+'|'+g.b}
+var G={};D.groups.forEach(function(g){G[g.k]=g});
+var st0=function(){var s={g:{},ct:JSON.parse(JSON.stringify(D.cartons)),led:[],seq:0};D.groups.forEach(function(g){s.g[g.k]={cov:g.cov,fld:0,ins:g.ins,fg:g.fg}});return s};
+var S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+if(!S||!S.g)S=st0();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function f(n){return Math.round(n).toLocaleString('en-GB')}
+function esc(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+function pg3(p){return ('00'+p).slice(-3)}
+function codes(g){var b=g.b==='Prince'?'PNC':'SWR',t=b+'-'+g.s+'-'+pg3(g.p)+'PG-'+g.r;return {cov:'COV-'+t,fld:'FLD-'+t,ins:'INS-'+t,book:g.book,ctn:D.ctnames[ck(g)]}}
+var RUL={SL:'Single line',SQ:'Square line',GPH:'Graph',PLN:'Plain',IRS:'Irish',MSC:'Music',HSL:'Half-inch single',HSQ:'Half-inch square',SQ13:'1/3 inch square',FNB:'Field note'};
+function gname(g){return g.b+' · '+g.s+' · '+g.p+' pages · '+(RUL[g.r]||g.r)}
+var sel=document.getElementById('v3-group');
+D.groups.forEach(function(g){var o=document.createElement('option');o.value=g.k;o.textContent=gname(g)+(g.dem?'  (on order: '+f(g.dem)+' books)':'');sel.appendChild(o)});
+try{var lg=localStorage.getItem(KEY+'-g');if(lg&&G[lg])sel.value=lg}catch(e){}
+if(!G[sel.value])sel.value='Prince|A5|120|SL';
+var STEPS=[['covers','Station 1','Covers'],['folds','Station 2','Folds'],['inserts','Station 3','Inserts'],['packing','Station 4','Packing'],['fg','Result','Finished Goods']];
+var cur='folds';try{var ls=localStorage.getItem(KEY+'-s');if(ls)cur=ls}catch(e){}
+var stepsEl=document.getElementById('v3-steps');
+STEPS.forEach(function(s,i){if(i){var a=document.createElement('span');a.className='arr';a.textContent='→';stepsEl.appendChild(a)}var b=document.createElement('button');b.type='button';b.setAttribute('role','tab');b.dataset.s=s[0];if(s[0]==='fg')b.className='fg';b.innerHTML='<span class="k">'+s[1]+'</span><span class="t">'+s[2]+'</span>';b.addEventListener('click',function(){cur=s[0];try{localStorage.setItem(KEY+'-s',cur)}catch(e){}render()});stepsEl.appendChild(b)});
+var V={};
+function num(id){var el=document.getElementById(id);if(!el)return 0;var v=parseInt(String(el.value).replace(/[^0-9]/g,''),10);return isNaN(v)?0:v}
+function field(id,label,val,help){return '<div class="cap-f"><label class="lb" for="'+id+'">'+label+'</label><input class="qty" id="'+id+'" inputmode="numeric" value="'+(val==null?'':val)+'" autocomplete="off">'+(help?'<span class="cap-note">'+help+'</span>':'')+'</div>'}
+function ro(label,val,mono){return '<div class="cap-f"><span class="lb">'+label+' · auto</span><span class="cap-ro'+(mono?' mono':'')+'">'+val+'</span></div>'}
+function g(){return G[sel.value]}
+function stock(){return S.g[sel.value]}
+function plan(){
+ var gg=g(),s=stock(),c=codes(gg),u=gg.u,P={rows:[],msgs:[],ok:true,type:'',station:''};
+ if(cur==='covers'){var sh=num('v3-a'),sp=num('v3-b');P.station='Covers';P.type='Material Receipt';
+  if(sh<=0){P.ok=false;P.msgs.push(['info','Enter the good printed sheets counted.']);}
+  P.rows.push(['in',c.cov,'Printed cover sheets → Stores - VCL',sh,s.cov,'cov','sheets']);
+  if(sp)P.msgs.push(['info',f(sp)+' spoiled sheets recorded for the run, not added to stock.']);
+  P.msgs.push(['info',f(sh)+' sheets = '+f(sh*u)+' books ('+gg.s+' is '+u+'-up).']);}
+ if(cur==='folds'){var fs=num('v3-a'),rj=num('v3-b');P.station='Folds';P.type='Material Receipt';
+  if(fs<=0){P.ok=false;P.msgs.push(['info','Enter the good fold sets counted.']);}
+  P.rows.push(['in',c.fld,'Fold sets → Stores - VCL',fs,s.fld,'fld','sets']);
+  if(rj)P.msgs.push(['info',f(rj)+' rejected fold sets recorded for the run, not added.']);
+  P.msgs.push(['info',f(fs)+' fold sets = '+f(fs*u)+' books\' inners.']);}
+ if(cur==='inserts'){var n=num('v3-a'),hold=document.getElementById('v3-hold')&&document.getElementById('v3-hold').checked;P.station='Inserts';P.type='Repack';
+  if(n<=0){P.ok=false;P.msgs.push(['info','Enter the insert sets made.']);}
+  P.rows.push(['out',c.cov,'Cover sheets ← Stores - VCL',-n,s.cov,'cov','sheets']);
+  if(!hold)P.rows.push(['out',c.fld,'Fold sets ← Stores - VCL',-n,s.fld,'fld','sets']);
+  P.rows.push(['in',c.ins,'Insert sets → Stores - VCL',n,s.ins,'ins','sets']);
+  if(n>s.cov){P.ok=false;P.msgs.push(['bad','Not enough covers: '+f(s.cov)+' sheets on hand, '+f(n)+' needed. Print more covers first.']);}
+  if(!hold&&n>s.fld){P.ok=false;P.msgs.push(['bad','Not enough folds: '+f(s.fld)+' fold sets on hand, '+f(n)+' needed. Post the fold count on the Folds station first, or hold off the fold check.']);}
+  if(hold)P.msgs.push(['info','Fold check held off: folds are not taken out (as today). Use only until the first fold count is posted.']);
+  P.msgs.push(['info',f(n)+' insert sets = '+f(n*u)+' books.']);}
+ if(cur==='packing'){var ct=num('v3-a'),lo=num('v3-b'),rj2=num('v3-c'),cpc=gg.cpc,books=ct*cpc+lo,sets=Math.ceil((books+rj2)/u),extra=sets*u-books-rj2;P.station='Packing';P.type='Manufacture (packing BOM)';
+  if(books<=0){P.ok=false;P.msgs.push(['info','Enter the full cartons and any loose books.']);}
+  P.rows.push(['out',c.ins,'Insert sets ← Stores - VCL',-sets,s.ins,'ins','sets']);
+  if(ct)P.rows.push(['out',c.ctn,'Empty cartons ← Stores - VCL'+(gg.s==='A5'?' (item disabled today)':''),-ct,S.ct[ck(gg)],'ctn','cartons']);
+  P.rows.push(['in',c.book,'Books → Finished Goods - VCL',books,s.fg,'fg','books']);
+  if(sets>s.ins){P.ok=false;P.msgs.push(['bad','Not enough inserts: '+f(s.ins)+' sets on hand, '+f(sets)+' needed for '+f(books+rj2)+' books.']);}
+  if(ct>S.ct[ck(gg)]){P.ok=false;P.msgs.push(['bad','Not enough empty cartons for this book: '+f(S.ct[ck(gg)])+' on hand.']);}
+  P.msgs.push(['info',f(ct)+' cartons × '+cpc+' + '+f(lo)+' loose = '+f(books)+' books.']);
+  if(extra>0)P.msgs.push(['info','The last insert set has '+extra+' book'+(extra>1?'s':'')+' over: recorded as rejects, so rejects = '+(rj2+extra)+'.']);
+  if(ct)P.msgs.push(['info','Spot-weigh '+Math.max(1,Math.ceil(ct/20))+' carton'+(Math.ceil(ct/20)>1?'s':'')+' (1 in 20). Flag any more than 5% off the expected weight.']);
+  P.extra={books:books,sets:sets,rejects:rj2+extra};}
+ return P;}
+function renderForm(){
+ var gg=g(),c=codes(gg),el=document.getElementById('v3-form'),h='';
+ if(cur==='covers')h='<div class="cap-h"><h3>Covers: quick entry</h3><span class="chip part">Existing, changed</span></div><div class="cap-fields">'+ro('Item',c.cov,1)+ro('Sheet','1 sheet = '+gg.u+' covers')+field('v3-a','Good printed sheets',V.a,'Count of good sheets off the press')+field('v3-b','Spoiled sheets',V.b)+'</div>';
+ if(cur==='folds')h='<div class="cap-h"><h3>Folds: entry</h3><span class="chip no">New screen</span></div><div class="cap-fields">'+ro('Item',c.fld,1)+ro('Unit','1 fold set = '+gg.u+' books\' inners')+field('v3-a','Good fold sets',V.a)+field('v3-b','Rejected fold sets',V.b)+'</div>';
+ if(cur==='inserts')h='<div class="cap-h"><h3>Inserts: make sets</h3><span class="chip part">Existing, changed</span></div><div class="cap-fields">'+ro('Makes',c.ins,1)+ro('Uses','1 cover sheet + 1 fold set per set')+field('v3-a','Insert sets made',V.a)+'</div><label class="cap-check"><input type="checkbox" id="v3-hold"'+(V.hold?' checked':'')+'> Hold off the fold check (no fold count yet)</label>';
+ if(cur==='packing')h='<div class="cap-h"><h3>Packing: receive finished books</h3><span class="chip part">Existing, changed</span></div><div class="cap-fields">'+ro('Book',c.book,1)+ro('Books per carton',gg.cpc)+field('v3-a','Full cartons',V.a)+field('v3-b','Loose books',V.b)+field('v3-c','Rejected books',V.c)+'</div>';
+ if(cur==='fg'){var s=stock();h='<div class="cap-h"><h3>Finished Goods: where production meets sales</h3><span class="chip ok">View</span></div><div class="cap-fields">'+ro('Book',c.book,1)+ro('In Finished Goods',f(s.fg)+' books = '+f(Math.floor(s.fg/gg.cpc))+' ctn + '+f(s.fg%gg.cpc))+ro('On open orders',f(gg.dem)+' books')+ro(gg.dem>s.fg?'Still short':'Covered',gg.dem>s.fg?f(gg.dem-s.fg)+' books':'All open orders')+'</div><p class="cap-note">Orders are served earliest delivery first. Delivery Notes ship from Finished Goods - VCL, taking books out here.</p>';el.innerHTML=h;return;}
+ h+='<button type="button" class="cap-post" id="v3-post">Post '+(cur==='packing'?'and receive into Finished Goods':'entry')+'</button>';
+ el.innerHTML=h;
+ ['v3-a','v3-b','v3-c'].forEach(function(id){var x=document.getElementById(id);if(x)x.addEventListener('input',function(){V[id.slice(3)]=x.value;renderPreview()})});
+ var hd=document.getElementById('v3-hold');if(hd)hd.addEventListener('change',function(){V.hold=hd.checked;renderPreview()});
+ document.getElementById('v3-post').addEventListener('click',post);}
+function renderPreview(){
+ var el=document.getElementById('v3-preview');
+ if(cur==='fg'){var gg=g(),s=stock();el.innerHTML='<div class="cap-h"><h3>The chain for this group</h3></div><div class="cap-rows">'+[['Covers',s.cov,'sheets',s.cov*gg.u],['Folds',s.fld,'sets',s.fld*gg.u],['Inserts',s.ins,'sets',s.ins*gg.u],['Finished Goods',s.fg,'books',s.fg]].map(function(r){return '<div class="cap-row in"><span class="d">'+r[0].slice(0,3).toUpperCase()+'</span><span class="it">'+r[0]+'<span> = '+f(r[3])+' books</span></span><span class="q"><b>'+f(r[1])+'</b><small>'+r[2]+'</small></span></div>'}).join('')+'</div>';var pb=document.getElementById('v3-post');return;}
+ var P=plan();
+ var h='<div class="cap-h"><h3>What this entry will do</h3><span class="cap-note">'+P.type+' · run '+esc(document.getElementById('v3-run').value||'-')+'</span></div><div class="cap-rows">'+
+ P.rows.map(function(r){var q=r[3],after=r[4]+q;return '<div class="cap-row '+r[0]+'"><span class="d">'+(r[0]==='out'?'OUT −':'IN +')+'</span><span class="it"><code>'+esc(r[1])+'</code><span>'+esc(r[2])+'</span></span><span class="q"><b>'+(q>0?'+':'')+f(q)+'</b><small>'+f(r[4])+' → '+f(after)+' '+r[6]+'</small></span></div>'}).join('')+'</div>'+
+ P.msgs.map(function(m){return '<div class="cap-msg '+m[0]+'">'+esc(m[1])+'</div>'}).join('');
+ el.innerHTML=h;
+ var pb=document.getElementById('v3-post');if(pb)pb.disabled=!P.ok;}
+function renderStock(changed){
+ var gg=g(),s=stock(),el=document.getElementById('v3-stock');
+ var items=[['cov','Covers',s.cov,'sheets',s.cov*gg.u],['fld','Folds',s.fld,'sets',s.fld*gg.u],['ins','Inserts',s.ins,'sets',s.ins*gg.u],['fg','Finished Goods',s.fg,'books',s.fg],['ctn','Empty cartons ('+(gg.s==='A5'?'A5 common':gg.s+' '+gg.b+' common')+')',S.ct[ck(gg)],'cartons',null]];
+ el.innerHTML=items.map(function(it){var ch=changed&&changed[it[0]];return '<div class="'+(ch?'flash':'')+'"><span class="n">'+it[1]+'</span><span class="v">'+f(it[2])+'</span><span class="s">'+it[3]+(it[4]!=null?' = '+f(it[4])+' books':'')+'</span>'+(ch?'<span class="chg '+(ch>0?'up':'down')+'">'+(ch>0?'+':'')+f(ch)+' last entry</span>':'')+'</div>'}).join('');
+ document.getElementById('v3-stocknote').textContent=gname(gg)+' · on open orders: '+f(gg.dem)+' books';}
+function renderLedger(){
+ var tb=document.getElementById('v3-ledger');
+ if(!S.led.length){tb.innerHTML='<tr><td colspan="6" class="cap-note">Nothing posted yet. Start with Folds (there is no fold stock), then Inserts and Packing.</td></tr>';return;}
+ tb.innerHTML=S.led.slice().reverse().map(function(e){return '<tr><td class="num">'+e.n+'</td><td><code>'+esc(e.run)+'</code></td><td>'+e.station+'<br><span class="cap-note">'+esc(e.grp)+'</span></td><td>'+e.type+'</td><td>'+(e.out.map(function(x){return '<code>'+esc(x[0])+'</code> −'+f(x[1])}).join('<br>')||'-')+'</td><td>'+(e['in'].map(function(x){return '<code>'+esc(x[0])+'</code> +'+f(x[1])}).join('<br>')||'-')+'</td></tr>'}).join('');}
+function post(){
+ var P=plan();if(!P.ok)return;var s=stock(),gg=g(),ch={},e={n:++S.seq,run:document.getElementById('v3-run').value||'-',station:P.station,type:P.type,grp:gname(gg),k:gg.k,out:[],'in':[],d:[]};
+ P.rows.forEach(function(r){if(r[5]==='ctn')S.ct[ck(gg)]+=r[3];else s[r[5]]+=r[3];ch[r[5]]=(ch[r[5]]||0)+r[3];e.d.push([r[5],r[3]]);(r[3]<0?e.out:e['in']).push([r[1],Math.abs(r[3])])});
+ S.led.push(e);save();V={hold:V.hold};renderForm();renderPreview();renderStock(ch);renderLedger();
+ var m=document.createElement('div');m.className='cap-msg ok';m.textContent='Posted ✓ entry '+e.n+' ('+e.type+') · run '+e.run+' · simulation only';document.getElementById('v3-preview').prepend(m);}
+document.getElementById('v3-undo').addEventListener('click',function(){var e=S.led.pop();if(!e)return;var gs=S.g[e.k],sz=G[e.k].s;e.d.forEach(function(x){if(x[0]==='ctn')S.ct[ck(G[e.k])]-=x[1];else gs[x[0]]-=x[1]});save();render()});
+var armed=false,rb=document.getElementById('v3-reset');
+rb.addEventListener('click',function(){if(!armed){armed=true;rb.textContent='Press again to reset';setTimeout(function(){armed=false;rb.textContent="Reset to today's stock"},3000);return}armed=false;rb.textContent="Reset to today's stock";S=st0();save();V={};render()});
+sel.addEventListener('change',function(){try{localStorage.setItem(KEY+'-g',sel.value)}catch(e){}V={hold:V.hold};render()});
+document.getElementById('v3-run').addEventListener('input',renderPreview);
+function render(){[].forEach.call(stepsEl.querySelectorAll('button'),function(b){b.setAttribute('aria-selected',b.dataset.s===cur?'true':'false')});renderForm();renderPreview();renderStock();renderLedger();}
+render();
+})();
+</script>
+
