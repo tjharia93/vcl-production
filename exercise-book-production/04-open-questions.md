@@ -25,3 +25,9 @@
 - Needed: flow by item type per stage, and brand and customer filters (data requested from the PC).
 - **Cover unit:** the 30/10 opening (MAT-STE-2026-00007, 483,600, 91% of cover stock) is labelled "single covers", while later entries count sheets. As recorded, covers = 1,260,230 books. As single covers = 539,580. Books still to make: 1,085,336 vs 1,155,976. Tanuj to confirm.
 - Inserts Repack today: COV out, INS in, 1:1, zero cost. No fold or inner item exists. Proposed `FLD-<PNC|SWR>-<A4|A5>-<PPP>PG-<RULING>`.
+
+## School vs brand mis-selection (Tanuj, 04/11/2026)
+People pick school items (Bank Paper / Newsprint, no brand) when they mean Prince / Swara. Sent to the PC session:
+1. Rename the school item names to "School Exercise Book - <Paper> - <Size> - <Pages> Pages - <Ruling> - <Cover>". Codes unchanged.
+2. A confirm prompt on Quotation and Sales Order lines ("Is this a school order?" / switch to the matching brand item, SCH-BP-EB → PNCEB, SCH-NP-EB → SWREB). Plus a server-side "School order confirmed" check.
+The PC does a read-only analysis and a dry run first. Nothing goes live until Tanuj approves.

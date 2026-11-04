@@ -646,6 +646,15 @@ tr.flag td{background:var(--warn-tint)}
 <section class="panel" id="p-comments" data-tab="comments" hidden>
   <h2>Your comments and what was done</h2>
   <p class="lede">Comments left on the Data flow tab on 04 Nov 2026, kept here with the change each one led to. New rounds of comments are added at the top.</p>
+  <h3>Round 2 · 04 Nov 2026</h3>
+  <div class="tw"><table>
+    <thead><tr><th>#</th><th>Where</th><th>Your comment</th><th>What was done</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td class="num">7</td><td>Overview · steps</td><td>"Make this a chart not cards please"</td><td>Another session replaced the step cards with a flowchart: Ruling → Folds, and Covers, both feeding Inserts → Packing → Finished stock. It goes vertical on a phone. That session replied on the thread and resolved it.</td><td><span class="chip ok">Done</span></td></tr>
+      <tr><td class="num">8</td><td>In good shape · item names</td><td>"We need a note made and sent to the pc session. What happens at the moment is people are selecting Bank Paper instead of Prince for Brand books. 1 - the bank paper and newsprint need to be rename to school so they are explicit. 2 we need a server script or a client script so if the school ones are selected they ask the user explicitly to confirm if that was a school order or did they mean the corresponding brand."</td><td>Note sent to the PC session. (1) Rename the school item names to start "School Exercise Book - Bank Paper / Newsprint / Brilliant White Bank Paper - …", with codes unchanged. (2) When a school item is picked on a Quotation or Sales Order, ask "Is this a school order?" and offer to switch to the matching Prince/Swara item (SCH-BP-EB → PNCEB, SCH-NP-EB → SWREB). A server-side check also requires a "School order confirmed" tick, so orders from Compass or the API are caught too. The PC will do a read-only count and mapping first, then show you a dry run and the scripts, and write nothing live until you approve. The scripts go into vcl-production, not as live-only scripts.</td><td><span class="chip part">Sent, awaiting your approval</span></td></tr>
+    </tbody>
+  </table></div>
+
   <h3>Round 1 · 04 Nov 2026</h3>
   <div class="tw"><table>
     <thead><tr><th>#</th><th>Where</th><th>Your comment</th><th>What was done</th><th>Status</th></tr></thead>
