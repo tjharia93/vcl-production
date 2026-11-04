@@ -22,8 +22,8 @@ Taken on 04/11/2026 from the second-brain notes `exercise-book-naming-standard-2
 - Done: 392 chipboard items and 18 Hi5 school items.
 
 ## Stock
-- No exercise-book item has ever had a Stock Ledger Entry (checked 30/10/2026). Every stock
-  figure reads 0 until finished books are received into a warehouse.
+- Until 04/11/2026 no exercise-book item had a Stock Ledger Entry. Opening stock was then posted as
+  `MAT-RECO-2026-00003` (3,566 ctn = 516,918 Nos, Finished Goods - VCL, zero valuation).
 - Stock production with no customer uses customer `Stock`, with the brand in the job name
   (e.g. `Prince 4 Quire`). Prince is a brand, not a customer.
 

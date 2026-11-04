@@ -1,0 +1,454 @@
+<title>Exercise Book Production</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: brand header bar, sticky tab strip, one panel per tab; panels are plain documents on kraft. */
+:root{
+  --surface:#f1ebdd;--raised:#ece6dc;--sunken:#e3dccb;--ink:#4a4542;--muted:#4d5b66;
+  --border:#d8bf95;--border-strong:#857252;--brand:#2b3990;--brand-text:#2b3990;--on-brand:#fff;
+  --brand-tint:#e3e3e4;--warn-text:#6e3b2a;--warn-tint:#ece0d7;--ok-text:#3f6b4e;--ok-tint:#e0eae2;
+  --info-text:#1b6a7c;--info-tint:#dce9ec;--focus:#2b3990;
+  --sans:Calibri,Carlito,"Segoe UI",Arial,system-ui,sans-serif;
+  --mono:"Courier New",Courier,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --surface:#1c1813;--raised:#27221b;--sunken:#140f0a;--ink:#f3ece0;--muted:#b5a88f;--border:#3b3328;
+  --border-strong:#7a6c56;--brand-text:#9eadf0;--brand-tint:#2a2a3e;--warn-text:#e0a070;--warn-tint:#3a2710;
+  --ok-text:#8fd3a5;--ok-tint:#1b2e20;--info-text:#6fc3d4;--info-tint:#13333a;--focus:#9eadf0;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --surface:#1c1813;--raised:#27221b;--sunken:#140f0a;--ink:#f3ece0;--muted:#b5a88f;--border:#3b3328;
+  --border-strong:#7a6c56;--brand-text:#9eadf0;--brand-tint:#2a2a3e;--warn-text:#e0a070;--warn-tint:#3a2710;
+  --ok-text:#8fd3a5;--ok-tint:#1b2e20;--info-text:#6fc3d4;--info-tint:#13333a;--focus:#9eadf0;color-scheme:dark}
+body{background:var(--surface);color:var(--ink);font:15px/22px var(--sans)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--brand)}
+.wrap{max-width:1100px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.bar{background:var(--brand);color:var(--on-brand)}
+header.bar .wrap{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;padding-block:14px}
+header.bar h1{margin:0;font-size:22px;line-height:28px;font-weight:700}
+header.bar p{margin:0;font-size:13px;opacity:.85}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--raised);border-bottom:1px solid var(--border)}
+nav.tabs .wrap{display:flex;gap:2px;overflow-x:auto;scrollbar-width:thin}
+nav.tabs a{flex:none;padding:12px 14px 10px;color:var(--muted);text-decoration:none;font-weight:700;font-size:14px;border-bottom:3px solid transparent;white-space:nowrap}
+nav.tabs a[aria-current="page"]{color:var(--brand-text);border-bottom-color:var(--brand)}
+nav.tabs a:hover{color:var(--ink)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+main .wrap{padding-block:24px 48px}
+section.panel{display:grid;gap:24px}
+h2{font-size:20px;line-height:26px;margin:0;text-wrap:balance}
+h3{font-size:16px;line-height:22px;margin:0}
+p{margin:0;max-width:72ch}
+.lede{color:var(--muted);max-width:72ch}
+code,.mono{font-family:var(--mono);font-size:13px}
+.label{font-size:12px;line-height:16px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.chip{display:inline-block;font-size:12px;line-height:16px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:2px 6px;border-radius:2px;white-space:nowrap}
+.chip.ok{background:var(--ok-tint);color:var(--ok-text)}
+.chip.part{background:var(--info-tint);color:var(--info-text)}
+.chip.no{background:var(--warn-tint);color:var(--warn-text)}
+.chip.wait{background:var(--brand-tint);color:var(--brand-text)}
+.card{background:var(--raised);border:1px solid var(--border);border-radius:4px;padding:16px;display:grid;gap:12px;min-width:0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.callout{background:var(--info-tint);border-radius:4px;padding:12px 16px}
+.callout.warn{background:var(--warn-tint)}
+ul.tight{margin:0;padding-left:20px;display:grid;gap:4px}
+/* process strip */
+.flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;counter-reset:s}
+.flow a{display:grid;gap:4px;padding:12px;background:var(--raised);border:1px solid var(--border);border-top:4px solid var(--brand);border-radius:4px;color:var(--ink);text-decoration:none}
+.flow a:hover{background:var(--sunken)}
+.flow .n{font-family:var(--mono);color:var(--brand-text);font-weight:700}
+.flow .t{font-weight:700}
+@media (max-width:720px){.flow{grid-template-columns:1fr}}
+/* step detail */
+.step{scroll-margin-top:64px}
+.step header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.step header .n{font-family:var(--mono);font-weight:700;color:var(--brand-text)}
+dl.facts{display:grid;grid-template-columns:minmax(120px,180px) 1fr;gap:8px 16px;margin:0}
+dl.facts dt{font-size:12px;line-height:20px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+dl.facts dd{margin:0;min-width:0}
+@media (max-width:560px){dl.facts{grid-template-columns:1fr}dl.facts dd{margin-bottom:6px}}
+/* tables */
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:13px;line-height:18px}
+th{background:var(--raised);text-align:left;font-size:12px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* model flow */
+.chain{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.chain span.box{padding:8px 10px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);font-family:var(--mono);font-size:13px}
+.chain span.box.new{border-style:dashed;color:var(--brand-text)}
+.chain span.arr{color:var(--muted)}
+.q{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:start}
+.q .n{font-family:var(--mono);font-weight:700;color:var(--brand-text)}
+footer{color:var(--muted);font-size:13px}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+</style>
+
+<header class="bar"><div class="wrap">
+  <h1>Exercise book production</h1>
+  <p>Review pack for tidying up the ERPNext model · as at 04 Nov 2026, with the PC session's findings · IT Development, Vimit Converters Limited</p>
+</div></header>
+
+<nav class="tabs" aria-label="Sections"><div class="wrap" id="tabs">
+  <a href="#overview">Overview</a>
+  <a href="#process">Process</a>
+  <a href="#erpnext">ERPNext today</a>
+  <a href="#model">Proposed flow</a>
+  <a href="#built">Built so far</a>
+  <a href="#orders">Items &amp; orders</a>
+  <a href="#decisions">Open decisions</a>
+  <a href="#sources">Sources</a>
+</div></nav>
+
+<main><div class="wrap">
+
+<!-- ============ OVERVIEW ============ -->
+<section class="panel" id="p-overview" data-tab="overview">
+  <h2>Where exercise books stand</h2>
+  <p class="lede">The products are standardised in ERPNext, and since today they have an opening finished stock. The production behind them is only partly modelled. A dev page records covers and inserts as stock moves. Ruling, folding and packing post nothing to ERPNext, and the floor route doesn't match the five steps the factory actually follows.</p>
+
+  <div class="flow" aria-label="Production process">
+    <a href="#process"><span class="n">1</span><span class="t">Ruling</span><span class="label">Inner papers</span></a>
+    <a href="#process"><span class="n">2</span><span class="t">Covers</span><span class="label">Printed sheets</span></a>
+    <a href="#process"><span class="n">3</span><span class="t">Folding</span><span class="label">Inner paper</span></a>
+    <a href="#process"><span class="n">4</span><span class="t">Inserts</span><span class="label">Cover sheet to insert</span></a>
+    <a href="#process"><span class="n">5</span><span class="t">Packing</span><span class="label">Cartons</span></a>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>In good shape</h3>
+      <ul class="tight">
+        <li>Item names follow one standard (26 Oct). 392 chipboard and 18 Hi5 school items are done.</li>
+        <li>Every item has a Carton UOM, and the selling price is set per carton.</li>
+        <li>The BOM master is cut to 54 brand × size × ruling × pages rows, which cover 99.5% of units sold.</li>
+        <li>The floor print format "Prod Exercise Book" is live on Sales Order.</li>
+        <li>Opening finished stock was posted on 04 Nov: <code>MAT-RECO-2026-00003</code>, 3,566 cartons = 516,918 books in <code>Finished Goods - VCL</code>.</li>
+        <li>Covers (Material Receipt and Issue) and inserts (Repack) post stock from the dev page.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Not modelled yet</h3>
+      <ul class="tight">
+        <li>There is no exercise-book job card or work order. CPS has a section for it, but nothing uses it.</li>
+        <li>The opening stock is at zero valuation, so the books carry no cost.</li>
+        <li>Packing is saved in the browser only. Nothing receives finished books into stock after the opening balance.</li>
+        <li>The floor route reads Printing → Ruling → Sheeting → Collation. It has no Folding, Inserts or Packing.</li>
+        <li>The CPS ruling and cover options don't match the real rulings and covers.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <p><strong>The dev pages are not in git.</strong> Several sessions edit them live over REST. On 03 Nov one session deployed from a stale copy and overwrote the Receive screen three times. Pull the live page before every change.</p>
+  </div>
+</section>
+
+<!-- ============ PROCESS ============ -->
+<section class="panel" id="p-process" data-tab="process" hidden>
+  <h2>The production process, step by step</h2>
+  <p class="lede">The five steps as Tanuj set them out. Each step shows what the factory does, what goes in and comes out, and how ERPNext and the dev page record it today. Anything marked "to confirm" has not been checked with the floor. No machine, owner or wastage figure is recorded for any step yet.</p>
+
+  <article class="card step" id="s-ruling">
+    <header><span class="n">1</span><h3>Ruling (inner papers)</h3><span class="chip no">Not in ERPNext</span></header>
+    <dl class="facts">
+      <dt>What happens</dt><dd>Plain paper is ruled on the ruling machines: single line, square line, graph, and so on.</dd>
+      <dt>In</dt><dd>Paper: <code>NP</code> newsprint and <code>BP</code> bank paper (the only two on the ruling log). Hi5 school uses Brilliant White Bank Paper (to confirm whether it is ruled on the same machines).</dd>
+      <dt>Out</dt><dd>Ruled sheets, A1 (the ruling log records A1 output only).</dd>
+      <dt>Where</dt><dd>Ruling stations <code>R-01</code> to <code>R-04</code> on the floor log. ERPNext has two workstations under <code>Ruling</code>: <code>Ruling Machine 01</code> and <code>Ruling 02</code>. Neither has a single schedule line. 8 operators are on the log.</dd>
+      <dt>Recorded today</dt><dd>On a handwritten daily log, which is scanned to email. Every day at 10:00 an n8n job reads it with Claude Vision, appends it to a master CSV and posts it to <code>#ruling_department</code> on Slack. None of this reaches ERPNext.</dd>
+      <dt>Gap</dt><dd>Inner paper and ruling are not modelled at all. Ruled sheets are not a stock item, so the paper issued to ruling and the sheets ruled can't be reconciled. The ruling options on CPS (Single/Double/Square-Graph/Blank) don't match the real list.</dd>
+    </dl>
+  </article>
+
+  <article class="card step" id="s-covers">
+    <header><span class="n">2</span><h3>Covers</h3><span class="chip ok">Posts stock</span></header>
+    <dl class="facts">
+      <dt>What happens</dt><dd>Covers are printed several to a sheet. The standard is A5 = 3-up and A4 = 2-up.</dd>
+      <dt>In</dt><dd>Cover board: chipboard (<code>CB</code>), plus <code>MNL</code> and <code>MGC</code> covers (all non-chipboard covers are still to be standardised). Ink and plates.</dd>
+      <dt>Out</dt><dd>Printed cover sheets, item <code>COV-&lt;book code minus its first 4 characters&gt;</code>, counted as 1 Nos = 1 printed sheet. The up-count is part of the item name, and the page reads it with <code>/(\d+)\s*up$/</code>. A5 9-up and A4 4-up exist in the code but nothing uses them.</dd>
+      <dt>Where</dt><dd>Stage <code>Sheet to Sheet Printing</code> (step 30 on the exercise-book route).</dd>
+      <dt>Recorded today</dt><dd>The Cover Stock quick entry on the dev page posts a submitted <code>Material Receipt</code> into <code>Stores - VCL</code>. Remove posts a <code>Material Issue</code> ("used in binding").</dd>
+      <dt>Gap</dt><dd>Board and ink aren't consumed, so the receipt has no cost. Some older code reads "covers" as single covers, not sheets, and applying the up-count twice overstates capacity. No spoilage is recorded (the 04 Nov review proposes printed, usable and spoilage per run).</dd>
+    </dl>
+  </article>
+
+  <article class="card step" id="s-folding">
+    <header><span class="n">3</span><h3>Folding of the inner paper</h3><span class="chip no">Not recorded</span></header>
+    <dl class="facts">
+      <dt>What happens</dt><dd>Ruled sheets are cut and folded into the book's inner section. The page count sets how many sheets make one book (CPS requires pages in multiples of 4).</dd>
+      <dt>In</dt><dd>Ruled sheets from step 1.</dd>
+      <dt>Out</dt><dd>Folded inner sections, one per book (to confirm whether they're counted per book or per bundle).</dd>
+      <dt>Where</dt><dd>To confirm: by machine or by hand. ERPNext has no Folding stage. The nearest stages are <code>Sheeting</code> (50) and <code>Collation</code> (60). The Collation workstations <code>Collater 01</code> and <code>02</code> have no book work recorded.</dd>
+      <dt>Gap</dt><dd>There's no stage, no workstation and no count, so yield from sheet to book can't be measured.</dd>
+    </dl>
+  </article>
+
+  <article class="card step" id="s-inserts">
+    <header><span class="n">4</span><h3>Inserts</h3><span class="chip ok">Posts stock</span></header>
+    <dl class="facts">
+      <dt>What happens</dt><dd>Printed cover sheets become insert sets. To confirm on the floor: how the folded inner joins the cover, and where stitching and trimming happen (a stitching machine is on the spares list).</dd>
+      <dt>In</dt><dd>The cover sheet (<code>COV-…</code>). The folded inner is not modelled.</dd>
+      <dt>Out</dt><dd>Insert item <code>INS-…</code> (Item Group <code>Exercise Book Inserts</code>). 1 cover sheet = 1 insert sheet. Book equivalents = sets × the up-count.</dd>
+      <dt>Recorded today</dt><dd>The dev page's Inserts tab posts a submitted <code>Repack</code> in <code>Stores - VCL</code>: the COV item goes down and the INS item goes up by the same quantity.</dd>
+      <dt>Gap</dt><dd>Collating, stitching, binding and trimming aren't modelled, and the inner paper is never consumed. It isn't decided when inserts are consumed into finished books.</dd>
+    </dl>
+  </article>
+
+  <article class="card step" id="s-packing">
+    <header><span class="n">5</span><h3>Packing</h3><span class="chip no">Browser only</span></header>
+    <dl class="facts">
+      <dt>What happens</dt><dd>Books are counted into cartons. Pieces per carton depend on the page count.</dd>
+      <dt>In</dt><dd>Finished books and cartons.</dd>
+      <dt>Out</dt><dd>Packed cartons: 200pg = 66, 120pg = 102, 96pg = 120, 80pg = 144, 64pg = 162, 48pg = 204 per carton. 100-page packing is still blank.</dd>
+      <dt>Where</dt><dd>To confirm. ERPNext has no Packing stage for this line.</dd>
+      <dt>Recorded today</dt><dd>The dev page's Packing tab records full cartons, loose books and rejects, but only in the browser (<code>localStorage</code>). Nothing reaches ERPNext. Finished stock exists only as the 04 Nov opening balance.</dd>
+      <dt>In progress</dt><dd>A receiving backend on vcl-production branch <code>feat/exercise-book-receiving</code> (<code>a84ef92</code>, 03 Nov). It counts cartons plus loose books, takes books per carton from the item's Carton UOM, spot-weighs about 5% of cartons and flags any more than 5% off. It adds the child doctype <code>VCL Stores Receipt Book Line</code>. It is only on the PC (not pushed) and has no screen yet.</dd>
+      <dt>Gap</dt><dd>Nothing receives packed cartons into <code>Finished Goods - VCL</code>, so stock will drift from today's opening balance with the first delivery.</dd>
+    </dl>
+  </article>
+</section>
+
+<!-- ============ ERPNEXT TODAY ============ -->
+<section class="panel" id="p-erpnext" data-tab="erpnext" hidden>
+  <h2>How ERPNext models exercise books today</h2>
+  <p class="lede">What exists in the system now, checked against the vcl-production repo and the notes. Where the model and the floor disagree, it's flagged.</p>
+
+  <h3>Floor route for "General Stationery and Exercise Book"</h3>
+  <p>Seeded by patch <code>v7_4.add_process_number_routes</code> (live since 20 May 2026). Each row is a <code>Workstation Product Line Tag</code> with a <code>process_number</code>.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Step</th><th>ERPNext stage</th><th>Matches the floor step</th><th>Comment</th></tr></thead>
+    <tbody>
+      <tr><td class="num">10</td><td><code>Design</code></td><td>(shared)</td><td>Shared by every line.</td></tr>
+      <tr><td class="num">20</td><td><code>Plate Making</code></td><td>(shared)</td><td>Shared by every line.</td></tr>
+      <tr><td class="num">30</td><td><code>Sheet to Sheet Printing</code></td><td>2 · Covers</td><td>Comes before Ruling here. On the floor, ruling and covers can run in parallel.</td></tr>
+      <tr><td class="num">40</td><td><code>Ruling</code></td><td>1 · Ruling</td><td>Two workstations in ERPNext (Ruling Machine 01, Ruling 02), four on the floor log (R-01 to R-04). No schedule lines.</td></tr>
+      <tr><td class="num">50</td><td><code>Sheeting</code></td><td>3 · Folding?</td><td>To confirm: is the cutting before folding done here?</td></tr>
+      <tr><td class="num">60</td><td><code>Collation</code></td><td>3 / 4?</td><td>Collater 01 and 02, no book work recorded. To confirm whether books use it.</td></tr>
+      <tr><td class="num">-</td><td><em>missing</em></td><td>3 · Folding</td><td>No stage.</td></tr>
+      <tr><td class="num">-</td><td><em>missing</em></td><td>4 · Inserts</td><td>No stage.</td></tr>
+      <tr><td class="num">-</td><td><em>missing</em></td><td>5 · Packing</td><td>No stage for this line.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Customer Product Specification (CPS)</h3>
+  <p>Product type <code>Exercise Books</code> exists, with naming series <code>EXB-SPEC-.#####</code>. Its section has four fields, and two of them don't match how the products are named.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Field</th><th>Options in ERPNext</th><th>What the items actually use</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td><code>number_of_pages</code></td><td>Integer, must be a multiple of 4</td><td>48, 60, 64, 80, 96, 100, 120, 200</td><td><span class="chip ok">Fits</span></td></tr>
+      <tr><td><code>ruling_type</code></td><td>Single Line, Double Line, Square/Graph, Blank</td><td>SL, SQ, SQ13, GPH, PLN, MSC, IRS, HSL, HSQ, FNB</td><td><span class="chip no">Mismatch</span></td></tr>
+      <tr><td><code>binding_type</code></td><td>Saddle Stitch, Perfect Binding, Wire-O</td><td>To confirm with the floor</td><td><span class="chip wait">To confirm</span></td></tr>
+      <tr><td><code>cover_type</code></td><td>Same as Inner, Card Stock, Glossy Cover</td><td>CB (chipboard), MNL, MGC</td><td><span class="chip no">Mismatch</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Items and selling</h3>
+      <ul class="tight">
+        <li>Item Group <code>Exercise Book</code> and its children, plus a stray <code>Swara Exercise Book</code> group under <code>Swara News Print</code>.</li>
+        <li>School groups: Bank Paper, Newsprint, Brilliant White Bank Paper.</li>
+        <li>Code pattern <code>&lt;BRAND&gt;EB-&lt;SIZE&gt;-&lt;PAGES&gt;PGS-&lt;COVER&gt;-&lt;PAPER&gt;-&lt;RULING&gt;</code>, e.g. <code>PNCEB-A4-96PGS-CB-BP-SL</code>. School books: <code>SCH-BP-EB</code>, <code>SCH-NP-EB</code>, <code>SCH-WBP-EB</code>.</li>
+        <li>Stock UOM <code>Nos</code>. <code>Carton</code> conversion = pieces per carton.</li>
+        <li>Sales Orders have been entered in Nos at carton rates. TRK-00363 asks for a check that flags it.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Production and stock</h3>
+      <ul class="tight">
+        <li>There is no Job Card DocType for exercise books, and <code>so_spec_control.JOB_CARD_DOCTYPES</code> leaves them out.</li>
+        <li>Stock production uses customer <code>Stock</code>, with the brand in the job name. Prince is a brand, not a customer.</li>
+        <li>Opening finished stock: <code>MAT-RECO-2026-00003</code> (04 Nov 16:29), 29 rows, 3,566 cartons = 516,918 books, zero valuation, authorised by Tanuj.</li>
+        <li>Items <code>COV-…</code> (cover sheets) and <code>INS-…</code> (inserts) move in <code>Stores - VCL</code>.</li>
+        <li>The Production Floor has an Exercise Book department (<code>71590c8</code>, 02 Sep) with no machines, and it isn't confirmed that this was merged.</li>
+        <li>The cost centre <code>Exercise Book</code> exists, but GL lands on <code>Main - VCL</code>.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PROPOSED FLOW ============ -->
+<section class="panel" id="p-model" data-tab="model" hidden>
+  <h2>Proposed ERPNext model flow</h2>
+  <div class="callout warn"><p><strong>Draft for discussion.</strong> Nothing here is decided or built. It's a starting point that maps each floor step to a record ERPNext already has, so the review has something concrete to change.</p></div>
+
+  <h3>Order to delivery</h3>
+  <div class="chain">
+    <span class="box">Sales Order (Carton)</span><span class="arr">→</span>
+    <span class="box new">Production plan per SKU</span><span class="arr">→</span>
+    <span class="box new">Work Order / job card</span><span class="arr">→</span>
+    <span class="box new">Stock Entry: Manufacture</span><span class="arr">→</span>
+    <span class="box">Delivery Note</span><span class="arr">→</span>
+    <span class="box">Sales Invoice</span>
+  </div>
+  <p>A dashed box is a record that isn't used for exercise books today.</p>
+
+  <h3>Each floor step mapped to a record</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Step</th><th>Stock in</th><th>Stock out (proposed item)</th><th>Record</th><th>Who enters it</th></tr></thead>
+    <tbody>
+      <tr><td>1 · Ruling</td><td>Paper NP / BP (kg or sheets)</td><td>Ruled sheet, per paper and ruling</td><td>Stock Entry (Manufacture) from the daily ruling log</td><td>To decide</td></tr>
+      <tr><td>2 · Covers</td><td>Cover board, ink (not consumed today)</td><td><code>COV-…</code> printed sheet <span class="chip ok">Exists</span></td><td>Material Receipt today. Could become a Manufacture that consumes the board.</td><td>To decide</td></tr>
+      <tr><td>3 · Folding</td><td>Ruled sheets</td><td>Folded inner, per size and pages</td><td>Count only, or a WIP item</td><td>To decide</td></tr>
+      <tr><td>4 · Inserts</td><td><code>COV-…</code> (+ folded inner)</td><td><code>INS-…</code> insert set <span class="chip ok">Exists</span></td><td>Repack today</td><td>To decide</td></tr>
+      <tr><td>5 · Packing</td><td><code>INS-…</code> + carton</td><td>The book item (<code>PNCEB-…</code>) in <code>Finished Goods - VCL</code>, in <code>Carton</code></td><td>Manufacture against the BOM, from the receiving record (<code>a84ef92</code>)</td><td>To decide</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="grid2">
+    <div class="card"><h3>The smallest version</h3><p>Keep the cover and insert moves as they are. Add one receipt per packed batch at step 5 that consumes <code>INS-…</code> and puts books into <code>Finished Goods - VCL</code>. That keeps stock current after today's opening balance and lets Compass allot orders.</p></div>
+    <div class="card"><h3>The fuller version</h3><p>Ruled sheets and printed covers become stock items, so each step has a count, and yield and waste show up at every stage. It needs more items, a BOM per stage, and someone on the floor who enters every step.</p></div>
+  </div>
+</section>
+
+<!-- ============ BUILT ============ -->
+<section class="panel" id="p-built" data-tab="built" hidden>
+  <h2>What has been built so far</h2>
+  <p class="lede">From the PC session's sweep on 04 Nov, checked against the repos. "Live" means it is on vimitconverters.frappe.cloud.</p>
+  <div class="tw"><table>
+    <thead><tr><th>What</th><th>Where</th><th>Does</th><th>Writes to ERPNext</th><th>State</th></tr></thead>
+    <tbody>
+      <tr><td>Exercise Book Production V2</td><td><code>/exercise-book-production-dev?mod=exercise</code></td><td>Tabs: Orders Pending, Order &amp; stock, Finished Stock, Cover Stock + quick entry, Empty Cartons, Inserts, Packing. Excel and PDF exports.</td><td>Covers: Material Receipt and Issue. Inserts: Repack. Packing: nothing (browser only).</td><td><span class="chip part">Live dev, not in git</span></td></tr>
+      <tr><td>Production (dev), EB tracker</td><td><code>/production-dev</code></td><td>The same cover and insert moves inside the production dev page</td><td>As above</td><td><span class="chip part">Live dev, not in git</span></td></tr>
+      <tr><td>Receiving (dev)</td><td><code>/receiving-dev</code></td><td>Computer paper only. Exercise books show "Coming later".</td><td>-</td><td><span class="chip wait">Not started for books</span></td></tr>
+      <tr><td>EB stores receiving backend</td><td>vcl-production <code>feat/exercise-book-receiving</code> <code>a84ef92</code></td><td>Cartons + loose books, 5% spot-weigh, new <code>VCL Stores Receipt Book Line</code></td><td>Not yet</td><td><span class="chip no">Only on the PC, not pushed</span></td></tr>
+      <tr><td>Exercise Book Orders</td><td><code>/compass/exercise-books</code>, vcl_compass <code>5709b0a</code></td><td>Open orders by SKU, allotted to the earliest delivery first. Order stage tracking.</td><td>SO <code>vcl_eb_stage</code>/<code>_by</code>/<code>_on</code> + a comment</td><td><span class="chip no">Merged, not deployed</span></td></tr>
+      <tr><td>Print format "Prod Exercise Book"</td><td>Sales Order (Jinja)</td><td>Floor sheet: SL/SQ side by side, brand large</td><td>-</td><td><span class="chip ok">Live, 02 Nov</span></td></tr>
+      <tr><td>Opening finished stock</td><td><code>MAT-RECO-2026-00003</code></td><td>29 rows, 3,566 cartons = 516,918 books in <code>Finished Goods - VCL</code></td><td>Stock Reconciliation, zero valuation</td><td><span class="chip ok">Submitted 04 Nov</span></td></tr>
+      <tr><td>Exercise Book department</td><td>vcl-production <code>71590c8</code></td><td>Production Floor department, no machines</td><td>-</td><td><span class="chip wait">Merge not verified</span></td></tr>
+      <tr><td>Ruling Log Sync</td><td>n8n <code>rulingLogIntake001</code></td><td>Reads the daily handwritten ruling log into a CSV and posts it to Slack</td><td>Nothing</td><td><span class="chip ok">Running</span></td></tr>
+      <tr><td>Item name standard + CR10</td><td>ERPNext Items</td><td>Names, descriptions, carton UOM and prices. 565 of 781 renamed.</td><td>Items, Item Prices</td><td><span class="chip wait">216 left</span></td></tr>
+      <tr><td>ESGA fixes</td><td><code>SAL-ORD-2026-00195</code></td><td>Generic Prince 48 rows replaced with <code>PNCEB-A5-48PGS</code> SL/SQ, 32pg row set to SQ, generic item disabled</td><td>Sales Order amended twice</td><td><span class="chip ok">Done 03 Nov</span></td></tr>
+      <tr><td>BOM master</td><td><a href="https://claude.ai/artifact/RHfu5pWNWzHmge8ye15G9Q" style="color:var(--brand-text)">18 Oct review</a></td><td>54 SKU rows that cover 99.5% of units</td><td>Not yet</td><td><span class="chip part">Open points</span></td></tr>
+      <tr><td>CPS Exercise Books section</td><td>vcl-production</td><td>Pages, ruling, binding and cover fields</td><td>-</td><td><span class="chip part">Unused, options outdated</span></td></tr>
+    </tbody>
+  </table></div>
+  <p>Dev-page snapshots and scripts are on the PC under <code>C:\Second_Brain\scratch\production-dev\</code>. The Linux copy <code>~/projects/vcl_production_dev</code> is stale.</p>
+</section>
+
+<!-- ============ ORDERS ============ -->
+<section class="panel" id="p-orders" data-tab="orders" hidden>
+  <h2>Items and open orders</h2>
+  <h3>Name standard</h3>
+  <p><code>&lt;Brand or Paper&gt; - &lt;Size&gt; - &lt;Pages&gt; Pages - &lt;Ruling&gt; - &lt;Cover&gt;</code>. The description adds <code> - &lt;pieces&gt; per carton</code>. Retail books carry the brand (Prince, Hi5, Swara). School books carry the paper (Bank Paper, Newsprint, Brilliant White Bank Paper). A4 32-page books are retired.</p>
+  <p>Codes: <code>PNCEB-A4-96PGS-CB-BP-SL</code> (Prince), <code>SWREB-…-NP-…</code> (Swara), <code>SCH-BP-EB</code>, <code>SCH-NP-EB</code>, <code>SCH-WBP-EB</code> (school). Cover sheets <code>COV-…</code>, inserts <code>INS-…</code>. Legacy generic codes are still on some orders: "Prince Exe A5 120pgs Bank CB" (SFS) and "Prince - Brand - A4 - 120 CB - S/L" (the January holds).</p>
+
+  <div class="grid2">
+    <div class="tw"><table>
+      <thead><tr><th>Pages</th><th>Pieces per carton</th></tr></thead>
+      <tbody>
+        <tr><td class="num">48</td><td class="num">204</td></tr>
+        <tr><td class="num">64</td><td class="num">162</td></tr>
+        <tr><td class="num">80</td><td class="num">144</td></tr>
+        <tr><td class="num">96</td><td class="num">120</td></tr>
+        <tr><td class="num">100</td><td>blank, 45 items</td></tr>
+        <tr><td class="num">120</td><td class="num">102</td></tr>
+        <tr><td class="num">200</td><td class="num">66</td></tr>
+      </tbody>
+    </table></div>
+    <div class="tw"><table>
+      <thead><tr><th>Code</th><th>Ruling</th></tr></thead>
+      <tbody>
+        <tr><td><code>SL</code></td><td>Single line</td></tr>
+        <tr><td><code>SQ</code> / <code>SQ13</code></td><td>Square line / 1/3 inch square</td></tr>
+        <tr><td><code>GPH</code></td><td>Graph</td></tr>
+        <tr><td><code>PLN</code></td><td>Plain</td></tr>
+        <tr><td><code>MSC</code> / <code>IRS</code></td><td>Music / Irish</td></tr>
+        <tr><td><code>HSL</code> / <code>HSQ</code></td><td>Half-inch single / square (kept as codes)</td></tr>
+        <tr><td><code>FNB</code></td><td>Field note book (keep or retire is open)</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+
+  <h3>Open Sales Orders, from the 03 Nov 13:53 export</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Order</th><th>Customer</th><th>Open</th><th>Ordered</th><th>Due</th><th>Note</th></tr></thead>
+    <tbody>
+      <tr><td><code>SAL-ORD-2026-00195</code> (amended) + <code>00192-1</code></td><td>ESGA Enterprises</td><td class="num">780 ctn</td><td class="num">2026-11-02</td><td class="num">2026-11-04</td><td>Prince A4 64–200pg and A5 32–120pg. 00192-1 = A4 96pg Graph 50 + Plain 50. The final SO name hasn't been re-checked.</td></tr>
+      <tr><td><code>SAL-ORD-2026-00194</code></td><td>Discount Office Supplies</td><td class="num">500 ctn</td><td class="num">2026-11-02</td><td class="num">2026-11-06</td><td>Prince A4 96/120, A5 64/100/200</td></tr>
+      <tr><td><code>SAL-ORD-2026-00173</code></td><td>Vaghela School Center</td><td class="num">550 ctn</td><td class="num">2026-10-30</td><td class="num">2026-11-06</td><td>Swara A4</td></tr>
+      <tr><td><code>SAL-ORD-2026-00184</code></td><td>Naxpar Enterprises</td><td class="num">220 ctn</td><td class="num">2026-10-31</td><td class="num">2026-11-06</td><td>Prince. Lines were entered in Nos at carton rates and then fixed.</td></tr>
+      <tr><td><code>SAL-ORD-2026-00172</code></td><td>Namo Trading</td><td class="num">60 ctn</td><td class="num">2026-10-29</td><td class="num">2026-10-30</td><td>60 of 180 still open (Swara A4 80pg)</td></tr>
+      <tr><td><code>SAL-ORD-2026-00175</code></td><td>SFS Integrated Primary School, Katani</td><td class="num">7,890 Nos</td><td class="num">2026-10-30</td><td class="num">2026-10-31</td><td>In Nos, not cartons. Includes legacy 120pg item ×1,800.</td></tr>
+      <tr><td><code>SAL-ORD-2026-00164</code> / <code>00174</code></td><td>Jeel Bookshop / Goldtex</td><td>-</td><td>-</td><td>-</td><td>In the 01 Nov snapshot but not the 03 Nov export. Probably delivered; not verified.</td></tr>
+      <tr><td><code>00022</code> / <code>00023</code> / <code>00007</code></td><td>Sabra / Bens / Noa</td><td class="num">1,800 / 185 / 6,600</td><td>Jan</td><td>-</td><td><span class="chip wait">On hold</span> Are these still live?</td></tr>
+    </tbody>
+  </table></div>
+  <p class="lede">Compass works out what to make as: Required = max(0, pending − physical finished cartons). It reads every warehouse, reserved stock included, and reserves nothing.</p>
+</section>
+
+<!-- ============ DECISIONS ============ -->
+<section class="panel" id="p-decisions" data-tab="decisions" hidden>
+  <h2>Open decisions</h2>
+  <p class="lede">Grouped by the part of the model they unblock. The first group decides how production is recorded. The rest are clean-up.</p>
+
+  <div class="card"><h3>Process and recording</h3>
+    <div class="q"><span class="n">P1</span><span>Confirm the five steps and where stitching and trimming sit (inside Inserts?).</span>
+    <span class="n">P2</span><span>Add Folding, Inserts and Packing stages to the exercise-book route, and decide what Sheeting and Collation mean for this line.</span>
+    <span class="n">P3</span><span>Smallest or fuller model (see Proposed flow): which steps post stock?</span>
+    <span class="n">P4</span><span>Who on the floor enters each step, and on which screen.</span>
+    <span class="n">P5</span><span>Does the daily ruling log feed ERPNext, or stay in CSV and Slack?</span>
+    <span class="n">P6</span><span>Exercise books: a job card of their own, or Work Orders?</span>
+    <span class="n">P7</span><span>Who owns each handover (Nadeem and Peter are candidates), and where the run reference travels on the floor.</span>
+    <span class="n">P8</span><span>How rejects, loose books and reversals are handled.</span>
+    <span class="n">P9</span><span>Put the dev pages in git, so sessions stop overwriting each other.</span></div>
+  </div>
+  <div class="card"><h3>Stock and orders</h3>
+    <div class="q"><span class="n">S1</span><span>How finished books are received into stock, and into which warehouse.</span>
+    <span class="n">S2</span><span>Who sets the order stage on Compass (the role list currently includes every sales rep).</span>
+    <span class="n">S3</span><span>When to deploy Exercise Book Orders (it needs a migrate and the <code>compass_exercise_books</code> config).</span>
+    <span class="n">S4</span><span>Are the three On Hold orders still live?</span>
+    <span class="n">S5</span><span>Valuation: the opening stock is at zero cost. When and how do books get a cost?</span>
+    <span class="n">S6</span><span>Make the packing record shared, not browser-only: push <code>a84ef92</code> and build its screen.</span>
+    <span class="n">S7</span><span>Should "Required" reserve stock per order rather than read all physical stock?</span>
+    <span class="n">S8</span><span>SFS is in Nos and carries legacy generic items. Convert it?</span></div>
+  </div>
+  <div class="card"><h3>Item master and specification</h3>
+    <div class="q"><span class="n">M1</span><span>CR10: finish the last 216 renames, or roll them back.</span>
+    <span class="n">M2</span><span>Pieces per carton for 100-page books (45 items) and A4 60-page Hi5 school.</span>
+    <span class="n">M3</span><span>FNB ruling (14 items) and the Prince A5 48 half-line price.</span>
+    <span class="n">M4</span><span>Standardise covers that aren't chipboard (MNL, MGC).</span>
+    <span class="n">M5</span><span>Update the CPS ruling and cover options to match the real codes.</span>
+    <span class="n">M6</span><span>BOM master: Graph row, keep or park Hi5, grammage and cover sheet sizes, and an owner on the floor.</span></div>
+  </div>
+</section>
+
+<!-- ============ SOURCES ============ -->
+<section class="panel" id="p-sources" data-tab="sources" hidden>
+  <h2>Sources</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Source</th><th>Used for</th></tr></thead>
+    <tbody>
+      <tr><td>Tanuj, 04 Nov 2026</td><td>The five process steps</td></tr>
+      <tr><td><code>second-brain/brain_inbox/exercise-book-naming-standard-2026-10.md</code></td><td>Name standard, rulings, packing</td></tr>
+      <tr><td><code>…/2026-10-30_exercise_book_orders_compass.md</code></td><td>Compass orders screen</td></tr>
+      <tr><td><code>…/exercise-books-no-stock-in-erpnext.md</code></td><td>Stock, pieces per carton, print formats</td></tr>
+      <tr><td><code>…/open-exercise-book-orders-2026-11-01.md</code></td><td>Open orders</td></tr>
+      <tr><td><code>…/2026-10-18_bom_master_decisions.md</code></td><td>BOM master</td></tr>
+      <tr><td><code>…/cr10-exercise-book-renames-565-not-10.md</code></td><td>CR10 status</td></tr>
+      <tr><td><code>second-brain/memory/project_ruling_log_sync.md</code></td><td>Ruling stations, paper, operators, log flow</td></tr>
+      <tr><td><code>vcl-production/production_log/patches/v7_4/add_process_number_routes.py</code></td><td>Floor route</td></tr>
+      <tr><td><code>vcl-production/…/customer_product_specification.json</code> / <code>.py</code></td><td>CPS fields and checks</td></tr>
+      <tr><td>PC session TMP-M034, 04 Nov (reply 1)</td><td>Process as recorded, dev-page builds. <code>C:\Second_Brain\output\exercise_books_process_and_dev_2026-11-04.md</code></td></tr>
+      <tr><td>PC session TMP-M034, 04 Nov (reply 2)</td><td>Item codes, orders, file list. <code>C:\Second_Brain\output\exercise_books_data_2026-11-04.md</code></td></tr>
+      <tr><td><code>C:\Second_Brain\output\production-process-flow-review.md</code></td><td>The 04 Nov draft process-flow review (on the PC)</td></tr>
+    </tbody>
+  </table></div>
+  <footer>Source file: <code>vcl-production/exercise-book-production/exercise-book-review.html</code>. To add a tab, add a link in the tab strip and a <code>section.panel</code> with a matching <code>data-tab</code>.</footer>
+</section>
+
+</div></main>
+
+<script>
+(function(){
+  var links=[].slice.call(document.querySelectorAll('#tabs a'));
+  var panels=[].slice.call(document.querySelectorAll('section.panel'));
+  var names=panels.map(function(p){return p.dataset.tab});
+  function show(){
+    var h=(location.hash||'').slice(1); if(names.indexOf(h)<0) h='overview';
+    panels.forEach(function(p){p.hidden=p.dataset.tab!==h});
+    links.forEach(function(a){ if(a.getAttribute('href')==='#'+h) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
+  }
+  window.addEventListener('hashchange',function(){show();window.scrollTo(0,0)});
+  show();
+})();
+</script>

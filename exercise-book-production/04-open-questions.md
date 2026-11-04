@@ -10,3 +10,9 @@
   and every cover that is not chipboard (MNL/MGC).
 - Is there going to be an Exercise Book Job Card / CPS? The tracker lists Exercise Books
   (and Monobox) as "still to build".
+- Valuation: the opening finished stock (MAT-RECO-2026-00003) is at zero cost.
+- Make packing a shared record, not browser-only: push `a84ef92` (PC only) and build its screen.
+- Should "Required" reserve stock per order instead of reading all physical stock?
+- SFS (SAL-ORD-2026-00175) is in Nos and carries legacy generic items.
+- Put the dev pages in git. Live REST edits from several sessions have overwritten each other.
+- Floor: where stitching and trimming sit, owners per handover, and wastage points.
