@@ -21,3 +21,7 @@ Copies kept elsewhere:
 `exercise-book-review.html` is the source of the tabbed review artifact:
 https://claude.ai/artifact/DtTjNC15VeSb9cneqqK16o. To add a tab, add a link in the tab strip
 and a `section.panel` with a matching `data-tab`, then republish.
+
+## Dev site roadmap
+`dev-site-roadmap.html` is the source of the roadmap artifact: what the Exercise Book Production dev page
+becomes, stage by stage (Today, 1a make it safe, 1b full floor flow, 2 into the app, 3 paper to book).
