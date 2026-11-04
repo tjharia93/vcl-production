@@ -434,6 +434,34 @@ nav.tabs .grp:first-child{border-left:0;padding-left:0}
   </div>
   <p class="label">Dashed box = a stage with no record in ERPNext, where the flow breaks.</p>
 
+  <div class="card" id="data-links"><h3>How the data links, and where it's kept</h3>
+    <p>Answer to "How are all these linked through and where is that data maintained?" (04 Nov, from the PC's read-only check of ERPNext).</p>
+    <div class="tw"><table>
+      <thead><tr><th>Stage</th><th>Where it lives in ERPNext</th><th>Link to the previous / next stage</th><th>Who keeps it</th></tr></thead>
+      <tbody>
+        <tr><td>Paper</td><td>Raw Material items (NP reels in Kg, BP reels in tonnes, sheets in reams); stock in <code>Stores - VCL</code></td><td><span class="chip no">None</span> Paper carries no brand, size, pages or ruling</td><td>Purchasing on Desk (receipts and invoices)</td></tr>
+        <tr><td>Ruling</td><td>Item group Ruling (1 item, no stock); Ruling Machine 01 and Ruling 02 have no records</td><td><span class="chip no">None</span> Nothing records ruling</td><td>Nobody yet (Phase 2/3)</td></tr>
+        <tr><td>Covers <code>COV-</code></td><td>Stock Entry (Material Receipt) → stock ledger → balance, <code>Stores - VCL</code>, in printed sheets</td><td><span class="chip ok">Stored</span> into Inserts: the same Repack takes COV-x out and puts INS-x in. <span class="chip wait">Code only</span> which COV pairs with which INS (prefix swap), and the 2/3 up-count (only in the item name)</td><td>Dev page Cover Stock quick entry, per print run; plus the 30 Oct opening</td></tr>
+        <tr><td>Folds <code>FLD-</code></td><td>Item group Folds, 80 items (created 04 Nov), no stock yet</td><td><span class="chip wait">Planned</span> an FLD-x out row in the same Repack. Pairing by code only</td><td>Nobody yet (station not built)</td></tr>
+        <tr><td>Inserts <code>INS-</code></td><td>Repack Stock Entry → stock ledger → balance, <code>Stores - VCL</code>, in sets</td><td><span class="chip ok">Stored</span> from covers (the Repack). <span class="chip no">None</span> to packing. <span class="chip wait">Code only</span> which book an INS makes; the cover type (CB/MNL/MGC) isn't known from the code</td><td>Dev page Inserts tab (14 Repacks, 2–3 Nov)</td></tr>
+        <tr><td>Packing</td><td><span class="chip no">Not in ERPNext</span> saved in each user's browser</td><td><span class="chip no">Missing</span> inserts → book. Planned: Manufacture (inserts + empty carton out, book into Finished Goods)</td><td>Dev page, per user, not shared</td></tr>
+        <tr><td>Finished Goods</td><td>Book items' balance in <code>Finished Goods - VCL</code>, in Nos (Carton = books per carton)</td><td><span class="chip no">None</span> from production: only the 04 Nov count (<code>MAT-RECO-2026-00003</code>). <span class="chip no">None</span> to delivery: deliveries ship from Stores</td><td>A one-off PC script from the photographed count</td></tr>
+        <tr><td>Delivered</td><td>Delivery Note → its lines → stock ledger, from <code>Stores - VCL</code></td><td><span class="chip ok">Stored</span> to the order: each delivery line points to its order line (<code>so_detail</code>). <span class="chip no">None</span> to stock: covered by a same-day receipt of the same quantity</td><td>Desk / Compass (4 deliveries since 1 Oct)</td></tr>
+        <tr><td>Open orders</td><td>Sales Order → order lines (qty, unit, conversion, delivered)</td><td><span class="chip ok">Stored</span> to delivery (above). <span class="chip wait">Code only</span> to stock and production: matched by item code and the brand | size | pages | ruling key in it</td><td>Reps on Desk, Compass, Android, the vcl_sales page</td></tr>
+      </tbody>
+    </table></div>
+    <ul class="tight">
+      <li><strong>Only two links are stored today:</strong> the Repack (cover out and insert in on one entry) and order → delivery. Everything else is joined by reading item codes and names.</li>
+      <li><strong>No batch number anywhere yet.</strong> Covers printed on one day can't be traced to the inserts or books they became. <code>custom_eb_run</code> is planned, not created.</li>
+      <li><strong>The chain breaks twice:</strong> inserts → finished goods (packing isn't recorded) and finished goods → delivery (deliveries ship from Stores against a same-day receipt). Finished stock is a one-time count, not a running flow.</li>
+      <li><strong>Where the numbers come from today:</strong> the dev page computes Order &amp; stock in the browser, but it undercounts covers 2–3× and can't see Repacks. Compass Exercise Book Orders is built but not deployed. This tab uses the PC's one-off reads of ERPNext, which aren't refreshed. No report or saved query exists.</li>
+      <li><strong>Recommendation: store the chain on the item, don't parse codes.</strong> Add fields (or a small "Exercise Book Set" record per brand | size | pages | ruling) for the cover, fold and insert items and the up-count, plus each book's insert item. Fill them once from today's codes (all 80 sets match). The dev page and Compass then read the fields. This also powers the "Item set per book" screen and a data-health check for missing twins.</li>
+      <li><strong>Next links to add, in order:</strong> (1) the batch number on every floor entry; (2) the Packing entry into Finished Goods, carrying the batch number; (3) deliveries from Finished Goods, ending the same-day receipts; (4) paper → ruling in Phase 2/3.</li>
+      <li><strong>One source for the numbers:</strong> a server-side report in vcl-production that reads stock balances, the ledger and the item links, so the dev page, Compass and this tab all show the same figures.</li>
+      <li><strong>Who keeps it, going forward:</strong> the floor enters covers, folds, inserts and packing on the Exercise Book page, each with the batch number. Sales and dispatch keep orders and deliveries as now.</li>
+    </ul>
+  </div>
+
   <div class="card">
     <header style="display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between">
       <h3>Meeting in the middle: what's still short, in books</h3>
@@ -1076,6 +1104,14 @@ nav.tabs .grp:first-child{border-left:0;padding-left:0}
 <section class="panel" id="p-comments" data-tab="comments" hidden>
   <h2>Your comments and what was done</h2>
   <p class="lede">Comments left on the Data flow tab on 04 Nov 2026, kept here with the change each one led to. New rounds of comments are added at the top.</p>
+  <h3>Round 5 · 04 Nov 2026</h3>
+  <div class="tw"><table>
+    <thead><tr><th>#</th><th>Where</th><th>Your comment</th><th>What was done</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td class="num">17</td><td>Data flow · Finished Goods box</td><td>"How are all these linked through and where is that data maintained? Ask the pc and reply here"</td><td>The PC checked ERPNext (read-only). The answer is the new "How the data links, and where it's kept" section on the Data flow tab: where each stage is stored, which links are stored and which rely only on code names, who keeps it, where the numbers come from, and the recommendation to store the chain on the item. This thread wasn't sent to Claude, so the answer couldn't be posted as an in-line reply.</td><td><span class="chip ok">Answered on the page</span></td></tr>
+    </tbody>
+  </table></div>
+
   <h3>Round 4 · 04 Nov 2026 (comments on the Overview)</h3>
   <div class="tw"><table>
     <thead><tr><th>#</th><th>Where</th><th>Your comment</th><th>What was done</th><th>Status</th></tr></thead>

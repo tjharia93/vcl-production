@@ -64,3 +64,9 @@ The school prompt also applies everywhere an item is picked (Opportunity, Quotat
 - Live now and wrong: `/production-dev?mod=exercise` still writes (Material Issue "used in binding", 9-up/4-up options). Order & stock understates cover capacity 2× (A4) and 3× (A5) and can't see Repack inserts.
 - Porting order: (1) git + deploy script `scripts/deploy_eb_dev_page.py`, retire the EB module on /production-dev; (2) bug fixes; (3) FLD + run number + Folds + server methods; (4) Packing Manufacture (a84ef92); (5) carton count; (6) plan/tracker/floor today, Compass dashboards; (7) tidy.
 - Gap map: on the click-through's Porting tab.
+
+## How the data links (PC answer, 04/11/2026)
+- Stored links today: only the Repack (COV out + INS in on one Stock Entry) and SO → DN (so_detail). Everything else joins by parsing item codes and names (COV/FLD/INS/book twins; ups only in the item name).
+- No run number anywhere yet. The chain breaks at Inserts → FG (packing not posted) and FG → Delivery (DNs ship from Stores against a same-day receipt).
+- Numbers: the dev page computes in the browser (undercounts covers, misses Repacks). Compass EB Orders isn't deployed. The Data flow tab uses one-off pulls. No report exists.
+- Recommendation: store the chain on Item (eb_cover_item, eb_fold_item, eb_insert_item, eb_ups; and eb_insert_item on books), or an "Exercise Book Set" doctype. One server-side report in vcl-production feeds the page, Compass and the dashboards.
