@@ -23,3 +23,5 @@
 - The Mahavir order SAL-ORD-2026-00199 is confirmed demand.
 - Empty-carton stock: the team counts on 05/11.
 - Needed: flow by item type per stage, and brand and customer filters (data requested from the PC).
+- **Cover unit:** the 30/10 opening (MAT-STE-2026-00007, 483,600, 91% of cover stock) is labelled "single covers", while later entries count sheets. As recorded, covers = 1,260,230 books. As single covers = 539,580. Books still to make: 1,085,336 vs 1,155,976. Tanuj to confirm.
+- Inserts Repack today: COV out, INS in, 1:1, zero cost. No fold or inner item exists. Proposed `FLD-<PNC|SWR>-<A4|A5>-<PPP>PG-<RULING>`.
