@@ -3,6 +3,7 @@
 <style>
 /* Layout: brand header bar, sticky tab strip, one panel per tab; panels are plain documents on kraft. */
 :root{
+  --success:#3f6b4e;--info:#1b6a7c;--warning:#6e3b2a;
   --surface:#f1ebdd;--raised:#ece6dc;--sunken:#e3dccb;--ink:#4a4542;--muted:#4d5b66;
   --border:#d8bf95;--border-strong:#857252;--brand:#2b3990;--brand-text:#2b3990;--on-brand:#fff;
   --brand-tint:#e3e3e4;--warn-text:#6e3b2a;--warn-tint:#ece0d7;--ok-text:#3f6b4e;--ok-tint:#e0eae2;
@@ -80,6 +81,36 @@ td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-num
 .q .n{font-family:var(--mono);font-weight:700;color:var(--brand-text)}
 footer{color:var(--muted);font-size:13px}
 @media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+
+/* data flow */
+.meet{display:grid;grid-template-columns:repeat(6,minmax(0,1fr)) minmax(0,1.3fr) repeat(2,minmax(0,1fr));gap:6px;align-items:stretch}
+.st{display:grid;gap:2px;align-content:start;padding:10px;border:1px solid var(--border);border-radius:4px;background:var(--raised);min-width:0}
+.st .nm{font-weight:700;font-size:13px}
+.st .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;font-weight:700}
+.st .u{font-size:12px;color:var(--muted);line-height:16px}
+.st.prod{border-top:4px solid var(--brand)}
+.st.sale{border-top:4px solid var(--info)}
+.st.gap{background:var(--surface);border-style:dashed}
+.st.gap .v{color:var(--warn-text)}
+.st.mid{background:var(--ok-tint);border:2px solid var(--ok-text)}
+.dir{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.dir .l{color:var(--brand-text)} .dir .r{color:var(--info-text)}
+@media (max-width:900px){.meet{grid-template-columns:repeat(3,minmax(0,1fr))}.st.mid{grid-column:1/-1}}
+@media (max-width:480px){.meet{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cascade{display:grid;gap:8px}
+.cas{display:grid;grid-template-columns:minmax(150px,220px) 1fr minmax(90px,auto);gap:12px;align-items:center}
+.cas .bar{height:22px;background:var(--sunken);border-radius:2px;position:relative;overflow:hidden}
+.cas .bar i{position:absolute;inset:0 auto 0 0;display:block}
+.cas .n{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+@media (max-width:560px){.cas{grid-template-columns:1fr auto}.cas .bar{grid-column:1/-1;order:3}}
+.c-dem{background:var(--muted)} .c-fg{background:var(--success)} .c-ins{background:var(--info)} .c-cov{background:var(--brand)} .c-short{background:var(--warning)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:2px;display:inline-block}
+.sk{display:flex;height:14px;min-width:140px;border-radius:2px;overflow:hidden;background:var(--sunken)}
+.sk i{display:block;height:100%}
+.toggle{display:inline-flex;gap:8px;align-items:center;font-size:14px}
+tr.flag td{background:var(--warn-tint)}
 </style>
 
 <header class="bar"><div class="wrap">
@@ -89,6 +120,7 @@ footer{color:var(--muted);font-size:13px}
 
 <nav class="tabs" aria-label="Sections"><div class="wrap" id="tabs">
   <a href="#overview">Overview</a>
+  <a href="#flow">Data flow</a>
   <a href="#process">Process</a>
   <a href="#erpnext">ERPNext today</a>
   <a href="#model">Proposed flow</a>
@@ -140,6 +172,61 @@ footer{color:var(--muted);font-size:13px}
   <div class="callout warn">
     <p><strong>The dev pages are not in git.</strong> Several sessions edit them live over REST. On 03 Nov one session deployed from a stale copy and overwrote the Receive screen three times. Pull the live page before every change.</p>
   </div>
+</section>
+
+<!-- ============ DATA FLOW ============ -->
+<section class="panel" id="p-flow" data-tab="flow" hidden>
+  <h2>Data flow: production and sales meet at finished stock</h2>
+  <p class="lede">What ERPNext holds today at each stage, as at 04 Nov 2026, 19:56. Every figure is also converted to books, so the stages can be compared. A cover sheet makes 3 A5 books or 2 A4 books, and so does an insert set. Production moves right, sales moves left, and finished stock is where they meet.</p>
+
+  <div class="dir"><span class="l">Production →</span><span class="r">← Sales</span></div>
+  <div class="meet">
+    <div class="st prod gap"><span class="nm">Paper</span><span class="v">No link</span><span class="u">Reels sit in Stores, not tied to books</span></div>
+    <div class="st prod gap"><span class="nm">Ruling</span><span class="v">0</span><span class="u">No ruled-sheet stock, no work orders</span></div>
+    <div class="st prod"><span class="nm">Covers <code>COV-</code></span><span class="v">508,510</span><span class="u">sheets on hand (533,894 received 30 Oct–3 Nov)<br>= 1,260,230 books</span></div>
+    <div class="st prod gap"><span class="nm">Folding</span><span class="v">0</span><span class="u">Nothing recorded</span></div>
+    <div class="st prod"><span class="nm">Inserts <code>INS-</code></span><span class="v">25,384</span><span class="u">sets, from 25,384 cover sheets<br>= 62,378 books. None used.</span></div>
+    <div class="st prod gap"><span class="nm">Packing</span><span class="v">0</span><span class="u">No receipt has ever been posted</span></div>
+    <div class="st mid"><span class="nm">Finished Goods - VCL</span><span class="v">516,918</span><span class="u">books = 3,566 cartons, 29 SKUs. From today's count only (<code>MAT-RECO-2026-00003</code>), nothing has moved since.</span></div>
+    <div class="st sale"><span class="nm">Delivered</span><span class="v">136,764</span><span class="u">books, 1,191 cartons, 4 Delivery Notes since 1 Oct. All from Stores, each booked in on the same day.</span></div>
+    <div class="st sale"><span class="nm">Open orders</span><span class="v">1,555,230</span><span class="u">books still to deliver (13,265 cartons), 10 orders, 43 SKUs</span></div>
+  </div>
+  <p class="label">Dashed box = a stage with no record in ERPNext, where the flow breaks.</p>
+
+  <div class="card">
+    <header style="display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between">
+      <h3>Meeting in the middle: what's still short, in books</h3>
+      <label class="toggle"><input type="checkbox" id="exsus"> Leave out the suspect Mahavir line (816,000 books)</label>
+    </header>
+    <p>Open orders, less finished stock, less inserts on hand, less printed covers. Whatever is left still has to be ruled, printed and made.</p>
+    <div class="cascade" id="cascade"></div>
+    <div class="legend"><span><i class="c-dem"></i>Open orders</span><span><i class="c-fg"></i>Covered by finished stock</span><span><i class="c-ins"></i>Covered by inserts</span><span><i class="c-cov"></i>Covered by printed covers</span><span><i class="c-short"></i>Still to make</span></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card"><h3>Surplus: made, but not on order</h3>
+      <ul class="tight">
+        <li>301,096 finished books above demand on SKUs that are ordered. 121,920 of them are <code>PNCEB-A4-96PGS-CB-BP-SL</code>.</li>
+        <li>34,968 finished books on SKUs with no open order.</li>
+        <li>30,010 books' worth of inserts not needed by any order.</li>
+        <li>1,010,758 books' worth of printed covers not needed, such as Prince A4 48 SQ (36,000) and scrapbook covers.</li>
+      </ul></div>
+    <div class="card"><h3>Where the chain breaks</h3>
+      <ul class="tight">
+        <li><strong>Paper → ruling:</strong> nothing links paper reels to books. <code>WF/BP - Reel-610-47-IN-0-C</code> shows 1,000,000 tonnes, which is a data error.</li>
+        <li><strong>Covers → inserts:</strong> works (Repack, 1:1). Covers have never been issued any other way.</li>
+        <li><strong>Inserts → finished stock:</strong> broken. No insert has ever been used and no book has been received from production.</li>
+        <li><strong>Finished stock → delivery:</strong> all 4 deliveries came out of <code>Stores - VCL</code>, not Finished Goods. Each was booked in that day with a Material Receipt of the same quantity (<code>MAT-STE-2026-00019</code> to <code>00022</code>), so they don't trace back to production.</li>
+        <li><strong>Orders:</strong> <code>SAL-ORD-2026-00199</code> (Mahavir) has 8,000 cartons of <code>SWREB-A4-120PGS-CB-NP-SL</code>, which is 52% of all demand. It is probably books keyed as cartons. The legacy item "Prince Exe A5 120pgs Bank CB" is still on an order.</li>
+      </ul></div>
+  </div>
+
+  <h3>By SKU: top 25 by open orders</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Book item</th><th>Open orders</th><th>Finished stock</th><th>Short after FG</th><th>after inserts</th><th>after covers</th><th>Surplus FG</th><th>How it's covered</th></tr></thead>
+    <tbody id="skurows"></tbody>
+  </table></div>
+  <p class="lede">Finished stock is matched per SKU. Inserts and covers are matched as shared pools by brand, size, pages and ruling, because one cover serves every variant, with the largest order served first. Data: <code>exercise-book-production/data/netting-2026-11-04.json</code>. The other 18 SKUs are in the PC's full file. Not yet included: empty carton stock and a check of today's count against the live balance (they match, because nothing has moved).</p>
 </section>
 
 <!-- ============ PROCESS ============ -->
@@ -462,5 +549,26 @@ footer{color:var(--muted);font-size:13px}
   }
   window.addEventListener('hashchange',function(){show();window.scrollTo(0,0)});
   show();
+})();
+</script>
+<script>
+(function(){
+var D={"as_of":"2026-11-04T16:56:43Z","source":"ERPNext, read-only pull from the Windows PC session (TMP-M034); full file C:/Second_Brain/output/exercise_books_flow_data_2026-11-04.json","totals":{"demand_nos":1555230,"demand_ctn":13264.61,"open_orders":10,"skus":43,"delivered_nos":53640,"demand_excl_suspect_nos":739230,"cov_received":533894,"cov_to_ins":25384,"cov_balance":508510,"cov_balance_book_eq":1260230,"ins_balance":25384,"ins_book_eq":62378,"fg_nos":516918,"fg_ctn":3566,"dn_count":4,"dn_ctn":1191,"dn_nos":136764,"fg_applied":180854,"short_after_fg":1374376,"ins_applied":32368,"short_after_ins":1342008,"cov_applied":249472,"short_after_cov":1092536,"short_after_cov_excl":277398,"fg_surplus":301096,"fg_unordered":34968,"ins_unused":30010,"cov_unused":1010758},"cols":["item_code","demand","fg_on_hand","short_after_fg","short_after_ins","short_after_cov","fg_surplus","flag"],"rows":[["SWREB-A4-120PGS-CB-NP-SL",893010,8772,884238,865278,815138,0,"Includes SAL-ORD-2026-00199: 8,000 ctn = 816,000 books, probably books keyed as cartons"],["SWREB-A4-120PGS-CB-NP-SQ",105060,5406,99654,97206,85206,0,""],["SWREB-A4-96PGS-CB-NP-SL",66000,600,65400,65400,39400,0,""],["PNCEB-A5-64PGS-CB-BP-SL",52200,17052,35148,35148,17148,0,""],["SWREB-A4-200PGS-CB-NP-SL",46200,1518,44682,44682,18682,0,""],["SWREB-A4-48PGS-CB-NP-SL",40800,0,40800,40800,28800,0,""],["PNCEB-A5-80PGS-CB-BP-SL",39060,41580,0,0,0,2520,""],["SWREB-A4-64PGS-CB-NP-SL",35640,14256,21384,21384,11384,0,""],["PNCEB-A5-100PGS-CB-BP-SL",32400,0,32400,32400,12600,0,""],["PNCEB-A5-48PGS-CB-BP-SL",30720,0,30720,30720,30720,0,""],["PNCEB-A5-32PGS-CB-BP-SL",30240,11592,18648,18648,0,0,""],["PNCEB-A4-120PGS-CB-BP-SL",17900,14484,3416,3416,3416,0,""],["PNCEB-A4-64PGS-CB-BP-SL",16200,3078,13122,13122,3122,0,""],["PNCEB-A4-96PGS-CB-BP-SL",15240,137160,0,0,0,121920,""],["PNCEB-A5-120PGS-CB-BP-SL",14880,3348,11532,2262,0,0,""],["PNCEB-A4-80PGS-CB-BP-SL",10800,2880,7920,7920,0,0,""],["SWREB-A4-48PGS-CB-NP-SQ",10200,0,10200,10200,10200,0,""],["SWREB-A4-64PGS-CB-NP-SQ",9720,0,9720,9720,7720,0,""],["PNCEB-A5-100PGS-CB-BP-SQ",8640,0,8640,8640,0,0,""],["PNCEB-A5-48PGS-CB-BP-PLN",7680,0,7680,7680,0,0,""],["PNCEB-A5-48PGS-CB-BP-GPH",7680,4224,3456,3456,0,0,""],["SWREB-A4-80PGS-CB-NP-SL",7200,0,7200,7200,7200,0,""],["PNCEB-A5-96PGS-CB-BP-SL",6840,50160,0,0,0,43320,""],["PNCEB-A4-96PGS-CB-BP-GPH",6300,0,6300,6300,0,0,""],["PNCEB-A4-96PGS-CB-BP-PLN",6000,0,6000,6000,0,0,""]]};var t=D.totals;
+function f(n){return Math.round(n).toLocaleString('en-GB')}
+function cascade(ex){
+  var dem=ex?t.demand_excl_suspect_nos:t.demand_nos;
+  var a=dem-t.fg_applied, b=a-t.ins_applied, c=ex?t.short_after_cov_excl:t.short_after_cov;
+  var rows=[["Open orders",dem,dem,"c-dem"],["Less finished stock",t.fg_applied,a,"c-fg"],["Less inserts",t.ins_applied,b,"c-ins"],["Less printed covers",b-c,c,"c-cov"],["Still to make",c,c,"c-short"]];
+  var h="";rows.forEach(function(r,i){var w=(r[2]/dem*100).toFixed(2);
+    var lab=i==0||i==4?r[0]:r[0]+" (−"+f(r[1])+")";
+    var rm=(i>0&&i<4)?'<i class="'+r[3]+'" style="left:'+w+'%;width:'+(r[1]/dem*100).toFixed(2)+'%"></i>':'';
+    h+='<div class="cas"><span>'+lab+'</span><span class="bar"><i class="'+(i==0?'c-dem':'c-short')+'" style="width:'+w+'%"></i>'+rm+'</span><span class="n">'+f(r[2])+'</span></div>';});
+  document.getElementById('cascade').innerHTML=h;
+}
+var el=document.getElementById('exsus');el.addEventListener('change',function(){cascade(el.checked)});cascade(false);
+var h="";D.rows.forEach(function(r){var dem=r[1],fg=Math.min(r[2],dem),ins=r[3]-r[4],cov=r[4]-r[5],sh=r[5];
+  function seg(v,c){return v>0?'<i class="'+c+'" style="width:'+(v/dem*100).toFixed(2)+'%"></i>':''}
+  h+='<tr'+(r[7]?' class="flag" title="'+r[7]+'"':'')+'><td><code>'+r[0]+'</code>'+(r[7]?'<br><span style="color:var(--warn-text);font-size:12px">'+r[7]+'</span>':'')+'</td><td class="num">'+f(dem)+'</td><td class="num">'+f(r[2])+'</td><td class="num">'+f(r[3])+'</td><td class="num">'+f(r[4])+'</td><td class="num">'+f(sh)+'</td><td class="num">'+(r[6]?f(r[6]):'-')+'</td><td><span class="sk">'+seg(fg,'c-fg')+seg(ins,'c-ins')+seg(cov,'c-cov')+seg(sh,'c-short')+'</span></td></tr>';});
+document.getElementById('skurows').innerHTML=h;
 })();
 </script>
