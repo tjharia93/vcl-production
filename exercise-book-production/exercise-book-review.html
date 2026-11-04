@@ -128,6 +128,7 @@ tr.flag td{background:var(--warn-tint)}
   <a href="#orders">Items &amp; orders</a>
   <a href="#decisions">Open decisions</a>
   <a href="#sources">Sources</a>
+  <a href="#comments">Your comments</a>
 </div></nav>
 
 <main><div class="wrap">
@@ -140,8 +141,8 @@ tr.flag td{background:var(--warn-tint)}
   <div class="flow" aria-label="Production process">
     <a href="#process"><span class="n">1</span><span class="t">Ruling</span><span class="label">Inner papers</span></a>
     <a href="#process"><span class="n">2</span><span class="t">Covers</span><span class="label">Printed sheets</span></a>
-    <a href="#process"><span class="n">3</span><span class="t">Folding</span><span class="label">Inner paper</span></a>
-    <a href="#process"><span class="n">4</span><span class="t">Inserts</span><span class="label">Cover sheet to insert</span></a>
+    <a href="#process"><span class="n">3</span><span class="t">Folds</span><span class="label">Folded inner, an input</span></a>
+    <a href="#process"><span class="n">4</span><span class="t">Inserts</span><span class="label">Covers + folds</span></a>
     <a href="#process"><span class="n">5</span><span class="t">Packing</span><span class="label">Cartons</span></a>
   </div>
 
@@ -181,10 +182,10 @@ tr.flag td{background:var(--warn-tint)}
 
   <div class="dir"><span class="l">Production →</span><span class="r">← Sales</span></div>
   <div class="meet">
-    <div class="st prod gap"><span class="nm">Paper</span><span class="v">No link</span><span class="u">Reels sit in Stores, not tied to books</span></div>
-    <div class="st prod gap"><span class="nm">Ruling</span><span class="v">0</span><span class="u">No ruled-sheet stock, no work orders</span></div>
+    <div class="st prod gap"><span class="nm">Paper</span><span class="v">Phase 2/3</span><span class="u">Not tied to books yet. Planned for a later phase.</span></div>
+    <div class="st prod gap"><span class="nm">Ruling</span><span class="v">Phase 2/3</span><span class="u">No ruled-sheet stock yet. Later phase, together with school and customised orders.</span></div>
     <div class="st prod"><span class="nm">Covers <code>COV-</code></span><span class="v">508,510</span><span class="u">sheets on hand (533,894 received 30 Oct–3 Nov)<br>= 1,260,230 books</span></div>
-    <div class="st prod gap"><span class="nm">Folding</span><span class="v">0</span><span class="u">Nothing recorded</span></div>
+    <div class="st prod gap"><span class="nm">Folds</span><span class="v">0</span><span class="u">No folds item exists. Folds should go into inserts together with covers.</span></div>
     <div class="st prod"><span class="nm">Inserts <code>INS-</code></span><span class="v">25,384</span><span class="u">sets, from 25,384 cover sheets<br>= 62,378 books. None used.</span></div>
     <div class="st prod gap"><span class="nm">Packing</span><span class="v">0</span><span class="u">No receipt has ever been posted. Empty cartons on the books: A4 19,104, A5 1,875.</span></div>
     <div class="st mid"><span class="nm">Finished Goods - VCL</span><span class="v">516,918</span><span class="u">books = 3,566 cartons, 29 SKUs. From today's count only (<code>MAT-RECO-2026-00003</code>), nothing has moved since.</span></div>
@@ -196,7 +197,7 @@ tr.flag td{background:var(--warn-tint)}
   <div class="card">
     <header style="display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between">
       <h3>Meeting in the middle: what's still short, in books</h3>
-      <label class="toggle"><input type="checkbox" id="exsus"> Leave out the suspect Mahavir line (816,000 books)</label>
+      <label class="toggle"><input type="checkbox" id="exsus"> Show without the Mahavir order (confirmed, 816,000 books)</label>
     </header>
     <p>Open orders, less finished stock, less inserts on hand, less printed covers. Whatever is left still has to be ruled, printed and made.</p>
     <div class="cascade" id="cascade"></div>
@@ -213,15 +214,16 @@ tr.flag td{background:var(--warn-tint)}
       </ul></div>
     <div class="card"><h3>Where the chain breaks</h3>
       <ul class="tight">
-        <li><strong>Paper → ruling:</strong> nothing links paper reels to books. <code>WF/BP - Reel-610-47-IN-0-C</code> shows 1,000,000 tonnes, which is a data error.</li>
-        <li><strong>Covers → inserts:</strong> works (Repack, 1:1). Covers have never been issued any other way.</li>
+        <li><strong>Paper → ruling:</strong> <span class="chip wait">Phase 2/3</span> Deferred to a later phase, together with school and customised exercise-book orders. Separately, <code>WF/BP - Reel-610-47-IN-0-C</code> shows 1,000,000 tonnes, which is a data error to fix.</li>
+        <li><strong>Covers + folds → inserts:</strong> half modelled. Today the dev page's Repack takes out <em>only</em> the cover sheet and puts in one insert set, 1:1. No folds item exists, so the folded inner is never taken out of stock and the paper inside every insert is invisible. The fix is to add a Folds stage (an input), so that covers + folds together make an insert.</li>
         <li><strong>Inserts → finished stock:</strong> broken. No insert has ever been used and no book has been received from production.</li>
-        <li><strong>Finished stock → delivery:</strong> all 4 deliveries came out of <code>Stores - VCL</code>, not Finished Goods. Each was booked in that day with a Material Receipt of the same quantity (<code>MAT-STE-2026-00019</code> to <code>00022</code>), so they don't trace back to production.</li>
-        <li><strong>Orders:</strong> <code>SAL-ORD-2026-00199</code> (Mahavir) has 8,000 cartons of <code>SWREB-A4-120PGS-CB-NP-SL</code>, which is 52% of all demand. It is probably books keyed as cartons. The legacy item "Prince Exe A5 120pgs Bank CB" is still on an order.</li>
+        <li><strong>Finished stock → delivery:</strong> "Stock" means any warehouse. <code>Finished Goods - VCL</code> is the warehouse for packed books ready to sell. <code>Stores - VCL</code> holds materials and part-made stock (paper, covers, inserts, cartons). Daily production hasn't been recorded, so the 4 deliveries had no books in the system. Each was covered by booking that day's quantity into Stores and shipping it from there (<code>MAT-STE-2026-00019</code> to <code>00022</code>). That workaround fills the data gap. From today's count, books should be received into Finished Goods when they are packed and delivered from there.</li>
+        <li><strong>Orders:</strong> <code>SAL-ORD-2026-00199</code> (Mahavir), 8,000 cartons of <code>SWREB-A4-120PGS-CB-NP-SL</code>, is confirmed as real demand. It is 52% of everything on order. The legacy item "Prince Exe A5 120pgs Bank CB" is still on an order.</li>
       </ul></div>
   </div>
 
-  <div class="card"><h3>Packing capacity: empty cartons against the shortfall</h3>
+  <div class="card"><h3>Packing capacity: empty cartons against the shortfall <span class="chip wait">Count due 05 Nov</span></h3>
+    <p>These figures will be replaced tomorrow with the team's carton stock count.</p>
     <div class="tw"><table>
       <thead><tr><th>Size</th><th>Short after finished stock</th><th>Empty cartons on the books</th><th>Comment</th></tr></thead>
       <tbody>
@@ -231,6 +233,22 @@ tr.flag td{background:var(--warn-tint)}
     </table></div>
     <p><span class="chip no">Unverified</span> These balances come from 11 purchase invoices between May 2024 and Aug 2025, and no carton has ever been issued in ERPNext. Count the cartons before relying on the figures. Only the common cartons have stock: all 47 page-specific carton items are at zero. ERPNext doesn't record which box height suits which page count.</p>
   </div>
+
+  <h3>Flow by item type, stage to stage</h3>
+  <p>Each stage keeps its own item type. The key fields carried by each code let one stage be matched to the next. The pool key <code>brand | size | pages | ruling</code> is shared from covers through to the finished book.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Stage</th><th>Item type</th><th>Code pattern (example)</th><th>Unit</th><th>Warehouse</th><th>Key it carries</th><th>Becomes</th></tr></thead>
+    <tbody>
+      <tr><td>Paper <span class="chip wait">Phase 2/3</span></td><td>Raw paper</td><td><code>NP-Reels-610-42-…</code>, <code>WF/BP - Reel-…</code></td><td>Kg / Tonne / Ream</td><td><code>Stores - VCL</code></td><td>paper, width, gsm</td><td>Ruled sheets</td></tr>
+      <tr><td>Ruling <span class="chip wait">Phase 2/3</span></td><td>Ruled sheet</td><td><code>RL - SL - A4 - BP</code> (the only one, no stock)</td><td>Sheets</td><td>-</td><td>ruling, size, paper</td><td>Folds</td></tr>
+      <tr><td>Folds <span class="chip no">Missing</span></td><td>Folded inner (proposed)</td><td><code>FOLD-&lt;SIZE&gt;-&lt;PPP&gt;PG-&lt;PAPER&gt;-&lt;RULING&gt;</code> (proposed)</td><td>Nos (one per book)</td><td><code>Stores - VCL</code></td><td>size, pages, paper, ruling</td><td>Inserts</td></tr>
+      <tr><td>Covers</td><td>Printed cover sheet</td><td><code>COV-PNC-A5-120PG-SL</code></td><td>Sheets (A5 3-up, A4 2-up)</td><td><code>Stores - VCL</code></td><td>brand, size, pages, ruling</td><td>Inserts</td></tr>
+      <tr><td>Inserts</td><td>Cover + inner, not yet packed</td><td><code>INS-PNC-A5-120PG-SL</code></td><td>Sets (1 set = 1 cover sheet)</td><td><code>Stores - VCL</code></td><td>brand, size, pages, ruling</td><td>Finished book</td></tr>
+      <tr><td>Packing / finished</td><td>Finished book</td><td><code>PNCEB-A5-120PGS-CB-BP-SL</code></td><td>Nos, sold in Carton</td><td><code>Finished Goods - VCL</code></td><td>brand, size, pages, cover, paper, ruling</td><td>Delivery</td></tr>
+      <tr><td>Packing material</td><td>Empty carton</td><td><code>PNC-EMPTY-CARTON-A4-EXBK-COMMON-425x305x260</code></td><td>Nos</td><td><code>Stores - VCL</code></td><td>brand, size (height ≈ pages, not mapped)</td><td>Used up at packing</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout"><p><strong>Requested from the PC:</strong> quantities for every pool at every stage (not only the top 25), the full list of item types per stage, and each open order line. When they arrive, this table gains a quantity per stage and the chart gets brand and customer filters.</p></div>
 
   <h3>By SKU: top 25 by open orders</h3>
   <div class="tw"><table>
@@ -270,11 +288,11 @@ tr.flag td{background:var(--warn-tint)}
   </article>
 
   <article class="card step" id="s-folding">
-    <header><span class="n">3</span><h3>Folding of the inner paper</h3><span class="chip no">Not recorded</span></header>
+    <header><span class="n">3</span><h3>Folds (folded inner paper, an input)</h3><span class="chip no">Not recorded</span></header>
     <dl class="facts">
       <dt>What happens</dt><dd>Ruled sheets are cut and folded into the book's inner section. The page count sets how many sheets make one book (CPS requires pages in multiples of 4).</dd>
       <dt>In</dt><dd>Ruled sheets from step 1.</dd>
-      <dt>Out</dt><dd>Folded inner sections, one per book (to confirm whether they're counted per book or per bundle).</dd>
+      <dt>Out</dt><dd>Folds: the folded inner section, one per book. Folds are an input to Inserts, the same way covers are. Proposed item: <code>FOLD-&lt;SIZE&gt;-&lt;PPP&gt;PG-&lt;PAPER&gt;-&lt;RULING&gt;</code>. To confirm whether they're counted per book or per bundle.</dd>
       <dt>Where</dt><dd>To confirm: by machine or by hand. ERPNext has no Folding stage. The nearest stages are <code>Sheeting</code> (50) and <code>Collation</code> (60). The Collation workstations <code>Collater 01</code> and <code>02</code> have no book work recorded.</dd>
       <dt>Gap</dt><dd>There's no stage, no workstation and no count, so yield from sheet to book can't be measured.</dd>
     </dl>
@@ -283,10 +301,10 @@ tr.flag td{background:var(--warn-tint)}
   <article class="card step" id="s-inserts">
     <header><span class="n">4</span><h3>Inserts</h3><span class="chip ok">Posts stock</span></header>
     <dl class="facts">
-      <dt>What happens</dt><dd>Printed cover sheets become insert sets. To confirm on the floor: how the folded inner joins the cover, and where stitching and trimming happen (a stitching machine is on the spares list).</dd>
-      <dt>In</dt><dd>The cover sheet (<code>COV-…</code>). The folded inner is not modelled.</dd>
+      <dt>What happens</dt><dd>Covers and folds are inserted together to make the insert: <strong>covers + folds = inserts</strong>. To confirm on the floor: where stitching and trimming happen (a stitching machine is on the spares list).</dd>
+      <dt>In</dt><dd>Should be the cover (<code>COV-…</code>) plus the folds (<code>FOLD-…</code>). Today only the cover is taken out.</dd>
       <dt>Out</dt><dd>Insert item <code>INS-…</code> (Item Group <code>Exercise Book Inserts</code>). 1 cover sheet = 1 insert sheet. Book equivalents = sets × the up-count.</dd>
-      <dt>Recorded today</dt><dd>The dev page's Inserts tab posts a submitted <code>Repack</code> in <code>Stores - VCL</code>: the COV item goes down and the INS item goes up by the same quantity.</dd>
+      <dt>Recorded today</dt><dd>The dev page's Inserts tab posts a submitted <code>Repack</code> in <code>Stores - VCL</code>: the COV item goes down and the INS item goes up by the same quantity. Proposed: the same Repack also takes out the folds. One cover sheet carries 2 (A4) or 3 (A5) covers, so it needs that many folds.</dd>
       <dt>Gap</dt><dd>Collating, stitching, binding and trimming aren't modelled, and the inner paper is never consumed. It isn't decided when inserts are consumed into finished books.</dd>
     </dl>
   </article>
@@ -321,7 +339,7 @@ tr.flag td{background:var(--warn-tint)}
       <tr><td class="num">40</td><td><code>Ruling</code></td><td>1 · Ruling</td><td>Two workstations in ERPNext (Ruling Machine 01, Ruling 02), four on the floor log (R-01 to R-04). No schedule lines.</td></tr>
       <tr><td class="num">50</td><td><code>Sheeting</code></td><td>3 · Folding?</td><td>To confirm: is the cutting before folding done here?</td></tr>
       <tr><td class="num">60</td><td><code>Collation</code></td><td>3 / 4?</td><td>Collater 01 and 02, no book work recorded. To confirm whether books use it.</td></tr>
-      <tr><td class="num">-</td><td><em>missing</em></td><td>3 · Folding</td><td>No stage.</td></tr>
+      <tr><td class="num">-</td><td><em>missing</em></td><td>3 · Folds</td><td>No stage and no item.</td></tr>
       <tr><td class="num">-</td><td><em>missing</em></td><td>4 · Inserts</td><td>No stage.</td></tr>
       <tr><td class="num">-</td><td><em>missing</em></td><td>5 · Packing</td><td>No stage for this line.</td></tr>
     </tbody>
@@ -397,9 +415,9 @@ tr.flag td{background:var(--warn-tint)}
     <tbody>
       <tr><td>1 · Ruling</td><td>Paper NP / BP (kg or sheets)</td><td>Ruled sheet, per paper and ruling</td><td>Stock Entry (Manufacture) from the daily ruling log</td><td>To decide</td></tr>
       <tr><td>2 · Covers</td><td>Cover board, ink (not consumed today)</td><td><code>COV-…</code> printed sheet <span class="chip ok">Exists</span></td><td>Material Receipt today. Could become a Manufacture that consumes the board.</td><td>To decide</td></tr>
-      <tr><td>3 · Folding</td><td>Ruled sheets</td><td>Folded inner, per size and pages</td><td>Count only, or a WIP item</td><td>To decide</td></tr>
+      <tr><td>3 · Folds</td><td>Ruled sheets (phase 2/3)</td><td><code>FOLD-…</code>, per size, pages, paper and ruling</td><td>Stock item, so inserts can take it out</td><td>To decide</td></tr>
       <tr><td colspan="5">Every record in this table belongs to a production run for one SKU. None of them points to a Sales Order.</td></tr>
-      <tr><td>4 · Inserts</td><td><code>COV-…</code> (+ folded inner)</td><td><code>INS-…</code> insert set <span class="chip ok">Exists</span></td><td>Repack today</td><td>To decide</td></tr>
+      <tr><td>4 · Inserts</td><td><code>COV-…</code> + <code>FOLD-…</code></td><td><code>INS-…</code> insert set <span class="chip ok">Exists</span></td><td>Repack today</td><td>To decide</td></tr>
       <tr><td>5 · Packing</td><td><code>INS-…</code> + carton</td><td>The book item (<code>PNCEB-…</code>) in <code>Finished Goods - VCL</code>, in <code>Carton</code></td><td>Manufacture against the BOM, from the receiving record (<code>a84ef92</code>)</td><td>To decide</td></tr>
     </tbody>
   </table></div>
@@ -520,6 +538,29 @@ tr.flag td{background:var(--warn-tint)}
     <span class="n">M5</span><span>Update the CPS ruling and cover options to match the real codes.</span>
     <span class="n">M6</span><span>BOM master: Graph row, keep or park Hi5, grammage and cover sheet sizes, and an owner on the floor.</span></div>
   </div>
+  <div class="card"><h3>Phasing (from your comments, 04 Nov)</h3>
+    <div class="q"><span class="n">Ph1</span><span>Stock books: covers, folds, inserts, packing into Finished Goods, and deliveries from Finished Goods. Flow by item type, with brand and customer filters.</span>
+    <span class="n">Ph2/3</span><span>Paper and ruling, linked to books. School and customised exercise-book orders.</span></div>
+  </div>
+</section>
+
+<!-- ============ YOUR COMMENTS ============ -->
+<section class="panel" id="p-comments" data-tab="comments" hidden>
+  <h2>Your comments and what was done</h2>
+  <p class="lede">Comments left on the Data flow tab on 04 Nov 2026, kept here with the change each one led to. New rounds of comments are added at the top.</p>
+  <h3>Round 1 · 04 Nov 2026</h3>
+  <div class="tw"><table>
+    <thead><tr><th>#</th><th>Where</th><th>Your comment</th><th>What was done</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>Meeting in the middle</td><td>"This is a good visual to keep for actual data as well, but can we add in filters here by brand and by customer? Maya or the order is confirmed."</td><td>The chart stays, and it will be built from live figures. The filters need each open order line (customer, item, quantity), which the PC has been asked for. They go in when that data arrives. "Maya or the order" was read as <strong>the Mahavir order is confirmed</strong>, so it's no longer called suspect. It counts as real demand, and the checkbox is just a view without it. Tell me if the comment meant something else.</td><td><span class="chip part">Part done</span></td></tr>
+      <tr><td class="num">2</td><td>Where the chain breaks · covers → inserts</td><td>"But how is this model working at the moment? Also we need a step called folds that is input - and the covers+folds inserted together = inserts."</td><td>How it works today: the dev page's Repack takes out only the cover sheet and puts in one insert set, 1:1. No folds item exists, so the inner paper never leaves stock. Changed: step 3 is now <strong>Folds (an input)</strong>, and Inserts = covers + folds, across the Overview, Process, Data flow, ERPNext today and Proposed flow tabs. Proposed item <code>FOLD-&lt;SIZE&gt;-&lt;PPP&gt;PG-&lt;PAPER&gt;-&lt;RULING&gt;</code>, with the Repack taking out covers and folds together. The PC has been asked to confirm exactly how the live Repack is built.</td><td><span class="chip ok">Done</span></td></tr>
+      <tr><td class="num">3</td><td>Where the chain breaks · finished stock → delivery</td><td>"What's the difference between finished goods and stock? Remember there is a data gap at the moment because we have not been recording daily production."</td><td>Answered on the Data flow tab. "Stock" is any warehouse. <code>Finished Goods - VCL</code> is for packed books ready to sell, and <code>Stores - VCL</code> is for materials and part-made stock. The data gap is now stated: with no daily production recorded, deliveries were covered by booking stock into Stores on the same day. That's a workaround, not an error. From today's count, books should come into Finished Goods when packed and be delivered from there.</td><td><span class="chip ok">Done</span></td></tr>
+      <tr><td class="num">4</td><td>Where the chain breaks · paper → ruling</td><td>"This goes to phase 2 or phase 3 - and it will include school exercise book/ customized exercise book orders."</td><td>Paper and ruling are marked Phase 2/3 on the Data flow and item-type tables. A Phasing card on Open decisions puts paper, ruling, and school and customised orders in Phase 2/3, and stock books in Phase 1. The 1,000,000-tonne reel is still listed as a data error to fix.</td><td><span class="chip ok">Done</span></td></tr>
+      <tr><td class="num">5</td><td>Packing capacity</td><td>"This will be updated tomorrow as we get the stock from the team."</td><td>The section is marked "Count due 05 Nov", and it says the figures will be replaced by the team's count. Send the count and I'll update it.</td><td><span class="chip wait">Waiting on count</span></td></tr>
+      <tr><td class="num">6</td><td>By SKU · method note</td><td>"We need the flow by item type from each stage so that it can be mapped properly."</td><td>Added a "Flow by item type" table on Data flow. For each stage it shows the item type, code pattern with an example, unit, warehouse, key fields, and what it becomes next, with the shared pool key <code>brand | size | pages | ruling</code>. Quantities for every pool at every stage (not only the top 25) have been requested from the PC, and they'll be added to that table.</td><td><span class="chip part">Part done</span></td></tr>
+    </tbody>
+  </table></div>
+  <p class="lede">The comment threads on the page itself are still open. Claude can only reply to or resolve a thread once you send it to Claude, so resolve them in the page, or send them to Claude and I'll resolve them.</p>
 </section>
 
 <!-- ============ SOURCES ============ -->

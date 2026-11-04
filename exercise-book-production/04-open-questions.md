@@ -16,3 +16,10 @@
 - SFS (SAL-ORD-2026-00175) is in Nos and carries legacy generic items.
 - Put the dev pages in git. Live REST edits from several sessions have overwritten each other.
 - Floor: where stitching and trimming sit, owners per handover, and wastage points.
+
+## From Tanuj's comments, 04/11/2026 (see the "Your comments" tab)
+- Add a **Folds** stage (input). Covers + folds inserted together = inserts. Today's Repack takes out the cover only.
+- Paper → ruling moves to **phase 2/3**, together with school and customised exercise-book orders.
+- The Mahavir order SAL-ORD-2026-00199 is confirmed demand.
+- Empty-carton stock: the team counts on 05/11.
+- Needed: flow by item type per stage, and brand and customer filters (data requested from the PC).
