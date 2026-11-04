@@ -1,0 +1,607 @@
+<title>Exercise Book Build Spec</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: brand header bar, sticky tab strip, one panel per tab; panels are plain documents on kraft. */
+:root{
+  --success:#3f6b4e;--info:#1b6a7c;--warning:#6e3b2a;
+  --surface:#f1ebdd;--raised:#ece6dc;--sunken:#e3dccb;--ink:#4a4542;--muted:#4d5b66;
+  --border:#d8bf95;--border-strong:#857252;--brand:#2b3990;--brand-text:#2b3990;--on-brand:#fff;
+  --brand-tint:#e3e3e4;--warn-text:#6e3b2a;--warn-tint:#ece0d7;--ok-text:#3f6b4e;--ok-tint:#e0eae2;
+  --info-text:#1b6a7c;--info-tint:#dce9ec;--focus:#2b3990;
+  --sans:Calibri,Carlito,"Segoe UI",Arial,system-ui,sans-serif;
+  --mono:"Courier New",Courier,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --surface:#1c1813;--raised:#27221b;--sunken:#140f0a;--ink:#f3ece0;--muted:#b5a88f;--border:#3b3328;
+  --border-strong:#7a6c56;--brand-text:#9eadf0;--brand-tint:#2a2a3e;--warn-text:#e0a070;--warn-tint:#3a2710;
+  --ok-text:#8fd3a5;--ok-tint:#1b2e20;--info-text:#6fc3d4;--info-tint:#13333a;--focus:#9eadf0;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --surface:#1c1813;--raised:#27221b;--sunken:#140f0a;--ink:#f3ece0;--muted:#b5a88f;--border:#3b3328;
+  --border-strong:#7a6c56;--brand-text:#9eadf0;--brand-tint:#2a2a3e;--warn-text:#e0a070;--warn-tint:#3a2710;
+  --ok-text:#8fd3a5;--ok-tint:#1b2e20;--info-text:#6fc3d4;--info-tint:#13333a;--focus:#9eadf0;color-scheme:dark}
+body{background:var(--surface);color:var(--ink);font:15px/22px var(--sans)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--brand)}
+.wrap{max-width:1100px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.bar{background:var(--brand);color:var(--on-brand)}
+header.bar .wrap{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;padding-block:14px}
+header.bar h1{margin:0;font-size:22px;line-height:28px;font-weight:700}
+header.bar p{margin:0;font-size:13px;opacity:.85}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--raised);border-bottom:1px solid var(--border)}
+nav.tabs .wrap{display:flex;gap:2px;overflow-x:auto;scrollbar-width:thin}
+nav.tabs a{flex:none;padding:12px 14px 10px;color:var(--muted);text-decoration:none;font-weight:700;font-size:14px;border-bottom:3px solid transparent;white-space:nowrap}
+nav.tabs a[aria-current="page"]{color:var(--brand-text);border-bottom-color:var(--brand)}
+nav.tabs a:hover{color:var(--ink)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+main .wrap{padding-block:24px 48px}
+section.panel{display:grid;gap:24px}
+h2{font-size:20px;line-height:26px;margin:0;text-wrap:balance}
+h3{font-size:16px;line-height:22px;margin:0}
+p{margin:0;max-width:72ch}
+.lede{color:var(--muted);max-width:72ch}
+code,.mono{font-family:var(--mono);font-size:13px}
+p code,li code,dd code{overflow-wrap:anywhere}
+.label{font-size:12px;line-height:16px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.chip{display:inline-block;font-size:12px;line-height:16px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:2px 6px;border-radius:2px;white-space:nowrap}
+.chip.ok{background:var(--ok-tint);color:var(--ok-text)}
+.chip.part{background:var(--info-tint);color:var(--info-text)}
+.chip.no{background:var(--warn-tint);color:var(--warn-text)}
+.chip.wait{background:var(--brand-tint);color:var(--brand-text)}
+.card{background:var(--raised);border:1px solid var(--border);border-radius:4px;padding:16px;display:grid;gap:12px;min-width:0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.callout{background:var(--info-tint);border-radius:4px;padding:12px 16px}
+.callout.warn{background:var(--warn-tint)}
+ul.tight{margin:0;padding-left:20px;display:grid;gap:4px}
+/* process strip */
+.flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;counter-reset:s}
+.flow a{display:grid;gap:4px;padding:12px;background:var(--raised);border:1px solid var(--border);border-top:4px solid var(--brand);border-radius:4px;color:var(--ink);text-decoration:none}
+.flow a:hover{background:var(--sunken)}
+.flow .n{font-family:var(--mono);color:var(--brand-text);font-weight:700}
+.flow .t{font-weight:700}
+@media (max-width:720px){.flow{grid-template-columns:1fr}}
+/* process flowchart */
+.fwrap{margin:0;display:grid;gap:10px;background:var(--raised);border:1px solid var(--border);border-radius:4px;padding:16px}
+.fchart{width:100%;height:auto;display:block;font-family:var(--sans)}
+.fh-narrow{display:none;max-width:400px;margin:0 auto}
+@media (max-width:640px){.fh-wide{display:none}.fh-narrow{display:block}}
+.fa{fill:none;stroke:var(--muted);stroke-width:1.5}
+.fah{fill:var(--muted)}
+.fn rect{stroke-width:2}
+.fn.ok rect{fill:var(--ok-tint);stroke:var(--ok-text)}
+.fn.no rect{fill:var(--surface);stroke:var(--warn-text);stroke-dasharray:5 4}
+.fn.end rect{fill:var(--brand);stroke:var(--brand)}
+.fn.end text{fill:var(--on-brand)}
+.fn text{fill:var(--ink)}
+.fh{font-size:15px;font-weight:700}
+.fnum{font-family:var(--mono);fill:var(--brand-text)}
+.fs{font-size:12px;fill:var(--muted)!important}
+.fn.end .fs{fill:var(--on-brand)!important;opacity:.85}
+.fst{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.fn.ok .fst{fill:var(--ok-text)}
+.fn.no .fst{fill:var(--warn-text)}
+a.fn:hover rect{filter:brightness(.95)}
+a.fn:focus-visible rect{stroke:var(--focus);stroke-width:3}
+/* entry-screen themes (click-through mock) */
+.themes{display:flex;flex-wrap:wrap;gap:6px}
+.themes button{font:inherit;font-size:13px;font-weight:700;padding:6px 10px;border-radius:4px;border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);cursor:pointer}
+.themes button[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.tnote{font-size:13px;color:var(--muted);max-width:none}
+.mock.mx{--p:#2B3990;--p-on:#fff;--ok:#2F5D50;--ok-bg:#E6EFEA;--warn:#B35A00;
+  font-family:var(--m-font);color:var(--m-ink);background:var(--m-page);border:1px solid var(--m-border);border-radius:var(--m-r);overflow:hidden;font-size:14px;line-height:20px}
+.mx *{box-sizing:border-box}
+.mx .mh{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--m-head);color:var(--m-head-ink);border-bottom:1px solid var(--m-border);box-shadow:var(--m-head-shadow)}
+.mx .ic{flex:none;width:36px;height:36px;border-radius:var(--m-ic-r);background:var(--m-ic-bg);color:var(--m-ic-ink);display:grid;place-items:center;font-weight:700;font-size:13px;letter-spacing:.3px}
+.mx .ht{display:grid;gap:0;min-width:0}
+.mx .ob{font-size:12px;line-height:16px;color:var(--m-head-muted)}
+.mx .tt{font-size:var(--m-title);line-height:1.2;font-weight:var(--m-title-w);overflow-wrap:anywhere}
+.mx .crumb{margin-left:auto;font-size:12px;color:var(--m-head-muted);white-space:nowrap}
+.mx .crumb b{font-family:var(--m-mono);color:var(--m-head-ink)}
+.mx .mb{padding:14px;display:grid;gap:12px}
+.mx .cardx{background:var(--m-card);border:var(--m-card-b);border-radius:var(--m-card-r);box-shadow:var(--m-shadow);padding:14px;display:grid;gap:12px}
+.mx .sec{font-size:var(--m-sec);font-weight:700;color:var(--m-ink);text-transform:var(--m-sec-t);letter-spacing:var(--m-sec-ls)}
+.mx .fx{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.mx .f{display:grid;gap:4px;min-width:0}
+.mx .f .l{font-size:var(--m-lbl);font-weight:var(--m-lbl-w);color:var(--m-muted)}
+.mx .f .i{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:var(--m-h);padding:0 10px;background:var(--m-in-bg);border:var(--m-in-b);border-bottom:var(--m-in-bb);border-radius:var(--m-in-r);color:var(--m-ink);overflow-wrap:anywhere}
+.mx .f .i.pick::after{content:"\25BE";color:var(--m-muted);font-size:12px}
+.mx .f .ro{min-height:var(--m-h);display:flex;align-items:center;color:var(--m-ink);font-weight:700;overflow-wrap:anywhere}
+.mx .f .ro::before{content:"\1F512\FE0E";font-size:11px;margin-right:6px;opacity:.45}
+.mx .f.qn .i,.mx .f.qn .ro{font-family:var(--m-mono);font-variant-numeric:tabular-nums;font-weight:700}
+.mx .sum{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;padding:10px 12px;border-radius:var(--m-in-r);background:var(--ok-bg);color:var(--ok)}
+.mx .sum b{font-family:var(--m-mono);font-size:18px;font-variant-numeric:tabular-nums}
+.mx .act{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.mx .bp{font:inherit;font-weight:700;border:0;cursor:pointer;background:var(--p);color:var(--p-on);border-radius:var(--m-btn-r);padding:0 18px;min-height:36px}
+.mx .bs{font:inherit;font-weight:700;cursor:pointer;background:var(--m-card);color:var(--p);border:1px solid var(--m-border-strong);border-radius:var(--m-btn-r);padding:0 14px;min-height:36px}
+.mx .toast{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 12px;border-radius:var(--m-in-r);background:var(--ok);color:#fff;font-weight:700}
+.mx .toast button{font:inherit;font-weight:700;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.7);border-radius:var(--m-btn-r);padding:4px 10px;cursor:pointer}
+.mx .hint{font-size:12px;color:var(--m-muted)}
+/* floor mode: touch, arm's length */
+.mx.floor{--m-h:52px}
+.mx.floor .f .i,.mx.floor .f .ro{font-size:18px}
+.mx.floor .f .l{font-size:14px}
+.mx.floor .f.qn .i,.mx.floor .f.qn .ro{font-size:28px;min-height:60px}
+.mx.floor .fx{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.mx.floor .act .bp{flex:1 1 100%;min-height:56px;font-size:18px}
+.mx.desk{--m-h:34px}
+/* desk dashboard bits */
+.mx .kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.mx .kp div{background:var(--m-card);border:var(--m-card-b);border-radius:var(--m-card-r);box-shadow:var(--m-shadow);padding:10px;display:grid;gap:2px}
+.mx .kp .k{font-size:12px;color:var(--m-muted)}
+.mx .kp .v{font-family:var(--m-mono);font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.mx .kp .v.bad{color:var(--warn)}
+.mx table{width:100%;border-collapse:collapse;font-size:13px;background:var(--m-card)}
+.mx th{background:var(--m-th);color:var(--m-muted);text-transform:none;letter-spacing:0;font-size:12px;font-weight:700;padding:8px 10px;text-align:left;border-bottom:1px solid var(--m-border)}
+.mx td{padding:8px 10px;border-bottom:1px solid var(--m-border);color:var(--m-ink)}
+.mx td.num{text-align:right;font-family:var(--m-mono)}
+.mx .tbw{border:var(--m-card-b);border-radius:var(--m-card-r);overflow-x:auto;box-shadow:var(--m-shadow)}
+.mx .pill{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px;background:#FBEBDD;color:var(--warn)}
+/* 1. VCL Lightning (Salesforce SLDS structure, VCL colours) */
+.mx.t-lightning{--m-font:Calibri,Carlito,"Segoe UI",Arial,sans-serif;--m-mono:"Courier New",Courier,monospace;--m-page:#F3F3F3;--m-card:#fff;--m-ink:#181818;--m-muted:#706E6B;--m-border:#DDDBDA;--m-border-strong:#C9C9C9;--m-r:4px;
+  --m-head:#fff;--m-head-ink:#181818;--m-head-muted:#706E6B;--m-head-shadow:0 2px 2px rgba(0,0,0,.08);--m-ic-bg:#2B3990;--m-ic-ink:#fff;--m-ic-r:4px;--m-title:18px;--m-title-w:700;
+  --m-card-b:1px solid #DDDBDA;--m-card-r:4px;--m-shadow:0 2px 2px rgba(0,0,0,.1);--m-sec:14px;--m-sec-t:none;--m-sec-ls:0;--m-lbl:12px;--m-lbl-w:400;
+  --m-in-bg:#fff;--m-in-b:1px solid #C9C9C9;--m-in-bb:1px solid #C9C9C9;--m-in-r:4px;--m-btn-r:4px;--m-th:#FAFAF9}
+/* 2. SAP Fiori Horizon */
+.mx.t-fiori{--m-font:"72","72full",Arial,Helvetica,sans-serif;--m-mono:"72Mono",Menlo,Consolas,monospace;--m-page:#F5F6F7;--m-card:#fff;--m-ink:#1D2D3E;--m-muted:#556B82;--m-border:#E5E5E5;--m-border-strong:#BCC3CA;--m-r:12px;
+  --m-head:#fff;--m-head-ink:#1D2D3E;--m-head-muted:#556B82;--m-head-shadow:0 0 2px rgba(34,53,72,.2),0 2px 4px rgba(34,53,72,.12);--m-ic-bg:#EBF8FF;--m-ic-ink:#2B3990;--m-ic-r:50%;--m-title:20px;--m-title-w:700;
+  --m-card-b:0;--m-card-r:12px;--m-shadow:0 0 2px rgba(34,53,72,.16),0 2px 4px rgba(34,53,72,.16);--m-sec:16px;--m-sec-t:none;--m-sec-ls:0;--m-lbl:14px;--m-lbl-w:400;
+  --m-in-bg:#fff;--m-in-b:1px solid #BCC3CA;--m-in-bb:1px solid #556B81;--m-in-r:8px;--m-btn-r:8px;--m-th:#fff}
+/* 3. Microsoft Fluent 2 (Dynamics 365 / Business Central) */
+.mx.t-fluent{--m-font:"Segoe UI Variable","Segoe UI",-apple-system,Roboto,sans-serif;--m-mono:Consolas,"Cascadia Mono",monospace;--m-page:#FAFAFA;--m-card:#fff;--m-ink:#242424;--m-muted:#616161;--m-border:#E0E0E0;--m-border-strong:#D1D1D1;--m-r:8px;
+  --m-head:#2B3990;--m-head-ink:#fff;--m-head-muted:rgba(255,255,255,.8);--m-head-shadow:none;--m-ic-bg:rgba(255,255,255,.16);--m-ic-ink:#fff;--m-ic-r:4px;--m-title:18px;--m-title-w:600;
+  --m-card-b:0;--m-card-r:8px;--m-shadow:0 0 2px rgba(0,0,0,.12),0 2px 4px rgba(0,0,0,.14);--m-sec:14px;--m-sec-t:none;--m-sec-ls:0;--m-lbl:14px;--m-lbl-w:600;
+  --m-in-bg:#fff;--m-in-b:1px solid #D1D1D1;--m-in-bb:1px solid #616161;--m-in-r:4px;--m-btn-r:4px;--m-th:#F5F5F5}
+/* 4. Frappe Espresso (ERPNext v15 desk) */
+.mx.t-espresso{--m-font:InterVariable,Inter,-apple-system,"Segoe UI",sans-serif;--m-mono:"SF Mono",Menlo,Consolas,monospace;--m-page:#fff;--m-card:#fff;--m-ink:#171717;--m-muted:#7C7C7C;--m-border:#EDEDED;--m-border-strong:#E2E2E2;--m-r:12px;
+  --m-head:#fff;--m-head-ink:#171717;--m-head-muted:#7C7C7C;--m-head-shadow:none;--m-ic-bg:#F3F3F3;--m-ic-ink:#171717;--m-ic-r:8px;--m-title:20px;--m-title-w:600;
+  --m-card-b:1px solid #EDEDED;--m-card-r:12px;--m-shadow:none;--m-sec:13px;--m-sec-t:uppercase;--m-sec-ls:.4px;--m-lbl:13px;--m-lbl-w:400;
+  --m-in-bg:#F3F3F3;--m-in-b:0;--m-in-bb:0;--m-in-r:8px;--m-btn-r:8px;--m-th:#F8F8F8}
+/* 5. IBM Carbon */
+.mx.t-carbon{--m-font:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;--m-mono:"IBM Plex Mono",Menlo,monospace;--m-page:#F4F4F4;--m-card:#fff;--m-ink:#161616;--m-muted:#525252;--m-border:#E0E0E0;--m-border-strong:#8D8D8D;--m-r:0;
+  --m-head:#161616;--m-head-ink:#F4F4F4;--m-head-muted:#C6C6C6;--m-head-shadow:none;--m-ic-bg:#2B3990;--m-ic-ink:#fff;--m-ic-r:0;--m-title:18px;--m-title-w:600;
+  --m-card-b:0;--m-card-r:0;--m-shadow:none;--m-sec:16px;--m-sec-t:none;--m-sec-ls:0;--m-lbl:12px;--m-lbl-w:400;
+  --m-in-bg:#F4F4F4;--m-in-b:0;--m-in-bb:1px solid #8D8D8D;--m-in-r:0;--m-btn-r:0;--m-th:#E0E0E0}
+.mx.t-carbon .bp{text-align:left}
+/* 6. Google Material 3 */
+.mx.t-material{--m-font:Roboto,"Google Sans","Segoe UI",Arial,sans-serif;--m-mono:"Roboto Mono",Menlo,monospace;--m-page:#F8F8FF;--m-card:#EFF0FA;--m-ink:#1B1B21;--m-muted:#46464F;--m-border:#E2E1EC;--m-border-strong:#767680;--m-r:16px;
+  --m-head:#F8F8FF;--m-head-ink:#1B1B21;--m-head-muted:#46464F;--m-head-shadow:none;--m-ic-bg:#DFE0FF;--m-ic-ink:#2B3990;--m-ic-r:50%;--m-title:22px;--m-title-w:400;
+  --m-card-b:0;--m-card-r:12px;--m-shadow:none;--m-sec:14px;--m-sec-t:none;--m-sec-ls:.1px;--m-lbl:12px;--m-lbl-w:500;
+  --m-in-bg:transparent;--m-in-b:1px solid #767680;--m-in-bb:1px solid #767680;--m-in-r:4px;--m-btn-r:20px;--m-th:#E8E9F4}
+/* 7. Shopify Polaris */
+.mx.t-polaris{--m-font:Inter,-apple-system,"Segoe UI",Roboto,sans-serif;--m-mono:"SF Mono",Menlo,Consolas,monospace;--m-page:#F1F1F1;--m-card:#fff;--m-ink:#303030;--m-muted:#616161;--m-border:#E3E3E3;--m-border-strong:#8A8A8A;--m-r:12px;
+  --m-head:#F1F1F1;--m-head-ink:#303030;--m-head-muted:#616161;--m-head-shadow:none;--m-ic-bg:#fff;--m-ic-ink:#2B3990;--m-ic-r:8px;--m-title:20px;--m-title-w:700;
+  --m-card-b:0;--m-card-r:12px;--m-shadow:0 1px 0 rgba(26,26,26,.07),inset 0 -1px 0 rgba(0,0,0,.13),inset 0 0 0 1px rgba(0,0,0,.08);--m-sec:14px;--m-sec-t:none;--m-sec-ls:0;--m-lbl:13px;--m-lbl-w:450;
+  --m-in-bg:#FDFDFD;--m-in-b:1px solid #8A8A8A;--m-in-bb:1px solid #8A8A8A;--m-in-r:8px;--m-btn-r:8px;--m-th:#F7F7F7}
+.mx.t-polaris .bp{box-shadow:inset 0 -2px 0 rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.25)}
+.mx.t-polaris .mh{border-bottom:0}
+/* 8. Industrial HMI (ISA-101 high-performance) */
+.mx.t-hmi{--m-font:"Segoe UI",Calibri,Arial,sans-serif;--m-mono:Consolas,"Courier New",monospace;--m-page:#C9CBCD;--m-card:#DCDDDE;--m-ink:#111;--m-muted:#3A3D40;--m-border:#9EA1A4;--m-border-strong:#6B6E71;--m-r:2px;
+  --m-head:#AEB1B4;--m-head-ink:#111;--m-head-muted:#2E3134;--m-head-shadow:none;--m-ic-bg:#6B6E71;--m-ic-ink:#fff;--m-ic-r:2px;--m-title:20px;--m-title-w:700;
+  --m-card-b:1px solid #9EA1A4;--m-card-r:2px;--m-shadow:none;--m-sec:14px;--m-sec-t:uppercase;--m-sec-ls:.6px;--m-lbl:13px;--m-lbl-w:700;
+  --m-in-bg:#fff;--m-in-b:2px solid #3A3D40;--m-in-bb:2px solid #3A3D40;--m-in-r:2px;--m-btn-r:2px;--m-th:#C9CBCD;--ok:#1F4D2C;--ok-bg:#E8E9EA}
+.mx.t-hmi .bp{border:2px solid #111}
+/* step detail */
+.step{scroll-margin-top:64px}
+.step header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.step header .n{font-family:var(--mono);font-weight:700;color:var(--brand-text)}
+dl.facts{display:grid;grid-template-columns:minmax(120px,180px) 1fr;gap:8px 16px;margin:0}
+dl.facts dt{font-size:12px;line-height:20px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+dl.facts dd{margin:0;min-width:0}
+@media (max-width:560px){dl.facts{grid-template-columns:1fr}dl.facts dd{margin-bottom:6px}}
+/* tables */
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:13px;line-height:18px}
+th{background:var(--raised);text-align:left;font-size:12px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* model flow */
+.chain{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.chain span.box{padding:8px 10px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);font-family:var(--mono);font-size:13px}
+.chain span.box.new{border-style:dashed;color:var(--brand-text)}
+.chain span.arr{color:var(--muted)}
+.q{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:start}
+.q .n{font-family:var(--mono);font-weight:700;color:var(--brand-text)}
+footer{color:var(--muted);font-size:13px}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+
+/* data flow */
+.meet{display:grid;grid-template-columns:repeat(6,minmax(0,1fr)) minmax(0,1.3fr) repeat(2,minmax(0,1fr));gap:6px;align-items:stretch}
+.st{display:grid;gap:2px;align-content:start;padding:10px;border:1px solid var(--border);border-radius:4px;background:var(--raised);min-width:0}
+.st .nm{font-weight:700;font-size:13px}
+.st .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;font-weight:700}
+.st .u{font-size:12px;color:var(--muted);line-height:16px}
+.st.prod{border-top:4px solid var(--brand)}
+.st.sale{border-top:4px solid var(--info)}
+.st.gap{background:var(--surface);border-style:dashed}
+.st.gap .v{color:var(--warn-text)}
+.st.mid{background:var(--ok-tint);border:2px solid var(--ok-text)}
+.dir{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.dir .l{color:var(--brand-text)} .dir .r{color:var(--info-text)}
+@media (max-width:900px){.meet{grid-template-columns:repeat(3,minmax(0,1fr))}.st.mid{grid-column:1/-1}}
+@media (max-width:480px){.meet{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cascade{display:grid;gap:8px}
+.cas{display:grid;grid-template-columns:minmax(150px,220px) 1fr minmax(90px,auto);gap:12px;align-items:center}
+.cas .bar{height:22px;background:var(--sunken);border-radius:2px;position:relative;overflow:hidden}
+.cas .bar i{position:absolute;inset:0 auto 0 0;display:block}
+.cas .n{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+@media (max-width:560px){.cas{grid-template-columns:1fr auto}.cas .bar{grid-column:1/-1;order:3}}
+.c-dem{background:var(--muted)} .c-fg{background:var(--success)} .c-ins{background:var(--info)} .c-cov{background:var(--brand)} .c-short{background:var(--warning)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:2px;display:inline-block}
+.sk{display:flex;height:14px;min-width:140px;border-radius:2px;overflow:hidden;background:var(--sunken)}
+.sk i{display:block;height:100%}
+.toggle{display:inline-flex;gap:8px;align-items:center;font-size:14px}
+.filters{display:flex;flex-wrap:wrap;gap:8px 16px}.filters label{display:grid;gap:2px;font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}.filters select{font:14px var(--sans);padding:6px 8px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);color:var(--ink);max-width:100%}
+tfoot td{font-weight:700;background:var(--raised)}
+tr.flag td{background:var(--warn-tint)}
+
+/* click-through */
+.stations{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch}
+.stations button{flex:1 1 120px;display:grid;gap:2px;text-align:left;padding:10px;border:1px solid var(--border);border-top:4px solid var(--border-strong);border-radius:4px;background:var(--raised);color:var(--ink);font:inherit;cursor:pointer;min-width:0}
+.stations button .k{font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.stations button .t{font-weight:700}
+.stations button.side-p{border-top-color:var(--brand)} .stations button.side-s{border-top-color:var(--info)} .stations button.side-d{border-top-color:var(--success)}
+.stations button[aria-pressed="true"]{background:var(--brand-tint);outline:2px solid var(--focus);outline-offset:-2px}
+.wgrid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px}
+@media (max-width:860px){.wgrid{grid-template-columns:1fr}}
+.mock{border:1px solid var(--border-strong);border-radius:8px;background:var(--surface);overflow:hidden}
+.mock .bar{background:var(--brand);color:var(--on-brand);padding:8px 12px;font-weight:700;font-size:14px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.mock .bar span{font-weight:400;opacity:.85;font-size:12px}
+.mock .body{padding:12px;display:grid;gap:10px}
+.fld{display:grid;gap:3px}
+.fld .lb{font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.fld .in{border:1px solid var(--border-strong);border-radius:4px;padding:7px 10px;background:var(--raised);font-size:14px;min-height:34px}
+.fld .in.auto{background:var(--sunken);color:var(--muted)}
+.frow{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.btnmock{justify-self:start;background:var(--brand);color:var(--on-brand);border-radius:4px;padding:8px 14px;font-weight:700;font-size:14px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.tile{border:1px solid var(--border);border-radius:4px;padding:10px;background:var(--raised);display:grid;gap:2px}
+.tile .v{font-family:var(--mono);font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.posts{display:grid;gap:6px}
+.post{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:13px;padding:6px 8px;border-radius:4px;background:var(--raised);border:1px solid var(--border)}
+.post .dir{font-family:var(--mono);font-weight:700}
+.post .out{color:var(--warn-text)} .post .in{color:var(--ok-text)}
+.navrow{display:flex;justify-content:space-between;gap:8px}
+.navrow button{font:inherit;font-weight:700;padding:8px 14px;border-radius:4px;border:1px solid var(--border-strong);background:var(--surface);color:var(--brand-text);cursor:pointer}
+
+/* screens gallery */
+.sgrid{display:grid;grid-template-columns:240px minmax(0,1fr);gap:16px;align-items:start}
+.snav{display:grid;gap:4px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 56px)}
+.snav .label{margin-top:8px}
+.snav button{display:flex;justify-content:space-between;align-items:center;gap:6px;text-align:left;font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--border);border-radius:4px;background:var(--raised);color:var(--ink);cursor:pointer}
+.snav button .chip{font-size:10px;padding:1px 4px}
+.snav button[aria-pressed="true"]{background:var(--brand-tint);outline:2px solid var(--focus);outline-offset:-2px}
+#sc-sel{display:none;font:15px var(--sans);padding:8px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);color:var(--ink);width:100%}
+#sc-view{display:grid;gap:16px;min-width:0}
+@media (max-width:860px){.sgrid{grid-template-columns:1fr}.snav{display:none}#sc-sel{display:block}}
+.fpill{border:1px solid var(--border-strong);border-radius:4px;padding:4px 10px;font-size:13px;background:var(--raised)}
+.rflow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.rflow .st{flex:1 1 110px}.rflow .arr{color:var(--muted)}
+.tile.st-ok{background:var(--ok-tint)}.tile.st-no{background:var(--warn-tint)}.tile.st-wait{background:var(--brand-tint)}
+.mmodal{background:var(--sunken);border-radius:4px;padding:16px;display:grid;justify-items:center}.mmodal .mock{max-width:440px;width:100%;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.mock .cas .bar{background:var(--sunken);padding:0;display:block;font-weight:400}
+.btnmock.alt{background:var(--surface);color:var(--brand-text);border:1px solid var(--border-strong)}
+
+.related{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.related a{display:grid;gap:4px;padding:12px 14px;border:1px solid var(--border);border-left:0;border-top:4px solid var(--brand);border-radius:4px;background:var(--raised);color:var(--ink);text-decoration:none}
+.related a:hover{background:var(--sunken)}
+.related a b{color:var(--brand-text)}
+.related a span{font-size:13px;color:var(--muted)}
+.related a.here{border-top-color:var(--border-strong);pointer-events:none}
+</style>
+
+<header class="bar"><div class="wrap">
+  <h1>Exercise book build spec</h1>
+  <p>What gets built for exercise books in Phase 1, and the rules it follows · as at 04 Nov 2026 · IT Development, Vimit Converters Limited</p>
+</div></header>
+
+<nav class="tabs" aria-label="Sections"><div class="wrap" id="tabs">
+  <a href="#scope">Scope</a>
+  <a href="#items">Item model</a>
+  <a href="#stations">Stations</a>
+  <a href="#model">Order to stock flow</a>
+  <a href="#controls">Order controls</a>
+  <a href="#cleanup">Data clean-up</a>
+  <a href="#plan">Build plan</a>
+  <a href="#decisions">Decisions</a>
+</div></nav>
+
+<main><div class="wrap">
+
+<!-- ============ SCOPE ============ -->
+<section class="panel" id="p-scope" data-tab="scope">
+  <h2>What this spec covers</h2>
+  <p class="lede">The build for Phase 1: stock exercise books (Prince, Swara, Hi5), from printed covers and folds to packed cartons in Finished Goods, plus the checks on every selling document. Paper, ruling, school and customised orders come in Phase 2/3 (see the Roadmap). Every rule here was agreed with Tanuj on 04 Nov 2026 unless it is marked open.</p>
+  <div class="related"><a href="https://claude.ai/artifact/DtTjNC15VeSb9cneqqK16o"><b>Review ↗</b><span>Analysis: data flow, ERPNext today, what is built, your comments</span></a><a href="https://claude.ai/artifact/Y9A9EELmbJBt7tQoaKU4An"><b>Click-through ↗</b><span>What people see: each station and every screen and dashboard</span></a><a href="https://claude.ai/artifact/2W8SCEBSJ6MLonkZSznNsE" class="here"><b>Build spec (this page)</b><span>What gets built: items, postings, order checks, clean-up, plan, decisions</span></a><a href="https://claude.ai/artifact/UzRSVKSmc1oPW8TKP6BRZb"><b>Roadmap ↗</b><span>How the dev site grows, stage by stage</span></a></div>
+  <div class="card"><h3>Rules the build keeps</h3><ul class="tight">
+    <li><strong>Made to stock.</strong> Runs are planned by group (brand, size, pages, ruling), never one per Sales Order.</li>
+    <li><strong>One place to enter each station.</strong> The duplicate tracker on <code>/production-dev</code> goes.</li>
+    <li><strong>Every floor entry records stock</strong> in ERPNext. Nothing important lives only in a browser.</li>
+    <li><strong>Covers are counted in printed sheets.</strong> A4 = 2 books per sheet, A5 = 3. One sheet makes one insert set.</li>
+    <li><strong>Covers + folds = inserts.</strong> Folds are an input, named <code>FLD-&lt;PNC|SWR&gt;-&lt;A4|A5&gt;-&lt;PPP&gt;PG-&lt;RULING&gt;</code> (approved).</li>
+    <li><strong>The run number travels on every entry</strong> (<code>custom_eb_run</code> on Stock Entry).</li>
+    <li><strong>Checks run on the server</strong> (school or brand, unit and price), so every screen, import and API call is covered.</li>
+    <li><strong>Code lives in git.</strong> Items, fields and settings are created in <code>after_migrate</code>, never in a patch. No live-only scripts.</li>
+  </ul></div>
+</section>
+
+<!-- ============ ITEM MODEL ============ -->
+<section class="panel" id="p-items" data-tab="items" hidden>
+  <h2>Item model</h2>
+  <p class="lede">One item type per stage. The group key <code>brand | size | pages | ruling</code> runs from covers to the finished book, so each stage can be matched to the next.</p>
+  <h3>Flow by item type, stage to stage</h3>
+  <p>Each stage keeps its own item type. The key fields carried by each code let one stage be matched to the next. The pool key <code>brand | size | pages | ruling</code> is shared from covers through to the finished book.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Stage</th><th>Item type</th><th>Code pattern (example)</th><th>Unit</th><th>Warehouse</th><th>Key it carries</th><th>Items (with stock)</th><th>Becomes</th></tr></thead>
+    <tbody>
+      <tr><td>Paper <span class="chip wait">Phase 2/3</span></td><td>Raw paper</td><td><code>NP-Reels-610-42-…</code>, <code>WF/BP - Reel-…</code></td><td>Kg / Tonne / Ream</td><td><code>Stores - VCL</code></td><td>paper, width, gsm</td><td class="num">32 (15)</td><td>Ruled sheets</td></tr>
+      <tr><td>Ruling <span class="chip wait">Phase 2/3</span></td><td>Ruled sheet</td><td><code>RL - SL - A4 - BP</code> (the only one, no stock)</td><td>Sheets</td><td>-</td><td>ruling, size, paper</td><td class="num">1 (0)</td><td>Folds</td></tr>
+      <tr><td>Folds <span class="chip no">Missing</span></td><td>Folded inner (proposed)</td><td><code>FLD-&lt;PNC|SWR&gt;-&lt;A4|A5&gt;-&lt;PPP&gt;PG-&lt;RULING&gt;</code> (approved 04 Nov, twin of COV/INS)</td><td>Nos (one per book)</td><td><code>Stores - VCL</code></td><td>size, pages, paper, ruling</td><td class="num">0. None exists</td><td>Inserts</td></tr>
+      <tr><td>Covers</td><td>Printed cover sheet</td><td><code>COV-PNC-A5-120PG-SL</code></td><td>Sheets (A5 3-up, A4 2-up)</td><td><code>Stores - VCL</code></td><td>brand, size, pages, ruling</td><td class="num">80 (68)</td><td>Inserts</td></tr>
+      <tr><td>Inserts</td><td>Cover + inner, not yet packed</td><td><code>INS-PNC-A5-120PG-SL</code></td><td>Sets (1 set = 1 cover sheet)</td><td><code>Stores - VCL</code></td><td>brand, size, pages, ruling</td><td class="num">80 (6)</td><td>Finished book</td></tr>
+      <tr><td>Packing / finished</td><td>Finished book</td><td><code>PNCEB-A5-120PGS-CB-BP-SL</code></td><td>Nos, sold in Carton</td><td><code>Finished Goods - VCL</code></td><td>brand, size, pages, cover, paper, ruling</td><td class="num">1,302 (29)</td><td>Delivery</td></tr>
+      <tr><td>Packing material</td><td>Empty carton</td><td><code>PNC-EMPTY-CARTON-A4-EXBK-COMMON-425x305x260</code></td><td>Nos</td><td><code>Stores - VCL</code></td><td>brand, size (height ≈ pages, not mapped)</td><td class="num">90 (19)</td><td>Used up at packing</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout"><p><strong>Rule (Tanuj, 04 Nov):</strong> all cover stock is counted in <strong>printed sheets</strong>, including the 30 Oct opening (<code>MAT-STE-2026-00007</code>, whose remark "counts treated as single covers" is wrong). An A4 sheet makes 2 books and an A5 sheet makes 3. One cover sheet becomes one insert set, which is 2 or 3 books.</p></div>
+  <div class="callout"><p><strong>How Inserts work today (live dev page):</strong> one Repack in <code>Stores - VCL</code> with exactly two rows: <code>COV-x</code> out and its twin <code>INS-x</code> in, the same quantity, at zero cost. Nothing else is taken out. ERPNext agrees: 14 Repacks, only COV out and INS in, 25,384 = 25,384. No fold, inner, signature or section item exists anywhere. A Folds stage needs a new item set that mirrors COV and INS, such as <code>FLD-PNC-A5-120PG-SL</code>.</p></div>
+  <div class="tw"><table>
+    <thead><tr><th>Unit rule</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Cover sheet → books</td><td>A4 = 2, A5 = 3 (the up-count is read from the cover item name)</td></tr>
+      <tr><td>Cover sheet → insert set</td><td>1 : 1. One set = 2 (A4) or 3 (A5) books</td></tr>
+      <tr><td>Folds per insert set</td><td>Sets × up-count (one fold per book)</td></tr>
+      <tr><td>Books per carton</td><td>From the book item's Carton conversion, e.g. A4: 200pg 66 · 120pg 102 · 96pg 120 · 80pg 144 · 64pg 162 · 48pg 204. A5 cartons hold more (e.g. A5 120pg 186). 100-page books: blank, still to set</td></tr>
+      <tr><td>Default selling unit</td><td>Carton (already set on the 455 items that have a Carton conversion)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ STATIONS ============ -->
+<section class="panel" id="p-stations" data-tab="stations" hidden>
+  <h2>What each station records</h2>
+  <p class="lede">Every entry is a submitted Stock Entry that carries the run number. The screens call whitelisted methods in <code>production_floor</code> (like <code>stores.py</code>), with tests, not raw REST writes. Valuation is zero in Phase 1; covers and books get a cost in Phase 2.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Station</th><th>Document</th><th>Out</th><th>In</th><th>Warehouse</th><th>Checks</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Covers</td><td>Material Receipt (Phase 2: Manufacture)</td><td>- (Phase 2: board and ink)</td><td><code>COV-x</code>, sheets</td><td><code>Stores - VCL</code></td><td>Run number required; spoiled sheets recorded</td><td><span class="chip part">Exists, add run no.</span></td></tr>
+      <tr><td>Folds</td><td>Material Receipt (Phase 3: from ruled sheets)</td><td>- (Phase 3: ruled sheets)</td><td><code>FLD-x</code>, folds</td><td><code>Stores - VCL</code></td><td>Rejects recorded</td><td><span class="chip no">New</span></td></tr>
+      <tr><td>Inserts</td><td>Repack</td><td><code>COV-x</code> × sets; <code>FLD-x</code> × sets × up-count</td><td><code>INS-x</code>, sets</td><td><code>Stores - VCL</code></td><td>Stops if covers or folds on hand are short</td><td><span class="chip part">Exists, add folds row</span></td></tr>
+      <tr><td>Packing</td><td>Manufacture</td><td><code>INS-x</code> sets; empty cartons</td><td>Book item, books (cartons × conversion + loose)</td><td><code>Finished Goods - VCL</code></td><td>Spot-weigh about 1 in 20 cartons, flag beyond ±5%%</td><td><span class="chip part">Browser only today; backend a84ef92</span></td></tr>
+      <tr><td>Empty cartons</td><td>Stock Reconciliation (draft)</td><td colspan="2">Counted quantity per carton item</td><td><code>Stores - VCL</code></td><td>Tanuj submits</td><td><span class="chip part">Count 05 Nov</span></td></tr>
+      <tr><td>Delivery</td><td>Delivery Note</td><td>Book item</td><td>-</td><td>from <code>Finished Goods - VCL</code></td><td>Order checks (see Order controls)</td><td><span class="chip part">Change the default warehouse</span></td></tr>
+    </tbody>
+  </table></div>
+  <div class="card"><h3>New fields and records</h3><ul class="tight">
+    <li><code>custom_eb_run</code> (Data or Link) on Stock Entry, shown on every floor screen.</li>
+    <li>80 <code>FLD-</code> items, twins of the 80 COV/INS items, Item Group to be named.</li>
+    <li>A run record, if P6 decides one (a Work Order per group run, or a light run doctype).</li>
+    <li>VCL Stores Receipt Book Line (from the receiving backend a84ef92) for packing.</li>
+  </ul></div>
+</section>
+
+<!-- ============ PROPOSED FLOW ============ -->
+<section class="panel" id="p-model" data-tab="model" hidden>
+  <h2>Order to stock flow</h2>
+  <div class="callout warn"><p><strong>Draft for discussion.</strong> Nothing here is decided or built. It's a starting point that maps each floor step to a record ERPNext already has, so the review has something concrete to change.</p></div>
+
+  <div class="callout"><p><strong>Made to stock, not to order.</strong> A work order can't be raised for every Sales Order. Production and sales run as two separate loops that meet at finished stock. Production fills stock by SKU, in runs. Sales draws stock down, order by order.</p></div>
+
+  <h3>Production loop (by SKU, in runs)</h3>
+  <div class="chain">
+    <span class="box new">Run plan per SKU (from total open demand − stock, or a minimum level)</span><span class="arr">→</span>
+    <span class="box new">Ruling</span><span class="arr">→</span>
+    <span class="box">Covers (COV-)</span><span class="arr">→</span>
+    <span class="box new">Folding</span><span class="arr">→</span>
+    <span class="box">Inserts (INS-)</span><span class="arr">→</span>
+    <span class="box new">Packing receipt</span><span class="arr">→</span>
+    <span class="box">Finished Goods - VCL</span>
+  </div>
+
+  <h3>Sales loop (by order)</h3>
+  <div class="chain">
+    <span class="box">Sales Order (Carton)</span><span class="arr">→</span>
+    <span class="box new">Allot from stock (earliest delivery first)</span><span class="arr">→</span>
+    <span class="box">Delivery Note</span><span class="arr">→</span>
+    <span class="box">Sales Invoice</span>
+  </div>
+  <p>A dashed box is a record or step that isn't used for exercise books today. The only link between the loops is the shortfall per SKU: when open demand exceeds finished stock plus what's in the pipeline, that SKU gets a run. A run is planned by SKU, never by order.</p>
+
+  <h3>Each floor step mapped to a record</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Step</th><th>Stock in</th><th>Stock out (proposed item)</th><th>Record</th><th>Who enters it</th></tr></thead>
+    <tbody>
+      <tr><td>1 · Ruling</td><td>Paper NP / BP (kg or sheets)</td><td>Ruled sheet, per paper and ruling</td><td>Stock Entry (Manufacture) from the daily ruling log</td><td>To decide</td></tr>
+      <tr><td>2 · Covers</td><td>Cover board, ink (not consumed today)</td><td><code>COV-…</code> printed sheet <span class="chip ok">Exists</span></td><td>Material Receipt today. Could become a Manufacture that consumes the board.</td><td>To decide</td></tr>
+      <tr><td>3 · Folds</td><td>Ruled sheets (phase 2/3)</td><td><code>FLD-…</code>, per size, pages, paper and ruling</td><td>Stock item, so inserts can take it out</td><td>To decide</td></tr>
+      <tr><td colspan="5">Every record in this table belongs to a production run for one SKU. None of them points to a Sales Order.</td></tr>
+      <tr><td>4 · Inserts</td><td><code>COV-…</code> + <code>FLD-…</code></td><td><code>INS-…</code> insert set <span class="chip ok">Exists</span></td><td>Repack today</td><td>To decide</td></tr>
+      <tr><td>5 · Packing</td><td><code>INS-…</code> + carton</td><td>The book item (<code>PNCEB-…</code>) in <code>Finished Goods - VCL</code>, in <code>Carton</code></td><td>Manufacture against the BOM, from the receiving record (<code>a84ef92</code>)</td><td>To decide</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="grid2">
+    <div class="card"><h3>The smallest version</h3><p>Keep the cover and insert moves as they are. Add one receipt per packed batch at step 5 that consumes <code>INS-…</code> and puts books into <code>Finished Goods - VCL</code>. That keeps stock current after today's opening balance and lets Compass allot orders.</p></div>
+    <div class="card"><h3>The fuller version</h3><p>Ruled sheets and printed covers become stock items, so each step has a count, and yield and waste show up at every stage. It needs more items, a BOM per stage, and someone on the floor who enters every step.</p></div>
+  </div>
+</section>
+
+<!-- ============ ORDER CONTROLS ============ -->
+<section class="panel" id="p-controls" data-tab="controls" hidden>
+  <h2>Order controls: right item, right unit, right price</h2>
+  <p class="lede">Three checks stop the two most common order mistakes: a school book picked when the brand book was meant, and a carton price typed against one book. Each check runs on the server, so it catches every way a line gets in (Desk, Compass, Android, API, import), and also shows on screen where there is one. Status: the dry-run pack is ready and with you for approval (04 Nov). Nothing has been written live, committed or pushed.</p>
+
+  <div class="grid2">
+    <div class="card"><h3>1. School or brand?</h3>
+      <p>Picking a school item (Bank Paper, Newsprint, Brilliant White) asks the user to confirm. One more click, but the data stays accurate.</p>
+      <div class="mock"><div class="bar">School exercise book <span>pop-up</span></div><div class="body">
+        <p>This is a <strong>SCHOOL</strong> exercise book (no brand). Is this a school order? If you meant the Prince book, switch to it.</p>
+        <div style="display:flex;flex-wrap:wrap;gap:8px"><span class="btnmock">Yes, school order</span><span class="btnmock" style="background:var(--surface);color:var(--brand-text);border:1px solid var(--border-strong)">Switch to PNCEB-A4-96PGS-CB-BP-SL</span></div>
+      </div></div>
+      <ul class="tight">
+        <li>"Yes" ticks <strong>School order confirmed</strong> on the document. The server refuses to save school lines without it.</li>
+        <li>The matching brand item: <code>SCH-BP-EB-…</code> → <code>PNCEB-…</code>, <code>SCH-NP-EB-…</code> → <code>SWREB-…</code>, with the same size, pages, ruling and cover.</li>
+        <li>The school item names are renamed to start "School Exercise Book - …". The codes stay as they are.</li>
+      </ul>
+      <div class="tw"><table><thead><tr><th>Rename dry run</th><th>Items</th></tr></thead><tbody>
+        <tr><td>Renamed to "School Exercise Book - &lt;Paper&gt; - …"</td><td class="num">547 of 554</td></tr>
+        <tr><td>Left alone (codes that don't follow the pattern)</td><td class="num">7</td></tr>
+        <tr><td>Have a brand twin to switch to</td><td class="num">448 (60 twins disabled)</td></tr>
+        <tr><td>No brand twin (mostly Newsprint 100pg HSL/HSQ)</td><td class="num">99</td></tr>
+      </tbody></table></div>
+      <p><span class="chip wait">Ready, awaiting your approval</span> The server check runs on Opportunity, Quotation, Sales Order, Delivery Note and Sales Invoice. It only checks lines a save adds or changes, so old documents aren't blocked, and lines copied from an earlier document are trusted. The pop-up is on Desk and on Compass Orders and Quotations. Backup and rollback are ready.</p>
+    </div>
+
+    <div class="card"><h3>2. Sell in cartons by default</h3>
+      <p>Exercise books default to <strong>Carton</strong> as the selling unit, and the unit column is shown and required on every line.</p>
+      <div class="tw"><table><thead><tr><th>Line</th><th>Before</th><th>After</th></tr></thead><tbody>
+        <tr><td>New line, Prince A4 96pg</td><td>1 Nos (blank unit easy to miss)</td><td>1 Carton (= 120 books)</td></tr>
+        <tr><td>Unit column</td><td>Hidden or optional</td><td>Visible and required</td></tr>
+      </tbody></table></div>
+      <p><span class="chip ok">Already in place</span> All 455 exercise-book items that have a Carton conversion already sell in Cartons by default. There's nothing to apply. <strong>847 items have no Carton conversion</strong> (807 enabled), so they can't default to Carton until their pieces per carton are filled in.</p>
+      <p><strong>"Show the UOM":</strong> checked across all repos and the live site. It was <strong>not done</strong>, except one live setting (02 Nov) that shows the unit in the Sales Order item list. The pack makes the unit visible <em>and required</em> on all five documents, set up through the app, not as a live-only setting.</p>
+    </div>
+  </div>
+
+  <div class="card"><h3>3. Does the price fit the unit?</h3>
+    <p>One book is about 100/=, and a carton is many times that. The price on a line has to fall in the range for its unit.</p>
+    <div class="tw"><table><thead><tr><th>Unit on the line</th><th>Price entered</th><th>What happens</th></tr></thead><tbody>
+      <tr><td>Nos</td><td>Within the per-book range (about 100/=)</td><td><span class="chip ok">Saves</span></td></tr>
+      <tr><td>Nos</td><td>In the carton range (e.g. 3,000/=)</td><td><span class="chip no">Stops</span> "This looks like a carton price. Did you mean Carton?"</td></tr>
+      <tr><td>Carton</td><td>In the per-book range (e.g. 100/=)</td><td><span class="chip no">Stops</span> "This looks like a price for one book. Did you mean Nos?"</td></tr>
+      <tr><td>Carton</td><td>Per-book range × books per carton</td><td><span class="chip ok">Saves</span></td></tr>
+    </tbody></table></div>
+    <div class="grid2">
+      <div class="tw"><table><thead><tr><th>Proposed rule</th><th>Action</th></tr></thead><tbody>
+        <tr><td>Nos, above <strong>150/= per book</strong></td><td><span class="chip no">Blocks</span> "Did you mean 1 Carton?"</td></tr>
+        <tr><td>Carton, below <strong>3/= per book</strong> (rate ÷ books per carton)</td><td><span class="chip no">Blocks</span> "Did you mean Nos?"</td></tr>
+        <tr><td>More than 3× away from a clean price-list price</td><td><span class="chip wait">Warns</span></td></tr>
+      </tbody></table></div>
+      <div class="tw"><table><thead><tr><th>Would have caught since 06 Aug</th><th>Lines</th></tr></thead><tbody>
+        <tr><td>Opportunity (enquiries)</td><td class="num">72</td></tr>
+        <tr><td>Quotation</td><td class="num">74</td></tr>
+        <tr><td>Sales Order</td><td class="num">1</td></tr>
+      </tbody></table></div>
+    </div>
+    <p>One band of 3–150/= per book for every size catches the same lines as separate bands per size, so the simpler rule is proposed. <strong>Check before approving:</strong> is 150/= enough headroom for your dearest single book (200-page A4)? If any is sold above 150/= per book, raise the ceiling.</p>
+    <p><strong>Price-list clean-up needed first:</strong> 13 carton prices entered against Nos, 7 doubtful Nos prices on MGC/MNL covers, and 809 enabled items with no current price. Separately, <strong>937 of 989 Carton invoice lines have a conversion factor of 1</strong>. Those invoices count a carton as one book, so the stock and per-book figures behind them are wrong. That needs its own fix.</p>
+    <p><span class="chip wait">Ready, awaiting your approval</span></p>
+  </div>
+
+  <h3>Where each check applies</h3>
+  <div class="tw"><table><thead><tr><th>Entry point</th><th>Server check</th><th>Pop-up / hint on screen</th></tr></thead><tbody>
+    <tr><td>Desk: Opportunity, Quotation, Sales Order, Delivery Note, Sales Invoice</td><td><span class="chip ok">Yes</span></td><td><span class="chip ok">Yes</span></td></tr>
+    <tr><td>Compass Orders and Quotations</td><td><span class="chip ok">Yes</span></td><td><span class="chip ok">Yes</span></td></tr>
+    <tr><td>Compass stock lines, deals, audit, capture</td><td><span class="chip ok">Yes</span></td><td><span class="chip wait">Still to wire</span></td></tr>
+    <tr><td>Android app</td><td><span class="chip ok">Yes</span></td><td><span class="chip wait">Needs an app release</span></td></tr>
+    <tr><td>vcl_sales enquiry page</td><td><span class="chip ok">Yes</span></td><td><span class="chip wait">Still to wire</span></td></tr>
+    <tr><td>API and imports</td><td><span class="chip ok">Yes</span></td><td>-</td></tr>
+  </tbody></table></div>
+  <p class="lede">The server check covers everything, so a screen without the pop-up still can't save a wrong line. It just shows the message on save instead of when the item is picked.</p>
+  <div class="callout"><p><strong>The pack, for your approval:</strong> <code>C:\Second_Brain\output\selling_line_guards_pack_2026-11-04.md</code> on the PC. The code is on branch <code>feat/school-item-guard</code> in vcl-production and vcl_compass (local, not pushed). Tests: vcl-production's 16 new tests pass. Compass type checks are clean and all 495 tests pass. To go live: approve, then push, deploy and run a migrate (the new field and settings are created on migrate). Nothing is written until you say go.</p></div>
+</section>
+
+<!-- ============ CLEAN-UP ============ -->
+<section class="panel" id="p-cleanup" data-tab="cleanup" hidden>
+  <h2>Data clean-up needed first</h2>
+  <p class="lede">The checks and stock postings depend on clean master data. These are the known gaps as at 04 Nov.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Issue</th><th>Count</th><th>Why it matters</th><th>Blocks</th></tr></thead>
+    <tbody>
+      <tr><td>Carton prices entered against Nos</td><td class="num">13</td><td>The price check would compare against a wrong price</td><td>Price check (warn rule)</td></tr>
+      <tr><td>Doubtful Nos prices on MGC/MNL covers</td><td class="num">7</td><td>Same</td><td>Price check</td></tr>
+      <tr><td>Enabled items with no current price</td><td class="num">809</td><td>The check falls back to the 3–150/= band</td><td>Price check</td></tr>
+      <tr><td>Items with no Carton conversion</td><td class="num">847 (807 enabled)</td><td>Can't default to Carton, can't pack in cartons</td><td>Carton default, Packing</td></tr>
+      <tr><td>Carton invoice lines with conversion factor 1</td><td class="num">937 of 989</td><td>A carton counted as one book: stock and per-book figures are wrong</td><td>Reporting, stock</td></tr>
+      <tr><td>100-page books with no packing</td><td class="num">45</td><td>Can't convert cartons to books</td><td>Packing</td></tr>
+      <tr><td>A5 empty carton item disabled</td><td class="num">1</td><td>A5 packing can't take out cartons</td><td>Packing (A5)</td></tr>
+      <tr><td>CR10 renames left</td><td class="num">216 of 781</td><td>Names don't follow the standard</td><td>School rename</td></tr>
+      <tr><td>Legacy generic items on open orders</td><td class="num">2</td><td>No ruling, can't be matched to a group</td><td>Allocation</td></tr>
+      <tr><td>CPS ruling and cover options outdated</td><td class="num">2 fields</td><td>Specs can't record SL/SQ/GPH… or CB/MNL/MGC</td><td>Phase 3 (school/custom)</td></tr>
+      <tr><td>Paper reel showing 1,000,000 tonnes</td><td class="num">1</td><td>Paper stock is wrong</td><td>Phase 3 (paper)</td></tr>
+      <tr><td>Opening stock at zero valuation</td><td class="num">516,918 books</td><td>Books carry no cost</td><td>Phase 2 (cost)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============ BUILD PLAN ============ -->
+<section class="panel" id="p-plan" data-tab="plan" hidden>
+  <h2>Build plan</h2>
+  <h3>How to build it out</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Step</th><th>What</th><th>Where it's built</th><th>Depends on</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>Put the dev pages in git, so sessions stop overwriting each other</td><td>Repo of their own, or <code>vcl-production</code></td><td>-</td></tr>
+      <tr><td class="num">2</td><td>Create the 80 <code>FLD-</code> items (twins of COV/INS) and a <code>custom_eb_run</code> field on Stock Entry</td><td>vcl-production, in <code>after_migrate</code></td><td>FLD naming approved 04 Nov</td></tr>
+      <tr><td class="num">3</td><td>New Folds screen. Inserts screen changed to take out covers and folds</td><td>Exercise Book Production dev page</td><td>2</td></tr>
+      <tr><td class="num">4</td><td>Packing screen posts to <code>Finished Goods - VCL</code>, takes out inserts and empty cartons, spot-weighs</td><td>Dev page + the receiving backend (<code>a84ef92</code>, push it)</td><td>2, plus the carton count</td></tr>
+      <tr><td class="num">5</td><td>Deliver from Finished Goods. Stop the same-day "book in to deliver" receipts</td><td>Existing Delivery Note, default warehouse</td><td>4</td></tr>
+      <tr><td class="num">6</td><td>Dashboard: the Data flow tab, made live</td><td>Compass <code>/compass/exercise-books</code> (deploy it, then extend)</td><td>3–5 posting real entries</td></tr>
+      <tr><td class="num">7</td><td>Phase 2/3: paper and ruling stations, and school and customised orders</td><td>Same pattern</td><td>Phase 1 running</td></tr>
+    </tbody>
+  </table></div>
+  <p class="lede">Recommendation: the floor keeps entering on the Exercise Book Production dev page it already uses, with the changes above, so nobody learns a new tool. The dashboard lives in Compass, next to the orders. Once the screens settle, they move from the dev page into the vcl-production app, in git.</p>
+  <div class="card"><h3>Where the code lives</h3><ul class="tight">
+    <li><strong>Now:</strong> the dev page is a Web Page edited live over REST, not in git. Pull the live page before any change.</li>
+    <li><strong>Phase 1:</strong> the page source in vcl-production, with a deploy script that refuses to overwrite a newer live page. Stock moves go through whitelisted methods in <code>production_floor</code>.</li>
+    <li><strong>Phase 2:</strong> the floor screens become a page of the vcl-production app, and the dashboards live in Compass. The dev page is retired.</li>
+    <li><strong>Order checks:</strong> branch <code>feat/school-item-guard</code> in vcl-production and vcl_compass (on the PC, awaiting approval).</li>
+  </ul><p>Stage by stage: <a href="https://claude.ai/artifact/UzRSVKSmc1oPW8TKP6BRZb" style="color:var(--brand-text)">the Roadmap ↗</a>.</p></div>
+</section>
+
+<!-- ============ DECISIONS ============ -->
+<section class="panel" id="p-decisions" data-tab="decisions" hidden>
+  <h2>Open decisions</h2>
+  <p class="lede">Grouped by the part of the model they unblock. The first group decides how production is recorded. The rest are clean-up.</p>
+
+  <div class="card"><h3>Process and recording</h3>
+    <div class="q"><span class="n">P1</span><span>Confirm the five steps and where stitching and trimming sit (inside Inserts?).</span>
+    <span class="n">P2</span><span>Add Folding, Inserts and Packing stages to the exercise-book route, and decide what Sheeting and Collation mean for this line.</span>
+    <span class="n">P3</span><span>Smallest or fuller model (see Proposed flow): which steps post stock?</span>
+    <span class="n">P4</span><span>Who on the floor enters each step, and on which screen.</span>
+    <span class="n">P5</span><span>Does the daily ruling log feed ERPNext, or stay in CSV and Slack?</span>
+    <span class="n">P6</span><span>Settled: no work order per Sales Order. Still open: what a production run is recorded on (a run-level job card, a Work Order per SKU run, or just the stage stock entries), and what triggers a run (shortfall against open demand, a minimum stock level, or both).</span>
+    <span class="n">P7</span><span>Who owns each handover (Nadeem and Peter are candidates), and where the run reference travels on the floor.</span>
+    <span class="n">P8</span><span>How rejects, loose books and reversals are handled.</span>
+    <span class="n">P10</span><span>Settled 04 Nov: folds items are named <code>FLD-&lt;PNC|SWR&gt;-&lt;A4|A5&gt;-&lt;PPP&gt;PG-&lt;RULING&gt;</code>, twins of COV and INS. They will be created through the vcl-production app (step 2 of the build plan).</span>
+    <span class="n">P9</span><span>Put the dev pages in git, so sessions stop overwriting each other.</span></div>
+  </div>
+  <div class="card"><h3>Stock and orders</h3>
+    <div class="q"><span class="n">S1</span><span>How finished books are received into stock, and into which warehouse.</span>
+    <span class="n">S2</span><span>Who sets the order stage on Compass (the role list currently includes every sales rep).</span>
+    <span class="n">S3</span><span>When to deploy Exercise Book Orders (it needs a migrate and the <code>compass_exercise_books</code> config).</span>
+    <span class="n">S4</span><span>Are the three On Hold orders still live?</span>
+    <span class="n">S5</span><span>Valuation: the opening stock is at zero cost. When and how do books get a cost?</span>
+    <span class="n">S6</span><span>Make the packing record shared, not browser-only: push <code>a84ef92</code> and build its screen.</span>
+    <span class="n">S7</span><span>Should "Required" reserve stock per order rather than read all physical stock?</span>
+    <span class="n">S8</span><span>SFS is in Nos and carries legacy generic items. Convert it?</span></div>
+  </div>
+  <div class="card"><h3>Item master and specification</h3>
+    <div class="q"><span class="n">M1</span><span>CR10: finish the last 216 renames, or roll them back.</span>
+    <span class="n">M2</span><span>Pieces per carton for 100-page books (45 items) and A4 60-page Hi5 school.</span>
+    <span class="n">M3</span><span>FNB ruling (14 items) and the Prince A5 48 half-line price.</span>
+    <span class="n">M4</span><span>Standardise covers that aren't chipboard (MNL, MGC).</span>
+    <span class="n">M5</span><span>Update the CPS ruling and cover options to match the real codes.</span>
+    <span class="n">M6</span><span>BOM master: Graph row, keep or park Hi5, grammage and cover sheet sizes, and an owner on the floor.</span></div>
+  </div>
+  <div class="card"><h3>Phasing (from your comments, 04 Nov)</h3>
+    <div class="q"><span class="n">Ph1</span><span>Stock books: covers, folds, inserts, packing into Finished Goods, and deliveries from Finished Goods. Flow by item type, with brand and customer filters.</span>
+    <span class="n">Ph2/3</span><span>Paper and ruling, linked to books. School and customised exercise-book orders.</span></div>
+  </div>
+</section>
+
+</div></main>
+
+<script>
+(function(){
+  var links=[].slice.call(document.querySelectorAll('#tabs a'));
+  var panels=[].slice.call(document.querySelectorAll('section.panel'));
+  var names=panels.map(function(p){return p.dataset.tab});
+  function show(){
+    var h=(location.hash||'').slice(1); if(names.indexOf(h)<0) h='scope';
+    panels.forEach(function(p){p.hidden=p.dataset.tab!==h});
+    links.forEach(function(a){ if(a.getAttribute('href')==='#'+h) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
+  }
+  window.addEventListener('hashchange',function(){show();window.scrollTo(0,0)});
+  show();
+})();
+</script>

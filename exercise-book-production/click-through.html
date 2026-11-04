@@ -1,0 +1,577 @@
+<title>Exercise Book Click-through</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: brand header bar, sticky tab strip, one panel per tab; panels are plain documents on kraft. */
+:root{
+  --success:#3f6b4e;--info:#1b6a7c;--warning:#6e3b2a;
+  --surface:#f1ebdd;--raised:#ece6dc;--sunken:#e3dccb;--ink:#4a4542;--muted:#4d5b66;
+  --border:#d8bf95;--border-strong:#857252;--brand:#2b3990;--brand-text:#2b3990;--on-brand:#fff;
+  --brand-tint:#e3e3e4;--warn-text:#6e3b2a;--warn-tint:#ece0d7;--ok-text:#3f6b4e;--ok-tint:#e0eae2;
+  --info-text:#1b6a7c;--info-tint:#dce9ec;--focus:#2b3990;
+  --sans:Calibri,Carlito,"Segoe UI",Arial,system-ui,sans-serif;
+  --mono:"Courier New",Courier,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --surface:#1c1813;--raised:#27221b;--sunken:#140f0a;--ink:#f3ece0;--muted:#b5a88f;--border:#3b3328;
+  --border-strong:#7a6c56;--brand-text:#9eadf0;--brand-tint:#2a2a3e;--warn-text:#e0a070;--warn-tint:#3a2710;
+  --ok-text:#8fd3a5;--ok-tint:#1b2e20;--info-text:#6fc3d4;--info-tint:#13333a;--focus:#9eadf0;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --surface:#1c1813;--raised:#27221b;--sunken:#140f0a;--ink:#f3ece0;--muted:#b5a88f;--border:#3b3328;
+  --border-strong:#7a6c56;--brand-text:#9eadf0;--brand-tint:#2a2a3e;--warn-text:#e0a070;--warn-tint:#3a2710;
+  --ok-text:#8fd3a5;--ok-tint:#1b2e20;--info-text:#6fc3d4;--info-tint:#13333a;--focus:#9eadf0;color-scheme:dark}
+body{background:var(--surface);color:var(--ink);font:15px/22px var(--sans)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--brand)}
+.wrap{max-width:1100px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.bar{background:var(--brand);color:var(--on-brand)}
+header.bar .wrap{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;padding-block:14px}
+header.bar h1{margin:0;font-size:22px;line-height:28px;font-weight:700}
+header.bar p{margin:0;font-size:13px;opacity:.85}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--raised);border-bottom:1px solid var(--border)}
+nav.tabs .wrap{display:flex;gap:2px;overflow-x:auto;scrollbar-width:thin}
+nav.tabs a{flex:none;padding:12px 14px 10px;color:var(--muted);text-decoration:none;font-weight:700;font-size:14px;border-bottom:3px solid transparent;white-space:nowrap}
+nav.tabs a[aria-current="page"]{color:var(--brand-text);border-bottom-color:var(--brand)}
+nav.tabs a:hover{color:var(--ink)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+main .wrap{padding-block:24px 48px}
+section.panel{display:grid;gap:24px}
+h2{font-size:20px;line-height:26px;margin:0;text-wrap:balance}
+h3{font-size:16px;line-height:22px;margin:0}
+p{margin:0;max-width:72ch}
+.lede{color:var(--muted);max-width:72ch}
+code,.mono{font-family:var(--mono);font-size:13px}
+p code,li code,dd code{overflow-wrap:anywhere}
+.label{font-size:12px;line-height:16px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.chip{display:inline-block;font-size:12px;line-height:16px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:2px 6px;border-radius:2px;white-space:nowrap}
+.chip.ok{background:var(--ok-tint);color:var(--ok-text)}
+.chip.part{background:var(--info-tint);color:var(--info-text)}
+.chip.no{background:var(--warn-tint);color:var(--warn-text)}
+.chip.wait{background:var(--brand-tint);color:var(--brand-text)}
+.card{background:var(--raised);border:1px solid var(--border);border-radius:4px;padding:16px;display:grid;gap:12px;min-width:0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.callout{background:var(--info-tint);border-radius:4px;padding:12px 16px}
+.callout.warn{background:var(--warn-tint)}
+ul.tight{margin:0;padding-left:20px;display:grid;gap:4px}
+/* process strip */
+.flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;counter-reset:s}
+.flow a{display:grid;gap:4px;padding:12px;background:var(--raised);border:1px solid var(--border);border-top:4px solid var(--brand);border-radius:4px;color:var(--ink);text-decoration:none}
+.flow a:hover{background:var(--sunken)}
+.flow .n{font-family:var(--mono);color:var(--brand-text);font-weight:700}
+.flow .t{font-weight:700}
+@media (max-width:720px){.flow{grid-template-columns:1fr}}
+/* process flowchart */
+.fwrap{margin:0;display:grid;gap:10px;background:var(--raised);border:1px solid var(--border);border-radius:4px;padding:16px}
+.fchart{width:100%;height:auto;display:block;font-family:var(--sans)}
+.fh-narrow{display:none;max-width:400px;margin:0 auto}
+@media (max-width:640px){.fh-wide{display:none}.fh-narrow{display:block}}
+.fa{fill:none;stroke:var(--muted);stroke-width:1.5}
+.fah{fill:var(--muted)}
+.fn rect{stroke-width:2}
+.fn.ok rect{fill:var(--ok-tint);stroke:var(--ok-text)}
+.fn.no rect{fill:var(--surface);stroke:var(--warn-text);stroke-dasharray:5 4}
+.fn.end rect{fill:var(--brand);stroke:var(--brand)}
+.fn.end text{fill:var(--on-brand)}
+.fn text{fill:var(--ink)}
+.fh{font-size:15px;font-weight:700}
+.fnum{font-family:var(--mono);fill:var(--brand-text)}
+.fs{font-size:12px;fill:var(--muted)!important}
+.fn.end .fs{fill:var(--on-brand)!important;opacity:.85}
+.fst{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.fn.ok .fst{fill:var(--ok-text)}
+.fn.no .fst{fill:var(--warn-text)}
+a.fn:hover rect{filter:brightness(.95)}
+a.fn:focus-visible rect{stroke:var(--focus);stroke-width:3}
+/* entry-screen themes (click-through mock) */
+.themes{display:flex;flex-wrap:wrap;gap:6px}
+.themes button{font:inherit;font-size:13px;font-weight:700;padding:6px 10px;border-radius:4px;border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);cursor:pointer}
+.themes button[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.tnote{font-size:13px;color:var(--muted);max-width:none}
+.mock.mx{--p:#2B3990;--p-on:#fff;--ok:#2F5D50;--ok-bg:#E6EFEA;--warn:#B35A00;
+  font-family:var(--m-font);color:var(--m-ink);background:var(--m-page);border:1px solid var(--m-border);border-radius:var(--m-r);overflow:hidden;font-size:14px;line-height:20px}
+.mx *{box-sizing:border-box}
+.mx .mh{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--m-head);color:var(--m-head-ink);border-bottom:1px solid var(--m-border);box-shadow:var(--m-head-shadow)}
+.mx .ic{flex:none;width:36px;height:36px;border-radius:var(--m-ic-r);background:var(--m-ic-bg);color:var(--m-ic-ink);display:grid;place-items:center;font-weight:700;font-size:13px;letter-spacing:.3px}
+.mx .ht{display:grid;gap:0;min-width:0}
+.mx .ob{font-size:12px;line-height:16px;color:var(--m-head-muted)}
+.mx .tt{font-size:var(--m-title);line-height:1.2;font-weight:var(--m-title-w);overflow-wrap:anywhere}
+.mx .crumb{margin-left:auto;font-size:12px;color:var(--m-head-muted);white-space:nowrap}
+.mx .crumb b{font-family:var(--m-mono);color:var(--m-head-ink)}
+.mx .mb{padding:14px;display:grid;gap:12px}
+.mx .cardx{background:var(--m-card);border:var(--m-card-b);border-radius:var(--m-card-r);box-shadow:var(--m-shadow);padding:14px;display:grid;gap:12px}
+.mx .sec{font-size:var(--m-sec);font-weight:700;color:var(--m-ink);text-transform:var(--m-sec-t);letter-spacing:var(--m-sec-ls)}
+.mx .fx{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.mx .f{display:grid;gap:4px;min-width:0}
+.mx .f .l{font-size:var(--m-lbl);font-weight:var(--m-lbl-w);color:var(--m-muted)}
+.mx .f .i{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:var(--m-h);padding:0 10px;background:var(--m-in-bg);border:var(--m-in-b);border-bottom:var(--m-in-bb);border-radius:var(--m-in-r);color:var(--m-ink);overflow-wrap:anywhere}
+.mx .f .i.pick::after{content:"\25BE";color:var(--m-muted);font-size:12px}
+.mx .f .ro{min-height:var(--m-h);display:flex;align-items:center;color:var(--m-ink);font-weight:700;overflow-wrap:anywhere}
+.mx .f .ro::before{content:"\1F512\FE0E";font-size:11px;margin-right:6px;opacity:.45}
+.mx .f.qn .i,.mx .f.qn .ro{font-family:var(--m-mono);font-variant-numeric:tabular-nums;font-weight:700}
+.mx .sum{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;padding:10px 12px;border-radius:var(--m-in-r);background:var(--ok-bg);color:var(--ok)}
+.mx .sum b{font-family:var(--m-mono);font-size:18px;font-variant-numeric:tabular-nums}
+.mx .act{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.mx .bp{font:inherit;font-weight:700;border:0;cursor:pointer;background:var(--p);color:var(--p-on);border-radius:var(--m-btn-r);padding:0 18px;min-height:36px}
+.mx .bs{font:inherit;font-weight:700;cursor:pointer;background:var(--m-card);color:var(--p);border:1px solid var(--m-border-strong);border-radius:var(--m-btn-r);padding:0 14px;min-height:36px}
+.mx .toast{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 12px;border-radius:var(--m-in-r);background:var(--ok);color:#fff;font-weight:700}
+.mx .toast button{font:inherit;font-weight:700;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.7);border-radius:var(--m-btn-r);padding:4px 10px;cursor:pointer}
+.mx .hint{font-size:12px;color:var(--m-muted)}
+/* floor mode: touch, arm's length */
+.mx.floor{--m-h:52px}
+.mx.floor .f .i,.mx.floor .f .ro{font-size:18px}
+.mx.floor .f .l{font-size:14px}
+.mx.floor .f.qn .i,.mx.floor .f.qn .ro{font-size:28px;min-height:60px}
+.mx.floor .fx{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.mx.floor .act .bp{flex:1 1 100%;min-height:56px;font-size:18px}
+.mx.desk{--m-h:34px}
+/* desk dashboard bits */
+.mx .kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.mx .kp div{background:var(--m-card);border:var(--m-card-b);border-radius:var(--m-card-r);box-shadow:var(--m-shadow);padding:10px;display:grid;gap:2px}
+.mx .kp .k{font-size:12px;color:var(--m-muted)}
+.mx .kp .v{font-family:var(--m-mono);font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.mx .kp .v.bad{color:var(--warn)}
+.mx table{width:100%;border-collapse:collapse;font-size:13px;background:var(--m-card)}
+.mx th{background:var(--m-th);color:var(--m-muted);text-transform:none;letter-spacing:0;font-size:12px;font-weight:700;padding:8px 10px;text-align:left;border-bottom:1px solid var(--m-border)}
+.mx td{padding:8px 10px;border-bottom:1px solid var(--m-border);color:var(--m-ink)}
+.mx td.num{text-align:right;font-family:var(--m-mono)}
+.mx .tbw{border:var(--m-card-b);border-radius:var(--m-card-r);overflow-x:auto;box-shadow:var(--m-shadow)}
+.mx .pill{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px;background:#FBEBDD;color:var(--warn)}
+/* 1. VCL Lightning (Salesforce SLDS structure, VCL colours) */
+.mx.t-lightning{--m-font:Calibri,Carlito,"Segoe UI",Arial,sans-serif;--m-mono:"Courier New",Courier,monospace;--m-page:#F3F3F3;--m-card:#fff;--m-ink:#181818;--m-muted:#706E6B;--m-border:#DDDBDA;--m-border-strong:#C9C9C9;--m-r:4px;
+  --m-head:#fff;--m-head-ink:#181818;--m-head-muted:#706E6B;--m-head-shadow:0 2px 2px rgba(0,0,0,.08);--m-ic-bg:#2B3990;--m-ic-ink:#fff;--m-ic-r:4px;--m-title:18px;--m-title-w:700;
+  --m-card-b:1px solid #DDDBDA;--m-card-r:4px;--m-shadow:0 2px 2px rgba(0,0,0,.1);--m-sec:14px;--m-sec-t:none;--m-sec-ls:0;--m-lbl:12px;--m-lbl-w:400;
+  --m-in-bg:#fff;--m-in-b:1px solid #C9C9C9;--m-in-bb:1px solid #C9C9C9;--m-in-r:4px;--m-btn-r:4px;--m-th:#FAFAF9}
+/* 2. SAP Fiori Horizon */
+.mx.t-fiori{--m-font:"72","72full",Arial,Helvetica,sans-serif;--m-mono:"72Mono",Menlo,Consolas,monospace;--m-page:#F5F6F7;--m-card:#fff;--m-ink:#1D2D3E;--m-muted:#556B82;--m-border:#E5E5E5;--m-border-strong:#BCC3CA;--m-r:12px;
+  --m-head:#fff;--m-head-ink:#1D2D3E;--m-head-muted:#556B82;--m-head-shadow:0 0 2px rgba(34,53,72,.2),0 2px 4px rgba(34,53,72,.12);--m-ic-bg:#EBF8FF;--m-ic-ink:#2B3990;--m-ic-r:50%;--m-title:20px;--m-title-w:700;
+  --m-card-b:0;--m-card-r:12px;--m-shadow:0 0 2px rgba(34,53,72,.16),0 2px 4px rgba(34,53,72,.16);--m-sec:16px;--m-sec-t:none;--m-sec-ls:0;--m-lbl:14px;--m-lbl-w:400;
+  --m-in-bg:#fff;--m-in-b:1px solid #BCC3CA;--m-in-bb:1px solid #556B81;--m-in-r:8px;--m-btn-r:8px;--m-th:#fff}
+/* 3. Microsoft Fluent 2 (Dynamics 365 / Business Central) */
+.mx.t-fluent{--m-font:"Segoe UI Variable","Segoe UI",-apple-system,Roboto,sans-serif;--m-mono:Consolas,"Cascadia Mono",monospace;--m-page:#FAFAFA;--m-card:#fff;--m-ink:#242424;--m-muted:#616161;--m-border:#E0E0E0;--m-border-strong:#D1D1D1;--m-r:8px;
+  --m-head:#2B3990;--m-head-ink:#fff;--m-head-muted:rgba(255,255,255,.8);--m-head-shadow:none;--m-ic-bg:rgba(255,255,255,.16);--m-ic-ink:#fff;--m-ic-r:4px;--m-title:18px;--m-title-w:600;
+  --m-card-b:0;--m-card-r:8px;--m-shadow:0 0 2px rgba(0,0,0,.12),0 2px 4px rgba(0,0,0,.14);--m-sec:14px;--m-sec-t:none;--m-sec-ls:0;--m-lbl:14px;--m-lbl-w:600;
+  --m-in-bg:#fff;--m-in-b:1px solid #D1D1D1;--m-in-bb:1px solid #616161;--m-in-r:4px;--m-btn-r:4px;--m-th:#F5F5F5}
+/* 4. Frappe Espresso (ERPNext v15 desk) */
+.mx.t-espresso{--m-font:InterVariable,Inter,-apple-system,"Segoe UI",sans-serif;--m-mono:"SF Mono",Menlo,Consolas,monospace;--m-page:#fff;--m-card:#fff;--m-ink:#171717;--m-muted:#7C7C7C;--m-border:#EDEDED;--m-border-strong:#E2E2E2;--m-r:12px;
+  --m-head:#fff;--m-head-ink:#171717;--m-head-muted:#7C7C7C;--m-head-shadow:none;--m-ic-bg:#F3F3F3;--m-ic-ink:#171717;--m-ic-r:8px;--m-title:20px;--m-title-w:600;
+  --m-card-b:1px solid #EDEDED;--m-card-r:12px;--m-shadow:none;--m-sec:13px;--m-sec-t:uppercase;--m-sec-ls:.4px;--m-lbl:13px;--m-lbl-w:400;
+  --m-in-bg:#F3F3F3;--m-in-b:0;--m-in-bb:0;--m-in-r:8px;--m-btn-r:8px;--m-th:#F8F8F8}
+/* 5. IBM Carbon */
+.mx.t-carbon{--m-font:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;--m-mono:"IBM Plex Mono",Menlo,monospace;--m-page:#F4F4F4;--m-card:#fff;--m-ink:#161616;--m-muted:#525252;--m-border:#E0E0E0;--m-border-strong:#8D8D8D;--m-r:0;
+  --m-head:#161616;--m-head-ink:#F4F4F4;--m-head-muted:#C6C6C6;--m-head-shadow:none;--m-ic-bg:#2B3990;--m-ic-ink:#fff;--m-ic-r:0;--m-title:18px;--m-title-w:600;
+  --m-card-b:0;--m-card-r:0;--m-shadow:none;--m-sec:16px;--m-sec-t:none;--m-sec-ls:0;--m-lbl:12px;--m-lbl-w:400;
+  --m-in-bg:#F4F4F4;--m-in-b:0;--m-in-bb:1px solid #8D8D8D;--m-in-r:0;--m-btn-r:0;--m-th:#E0E0E0}
+.mx.t-carbon .bp{text-align:left}
+/* 6. Google Material 3 */
+.mx.t-material{--m-font:Roboto,"Google Sans","Segoe UI",Arial,sans-serif;--m-mono:"Roboto Mono",Menlo,monospace;--m-page:#F8F8FF;--m-card:#EFF0FA;--m-ink:#1B1B21;--m-muted:#46464F;--m-border:#E2E1EC;--m-border-strong:#767680;--m-r:16px;
+  --m-head:#F8F8FF;--m-head-ink:#1B1B21;--m-head-muted:#46464F;--m-head-shadow:none;--m-ic-bg:#DFE0FF;--m-ic-ink:#2B3990;--m-ic-r:50%;--m-title:22px;--m-title-w:400;
+  --m-card-b:0;--m-card-r:12px;--m-shadow:none;--m-sec:14px;--m-sec-t:none;--m-sec-ls:.1px;--m-lbl:12px;--m-lbl-w:500;
+  --m-in-bg:transparent;--m-in-b:1px solid #767680;--m-in-bb:1px solid #767680;--m-in-r:4px;--m-btn-r:20px;--m-th:#E8E9F4}
+/* 7. Shopify Polaris */
+.mx.t-polaris{--m-font:Inter,-apple-system,"Segoe UI",Roboto,sans-serif;--m-mono:"SF Mono",Menlo,Consolas,monospace;--m-page:#F1F1F1;--m-card:#fff;--m-ink:#303030;--m-muted:#616161;--m-border:#E3E3E3;--m-border-strong:#8A8A8A;--m-r:12px;
+  --m-head:#F1F1F1;--m-head-ink:#303030;--m-head-muted:#616161;--m-head-shadow:none;--m-ic-bg:#fff;--m-ic-ink:#2B3990;--m-ic-r:8px;--m-title:20px;--m-title-w:700;
+  --m-card-b:0;--m-card-r:12px;--m-shadow:0 1px 0 rgba(26,26,26,.07),inset 0 -1px 0 rgba(0,0,0,.13),inset 0 0 0 1px rgba(0,0,0,.08);--m-sec:14px;--m-sec-t:none;--m-sec-ls:0;--m-lbl:13px;--m-lbl-w:450;
+  --m-in-bg:#FDFDFD;--m-in-b:1px solid #8A8A8A;--m-in-bb:1px solid #8A8A8A;--m-in-r:8px;--m-btn-r:8px;--m-th:#F7F7F7}
+.mx.t-polaris .bp{box-shadow:inset 0 -2px 0 rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.25)}
+.mx.t-polaris .mh{border-bottom:0}
+/* 8. Industrial HMI (ISA-101 high-performance) */
+.mx.t-hmi{--m-font:"Segoe UI",Calibri,Arial,sans-serif;--m-mono:Consolas,"Courier New",monospace;--m-page:#C9CBCD;--m-card:#DCDDDE;--m-ink:#111;--m-muted:#3A3D40;--m-border:#9EA1A4;--m-border-strong:#6B6E71;--m-r:2px;
+  --m-head:#AEB1B4;--m-head-ink:#111;--m-head-muted:#2E3134;--m-head-shadow:none;--m-ic-bg:#6B6E71;--m-ic-ink:#fff;--m-ic-r:2px;--m-title:20px;--m-title-w:700;
+  --m-card-b:1px solid #9EA1A4;--m-card-r:2px;--m-shadow:none;--m-sec:14px;--m-sec-t:uppercase;--m-sec-ls:.6px;--m-lbl:13px;--m-lbl-w:700;
+  --m-in-bg:#fff;--m-in-b:2px solid #3A3D40;--m-in-bb:2px solid #3A3D40;--m-in-r:2px;--m-btn-r:2px;--m-th:#C9CBCD;--ok:#1F4D2C;--ok-bg:#E8E9EA}
+.mx.t-hmi .bp{border:2px solid #111}
+/* step detail */
+.step{scroll-margin-top:64px}
+.step header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.step header .n{font-family:var(--mono);font-weight:700;color:var(--brand-text)}
+dl.facts{display:grid;grid-template-columns:minmax(120px,180px) 1fr;gap:8px 16px;margin:0}
+dl.facts dt{font-size:12px;line-height:20px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+dl.facts dd{margin:0;min-width:0}
+@media (max-width:560px){dl.facts{grid-template-columns:1fr}dl.facts dd{margin-bottom:6px}}
+/* tables */
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:13px;line-height:18px}
+th{background:var(--raised);text-align:left;font-size:12px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* model flow */
+.chain{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.chain span.box{padding:8px 10px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);font-family:var(--mono);font-size:13px}
+.chain span.box.new{border-style:dashed;color:var(--brand-text)}
+.chain span.arr{color:var(--muted)}
+.q{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:start}
+.q .n{font-family:var(--mono);font-weight:700;color:var(--brand-text)}
+footer{color:var(--muted);font-size:13px}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+
+/* data flow */
+.meet{display:grid;grid-template-columns:repeat(6,minmax(0,1fr)) minmax(0,1.3fr) repeat(2,minmax(0,1fr));gap:6px;align-items:stretch}
+.st{display:grid;gap:2px;align-content:start;padding:10px;border:1px solid var(--border);border-radius:4px;background:var(--raised);min-width:0}
+.st .nm{font-weight:700;font-size:13px}
+.st .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;font-weight:700}
+.st .u{font-size:12px;color:var(--muted);line-height:16px}
+.st.prod{border-top:4px solid var(--brand)}
+.st.sale{border-top:4px solid var(--info)}
+.st.gap{background:var(--surface);border-style:dashed}
+.st.gap .v{color:var(--warn-text)}
+.st.mid{background:var(--ok-tint);border:2px solid var(--ok-text)}
+.dir{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.dir .l{color:var(--brand-text)} .dir .r{color:var(--info-text)}
+@media (max-width:900px){.meet{grid-template-columns:repeat(3,minmax(0,1fr))}.st.mid{grid-column:1/-1}}
+@media (max-width:480px){.meet{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cascade{display:grid;gap:8px}
+.cas{display:grid;grid-template-columns:minmax(150px,220px) 1fr minmax(90px,auto);gap:12px;align-items:center}
+.cas .bar{height:22px;background:var(--sunken);border-radius:2px;position:relative;overflow:hidden}
+.cas .bar i{position:absolute;inset:0 auto 0 0;display:block}
+.cas .n{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+@media (max-width:560px){.cas{grid-template-columns:1fr auto}.cas .bar{grid-column:1/-1;order:3}}
+.c-dem{background:var(--muted)} .c-fg{background:var(--success)} .c-ins{background:var(--info)} .c-cov{background:var(--brand)} .c-short{background:var(--warning)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:2px;display:inline-block}
+.sk{display:flex;height:14px;min-width:140px;border-radius:2px;overflow:hidden;background:var(--sunken)}
+.sk i{display:block;height:100%}
+.toggle{display:inline-flex;gap:8px;align-items:center;font-size:14px}
+.filters{display:flex;flex-wrap:wrap;gap:8px 16px}.filters label{display:grid;gap:2px;font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}.filters select{font:14px var(--sans);padding:6px 8px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);color:var(--ink);max-width:100%}
+tfoot td{font-weight:700;background:var(--raised)}
+tr.flag td{background:var(--warn-tint)}
+
+/* click-through */
+.stations{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch}
+.stations button{flex:1 1 120px;display:grid;gap:2px;text-align:left;padding:10px;border:1px solid var(--border);border-top:4px solid var(--border-strong);border-radius:4px;background:var(--raised);color:var(--ink);font:inherit;cursor:pointer;min-width:0}
+.stations button .k{font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.stations button .t{font-weight:700}
+.stations button.side-p{border-top-color:var(--brand)} .stations button.side-s{border-top-color:var(--info)} .stations button.side-d{border-top-color:var(--success)}
+.stations button[aria-pressed="true"]{background:var(--brand-tint);outline:2px solid var(--focus);outline-offset:-2px}
+.wgrid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px}
+@media (max-width:860px){.wgrid{grid-template-columns:1fr}}
+.mock{border:1px solid var(--border-strong);border-radius:8px;background:var(--surface);overflow:hidden}
+.mock .bar{background:var(--brand);color:var(--on-brand);padding:8px 12px;font-weight:700;font-size:14px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.mock .bar span{font-weight:400;opacity:.85;font-size:12px}
+.mock .body{padding:12px;display:grid;gap:10px}
+.fld{display:grid;gap:3px}
+.fld .lb{font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.fld .in{border:1px solid var(--border-strong);border-radius:4px;padding:7px 10px;background:var(--raised);font-size:14px;min-height:34px}
+.fld .in.auto{background:var(--sunken);color:var(--muted)}
+.frow{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.btnmock{justify-self:start;background:var(--brand);color:var(--on-brand);border-radius:4px;padding:8px 14px;font-weight:700;font-size:14px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.tile{border:1px solid var(--border);border-radius:4px;padding:10px;background:var(--raised);display:grid;gap:2px}
+.tile .v{font-family:var(--mono);font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.posts{display:grid;gap:6px}
+.post{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:13px;padding:6px 8px;border-radius:4px;background:var(--raised);border:1px solid var(--border)}
+.post .dir{font-family:var(--mono);font-weight:700}
+.post .out{color:var(--warn-text)} .post .in{color:var(--ok-text)}
+.navrow{display:flex;justify-content:space-between;gap:8px}
+.navrow button{font:inherit;font-weight:700;padding:8px 14px;border-radius:4px;border:1px solid var(--border-strong);background:var(--surface);color:var(--brand-text);cursor:pointer}
+
+/* screens gallery */
+.sgrid{display:grid;grid-template-columns:240px minmax(0,1fr);gap:16px;align-items:start}
+.snav{display:grid;gap:4px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 56px)}
+.snav .label{margin-top:8px}
+.snav button{display:flex;justify-content:space-between;align-items:center;gap:6px;text-align:left;font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--border);border-radius:4px;background:var(--raised);color:var(--ink);cursor:pointer}
+.snav button .chip{font-size:10px;padding:1px 4px}
+.snav button[aria-pressed="true"]{background:var(--brand-tint);outline:2px solid var(--focus);outline-offset:-2px}
+#sc-sel{display:none;font:15px var(--sans);padding:8px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);color:var(--ink);width:100%}
+#sc-view{display:grid;gap:16px;min-width:0}
+@media (max-width:860px){.sgrid{grid-template-columns:1fr}.snav{display:none}#sc-sel{display:block}}
+.fpill{border:1px solid var(--border-strong);border-radius:4px;padding:4px 10px;font-size:13px;background:var(--raised)}
+.rflow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.rflow .st{flex:1 1 110px}.rflow .arr{color:var(--muted)}
+.tile.st-ok{background:var(--ok-tint)}.tile.st-no{background:var(--warn-tint)}.tile.st-wait{background:var(--brand-tint)}
+.mmodal{background:var(--sunken);border-radius:4px;padding:16px;display:grid;justify-items:center}.mmodal .mock{max-width:440px;width:100%;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.mock .cas .bar{background:var(--sunken);padding:0;display:block;font-weight:400}
+.btnmock.alt{background:var(--surface);color:var(--brand-text);border:1px solid var(--border-strong)}
+
+.related{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.related a{display:grid;gap:4px;padding:12px 14px;border:1px solid var(--border);border-left:0;border-top:4px solid var(--brand);border-radius:4px;background:var(--raised);color:var(--ink);text-decoration:none}
+.related a:hover{background:var(--sunken)}
+.related a b{color:var(--brand-text)}
+.related a span{font-size:13px;color:var(--muted)}
+.related a.here{border-top-color:var(--border-strong);pointer-events:none}
+</style>
+
+<header class="bar"><div class="wrap">
+  <h1>Exercise book click-through</h1>
+  <p>Prototype of every station, screen and dashboard · as at 04 Nov 2026 · IT Development, Vimit Converters Limited</p>
+</div></header>
+
+<nav class="tabs" aria-label="Sections"><div class="wrap" id="tabs">
+  <a href="#walk">Stations</a>
+  <a href="#screens">Screens and dashboards</a>
+  <a href="#about">About</a>
+</div></nav>
+
+<main><div class="wrap">
+
+<!-- ============ CLICK-THROUGH ============ -->
+<section class="panel" id="p-walk" data-tab="walk">
+  <h2>Station by station</h2>
+  <p class="lede">Each station on the floor, the screen someone enters it on, what that entry posts to ERPNext, and how the item maps on to the next station. Click a station, or use Next. One worked example runs all the way through: a run of Prince A5 120-page single-line books.</p>
+  <div class="callout"><p><strong>Example run <code>EBR-0001</code>:</strong> 1,000 cover sheets (A5, 3-up) → 3,000 folds → 1,000 insert sets = 3,000 books → 16 cartons of 186 + 24 loose books → into <code>Finished Goods - VCL</code> → allotted to ESGA's order. The run number is carried on every entry, so yield and waste can be read per run (see the Build spec, decision P6).</p></div>
+
+  <div class="stations" id="stations" role="group" aria-label="Stations"></div>
+
+  <div class="wgrid">
+    <div class="card" style="align-content:start">
+      <header style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><h3 id="w-title"></h3><span id="w-chip"></span></header>
+      <p id="w-what"></p>
+      <dl class="facts" id="w-facts"></dl>
+      <div><p class="label" style="margin-bottom:6px">On save, ERPNext posts</p><div class="posts" id="w-posts"></div></div>
+      <div class="navrow"><button type="button" id="w-prev">← Previous</button><button type="button" id="w-next">Next →</button></div>
+    </div>
+    <div style="display:grid;gap:8px;align-content:start;min-width:0">
+      <p class="label">Entry screen (mock-up) · style</p>
+      <div class="themes" id="w-themes" role="group" aria-label="Screen style"></div>
+      <p class="tnote" id="w-tnote"></p>
+      <div class="mock" id="w-mock"></div>
+      <p class="label" id="w-where"></p>
+    </div>
+  </div>
+
+  <p class="lede">The build order, what each station records and who approves what are in the Build spec.</p>
+</section>
+
+<!-- ============ SCREENS ============ -->
+<section class="panel" id="p-screens" data-tab="screens" hidden>
+  <h2>Every proposed screen</h2>
+  <p class="lede">Mock-ups of every screen in the build: planning, floor entry, sales, dashboards and the item set. Each one says who uses it, where it's built, and what it reads and writes. The figures are today's real totals where they exist. Run EBR-0001 and its entries are an example. For the look of the floor entry screens, see the style picker on the Stations tab.</p>
+  <div class="legend"><span><span class="chip no">New</span> to build</span><span><span class="chip part">Existing, changed</span> on a screen people already use</span><span><span class="chip ok">Built</span> exists today</span></div>
+  <div class="sgrid">
+    <nav class="snav" id="sc-nav" aria-label="Screens"></nav>
+    <div style="display:grid;gap:12px;min-width:0"><select id="sc-sel" aria-label="Screen"></select><div id="sc-view"></div></div>
+  </div>
+</section>
+
+<!-- ============ ABOUT ============ -->
+<section class="panel" id="p-about" data-tab="about" hidden>
+  <h2>About this prototype</h2>
+  <p class="lede">A clickable prototype of the exercise-book floor app and its dashboards. Nothing here writes to ERPNext. Batch EBR-0001 and its entries are an example; other figures are today's real totals.</p>
+  <div class="related"><a href="https://claude.ai/artifact/DtTjNC15VeSb9cneqqK16o"><b>Review ↗</b><span>Analysis: data flow, ERPNext today, what is built, your comments</span></a><a href="https://claude.ai/artifact/Y9A9EELmbJBt7tQoaKU4An" class="here"><b>Click-through (this page)</b><span>What people see: each station and every screen and dashboard</span></a><a href="https://claude.ai/artifact/2W8SCEBSJ6MLonkZSznNsE"><b>Build spec ↗</b><span>What gets built: items, postings, order checks, clean-up, plan, decisions</span></a><a href="https://claude.ai/artifact/UzRSVKSmc1oPW8TKP6BRZb"><b>Roadmap ↗</b><span>How the dev site grows, stage by stage</span></a></div>
+</section>
+
+</div></main>
+
+<script>
+(function(){
+  var links=[].slice.call(document.querySelectorAll('#tabs a'));
+  var panels=[].slice.call(document.querySelectorAll('section.panel'));
+  var names=panels.map(function(p){return p.dataset.tab});
+  function show(){
+    var h=(location.hash||'').slice(1); if(names.indexOf(h)<0) h='walk';
+    panels.forEach(function(p){p.hidden=p.dataset.tab!==h});
+    links.forEach(function(a){ if(a.getAttribute('href')==='#'+h) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
+  }
+  window.addEventListener('hashchange',function(){show();window.scrollTo(0,0)});
+  show();
+})();
+</script>
+<script>
+(function(){
+var S=[
+{k:'Station 1',t:'Covers',side:'p',chip:['ok','Existing screen'],
+ what:'Cover sheets come off the press and are counted in printed sheets. A5 sheets carry 3 covers and A4 sheets carry 2.',
+ facts:[['Who','Printing supervisor (to confirm)'],['Item in','COV-PNC-A5-120PG-SL, in sheets'],['Maps to next by','brand | size | pages | ruling: PNC | A5 | 120 | SL'],['Change','Add the run number. Later, take out board and ink so covers get a cost.']],
+ posts:[['IN','COV-PNC-A5-120PG-SL','+1,000 sheets','Stores - VCL'],['DOC','Stock Entry: Material Receipt','run EBR-0001','']],
+ where:'Exercise Book Production dev page › Cover Stock › Quick entry (exists today)',
+ mock:{title:'Cover Stock · Quick entry',sub:'existing',f:[['Date','04 Nov 2026'],['Run number','EBR-0001',1],['Brand','Prince'],['Size','A5 (3-up)'],['Pages','120'],['Ruling','Single line'],['Printed sheets','1,000'],['= covers','3,000',1]],btn:'Add to stock'}},
+{k:'Station 2',t:'Folds',side:'p',chip:['no','New screen'],
+ what:'Ruled inner paper is folded into the book\'s inner section, one fold per book. Folds are an input to inserts, the same way covers are.',
+ facts:[['Who','Folding supervisor (to confirm)'],['Item in','FLD-PNC-A5-120PG-SL (new), in folds = books'],['Maps to next by','The same key as covers: PNC | A5 | 120 | SL'],['Phase 1','Folds are received as counted. Paper and ruling going out of stock comes in Phase 2/3.']],
+ posts:[['IN','FLD-PNC-A5-120PG-SL','+3,000 folds','Stores - VCL'],['DOC','Stock Entry: Material Receipt','run EBR-0001','']],
+ where:'Exercise Book Production dev page › new Folds tab',
+ mock:{title:'Folds · Entry',sub:'new',f:[['Date','04 Nov 2026'],['Run number','EBR-0001',1],['Brand','Prince'],['Size','A5'],['Pages','120'],['Ruling','Single line'],['Folds counted','3,000'],['Rejects','12']],btn:'Save folds'}},
+{k:'Station 3',t:'Inserts',side:'p',chip:['part','Existing screen, changed'],
+ what:'Covers and folds are inserted together. One cover sheet becomes one insert set, which is 3 A5 books, so it uses 3 folds.',
+ facts:[['Who','Binding supervisor (to confirm)'],['Today','Takes out the cover only (COV out, INS in, 1:1)'],['Change','Also take out folds: sets × up-count'],['Unit','Per set, as today (Tanuj, 04 Nov): 1 cover sheet = 1 set = 2 (A4) or 3 (A5) books']],
+ posts:[['OUT','COV-PNC-A5-120PG-SL','−1,000 sheets','Stores - VCL'],['OUT','FLD-PNC-A5-120PG-SL','−3,000 folds','Stores - VCL'],['IN','INS-PNC-A5-120PG-SL','+1,000 sets (3,000 books)','Stores - VCL'],['DOC','Stock Entry: Repack','run EBR-0001','']],
+ where:'Exercise Book Production dev page › Inserts tab (exists, needs the folds row added)',
+ mock:{title:'Inserts · Make sets',sub:'changed',f:[['Run number','EBR-0001',1],['Group','Prince · A5 · 120 · SL'],['Sets made','1,000'],['Covers used','1,000 sheets',1],['Folds used','3,000',1],['= books','3,000',1]],btn:'Post repack'}},
+{k:'Station 4',t:'Packing',side:'p',chip:['part','Existing screen, changed'],
+ what:'Books are counted into cartons and received as finished stock. This is where production meets sales.',
+ facts:[['Who','Packing and stores (Nadeem / Peter, to confirm)'],['Today','Saved in the browser only. Nothing reaches ERPNext.'],['Change','Post the receipt into Finished Goods, take out inserts and empty cartons, and spot-weigh about 5% of cartons (backend a84ef92).'],['Maps to next by','The book item PNCEB-A5-120PGS-CB-BP-SL (cover and paper are added here)']],
+ posts:[['OUT','INS-PNC-A5-120PG-SL','−1,000 sets','Stores - VCL'],['OUT','Empty carton, A5 common','−17 cartons','Stores - VCL'],['IN','PNCEB-A5-120PGS-CB-BP-SL','+3,000 books (16 ctn + 24 loose)','Finished Goods - VCL'],['DOC','Stock Entry: Manufacture (or Repack)','run EBR-0001','']],
+ where:'Exercise Book Production dev page › Packing tab (exists, browser-only today)',
+ mock:{title:'Packing · Receive finished books',sub:'changed',f:[['Run number','EBR-0001',1],['Book','PNCEB-A5-120PGS-CB-BP-SL'],['Full cartons','16'],['Books per carton','186',1],['Loose books','24'],['Rejects','6'],['Spot-weigh (1 of 16)','4.92 kg ✓ within 5%'],['= books in','3,000',1]],btn:'Receive into Finished Goods'}},
+{k:'Meet',t:'Finished Goods',side:'d',chip:['ok','Existing'],
+ what:'Production fills finished stock by group. Sales draws it down by order. Compass allots stock to open orders by earliest delivery first.',
+ facts:[['Today','516,918 books (count of 04 Nov). Nothing moves in or out.'],['After step 4','Every packing entry adds to it, and every delivery takes from it'],['Shortfall','Open orders − finished − inserts − covers, per group (the Data flow chart)']],
+ posts:[['READ','Bin: Finished Goods - VCL','per book item',''],['READ','Open Sales Orders','per line','']],
+ where:'Compass › Exercise Book Orders (built, not deployed)',
+ mock:{title:'Exercise Book Orders',sub:'existing, not deployed',f:[['Order','SAL-ORD-2026-00195-2 · ESGA'],['Line','A5 120 SL · 80 ctn'],['Allotted from stock','34 ctn',1],['Still to make','46 ctn',1],['Stage','In production']],btn:'Set stage'}},
+{k:'Sales',t:'Delivery',side:'s',chip:['part','Existing, changed'],
+ what:'The Delivery Note ships from Finished Goods against the Sales Order.',
+ facts:[['Today','Shipped from Stores, after a same-day receipt of the same quantity (a workaround while production isn\'t recorded)'],['Change','Default warehouse = Finished Goods - VCL. Stop the same-day receipts once packing posts.']],
+ posts:[['OUT','PNCEB-A5-120PGS-CB-BP-SL','−2,976 books (16 ctn)','Finished Goods - VCL'],['DOC','Delivery Note','against SAL-ORD-2026-00195-2','']],
+ where:'ERPNext Delivery Note, or Compass',
+ mock:{title:'Delivery Note',sub:'existing',f:[['Customer','ESGA Enterprises'],['Sales Order','SAL-ORD-2026-00195-2'],['Item','PNCEB-A5-120PGS-CB-BP-SL'],['Qty','16 Carton'],['From warehouse','Finished Goods - VCL',1]],btn:'Submit'}},
+{k:'Watch',t:'Dashboard',side:'d',chip:['no','New, in Compass'],
+ what:'One screen for the day: what is on order, what is in stock at each stage, what is short, and what each station posted today.',
+ facts:[['Filters','Brand, customer, size'],['Built from','The same order lines and stage stock as the Data flow tab, read live'],['Alerts','Groups short with no covers. Stations with no entry today. Cartons running low.']],
+ posts:[['READ','Sales Order lines, Bins, Stock Entries by run','live','']],
+ where:'Compass › Exercise Books › Dashboard (new tab beside Orders)',
+ dash:true}
+];
+
+var TH=[['lightning','VCL Lightning (recommended)','Salesforce Lightning structure in VCL colours and Calibri, the same family as the CRM. White cards on grey, square icon tile, plain labels. Floor stations switch to large touch mode.'],
+ ['fiori','SAP Fiori Horizon','SAP\'s current style, built for manufacturing and warehouse apps. Rounder corners, softer shadows, roomy spacing, big object header. Very readable on tablets; reads as "SAP", not as the CRM.'],
+ ['fluent','Microsoft Fluent 2','The Dynamics 365 / Business Central look. Solid brand header band, Segoe UI, semibold labels with an underlined input edge. Familiar to anyone who uses Office; slightly denser.'],
+ ['espresso','Frappe Espresso','ERPNext\'s own desk style (Inter, filled grey inputs, almost no borders). Matches what users see in ERPNext itself, but flat and low-contrast for the floor. Espresso normally uses near-black buttons; VCL Blue is kept here.'],
+ ['carbon','IBM Carbon','IBM\'s enterprise system. Square corners, dark shell bar, filled fields with an underline, IBM Plex type. Very crisp and dense; feels technical rather than friendly.'],
+ ['material','Google Material 3','Android\'s own style, so it matches the floor tablets and the VCL Android app. Tinted surfaces, pill buttons, outlined fields, round icon. Friendly, but it reads as Google rather than VCL.'],
+ ['polaris','Shopify Polaris','Shopify admin style. Soft grey page, raised white cards, tactile buttons, Inter type. Clean and modern for desk work; a little soft for the floor.'],
+ ['hmi','Industrial HMI (ISA-101)','The machine-panel standard for factory screens: grey everywhere, heavy black field borders, bold labels, and colour kept only for actions and alarms. Most legible on the floor and closest to what operators see on machines; plain at a desk.']];
+var theme='lightning';try{var sv=localStorage.getItem('eb-theme');if(sv&&TH.some(function(t){return t[0]===sv}))theme=sv}catch(e){}
+var tb=document.getElementById('w-themes');
+TH.forEach(function(t){var b=document.createElement('button');b.type='button';b.textContent=t[1];b.dataset.t=t[0];b.addEventListener('click',function(){theme=t[0];try{localStorage.setItem('eb-theme',theme)}catch(e){}renderMock(S[cur])});tb.appendChild(b)});
+var IC={'Covers':'CV','Folds':'FD','Inserts':'IN','Packing':'PK','Finished Goods':'FG','Delivery':'DN','Dashboard':'DB'};
+var QRE=/sheets|counted|sets made|cartons|loose|rejects|^qty|books in|covers|folds used|books$/i;
+function renderMock(st){
+ var m=document.getElementById('w-mock');var floor=st.side==='p';
+ [].forEach.call(tb.children,function(b){b.setAttribute('aria-pressed',b.dataset.t===theme?'true':'false')});
+ var tn=TH.filter(function(t){return t[0]===theme})[0];
+ document.getElementById('w-tnote').textContent=tn[2]+(floor?' Shown in floor mode (touch, arm\'s length).':' Shown in desk mode.');
+ m.className='mock mx t-'+theme+(floor?' floor':' desk');
+ var title=st.dash?'Exercise Books · Dashboard':st.mock.title, parts=title.split(' · ');
+ var head='<div class="mh"><span class="ic" aria-hidden="true">'+(IC[st.t]||'EB')+'</span><span class="ht"><span class="ob">'+esc(parts.length>1?parts[0]:'Exercise Books')+'</span><span class="tt">'+esc(parts.length>1?parts.slice(1).join(' · '):parts[0])+'</span></span>'+(st.side==='p'?'<span class="crumb">Run <b>EBR-0001</b></span>':'')+'</div>';
+ if(st.dash){
+  m.innerHTML=head+'<div class="mb"><div class="kp">'+[['Open orders','1,546,590'],['Finished','516,918'],['Inserts','62,378'],['Covers','1,260,230'],['Still to make','1,085,336',1]].map(function(t){return '<div><span class="k">'+t[0]+' (books)</span><span class="v'+(t[2]?' bad':'')+'">'+t[1]+'</span></div>'}).join('')+'</div>'+
+  '<div class="tbw"><table><thead><tr><th>Group</th><th>Orders</th><th>Finished</th><th>Short</th></tr></thead><tbody><tr><td>Swara A4 120 SL</td><td class="num">893,010</td><td class="num">8,772</td><td class="num">815,138</td></tr><tr><td>Swara A4 120 SQ</td><td class="num">105,060</td><td class="num">5,406</td><td class="num">85,206</td></tr><tr><td>Swara A4 96 SL</td><td class="num">66,000</td><td class="num">600</td><td class="num">39,400</td></tr></tbody></table></div>'+
+  '<div class="tbw"><table><thead><tr><th>Today by station</th><th>Entries</th><th>Qty</th></tr></thead><tbody><tr><td>Covers</td><td class="num">2</td><td class="num">1,000 sheets</td></tr><tr><td>Folds</td><td class="num">1</td><td class="num">3,000</td></tr><tr><td>Inserts</td><td class="num">1</td><td class="num">1,000 sets</td></tr><tr><td>Packing</td><td class="num">0</td><td><span class="pill">No entry yet</span></td></tr></tbody></table></div></div>';
+  return;}
+ var mk=st.mock, sums=[], fields=[];
+ mk.f.forEach(function(f){ if(f[2]&&/^=/.test(f[0])) sums.push(f); else fields.push(f); });
+ var fx=fields.map(function(f){var q=QRE.test(f[0])&&/\d/.test(f[1]);var auto=!!f[2];var pick=!auto&&!q&&!/date/i.test(f[0]);
+  return '<div class="f'+(q?' qn':'')+'"><span class="l">'+esc(f[0])+(auto?' · auto':'')+'</span>'+(auto?'<span class="ro">'+esc(f[1])+'</span>':'<span class="i'+(pick?' pick':'')+'">'+esc(f[1])+'</span>')+'</div>'}).join('');
+ var sum=sums.length?'<div class="sum">'+sums.map(function(f){return '<span>'+esc(f[0])+' <b>'+esc(f[1])+'</b></span>'}).join('')+(st.t==='Covers'?'<span class="hint" style="color:inherit">A5 is 3-up: 1,000 sheets make 3,000 books</span>':'')+'</div>':'';
+ m.innerHTML=head+'<div class="mb"><div class="cardx"><span class="sec">'+(floor?'Enter this run':'Details')+'</span><div class="fx">'+fx+'</div>'+sum+'</div><div class="act" id="w-act"><button type="button" class="bp" id="w-save">'+esc(mk.btn)+'</button>'+(floor?'':'<button type="button" class="bs">Cancel</button>')+'</div><p class="hint">'+(floor?'Pick lists for run, item and machine; numeric keypad for quantities. Locked fields are filled in by the screen. Tap the button to see the confirmation.':'Locked fields are filled in by the screen.')+'</p></div>';
+ document.getElementById('w-save').addEventListener('click',function(){var a=document.getElementById('w-act');
+  a.innerHTML='<div class="toast" style="flex:1 1 100%"><span>Posted ✓ '+(st.posts[st.posts.length-1]?esc(st.posts[st.posts.length-1][1]):'')+' · run EBR-0001 (demo)</span><button type="button" id="w-undo">Undo (10 s)</button></div>';
+  document.getElementById('w-undo').addEventListener('click',function(){renderMock(st)});});
+}
+var cur=0, box=document.getElementById('stations');
+S.forEach(function(st,i){var b=document.createElement('button');b.type='button';b.className='side-'+st.side;b.innerHTML='<span class="k">'+st.k+'</span><span class="t">'+st.t+'</span>';b.addEventListener('click',function(){show(i)});box.appendChild(b)});
+function esc(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+function show(i){cur=i;var st=S[i];
+ [].forEach.call(box.children,function(b,j){b.setAttribute('aria-pressed',j===i?'true':'false')});
+ document.getElementById('w-title').textContent=st.t;
+ document.getElementById('w-chip').innerHTML='<span class="chip '+st.chip[0]+'">'+st.chip[1]+'</span>';
+ document.getElementById('w-what').textContent=st.what;
+ document.getElementById('w-facts').innerHTML=st.facts.map(function(f){return '<dt>'+esc(f[0])+'</dt><dd>'+esc(f[1])+'</dd>'}).join('');
+ document.getElementById('w-posts').innerHTML=st.posts.map(function(p){var c=p[0]==='OUT'?'out':p[0]==='IN'?'in':'';return '<div class="post"><span class="dir '+c+'">'+p[0]+'</span><span><code>'+esc(p[1])+'</code>'+(p[3]?' · '+esc(p[3]):'')+'</span><span class="mono">'+esc(p[2])+'</span></div>'}).join('');
+ document.getElementById('w-where').textContent='Where: '+st.where;
+ var m=document.getElementById('w-mock');renderMock(st);
+ document.getElementById('w-prev').disabled=i===0;document.getElementById('w-next').disabled=i===S.length-1;}
+document.getElementById('w-prev').addEventListener('click',function(){if(cur>0)show(cur-1)});
+document.getElementById('w-next').addEventListener('click',function(){if(cur<S.length-1)show(cur+1)});
+show(0);
+})();
+</script>
+<script>
+(function(){
+var G=[
+['Plan',[
+{id:'plan',n:'Run plan: what to make',st:['no','New'],where:'Exercise Book Production dev page › Plan (later: vcl-production app)',who:'Production planner',reads:'Open order lines, Finished Goods, inserts, covers (the Data flow netting)',writes:'Creates a run number EBR-#### per group, with a target in sheets',why:'Turns the shortfall into runs by group. Production is planned by group, never per order.',
+ path:'Production › Exercise Books › Plan',b:[
+ {t:'filters',items:['Brand: All','Size: All','Due before: 13 Nov']},
+ {t:'table',head:['Group','On order','Finished','In pipeline','Short','Covers on hand','Plan run'],num:[1,2,3,4,5],rows:[
+  ['Swara A4 120 SL','893,010','8,772','69,100','815,138','25,070 sh','<b>Create run</b> 410,000 sh'],
+  ['Swara A4 120 SQ','105,060','5,406','14,448','85,206','6,000 sh','<b>Create run</b> 43,000 sh'],
+  ['Swara A4 96 SL','66,000','600','26,000','39,400','13,000 sh','<b>Create run</b> 20,000 sh'],
+  ['Prince A5 48 SL','30,720','0','0','30,720','0 sh','<b>Print covers first</b>'],
+  ['Swara A4 48 SL','40,800','0','12,000','28,800','6,000 sh','<b>Create run</b> 14,400 sh']]},
+ {t:'alert',k:'info',x:'Pipeline = inserts + printed covers, in books. A run target is in cover sheets: A4 = 2 books per sheet, A5 = 3.'}]},
+{id:'runs',n:'Run tracker',st:['no','New'],where:'Exercise Book Production dev page › Runs',who:'Production manager',reads:'Stock Entries carrying the run number',writes:'Nothing. Closing a run only stamps it closed.',why:'Follows one run across every station, so yield and waste can be read per run.',
+ path:'Production › Exercise Books › Runs › EBR-0001',b:[
+ {t:'chips',items:[['ok','Prince · A5 · 120 · SL'],['part','In progress'],['wait','Target 1,000 sheets']]},
+ {t:'flow',items:[['Covers','1,000 sheets','= 3,000 books'],['Folds','2,988','12 rejected'],['Inserts','996 sets','= 2,988 books'],['Packing','16 ctn + 12','= 2,988 books'],['Finished Goods','2,988','received']]},
+ {t:'tiles',items:[['Yield, covers → books','99.6%','','ok'],['Waste','12 folds','0.4%',''],['Days open','2','',''],['Cartons used','17','A5 common','']]},
+ {t:'table',head:['Date','Station','Entry','Qty','By'],num:[3],rows:[['04 Nov','Covers','MAT-STE-…','1,000 sheets','Printing'],['04 Nov','Folds','MAT-STE-…','2,988','Folding'],['05 Nov','Inserts','Repack','996 sets','Binding'],['05 Nov','Packing','Manufacture','2,988 books','Stores']]}]}
+]],
+['Floor entry',[
+{id:'covers',n:'Covers: quick entry',st:['part','Existing, changed'],where:'Exercise Book Production dev page › Cover Stock',who:'Printing supervisor',reads:'COV- items',writes:'Material Receipt of COV- sheets into Stores - VCL (later: a Manufacture that uses board and ink)',why:'Records printed cover sheets per run. Change: add the run number.',
+ path:'Exercise Book Production › Cover Stock › Quick entry',b:[
+ {t:'form',f:[['Date','04 Nov 2026'],['Run number','EBR-0001 ▾'],['Brand','Prince'],['Size','A5 (3-up)'],['Pages','120'],['Ruling','Single line'],['Printed sheets','1,000'],['= books','3,000',1],['Spoiled sheets','8']],btn:'Add to stock'},
+ {t:'alert',k:'ok',x:'Saved: MAT-STE-2026-00061 · +1,000 COV-PNC-A5-120PG-SL · run EBR-0001'}]},
+{id:'folds',n:'Folds: entry',st:['no','New'],where:'Exercise Book Production dev page › new Folds tab',who:'Folding supervisor',reads:'FLD- items (to be created)',writes:'Material Receipt of FLD- folds into Stores - VCL. Paper goes out of stock in Phase 2/3.',why:'Folds are an input to inserts, the same way covers are.',
+ path:'Exercise Book Production › Folds',b:[
+ {t:'form',f:[['Date','04 Nov 2026'],['Run number','EBR-0001 ▾'],['Brand','Prince'],['Size','A5'],['Pages','120'],['Ruling','Single line'],['Folds counted','2,988'],['Rejected','12'],['Item','FLD-PNC-A5-120PG-SL',1]],btn:'Save folds'}]},
+{id:'inserts',n:'Inserts: make sets',st:['part','Existing, changed'],where:'Exercise Book Production dev page › Inserts',who:'Binding supervisor',reads:'COV- and FLD- on hand',writes:'Repack: COV- out, FLD- out (sets × up-count), INS- in',why:'Covers + folds = inserts. Today only the cover is taken out.',
+ path:'Exercise Book Production › Inserts',b:[
+ {t:'form',f:[['Run number','EBR-0001 ▾'],['Group','Prince · A5 · 120 · SL',1],['Sets made','996'],['Covers used','996 sheets',1],['Folds used','2,988',1],['= books','2,988',1]],btn:'Post repack'},
+ {t:'table',head:['On hand after','Covers','Folds','Inserts'],num:[1,2,3],rows:[['Prince A5 120 SL','4 sheets','0','996 sets']]},
+ {t:'alert',k:'warn',x:'If folds on hand are fewer than sets × 3, the screen stops: "Only 2,400 folds on hand, enough for 800 sets."'}]},
+{id:'packing',n:'Packing: receive finished books',st:['part','Existing, changed'],where:'Exercise Book Production dev page › Packing + receiving backend (a84ef92)',who:'Packing and stores',reads:'INS- on hand, the book item\'s Carton conversion, empty cartons',writes:'Manufacture: INS- out, empty cartons out, book item in to Finished Goods - VCL',why:'Today packing is saved in the browser only. This is where production meets sales.',
+ path:'Exercise Book Production › Packing',b:[
+ {t:'form',f:[['Run number','EBR-0001 ▾'],['Book','PNCEB-A5-120PGS-CB-BP-SL',1],['Full cartons','16'],['Books per carton','186',1],['Loose books','12'],['Rejects','0'],['Carton used','A5 common ▾'],['= books in','2,988',1]],btn:'Receive into Finished Goods'},
+ {t:'h',x:'Spot-weigh (about 1 in 20 cartons)'},
+ {t:'table',head:['Carton','Weight','Expected','Result'],num:[1,2],rows:[['1 of 16','4.92 kg','4.95 kg','<span class="chip ok">Within 5%</span>']]}]},
+{id:'cartons',n:'Empty cartons: count',st:['part','Existing, changed'],where:'Exercise Book Production dev page › Empty Cartons',who:'Stores',reads:'Empty Cartons item group',writes:'Stock Reconciliation draft from the count (Tanuj submits)',why:'Book balances date from 2024–25 purchases and have never been issued. The team counts on 05 Nov.',
+ path:'Exercise Book Production › Empty Cartons › Count',b:[
+ {t:'table',head:['Carton','Size','On books','Counted','Difference'],num:[2,3,4],rows:[['Prince common 425×305×275','A4','7,086','',''],['Prince common 425×305×260','A4','4,425','',''],['Prince common 425×305×250','A4','2,647','',''],['Prince/Swara common A4','A4','961','',''],['Swara common 280 mm','A4','2,078','',''],['Prince/Swara A5 (disabled item)','A5','1,875','','']]},
+ {t:'alert',k:'warn',x:'Count due 05 Nov. The A5 carton item is disabled, so enable it or replace it before packing A5.'}]}
+]],
+['Sales',[
+{id:'order',n:'Order entry with checks',st:['part','Existing, changed'],where:'Desk Quotation / Sales Order / Opportunity, and Compass Orders and Quotations',who:'Sales reps',reads:'Item, brand twin, price list, rate band',writes:'The document, plus "School order confirmed"',why:'Stops the two common mistakes: a school book picked by mistake, and a carton price typed against one book.',
+ path:'Compass › Sales › New order',b:[
+ {t:'table',head:['Item','Qty','Unit','Rate','Check'],num:[1,3],rows:[['PNCEB-A4-96PGS-CB-BP-SL','50','Carton','11,700','<span class="chip ok">OK</span>'],['SCH-BP-EB-A4-96PGS-CB-BP-SL','20','Carton','9,800','<span class="chip wait">Confirm school?</span>'],['PNCEB-A5-48PGS-CB-BP-SL','1','Nos','3,000','<span class="chip no">Did you mean 1 Carton?</span>']]},
+ {t:'modal',title:'School exercise book',x:'This is a SCHOOL exercise book (no brand). Is this a school order? If you meant the Prince book, switch to it.',btns:['Yes, school order','Switch to PNCEB-A4-96PGS-CB-BP-SL']}]},
+{id:'ebo',n:'Exercise Book Orders',st:['ok','Built, not deployed'],where:'Compass › Exercise Books › Orders (vcl_compass 5709b0a)',who:'Sales and production',reads:'Open order lines, Finished Goods',writes:'Order stage (vcl_eb_stage) + a comment',why:'Shows each order line, what finished stock covers it (earliest delivery first) and what is still to make.',
+ path:'Compass › Exercise Books › Orders',b:[
+ {t:'filters',items:['Brand: All','Customer: All','Stage: All']},
+ {t:'table',head:['Order','Customer','Due','Line','Ordered','From stock','To make','Stage'],num:[4,5,6],rows:[['00195-2','ESGA','04 Nov','A5 120 SL','80 ctn','18 ctn','62 ctn','In production'],['00194','Discount Office','06 Nov','A4 96 SL','100 ctn','100 ctn','0','Ready'],['00199','Mahavir','03 Nov','A4 120 SL Swara','8,000 ctn','86 ctn','7,914 ctn','Planned'],['00173','Vaghela','06 Nov','A4 200 SL Swara','200 ctn','23 ctn','177 ctn','Planned']]}]},
+{id:'dn',n:'Delivery from Finished Goods',st:['part','Existing, changed'],where:'Desk Delivery Note, or Compass',who:'Dispatch',reads:'Sales Order, Finished Goods - VCL',writes:'Delivery Note from Finished Goods - VCL',why:'Stops the same-day "book in to deliver" receipts once packing records stock.',
+ path:'Delivery Note › New',b:[
+ {t:'form',f:[['Customer','ESGA Enterprises',1],['Sales Order','SAL-ORD-2026-00195-2',1],['Item','PNCEB-A5-120PGS-CB-BP-SL',1],['Qty','16 Carton'],['From warehouse','Finished Goods - VCL',1],['Available','16 ctn + 12',1]],btn:'Submit'}]}
+]],
+['Dashboards',[
+{id:'d-floor',n:'Floor today',st:['no','New'],where:'Exercise Book Production dev page › Today (on a floor screen)',who:'Supervisors, production manager',reads:'Today\'s Stock Entries by station and run',writes:'Nothing',why:'Shows at a glance whether every station has entered today, and what each produced.',
+ path:'Exercise Book Production › Today · 04 Nov',b:[
+ {t:'tiles',items:[['Covers printed','2,400 sh','= 6,000 books','ok'],['Folds','5,820','','ok'],['Inserts','1,940 sets','= 5,820 books','ok'],['Packed','0','No entry yet','no']]},
+ {t:'table',head:['Run','Group','Covers','Folds','Inserts','Packed','Yield'],num:[2,3,4,5],rows:[['EBR-0001','Prince A5 120 SL','1,000','2,988','996','2,988','99.6%'],['EBR-0002','Swara A4 120 SL','1,400','2,832','944','0','-']]},
+ {t:'alert',k:'warn',x:'Packing has no entry today. Cartons on hand for A5: 1,875 (disabled item).'}]},
+{id:'d-plan',n:'Stock and shortfall',st:['no','New'],where:'Compass › Exercise Books › Dashboard',who:'Planner, sales manager',reads:'The Data flow netting, live',writes:'Nothing',why:'Where production and sales meet: stock at each stage against open orders, by group, with brand and customer filters.',
+ path:'Compass › Exercise Books › Dashboard',b:[
+ {t:'filters',items:['Brand: All','Customer: All','Size: All']},
+ {t:'tiles',items:[['Open orders','1,546,590','books',''],['Finished','516,918','books','ok'],['Inserts','62,378','books',''],['Covers','1,260,230','books',''],['Still to make','1,085,336','books','no']]},
+ {t:'bars',items:[['Open orders',1546590,'c-dem'],['After finished stock',1365736,'c-short'],['After inserts',1334808,'c-short'],['After covers',1085336,'c-short']]},
+ {t:'table',head:['Group','Orders','Finished','Short'],num:[1,2,3],rows:[['Swara A4 120 SL','893,010','8,772','815,138'],['Swara A4 120 SQ','105,060','5,406','85,206'],['Swara A4 96 SL','66,000','600','39,400']]}]},
+{id:'d-mgmt',n:'Management summary',st:['no','New'],where:'Compass › Exercise Books › Summary',who:'Tanuj',reads:'Orders, stock, runs, deliveries',writes:'Nothing',why:'A weekly view: orders on hand, output, deliveries, waste and overdue orders.',
+ path:'Compass › Exercise Books › Summary · week 45',b:[
+ {t:'tiles',items:[['Orders on hand','13,205 ctn','10 orders',''],['Overdue lines','38','due before today','no'],['Packed this week','0 ctn','production not yet recorded','wait'],['Delivered this week','591 ctn','4 delivery notes',''],['Waste','-','needs runs','wait']]},
+ {t:'table',head:['Customer','Open ctn','Due','Covered by stock'],num:[1,3],rows:[['Mahavir','10,550','03 Nov','2%'],['ESGA','780','04 Nov','46%'],['Jain Trading','550','12 Nov','0%'],['Vaghela','550','06 Nov','14%']]}]},
+{id:'d-health',n:'Data health and controls',st:['no','New'],where:'Compass › Exercise Books › Data health',who:'IT Development, Tanuj',reads:'Items, price list, invoice lines, guard logs',writes:'Nothing (links to the records to fix)',why:'Shows the clean-up still needed and what the order checks are catching.',
+ path:'Compass › Exercise Books › Data health',b:[
+ {t:'tiles',items:[['Items without a Carton conversion','847','807 enabled','no'],['Items with no current price','809','','no'],['Carton invoice lines with conversion 1','937 of 989','','no'],['Carton prices on Nos','13','','no']]},
+ {t:'table',head:['Check','Stopped this week','Switched / corrected'],num:[1,2],rows:[['School or brand?','-','-'],['"Did you mean 1 Carton?"','-','-'],['"Did you mean Nos?"','-','-']]},
+ {t:'alert',k:'info',x:'The check counts start when the pack goes live. Since 06 Aug the price rule would have caught 72 enquiry, 74 quotation and 1 order lines.'}]}
+]],
+['Masters',[
+{id:'itemset',n:'Item set per book',st:['no','New'],where:'Desk Item (a "Production set" section) or Compass',who:'IT Development, production',reads:'COV-, FLD-, INS-, book items, cartons',writes:'Links only (creates missing twins in after_migrate)',why:'Shows one book\'s full chain of items, so the mapping between stations is visible and gaps stand out.',
+ path:'Item › PNCEB-A5-120PGS-CB-BP-SL › Production set',b:[
+ {t:'table',head:['Stage','Item','Unit','Status'],rows:[['Covers','COV-PNC-A5-120PG-SL','Sheet (3-up)','<span class="chip ok">Exists</span>'],['Folds','FLD-PNC-A5-120PG-SL','Fold (1 per book)','<span class="chip no">To create</span>'],['Inserts','INS-PNC-A5-120PG-SL','Set (3 books)','<span class="chip ok">Exists</span>'],['Finished book','PNCEB-A5-120PGS-CB-BP-SL','Nos, Carton = 186','<span class="chip ok">Exists</span>'],['Carton','A5 common','Nos','<span class="chip wait">Item disabled</span>'],['School twin','SCH-BP-EB-A5-120PGS-CB-BP-SL','Nos','<span class="chip ok">Exists</span>']]}]}
+]]
+];
+var all=[];G.forEach(function(g){g[1].forEach(function(s){s.g=g[0];all.push(s)})});
+var nav=document.getElementById('sc-nav'),sel=document.getElementById('sc-sel');
+G.forEach(function(g){var h=document.createElement('p');h.className='label';h.textContent=g[0];nav.appendChild(h);var og=document.createElement('optgroup');og.label=g[0];
+ g[1].forEach(function(s){var b=document.createElement('button');b.type='button';b.dataset.id=s.id;b.innerHTML='<span>'+s.n+'</span><span class="chip '+s.st[0]+'">'+s.st[1]+'</span>';b.addEventListener('click',function(){show(s.id)});nav.appendChild(b);
+ var o=document.createElement('option');o.value=s.id;o.textContent=s.n+' ('+s.st[1]+')';og.appendChild(o)});sel.appendChild(og)});
+sel.addEventListener('change',function(){show(sel.value)});
+function blk(b){
+ if(b.t==='tiles')return '<div class="tiles">'+b.items.map(function(t){return '<div class="tile'+(t[3]?' st-'+t[3]:'')+'"><span class="label">'+t[0]+'</span><span class="v">'+t[1]+'</span><span class="label" style="text-transform:none;letter-spacing:0">'+t[2]+'</span></div>'}).join('')+'</div>';
+ if(b.t==='form')return '<div class="frow">'+b.f.map(function(f){return '<div class="fld"><span class="lb">'+f[0]+'</span><span class="in'+(f[2]?' auto':'')+'">'+f[1]+'</span></div>'}).join('')+'</div><span class="btnmock">'+b.btn+'</span>';
+ if(b.t==='table')return '<div class="tw"><table><thead><tr>'+b.head.map(function(h){return '<th>'+h+'</th>'}).join('')+'</tr></thead><tbody>'+b.rows.map(function(r){return '<tr>'+r.map(function(c,i){return '<td'+((b.num||[]).indexOf(i)>=0?' class="num"':'')+'>'+c+'</td>'}).join('')+'</tr>'}).join('')+'</tbody></table></div>';
+ if(b.t==='alert')return '<div class="callout'+(b.k==='warn'?' warn':'')+'"><p>'+b.x+'</p></div>';
+ if(b.t==='h')return '<p class="label">'+b.x+'</p>';
+ if(b.t==='chips')return '<div style="display:flex;flex-wrap:wrap;gap:6px">'+b.items.map(function(c){return '<span class="chip '+c[0]+'">'+c[1]+'</span>'}).join('')+'</div>';
+ if(b.t==='filters')return '<div style="display:flex;flex-wrap:wrap;gap:6px">'+b.items.map(function(c){return '<span class="fpill">'+c+' ▾</span>'}).join('')+'</div>';
+ if(b.t==='flow')return '<div class="rflow">'+b.items.map(function(c,i){return (i?'<span class="arr">→</span>':'')+'<div class="st prod"><span class="nm">'+c[0]+'</span><span class="v">'+c[1]+'</span><span class="u">'+c[2]+'</span></div>'}).join('')+'</div>';
+ if(b.t==='bars'){var m=b.items[0][1];return '<div class="cascade">'+b.items.map(function(c){return '<div class="cas"><span>'+c[0]+'</span><span class="bar"><i class="'+c[2]+'" style="width:'+(c[1]/m*100).toFixed(1)+'%"></i></span><span class="n">'+c[1].toLocaleString('en-GB')+'</span></div>'}).join('')+'</div>';}
+ if(b.t==='modal')return '<div class="mmodal"><div class="mock"><div class="bar">'+b.title+' <span>pop-up</span></div><div class="body"><p>'+b.x+'</p><div style="display:flex;flex-wrap:wrap;gap:8px"><span class="btnmock">'+b.btns[0]+'</span><span class="btnmock alt">'+b.btns[1]+'</span></div></div></div></div>';
+ return '';}
+function show(id){var s=all.filter(function(x){return x.id===id})[0]||all[0];sel.value=s.id;
+ [].forEach.call(nav.querySelectorAll('button'),function(b){b.setAttribute('aria-pressed',b.dataset.id===s.id?'true':'false')});
+ document.getElementById('sc-view').innerHTML='<div class="mock"><div class="bar">'+s.path+' <span>'+s.st[1]+'</span></div><div class="body">'+s.b.map(blk).join('')+'</div></div>'+
+ '<div class="card"><header style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><h3>'+s.n+'</h3><span class="chip '+s.st[0]+'">'+s.st[1]+'</span></header><p>'+s.why+'</p><dl class="facts"><dt>Who uses it</dt><dd>'+s.who+'</dd><dt>Where it\'s built</dt><dd>'+s.where+'</dd><dt>Reads</dt><dd>'+s.reads+'</dd><dt>Writes</dt><dd>'+s.writes+'</dd></dl></div>';}
+show('plan');
+})();
+</script>

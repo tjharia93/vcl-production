@@ -280,6 +280,13 @@ tr.flag td{background:var(--warn-tint)}
 .mmodal{background:var(--sunken);border-radius:4px;padding:16px;display:grid;justify-items:center}.mmodal .mock{max-width:440px;width:100%;box-shadow:0 4px 12px rgba(0,0,0,.18)}
 .mock .cas .bar{background:var(--sunken);padding:0;display:block;font-weight:400}
 .btnmock.alt{background:var(--surface);color:var(--brand-text);border:1px solid var(--border-strong)}
+
+.related{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.related a{display:grid;gap:4px;padding:12px 14px;border:1px solid var(--border);border-left:0;border-top:4px solid var(--brand);border-radius:4px;background:var(--raised);color:var(--ink);text-decoration:none}
+.related a:hover{background:var(--sunken)}
+.related a b{color:var(--brand-text)}
+.related a span{font-size:13px;color:var(--muted)}
+.related a.here{border-top-color:var(--border-strong);pointer-events:none}
 </style>
 
 <header class="bar"><div class="wrap">
@@ -290,15 +297,10 @@ tr.flag td{background:var(--warn-tint)}
 <nav class="tabs" aria-label="Sections"><div class="wrap" id="tabs">
   <a href="#overview">Overview</a>
   <a href="#flow">Data flow</a>
-  <a href="#walk">Click-through</a>
-  <a href="#screens">Screens</a>
-  <a href="#controls">Order controls</a>
   <a href="#process">Process</a>
   <a href="#erpnext">ERPNext today</a>
-  <a href="#model">Proposed flow</a>
   <a href="#built">Built so far</a>
   <a href="#orders">Items &amp; orders</a>
-  <a href="#decisions">Open decisions</a>
   <a href="#sources">Sources</a>
   <a href="#comments">Your comments</a>
 </div></nav>
@@ -315,6 +317,8 @@ tr.flag td{background:var(--warn-tint)}
     <svg class="fchart fh-narrow" viewBox="0 0 340 500" role="img" aria-labelledby="fct2"><title id="fct2">Production flow: ruling to folds, and covers, both feed inserts, then packing into finished stock</title><defs><marker id="fa2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fah"/></marker></defs><path d="M85 86V110" class="fa" marker-end="url(#fa2)"/><path d="M85 190V208H140V226" class="fa" marker-end="url(#fa2)"/><path d="M255 190V208H200V226" class="fa" marker-end="url(#fa2)"/><path d="M170 306V330" class="fa" marker-end="url(#fa2)"/><path d="M170 410V434" class="fa" marker-end="url(#fa2)"/><a href="#process" class="fn no"><rect x="10" y="10" width="150" height="76" rx="4"/><text x="22" y="34" class="fh"><tspan class="fnum">1</tspan>  Ruling</text><text x="22" y="54" class="fs">Inner papers</text><text x="22" y="73" class="fst">Not in ERPNext</text></a><a href="#process" class="fn no"><rect x="10" y="114" width="150" height="76" rx="4"/><text x="22" y="138" class="fh"><tspan class="fnum">3</tspan>  Folds</text><text x="22" y="158" class="fs">Folded inner</text><text x="22" y="177" class="fst">Not in ERPNext</text></a><a href="#process" class="fn ok"><rect x="180" y="114" width="150" height="76" rx="4"/><text x="192" y="138" class="fh"><tspan class="fnum">2</tspan>  Covers</text><text x="192" y="158" class="fs">Printed sheets</text><text x="192" y="177" class="fst">Posts stock</text></a><a href="#process" class="fn ok"><rect x="95" y="230" width="150" height="76" rx="4"/><text x="107" y="254" class="fh"><tspan class="fnum">4</tspan>  Inserts</text><text x="107" y="274" class="fs">Covers + folds</text><text x="107" y="293" class="fst">Posts stock</text></a><a href="#process" class="fn no"><rect x="95" y="334" width="150" height="76" rx="4"/><text x="107" y="358" class="fh"><tspan class="fnum">5</tspan>  Packing</text><text x="107" y="378" class="fs">Cartons</text><text x="107" y="397" class="fst">Browser only</text></a><g class="fn end"><rect x="95" y="438" width="150" height="56" rx="28"/><text x="170.0" y="462" text-anchor="middle" class="fh">Finished stock</text><text x="170.0" y="480" text-anchor="middle" class="fs">Finished Goods - VCL</text></g></svg>
     <div class="legend"><span><i style="background:var(--ok-tint);border:2px solid var(--ok-text)"></i>Posts stock in ERPNext</span><span><i style="background:var(--surface);border:2px dashed var(--warn-text)"></i>Not recorded in ERPNext</span><span class="label">Tap a step for detail</span></div>
   </figure>
+ 
+  <div class="card"><h3>This work is now in four pages</h3><div class="related"><a href="https://claude.ai/artifact/DtTjNC15VeSb9cneqqK16o" class="here"><b>Review (this page)</b><span>Analysis: data flow, ERPNext today, what is built, your comments</span></a><a href="https://claude.ai/artifact/Y9A9EELmbJBt7tQoaKU4An"><b>Click-through ↗</b><span>What people see: each station and every screen and dashboard</span></a><a href="https://claude.ai/artifact/2W8SCEBSJ6MLonkZSznNsE"><b>Build spec ↗</b><span>What gets built: items, postings, order checks, clean-up, plan, decisions</span></a><a href="https://claude.ai/artifact/UzRSVKSmc1oPW8TKP6BRZb"><b>Roadmap ↗</b><span>How the dev site grows, stage by stage</span></a></div></div>
 
   <div class="grid2">
     <div class="card">
@@ -433,132 +437,8 @@ tr.flag td{background:var(--warn-tint)}
   <p class="lede">Data: <code>exercise-book-production/data/flow-lines-2026-11-04.json</code> (69 order lines, 75 groups, pulled read-only from ERPNext 04 Nov 20:13). Today's count matches the live <code>Finished Goods - VCL</code> balance exactly. The SFS lines on the legacy item "Prince Exe A5 120pgs Bank CB" have no ruling, so they form their own group (Prince | A5 | 120 | ?).</p>
 </section>
 
-<!-- ============ CLICK-THROUGH ============ -->
-<section class="panel" id="p-walk" data-tab="walk" hidden>
-  <h2>Click-through: station by station</h2>
-  <p class="lede">Each station on the floor, the screen someone enters it on, what that entry posts to ERPNext, and how the item maps on to the next station. Click a station, or use Next. One worked example runs all the way through: a run of Prince A5 120-page single-line books.</p>
-  <div class="callout"><p><strong>Example run <code>EBR-0001</code>:</strong> 1,000 cover sheets (A5, 3-up) → 3,000 folds → 1,000 insert sets = 3,000 books → 16 cartons of 186 + 24 loose books → into <code>Finished Goods - VCL</code> → allotted to ESGA's order. The run number is carried on every entry, so yield and waste can be read per run (see Open decisions, P6).</p></div>
 
-  <div class="stations" id="stations" role="group" aria-label="Stations"></div>
 
-  <div class="wgrid">
-    <div class="card" style="align-content:start">
-      <header style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><h3 id="w-title"></h3><span id="w-chip"></span></header>
-      <p id="w-what"></p>
-      <dl class="facts" id="w-facts"></dl>
-      <div><p class="label" style="margin-bottom:6px">On save, ERPNext posts</p><div class="posts" id="w-posts"></div></div>
-      <div class="navrow"><button type="button" id="w-prev">← Previous</button><button type="button" id="w-next">Next →</button></div>
-    </div>
-    <div style="display:grid;gap:8px;align-content:start;min-width:0">
-      <p class="label">Entry screen (mock-up) · style</p>
-      <div class="themes" id="w-themes" role="group" aria-label="Screen style"></div>
-      <p class="tnote" id="w-tnote"></p>
-      <div class="mock" id="w-mock"></div>
-      <p class="label" id="w-where"></p>
-    </div>
-  </div>
-
-  <h3>How to build it out</h3>
-  <div class="tw"><table>
-    <thead><tr><th>Step</th><th>What</th><th>Where it's built</th><th>Depends on</th></tr></thead>
-    <tbody>
-      <tr><td class="num">1</td><td>Put the dev pages in git, so sessions stop overwriting each other</td><td>Repo of their own, or <code>vcl-production</code></td><td>-</td></tr>
-      <tr><td class="num">2</td><td>Create the 80 <code>FLD-</code> items (twins of COV/INS) and a <code>custom_eb_run</code> field on Stock Entry</td><td>vcl-production, in <code>after_migrate</code></td><td>FLD naming approved 04 Nov</td></tr>
-      <tr><td class="num">3</td><td>New Folds screen. Inserts screen changed to take out covers and folds</td><td>Exercise Book Production dev page</td><td>2</td></tr>
-      <tr><td class="num">4</td><td>Packing screen posts to <code>Finished Goods - VCL</code>, takes out inserts and empty cartons, spot-weighs</td><td>Dev page + the receiving backend (<code>a84ef92</code>, push it)</td><td>2, plus the carton count</td></tr>
-      <tr><td class="num">5</td><td>Deliver from Finished Goods. Stop the same-day "book in to deliver" receipts</td><td>Existing Delivery Note, default warehouse</td><td>4</td></tr>
-      <tr><td class="num">6</td><td>Dashboard: the Data flow tab, made live</td><td>Compass <code>/compass/exercise-books</code> (deploy it, then extend)</td><td>3–5 posting real entries</td></tr>
-      <tr><td class="num">7</td><td>Phase 2/3: paper and ruling stations, and school and customised orders</td><td>Same pattern</td><td>Phase 1 running</td></tr>
-    </tbody>
-  </table></div>
-  <p class="lede">Recommendation: the floor keeps entering on the Exercise Book Production dev page it already uses, with the changes above, so nobody learns a new tool. The dashboard lives in Compass, next to the orders. Once the screens settle, they move from the dev page into the vcl-production app, in git.</p>
-</section>
-
-<!-- ============ SCREENS ============ -->
-<section class="panel" id="p-screens" data-tab="screens" hidden>
-  <h2>Every proposed screen</h2>
-  <p class="lede">Mock-ups of every screen in the build: planning, floor entry, sales, dashboards and the item set. Each one says who uses it, where it's built, and what it reads and writes. The figures are today's real totals where they exist. Run EBR-0001 and its entries are an example. For the look of the floor entry screens, see the style picker on the Click-through tab.</p>
-  <div class="legend"><span><span class="chip no">New</span> to build</span><span><span class="chip part">Existing, changed</span> on a screen people already use</span><span><span class="chip ok">Built</span> exists today</span></div>
-  <div class="sgrid">
-    <nav class="snav" id="sc-nav" aria-label="Screens"></nav>
-    <div style="display:grid;gap:12px;min-width:0"><select id="sc-sel" aria-label="Screen"></select><div id="sc-view"></div></div>
-  </div>
-</section>
-
-<!-- ============ ORDER CONTROLS ============ -->
-<section class="panel" id="p-controls" data-tab="controls" hidden>
-  <h2>Order controls: right item, right unit, right price</h2>
-  <p class="lede">Three checks stop the two most common order mistakes: a school book picked when the brand book was meant, and a carton price typed against one book. Each check runs on the server, so it catches every way a line gets in (Desk, Compass, Android, API, import), and also shows on screen where there is one. Status: the dry-run pack is ready and with you for approval (04 Nov). Nothing has been written live, committed or pushed.</p>
-
-  <div class="grid2">
-    <div class="card"><h3>1. School or brand?</h3>
-      <p>Picking a school item (Bank Paper, Newsprint, Brilliant White) asks the user to confirm. One more click, but the data stays accurate.</p>
-      <div class="mock"><div class="bar">School exercise book <span>pop-up</span></div><div class="body">
-        <p>This is a <strong>SCHOOL</strong> exercise book (no brand). Is this a school order? If you meant the Prince book, switch to it.</p>
-        <div style="display:flex;flex-wrap:wrap;gap:8px"><span class="btnmock">Yes, school order</span><span class="btnmock" style="background:var(--surface);color:var(--brand-text);border:1px solid var(--border-strong)">Switch to PNCEB-A4-96PGS-CB-BP-SL</span></div>
-      </div></div>
-      <ul class="tight">
-        <li>"Yes" ticks <strong>School order confirmed</strong> on the document. The server refuses to save school lines without it.</li>
-        <li>The matching brand item: <code>SCH-BP-EB-…</code> → <code>PNCEB-…</code>, <code>SCH-NP-EB-…</code> → <code>SWREB-…</code>, with the same size, pages, ruling and cover.</li>
-        <li>The school item names are renamed to start "School Exercise Book - …". The codes stay as they are.</li>
-      </ul>
-      <div class="tw"><table><thead><tr><th>Rename dry run</th><th>Items</th></tr></thead><tbody>
-        <tr><td>Renamed to "School Exercise Book - &lt;Paper&gt; - …"</td><td class="num">547 of 554</td></tr>
-        <tr><td>Left alone (codes that don't follow the pattern)</td><td class="num">7</td></tr>
-        <tr><td>Have a brand twin to switch to</td><td class="num">448 (60 twins disabled)</td></tr>
-        <tr><td>No brand twin (mostly Newsprint 100pg HSL/HSQ)</td><td class="num">99</td></tr>
-      </tbody></table></div>
-      <p><span class="chip wait">Ready, awaiting your approval</span> The server check runs on Opportunity, Quotation, Sales Order, Delivery Note and Sales Invoice. It only checks lines a save adds or changes, so old documents aren't blocked, and lines copied from an earlier document are trusted. The pop-up is on Desk and on Compass Orders and Quotations. Backup and rollback are ready.</p>
-    </div>
-
-    <div class="card"><h3>2. Sell in cartons by default</h3>
-      <p>Exercise books default to <strong>Carton</strong> as the selling unit, and the unit column is shown and required on every line.</p>
-      <div class="tw"><table><thead><tr><th>Line</th><th>Before</th><th>After</th></tr></thead><tbody>
-        <tr><td>New line, Prince A4 96pg</td><td>1 Nos (blank unit easy to miss)</td><td>1 Carton (= 120 books)</td></tr>
-        <tr><td>Unit column</td><td>Hidden or optional</td><td>Visible and required</td></tr>
-      </tbody></table></div>
-      <p><span class="chip ok">Already in place</span> All 455 exercise-book items that have a Carton conversion already sell in Cartons by default. There's nothing to apply. <strong>847 items have no Carton conversion</strong> (807 enabled), so they can't default to Carton until their pieces per carton are filled in.</p>
-      <p><strong>"Show the UOM":</strong> checked across all repos and the live site. It was <strong>not done</strong>, except one live setting (02 Nov) that shows the unit in the Sales Order item list. The pack makes the unit visible <em>and required</em> on all five documents, set up through the app, not as a live-only setting.</p>
-    </div>
-  </div>
-
-  <div class="card"><h3>3. Does the price fit the unit?</h3>
-    <p>One book is about 100/=, and a carton is many times that. The price on a line has to fall in the range for its unit.</p>
-    <div class="tw"><table><thead><tr><th>Unit on the line</th><th>Price entered</th><th>What happens</th></tr></thead><tbody>
-      <tr><td>Nos</td><td>Within the per-book range (about 100/=)</td><td><span class="chip ok">Saves</span></td></tr>
-      <tr><td>Nos</td><td>In the carton range (e.g. 3,000/=)</td><td><span class="chip no">Stops</span> "This looks like a carton price. Did you mean Carton?"</td></tr>
-      <tr><td>Carton</td><td>In the per-book range (e.g. 100/=)</td><td><span class="chip no">Stops</span> "This looks like a price for one book. Did you mean Nos?"</td></tr>
-      <tr><td>Carton</td><td>Per-book range × books per carton</td><td><span class="chip ok">Saves</span></td></tr>
-    </tbody></table></div>
-    <div class="grid2">
-      <div class="tw"><table><thead><tr><th>Proposed rule</th><th>Action</th></tr></thead><tbody>
-        <tr><td>Nos, above <strong>150/= per book</strong></td><td><span class="chip no">Blocks</span> "Did you mean 1 Carton?"</td></tr>
-        <tr><td>Carton, below <strong>3/= per book</strong> (rate ÷ books per carton)</td><td><span class="chip no">Blocks</span> "Did you mean Nos?"</td></tr>
-        <tr><td>More than 3× away from a clean price-list price</td><td><span class="chip wait">Warns</span></td></tr>
-      </tbody></table></div>
-      <div class="tw"><table><thead><tr><th>Would have caught since 06 Aug</th><th>Lines</th></tr></thead><tbody>
-        <tr><td>Opportunity (enquiries)</td><td class="num">72</td></tr>
-        <tr><td>Quotation</td><td class="num">74</td></tr>
-        <tr><td>Sales Order</td><td class="num">1</td></tr>
-      </tbody></table></div>
-    </div>
-    <p>One band of 3–150/= per book for every size catches the same lines as separate bands per size, so the simpler rule is proposed. <strong>Check before approving:</strong> is 150/= enough headroom for your dearest single book (200-page A4)? If any is sold above 150/= per book, raise the ceiling.</p>
-    <p><strong>Price-list clean-up needed first:</strong> 13 carton prices entered against Nos, 7 doubtful Nos prices on MGC/MNL covers, and 809 enabled items with no current price. Separately, <strong>937 of 989 Carton invoice lines have a conversion factor of 1</strong>. Those invoices count a carton as one book, so the stock and per-book figures behind them are wrong. That needs its own fix.</p>
-    <p><span class="chip wait">Ready, awaiting your approval</span></p>
-  </div>
-
-  <h3>Where each check applies</h3>
-  <div class="tw"><table><thead><tr><th>Entry point</th><th>Server check</th><th>Pop-up / hint on screen</th></tr></thead><tbody>
-    <tr><td>Desk: Opportunity, Quotation, Sales Order, Delivery Note, Sales Invoice</td><td><span class="chip ok">Yes</span></td><td><span class="chip ok">Yes</span></td></tr>
-    <tr><td>Compass Orders and Quotations</td><td><span class="chip ok">Yes</span></td><td><span class="chip ok">Yes</span></td></tr>
-    <tr><td>Compass stock lines, deals, audit, capture</td><td><span class="chip ok">Yes</span></td><td><span class="chip wait">Still to wire</span></td></tr>
-    <tr><td>Android app</td><td><span class="chip ok">Yes</span></td><td><span class="chip wait">Needs an app release</span></td></tr>
-    <tr><td>vcl_sales enquiry page</td><td><span class="chip ok">Yes</span></td><td><span class="chip wait">Still to wire</span></td></tr>
-    <tr><td>API and imports</td><td><span class="chip ok">Yes</span></td><td>-</td></tr>
-  </tbody></table></div>
-  <p class="lede">The server check covers everything, so a screen without the pop-up still can't save a wrong line. It just shows the message on save instead of when the item is picked.</p>
-  <div class="callout"><p><strong>The pack, for your approval:</strong> <code>C:\Second_Brain\output\selling_line_guards_pack_2026-11-04.md</code> on the PC. The code is on branch <code>feat/school-item-guard</code> in vcl-production and vcl_compass (local, not pushed). Tests: vcl-production's 16 new tests pass. Compass type checks are clean and all 495 tests pass. To go live: approve, then push, deploy and run a migrate (the new field and settings are created on migrate). Nothing is written until you say go.</p></div>
-</section>
 
 <!-- ============ PROCESS ============ -->
 <section class="panel" id="p-process" data-tab="process" hidden>
@@ -684,51 +564,6 @@ tr.flag td{background:var(--warn-tint)}
   </div>
 </section>
 
-<!-- ============ PROPOSED FLOW ============ -->
-<section class="panel" id="p-model" data-tab="model" hidden>
-  <h2>Proposed ERPNext model flow</h2>
-  <div class="callout warn"><p><strong>Draft for discussion.</strong> Nothing here is decided or built. It's a starting point that maps each floor step to a record ERPNext already has, so the review has something concrete to change.</p></div>
-
-  <div class="callout"><p><strong>Made to stock, not to order.</strong> A work order can't be raised for every Sales Order. Production and sales run as two separate loops that meet at finished stock. Production fills stock by SKU, in runs. Sales draws stock down, order by order.</p></div>
-
-  <h3>Production loop (by SKU, in runs)</h3>
-  <div class="chain">
-    <span class="box new">Run plan per SKU (from total open demand − stock, or a minimum level)</span><span class="arr">→</span>
-    <span class="box new">Ruling</span><span class="arr">→</span>
-    <span class="box">Covers (COV-)</span><span class="arr">→</span>
-    <span class="box new">Folding</span><span class="arr">→</span>
-    <span class="box">Inserts (INS-)</span><span class="arr">→</span>
-    <span class="box new">Packing receipt</span><span class="arr">→</span>
-    <span class="box">Finished Goods - VCL</span>
-  </div>
-
-  <h3>Sales loop (by order)</h3>
-  <div class="chain">
-    <span class="box">Sales Order (Carton)</span><span class="arr">→</span>
-    <span class="box new">Allot from stock (earliest delivery first)</span><span class="arr">→</span>
-    <span class="box">Delivery Note</span><span class="arr">→</span>
-    <span class="box">Sales Invoice</span>
-  </div>
-  <p>A dashed box is a record or step that isn't used for exercise books today. The only link between the loops is the shortfall per SKU: when open demand exceeds finished stock plus what's in the pipeline, that SKU gets a run. A run is planned by SKU, never by order.</p>
-
-  <h3>Each floor step mapped to a record</h3>
-  <div class="tw"><table>
-    <thead><tr><th>Step</th><th>Stock in</th><th>Stock out (proposed item)</th><th>Record</th><th>Who enters it</th></tr></thead>
-    <tbody>
-      <tr><td>1 · Ruling</td><td>Paper NP / BP (kg or sheets)</td><td>Ruled sheet, per paper and ruling</td><td>Stock Entry (Manufacture) from the daily ruling log</td><td>To decide</td></tr>
-      <tr><td>2 · Covers</td><td>Cover board, ink (not consumed today)</td><td><code>COV-…</code> printed sheet <span class="chip ok">Exists</span></td><td>Material Receipt today. Could become a Manufacture that consumes the board.</td><td>To decide</td></tr>
-      <tr><td>3 · Folds</td><td>Ruled sheets (phase 2/3)</td><td><code>FLD-…</code>, per size, pages, paper and ruling</td><td>Stock item, so inserts can take it out</td><td>To decide</td></tr>
-      <tr><td colspan="5">Every record in this table belongs to a production run for one SKU. None of them points to a Sales Order.</td></tr>
-      <tr><td>4 · Inserts</td><td><code>COV-…</code> + <code>FLD-…</code></td><td><code>INS-…</code> insert set <span class="chip ok">Exists</span></td><td>Repack today</td><td>To decide</td></tr>
-      <tr><td>5 · Packing</td><td><code>INS-…</code> + carton</td><td>The book item (<code>PNCEB-…</code>) in <code>Finished Goods - VCL</code>, in <code>Carton</code></td><td>Manufacture against the BOM, from the receiving record (<code>a84ef92</code>)</td><td>To decide</td></tr>
-    </tbody>
-  </table></div>
-
-  <div class="grid2">
-    <div class="card"><h3>The smallest version</h3><p>Keep the cover and insert moves as they are. Add one receipt per packed batch at step 5 that consumes <code>INS-…</code> and puts books into <code>Finished Goods - VCL</code>. That keeps stock current after today's opening balance and lets Compass allot orders.</p></div>
-    <div class="card"><h3>The fuller version</h3><p>Ruled sheets and printed covers become stock items, so each step has a count, and yield and waste show up at every stage. It needs more items, a BOM per stage, and someone on the floor who enters every step.</p></div>
-  </div>
-</section>
 
 <!-- ============ BUILT ============ -->
 <section class="panel" id="p-built" data-tab="built" hidden>
@@ -806,46 +641,6 @@ tr.flag td{background:var(--warn-tint)}
   <p class="lede">Compass works out what to make as: Required = max(0, pending − physical finished cartons). It reads every warehouse, reserved stock included, and reserves nothing.</p>
 </section>
 
-<!-- ============ DECISIONS ============ -->
-<section class="panel" id="p-decisions" data-tab="decisions" hidden>
-  <h2>Open decisions</h2>
-  <p class="lede">Grouped by the part of the model they unblock. The first group decides how production is recorded. The rest are clean-up.</p>
-
-  <div class="card"><h3>Process and recording</h3>
-    <div class="q"><span class="n">P1</span><span>Confirm the five steps and where stitching and trimming sit (inside Inserts?).</span>
-    <span class="n">P2</span><span>Add Folding, Inserts and Packing stages to the exercise-book route, and decide what Sheeting and Collation mean for this line.</span>
-    <span class="n">P3</span><span>Smallest or fuller model (see Proposed flow): which steps post stock?</span>
-    <span class="n">P4</span><span>Who on the floor enters each step, and on which screen.</span>
-    <span class="n">P5</span><span>Does the daily ruling log feed ERPNext, or stay in CSV and Slack?</span>
-    <span class="n">P6</span><span>Settled: no work order per Sales Order. Still open: what a production run is recorded on (a run-level job card, a Work Order per SKU run, or just the stage stock entries), and what triggers a run (shortfall against open demand, a minimum stock level, or both).</span>
-    <span class="n">P7</span><span>Who owns each handover (Nadeem and Peter are candidates), and where the run reference travels on the floor.</span>
-    <span class="n">P8</span><span>How rejects, loose books and reversals are handled.</span>
-    <span class="n">P10</span><span>Settled 04 Nov: folds items are named <code>FLD-&lt;PNC|SWR&gt;-&lt;A4|A5&gt;-&lt;PPP&gt;PG-&lt;RULING&gt;</code>, twins of COV and INS. They will be created through the vcl-production app (step 2 of the build plan).</span>
-    <span class="n">P9</span><span>Put the dev pages in git, so sessions stop overwriting each other.</span></div>
-  </div>
-  <div class="card"><h3>Stock and orders</h3>
-    <div class="q"><span class="n">S1</span><span>How finished books are received into stock, and into which warehouse.</span>
-    <span class="n">S2</span><span>Who sets the order stage on Compass (the role list currently includes every sales rep).</span>
-    <span class="n">S3</span><span>When to deploy Exercise Book Orders (it needs a migrate and the <code>compass_exercise_books</code> config).</span>
-    <span class="n">S4</span><span>Are the three On Hold orders still live?</span>
-    <span class="n">S5</span><span>Valuation: the opening stock is at zero cost. When and how do books get a cost?</span>
-    <span class="n">S6</span><span>Make the packing record shared, not browser-only: push <code>a84ef92</code> and build its screen.</span>
-    <span class="n">S7</span><span>Should "Required" reserve stock per order rather than read all physical stock?</span>
-    <span class="n">S8</span><span>SFS is in Nos and carries legacy generic items. Convert it?</span></div>
-  </div>
-  <div class="card"><h3>Item master and specification</h3>
-    <div class="q"><span class="n">M1</span><span>CR10: finish the last 216 renames, or roll them back.</span>
-    <span class="n">M2</span><span>Pieces per carton for 100-page books (45 items) and A4 60-page Hi5 school.</span>
-    <span class="n">M3</span><span>FNB ruling (14 items) and the Prince A5 48 half-line price.</span>
-    <span class="n">M4</span><span>Standardise covers that aren't chipboard (MNL, MGC).</span>
-    <span class="n">M5</span><span>Update the CPS ruling and cover options to match the real codes.</span>
-    <span class="n">M6</span><span>BOM master: Graph row, keep or park Hi5, grammage and cover sheet sizes, and an owner on the floor.</span></div>
-  </div>
-  <div class="card"><h3>Phasing (from your comments, 04 Nov)</h3>
-    <div class="q"><span class="n">Ph1</span><span>Stock books: covers, folds, inserts, packing into Finished Goods, and deliveries from Finished Goods. Flow by item type, with brand and customer filters.</span>
-    <span class="n">Ph2/3</span><span>Paper and ruling, linked to books. School and customised exercise-book orders.</span></div>
-  </div>
-</section>
 
 <!-- ============ YOUR COMMENTS ============ -->
 <section class="panel" id="p-comments" data-tab="comments" hidden>
@@ -855,7 +650,7 @@ tr.flag td{background:var(--warn-tint)}
   <div class="tw"><table>
     <thead><tr><th>#</th><th>Your request</th><th>What was done</th><th>Status</th></tr></thead>
     <tbody>
-      <tr><td class="num">9</td><td>The school check should apply everywhere the item is picked: Compass or anywhere else. One more click is fine for accuracy.</td><td>Built and in the pack. The server check is on all five documents plus API and imports, with pop-ups on Desk and Compass orders and quotations. Android and a few Compass screens get the pop-up later. See Order controls.</td><td><span class="chip wait">Awaiting approval</span></td></tr>
+      <tr><td class="num">9</td><td>The school check should apply everywhere the item is picked: Compass or anywhere else. One more click is fine for accuracy.</td><td>Built and in the pack. The server check is on all five documents plus API and imports, with pop-ups on Desk and Compass orders and quotations. Android and a few Compass screens get the pop-up later. See the Build spec (Order controls).</td><td><span class="chip wait">Awaiting approval</span></td></tr>
       <tr><td class="num">10</td><td>Users enter 3,000/= for one Nos instead of one carton. Was "show the UOM" ever hard-implemented?</td><td>Answer: it was <strong>not hard-implemented</strong>. Only one live setting shows the unit in the Sales Order item list. The pack makes the unit visible and required on all five documents, plus the price-range check.</td><td><span class="chip wait">Awaiting approval</span></td></tr>
       <tr><td class="num">11</td><td>Check all the git repos. Agreed: default to cartons. One Nos is about 100/=, a carton much higher. Apply that logic.</td><td>All repos checked. The Carton default was already set on all 455 items with a carton conversion, while 847 items lack one. The price rule is 3–150/= per book: it would have caught 147 lines since August.</td><td><span class="chip wait">Awaiting approval</span></td></tr>
     </tbody>
@@ -866,7 +661,7 @@ tr.flag td{background:var(--warn-tint)}
     <thead><tr><th>#</th><th>Where</th><th>Your comment</th><th>What was done</th><th>Status</th></tr></thead>
     <tbody>
       <tr><td class="num">7</td><td>Overview · steps</td><td>"Make this a chart not cards please"</td><td>Another session replaced the step cards with a flowchart: Ruling → Folds, and Covers, both feeding Inserts → Packing → Finished stock. It goes vertical on a phone. That session replied on the thread and resolved it.</td><td><span class="chip ok">Done</span></td></tr>
-      <tr><td class="num">8</td><td>In good shape · item names</td><td>"We need a note made and sent to the pc session. What happens at the moment is people are selecting Bank Paper instead of Prince for Brand books. 1 - the bank paper and newsprint need to be rename to school so they are explicit. 2 we need a server script or a client script so if the school ones are selected they ask the user explicitly to confirm if that was a school order or did they mean the corresponding brand."</td><td>Note sent to the PC session. (1) Rename the school item names to start "School Exercise Book - Bank Paper / Newsprint / Brilliant White Bank Paper - …", with codes unchanged. (2) When a school item is picked on a Quotation or Sales Order, ask "Is this a school order?" and offer to switch to the matching Prince/Swara item (SCH-BP-EB → PNCEB, SCH-NP-EB → SWREB). A server-side check also requires a "School order confirmed" tick, so orders from Compass or the API are caught too. The PC will do a read-only count and mapping first, then show you a dry run and the scripts, and write nothing live until you approve. The scripts go into vcl-production, not as live-only scripts.</td><td><span class="chip wait">Awaiting approval, see Order controls</span></td></tr>
+      <tr><td class="num">8</td><td>In good shape · item names</td><td>"We need a note made and sent to the pc session. What happens at the moment is people are selecting Bank Paper instead of Prince for Brand books. 1 - the bank paper and newsprint need to be rename to school so they are explicit. 2 we need a server script or a client script so if the school ones are selected they ask the user explicitly to confirm if that was a school order or did they mean the corresponding brand."</td><td>Note sent to the PC session. (1) Rename the school item names to start "School Exercise Book - Bank Paper / Newsprint / Brilliant White Bank Paper - …", with codes unchanged. (2) When a school item is picked on a Quotation or Sales Order, ask "Is this a school order?" and offer to switch to the matching Prince/Swara item (SCH-BP-EB → PNCEB, SCH-NP-EB → SWREB). A server-side check also requires a "School order confirmed" tick, so orders from Compass or the API are caught too. The PC will do a read-only count and mapping first, then show you a dry run and the scripts, and write nothing live until you approve. The scripts go into vcl-production, not as live-only scripts.</td><td><span class="chip wait">Awaiting approval, see the Build spec (Order controls)</span></td></tr>
     </tbody>
   </table></div>
 
@@ -877,7 +672,7 @@ tr.flag td{background:var(--warn-tint)}
       <tr><td class="num">1</td><td>Meeting in the middle</td><td>"This is a good visual to keep for actual data as well, but can we add in filters here by brand and by customer? Maya or the order is confirmed."</td><td>The chart stays and now runs on the order lines from ERPNext (69 lines, re-pulled 04 Nov 20:13). It has <strong>Brand</strong> and <strong>Customer</strong> filters, and the group table below follows them. Stock goes to the earliest delivery first, so each customer sees what's left after the orders due before theirs. "Maya or the order" was read as <strong>the Mahavir order is confirmed</strong>, so it counts as real demand and the old "without Mahavir" switch has been removed (choose a customer to see any order on its own). Tell me if the comment meant something else.</td><td><span class="chip ok">Done</span></td></tr>
       <tr><td class="num">2</td><td>Where the chain breaks · covers → inserts</td><td>"But how is this model working at the moment? Also we need a step called folds that is input - and the covers+folds inserted together = inserts."</td><td><strong>How it works today</strong> (confirmed from the live dev page and ERPNext): one Repack with two rows, <code>COV-x</code> out and its twin <code>INS-x</code> in, same quantity, zero cost. 14 Repacks, 25,384 = 25,384, and no inner paper is ever taken out. No fold, inner or signature item exists. <strong>Changed:</strong> step 3 is now <strong>Folds (an input)</strong> and Inserts = covers + folds, on every tab. Proposed items <code>FLD-&lt;PNC|SWR&gt;-&lt;A4|A5&gt;-&lt;PPP&gt;PG-&lt;RULING&gt;</code>, twins of COV and INS, with the Repack taking out covers and folds together.</td><td><span class="chip ok">Done</span></td></tr>
       <tr><td class="num">3</td><td>Where the chain breaks · finished stock → delivery</td><td>"What's the difference between finished goods and stock? Remember there is a data gap at the moment because we have not been recording daily production."</td><td>Answered on the Data flow tab. "Stock" is any warehouse. <code>Finished Goods - VCL</code> is for packed books ready to sell, and <code>Stores - VCL</code> is for materials and part-made stock. The data gap is now stated: with no daily production recorded, deliveries were covered by booking stock into Stores on the same day. That's a workaround, not an error. From today's count, books should come into Finished Goods when packed and be delivered from there.</td><td><span class="chip ok">Done</span></td></tr>
-      <tr><td class="num">4</td><td>Where the chain breaks · paper → ruling</td><td>"This goes to phase 2 or phase 3 - and it will include school exercise book/ customized exercise book orders."</td><td>Paper and ruling are marked Phase 2/3 on the Data flow and item-type tables. A Phasing card on Open decisions puts paper, ruling, and school and customised orders in Phase 2/3, and stock books in Phase 1. The 1,000,000-tonne reel is still listed as a data error to fix.</td><td><span class="chip ok">Done</span></td></tr>
+      <tr><td class="num">4</td><td>Where the chain breaks · paper → ruling</td><td>"This goes to phase 2 or phase 3 - and it will include school exercise book/ customized exercise book orders."</td><td>Paper and ruling are marked Phase 2/3 on the Data flow and item-type tables. A Phasing card in the Build spec (Decisions) puts paper, ruling, and school and customised orders in Phase 2/3, and stock books in Phase 1. The 1,000,000-tonne reel is still listed as a data error to fix.</td><td><span class="chip ok">Done</span></td></tr>
       <tr><td class="num">5</td><td>Packing capacity</td><td>"This will be updated tomorrow as we get the stock from the team."</td><td>The section is marked "Count due 05 Nov", and it says the figures will be replaced by the team's count. Send the count and I'll update it.</td><td><span class="chip wait">Waiting on count</span></td></tr>
       <tr><td class="num">6</td><td>By SKU · method note</td><td>"We need the flow by item type from each stage so that it can be mapped properly."</td><td>Added "Flow by item type, stage to stage": item type, code pattern, unit, warehouse, key fields, how many items exist (with stock), and what each becomes. Added "Flow by group" with all 75 groups (brand | size | pages | ruling) and their quantities at each stage: covers, inserts, finished, orders, the shortfall after each stage, and surplus. 34 groups have stock but no orders.</td><td><span class="chip ok">Done</span></td></tr>
     </tbody>
@@ -964,217 +759,6 @@ function run(){
   document.getElementById('fnote').textContent='Showing '+sel.join(', ')+'.';
 }
 ['fbrand','fcust'].forEach(function(id){document.getElementById(id).addEventListener('change',run)});run();
-})();
-</script>
-<script>
-(function(){
-var S=[
-{k:'Station 1',t:'Covers',side:'p',chip:['ok','Existing screen'],
- what:'Cover sheets come off the press and are counted in printed sheets. A5 sheets carry 3 covers and A4 sheets carry 2.',
- facts:[['Who','Printing supervisor (to confirm)'],['Item in','COV-PNC-A5-120PG-SL, in sheets'],['Maps to next by','brand | size | pages | ruling: PNC | A5 | 120 | SL'],['Change','Add the run number. Later, take out board and ink so covers get a cost.']],
- posts:[['IN','COV-PNC-A5-120PG-SL','+1,000 sheets','Stores - VCL'],['DOC','Stock Entry: Material Receipt','run EBR-0001','']],
- where:'Exercise Book Production dev page › Cover Stock › Quick entry (exists today)',
- mock:{title:'Cover Stock · Quick entry',sub:'existing',f:[['Date','04 Nov 2026'],['Run number','EBR-0001',1],['Brand','Prince'],['Size','A5 (3-up)'],['Pages','120'],['Ruling','Single line'],['Printed sheets','1,000'],['= covers','3,000',1]],btn:'Add to stock'}},
-{k:'Station 2',t:'Folds',side:'p',chip:['no','New screen'],
- what:'Ruled inner paper is folded into the book\'s inner section, one fold per book. Folds are an input to inserts, the same way covers are.',
- facts:[['Who','Folding supervisor (to confirm)'],['Item in','FLD-PNC-A5-120PG-SL (new), in folds = books'],['Maps to next by','The same key as covers: PNC | A5 | 120 | SL'],['Phase 1','Folds are received as counted. Paper and ruling going out of stock comes in Phase 2/3.']],
- posts:[['IN','FLD-PNC-A5-120PG-SL','+3,000 folds','Stores - VCL'],['DOC','Stock Entry: Material Receipt','run EBR-0001','']],
- where:'Exercise Book Production dev page › new Folds tab',
- mock:{title:'Folds · Entry',sub:'new',f:[['Date','04 Nov 2026'],['Run number','EBR-0001',1],['Brand','Prince'],['Size','A5'],['Pages','120'],['Ruling','Single line'],['Folds counted','3,000'],['Rejects','12']],btn:'Save folds'}},
-{k:'Station 3',t:'Inserts',side:'p',chip:['part','Existing screen, changed'],
- what:'Covers and folds are inserted together. One cover sheet becomes one insert set, which is 3 A5 books, so it uses 3 folds.',
- facts:[['Who','Binding supervisor (to confirm)'],['Today','Takes out the cover only (COV out, INS in, 1:1)'],['Change','Also take out folds: sets × up-count'],['Unit','Per set, as today (Tanuj, 04 Nov): 1 cover sheet = 1 set = 2 (A4) or 3 (A5) books']],
- posts:[['OUT','COV-PNC-A5-120PG-SL','−1,000 sheets','Stores - VCL'],['OUT','FLD-PNC-A5-120PG-SL','−3,000 folds','Stores - VCL'],['IN','INS-PNC-A5-120PG-SL','+1,000 sets (3,000 books)','Stores - VCL'],['DOC','Stock Entry: Repack','run EBR-0001','']],
- where:'Exercise Book Production dev page › Inserts tab (exists, needs the folds row added)',
- mock:{title:'Inserts · Make sets',sub:'changed',f:[['Run number','EBR-0001',1],['Group','Prince · A5 · 120 · SL'],['Sets made','1,000'],['Covers used','1,000 sheets',1],['Folds used','3,000',1],['= books','3,000',1]],btn:'Post repack'}},
-{k:'Station 4',t:'Packing',side:'p',chip:['part','Existing screen, changed'],
- what:'Books are counted into cartons and received as finished stock. This is where production meets sales.',
- facts:[['Who','Packing and stores (Nadeem / Peter, to confirm)'],['Today','Saved in the browser only. Nothing reaches ERPNext.'],['Change','Post the receipt into Finished Goods, take out inserts and empty cartons, and spot-weigh about 5% of cartons (backend a84ef92).'],['Maps to next by','The book item PNCEB-A5-120PGS-CB-BP-SL (cover and paper are added here)']],
- posts:[['OUT','INS-PNC-A5-120PG-SL','−1,000 sets','Stores - VCL'],['OUT','Empty carton, A5 common','−17 cartons','Stores - VCL'],['IN','PNCEB-A5-120PGS-CB-BP-SL','+3,000 books (16 ctn + 24 loose)','Finished Goods - VCL'],['DOC','Stock Entry: Manufacture (or Repack)','run EBR-0001','']],
- where:'Exercise Book Production dev page › Packing tab (exists, browser-only today)',
- mock:{title:'Packing · Receive finished books',sub:'changed',f:[['Run number','EBR-0001',1],['Book','PNCEB-A5-120PGS-CB-BP-SL'],['Full cartons','16'],['Books per carton','186',1],['Loose books','24'],['Rejects','6'],['Spot-weigh (1 of 16)','4.92 kg ✓ within 5%'],['= books in','3,000',1]],btn:'Receive into Finished Goods'}},
-{k:'Meet',t:'Finished Goods',side:'d',chip:['ok','Existing'],
- what:'Production fills finished stock by group. Sales draws it down by order. Compass allots stock to open orders by earliest delivery first.',
- facts:[['Today','516,918 books (count of 04 Nov). Nothing moves in or out.'],['After step 4','Every packing entry adds to it, and every delivery takes from it'],['Shortfall','Open orders − finished − inserts − covers, per group (the Data flow chart)']],
- posts:[['READ','Bin: Finished Goods - VCL','per book item',''],['READ','Open Sales Orders','per line','']],
- where:'Compass › Exercise Book Orders (built, not deployed)',
- mock:{title:'Exercise Book Orders',sub:'existing, not deployed',f:[['Order','SAL-ORD-2026-00195-2 · ESGA'],['Line','A5 120 SL · 80 ctn'],['Allotted from stock','34 ctn',1],['Still to make','46 ctn',1],['Stage','In production']],btn:'Set stage'}},
-{k:'Sales',t:'Delivery',side:'s',chip:['part','Existing, changed'],
- what:'The Delivery Note ships from Finished Goods against the Sales Order.',
- facts:[['Today','Shipped from Stores, after a same-day receipt of the same quantity (a workaround while production isn\'t recorded)'],['Change','Default warehouse = Finished Goods - VCL. Stop the same-day receipts once packing posts.']],
- posts:[['OUT','PNCEB-A5-120PGS-CB-BP-SL','−2,976 books (16 ctn)','Finished Goods - VCL'],['DOC','Delivery Note','against SAL-ORD-2026-00195-2','']],
- where:'ERPNext Delivery Note, or Compass',
- mock:{title:'Delivery Note',sub:'existing',f:[['Customer','ESGA Enterprises'],['Sales Order','SAL-ORD-2026-00195-2'],['Item','PNCEB-A5-120PGS-CB-BP-SL'],['Qty','16 Carton'],['From warehouse','Finished Goods - VCL',1]],btn:'Submit'}},
-{k:'Watch',t:'Dashboard',side:'d',chip:['no','New, in Compass'],
- what:'One screen for the day: what is on order, what is in stock at each stage, what is short, and what each station posted today.',
- facts:[['Filters','Brand, customer, size'],['Built from','The same order lines and stage stock as the Data flow tab, read live'],['Alerts','Groups short with no covers. Stations with no entry today. Cartons running low.']],
- posts:[['READ','Sales Order lines, Bins, Stock Entries by run','live','']],
- where:'Compass › Exercise Books › Dashboard (new tab beside Orders)',
- dash:true}
-];
-
-var TH=[['lightning','VCL Lightning (recommended)','Salesforce Lightning structure in VCL colours and Calibri, the same family as the CRM. White cards on grey, square icon tile, plain labels. Floor stations switch to large touch mode.'],
- ['fiori','SAP Fiori Horizon','SAP\'s current style, built for manufacturing and warehouse apps. Rounder corners, softer shadows, roomy spacing, big object header. Very readable on tablets; reads as "SAP", not as the CRM.'],
- ['fluent','Microsoft Fluent 2','The Dynamics 365 / Business Central look. Solid brand header band, Segoe UI, semibold labels with an underlined input edge. Familiar to anyone who uses Office; slightly denser.'],
- ['espresso','Frappe Espresso','ERPNext\'s own desk style (Inter, filled grey inputs, almost no borders). Matches what users see in ERPNext itself, but flat and low-contrast for the floor. Espresso normally uses near-black buttons; VCL Blue is kept here.'],
- ['carbon','IBM Carbon','IBM\'s enterprise system. Square corners, dark shell bar, filled fields with an underline, IBM Plex type. Very crisp and dense; feels technical rather than friendly.'],
- ['material','Google Material 3','Android\'s own style, so it matches the floor tablets and the VCL Android app. Tinted surfaces, pill buttons, outlined fields, round icon. Friendly, but it reads as Google rather than VCL.'],
- ['polaris','Shopify Polaris','Shopify admin style. Soft grey page, raised white cards, tactile buttons, Inter type. Clean and modern for desk work; a little soft for the floor.'],
- ['hmi','Industrial HMI (ISA-101)','The machine-panel standard for factory screens: grey everywhere, heavy black field borders, bold labels, and colour kept only for actions and alarms. Most legible on the floor and closest to what operators see on machines; plain at a desk.']];
-var theme='lightning';try{var sv=localStorage.getItem('eb-theme');if(sv&&TH.some(function(t){return t[0]===sv}))theme=sv}catch(e){}
-var tb=document.getElementById('w-themes');
-TH.forEach(function(t){var b=document.createElement('button');b.type='button';b.textContent=t[1];b.dataset.t=t[0];b.addEventListener('click',function(){theme=t[0];try{localStorage.setItem('eb-theme',theme)}catch(e){}renderMock(S[cur])});tb.appendChild(b)});
-var IC={'Covers':'CV','Folds':'FD','Inserts':'IN','Packing':'PK','Finished Goods':'FG','Delivery':'DN','Dashboard':'DB'};
-var QRE=/sheets|counted|sets made|cartons|loose|rejects|^qty|books in|covers|folds used|books$/i;
-function renderMock(st){
- var m=document.getElementById('w-mock');var floor=st.side==='p';
- [].forEach.call(tb.children,function(b){b.setAttribute('aria-pressed',b.dataset.t===theme?'true':'false')});
- var tn=TH.filter(function(t){return t[0]===theme})[0];
- document.getElementById('w-tnote').textContent=tn[2]+(floor?' Shown in floor mode (touch, arm\'s length).':' Shown in desk mode.');
- m.className='mock mx t-'+theme+(floor?' floor':' desk');
- var title=st.dash?'Exercise Books · Dashboard':st.mock.title, parts=title.split(' · ');
- var head='<div class="mh"><span class="ic" aria-hidden="true">'+(IC[st.t]||'EB')+'</span><span class="ht"><span class="ob">'+esc(parts.length>1?parts[0]:'Exercise Books')+'</span><span class="tt">'+esc(parts.length>1?parts.slice(1).join(' · '):parts[0])+'</span></span>'+(st.side==='p'?'<span class="crumb">Run <b>EBR-0001</b></span>':'')+'</div>';
- if(st.dash){
-  m.innerHTML=head+'<div class="mb"><div class="kp">'+[['Open orders','1,546,590'],['Finished','516,918'],['Inserts','62,378'],['Covers','1,260,230'],['Still to make','1,085,336',1]].map(function(t){return '<div><span class="k">'+t[0]+' (books)</span><span class="v'+(t[2]?' bad':'')+'">'+t[1]+'</span></div>'}).join('')+'</div>'+
-  '<div class="tbw"><table><thead><tr><th>Group</th><th>Orders</th><th>Finished</th><th>Short</th></tr></thead><tbody><tr><td>Swara A4 120 SL</td><td class="num">893,010</td><td class="num">8,772</td><td class="num">815,138</td></tr><tr><td>Swara A4 120 SQ</td><td class="num">105,060</td><td class="num">5,406</td><td class="num">85,206</td></tr><tr><td>Swara A4 96 SL</td><td class="num">66,000</td><td class="num">600</td><td class="num">39,400</td></tr></tbody></table></div>'+
-  '<div class="tbw"><table><thead><tr><th>Today by station</th><th>Entries</th><th>Qty</th></tr></thead><tbody><tr><td>Covers</td><td class="num">2</td><td class="num">1,000 sheets</td></tr><tr><td>Folds</td><td class="num">1</td><td class="num">3,000</td></tr><tr><td>Inserts</td><td class="num">1</td><td class="num">1,000 sets</td></tr><tr><td>Packing</td><td class="num">0</td><td><span class="pill">No entry yet</span></td></tr></tbody></table></div></div>';
-  return;}
- var mk=st.mock, sums=[], fields=[];
- mk.f.forEach(function(f){ if(f[2]&&/^=/.test(f[0])) sums.push(f); else fields.push(f); });
- var fx=fields.map(function(f){var q=QRE.test(f[0])&&/\d/.test(f[1]);var auto=!!f[2];var pick=!auto&&!q&&!/date/i.test(f[0]);
-  return '<div class="f'+(q?' qn':'')+'"><span class="l">'+esc(f[0])+(auto?' · auto':'')+'</span>'+(auto?'<span class="ro">'+esc(f[1])+'</span>':'<span class="i'+(pick?' pick':'')+'">'+esc(f[1])+'</span>')+'</div>'}).join('');
- var sum=sums.length?'<div class="sum">'+sums.map(function(f){return '<span>'+esc(f[0])+' <b>'+esc(f[1])+'</b></span>'}).join('')+(st.t==='Covers'?'<span class="hint" style="color:inherit">A5 is 3-up: 1,000 sheets make 3,000 books</span>':'')+'</div>':'';
- m.innerHTML=head+'<div class="mb"><div class="cardx"><span class="sec">'+(floor?'Enter this run':'Details')+'</span><div class="fx">'+fx+'</div>'+sum+'</div><div class="act" id="w-act"><button type="button" class="bp" id="w-save">'+esc(mk.btn)+'</button>'+(floor?'':'<button type="button" class="bs">Cancel</button>')+'</div><p class="hint">'+(floor?'Pick lists for run, item and machine; numeric keypad for quantities. Locked fields are filled in by the screen. Tap the button to see the confirmation.':'Locked fields are filled in by the screen.')+'</p></div>';
- document.getElementById('w-save').addEventListener('click',function(){var a=document.getElementById('w-act');
-  a.innerHTML='<div class="toast" style="flex:1 1 100%"><span>Posted ✓ '+(st.posts[st.posts.length-1]?esc(st.posts[st.posts.length-1][1]):'')+' · run EBR-0001 (demo)</span><button type="button" id="w-undo">Undo (10 s)</button></div>';
-  document.getElementById('w-undo').addEventListener('click',function(){renderMock(st)});});
-}
-var cur=0, box=document.getElementById('stations');
-S.forEach(function(st,i){var b=document.createElement('button');b.type='button';b.className='side-'+st.side;b.innerHTML='<span class="k">'+st.k+'</span><span class="t">'+st.t+'</span>';b.addEventListener('click',function(){show(i)});box.appendChild(b)});
-function esc(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
-function show(i){cur=i;var st=S[i];
- [].forEach.call(box.children,function(b,j){b.setAttribute('aria-pressed',j===i?'true':'false')});
- document.getElementById('w-title').textContent=st.t;
- document.getElementById('w-chip').innerHTML='<span class="chip '+st.chip[0]+'">'+st.chip[1]+'</span>';
- document.getElementById('w-what').textContent=st.what;
- document.getElementById('w-facts').innerHTML=st.facts.map(function(f){return '<dt>'+esc(f[0])+'</dt><dd>'+esc(f[1])+'</dd>'}).join('');
- document.getElementById('w-posts').innerHTML=st.posts.map(function(p){var c=p[0]==='OUT'?'out':p[0]==='IN'?'in':'';return '<div class="post"><span class="dir '+c+'">'+p[0]+'</span><span><code>'+esc(p[1])+'</code>'+(p[3]?' · '+esc(p[3]):'')+'</span><span class="mono">'+esc(p[2])+'</span></div>'}).join('');
- document.getElementById('w-where').textContent='Where: '+st.where;
- var m=document.getElementById('w-mock');renderMock(st);
- document.getElementById('w-prev').disabled=i===0;document.getElementById('w-next').disabled=i===S.length-1;}
-document.getElementById('w-prev').addEventListener('click',function(){if(cur>0)show(cur-1)});
-document.getElementById('w-next').addEventListener('click',function(){if(cur<S.length-1)show(cur+1)});
-show(0);
-})();
-</script>
-<script>
-(function(){
-var G=[
-['Plan',[
-{id:'plan',n:'Run plan: what to make',st:['no','New'],where:'Exercise Book Production dev page › Plan (later: vcl-production app)',who:'Production planner',reads:'Open order lines, Finished Goods, inserts, covers (the Data flow netting)',writes:'Creates a run number EBR-#### per group, with a target in sheets',why:'Turns the shortfall into runs by group. Production is planned by group, never per order.',
- path:'Production › Exercise Books › Plan',b:[
- {t:'filters',items:['Brand: All','Size: All','Due before: 13 Nov']},
- {t:'table',head:['Group','On order','Finished','In pipeline','Short','Covers on hand','Plan run'],num:[1,2,3,4,5],rows:[
-  ['Swara A4 120 SL','893,010','8,772','69,100','815,138','25,070 sh','<b>Create run</b> 410,000 sh'],
-  ['Swara A4 120 SQ','105,060','5,406','14,448','85,206','6,000 sh','<b>Create run</b> 43,000 sh'],
-  ['Swara A4 96 SL','66,000','600','26,000','39,400','13,000 sh','<b>Create run</b> 20,000 sh'],
-  ['Prince A5 48 SL','30,720','0','0','30,720','0 sh','<b>Print covers first</b>'],
-  ['Swara A4 48 SL','40,800','0','12,000','28,800','6,000 sh','<b>Create run</b> 14,400 sh']]},
- {t:'alert',k:'info',x:'Pipeline = inserts + printed covers, in books. A run target is in cover sheets: A4 = 2 books per sheet, A5 = 3.'}]},
-{id:'runs',n:'Run tracker',st:['no','New'],where:'Exercise Book Production dev page › Runs',who:'Production manager',reads:'Stock Entries carrying the run number',writes:'Nothing. Closing a run only stamps it closed.',why:'Follows one run across every station, so yield and waste can be read per run.',
- path:'Production › Exercise Books › Runs › EBR-0001',b:[
- {t:'chips',items:[['ok','Prince · A5 · 120 · SL'],['part','In progress'],['wait','Target 1,000 sheets']]},
- {t:'flow',items:[['Covers','1,000 sheets','= 3,000 books'],['Folds','2,988','12 rejected'],['Inserts','996 sets','= 2,988 books'],['Packing','16 ctn + 12','= 2,988 books'],['Finished Goods','2,988','received']]},
- {t:'tiles',items:[['Yield, covers → books','99.6%','','ok'],['Waste','12 folds','0.4%',''],['Days open','2','',''],['Cartons used','17','A5 common','']]},
- {t:'table',head:['Date','Station','Entry','Qty','By'],num:[3],rows:[['04 Nov','Covers','MAT-STE-…','1,000 sheets','Printing'],['04 Nov','Folds','MAT-STE-…','2,988','Folding'],['05 Nov','Inserts','Repack','996 sets','Binding'],['05 Nov','Packing','Manufacture','2,988 books','Stores']]}]}
-]],
-['Floor entry',[
-{id:'covers',n:'Covers: quick entry',st:['part','Existing, changed'],where:'Exercise Book Production dev page › Cover Stock',who:'Printing supervisor',reads:'COV- items',writes:'Material Receipt of COV- sheets into Stores - VCL (later: a Manufacture that uses board and ink)',why:'Records printed cover sheets per run. Change: add the run number.',
- path:'Exercise Book Production › Cover Stock › Quick entry',b:[
- {t:'form',f:[['Date','04 Nov 2026'],['Run number','EBR-0001 ▾'],['Brand','Prince'],['Size','A5 (3-up)'],['Pages','120'],['Ruling','Single line'],['Printed sheets','1,000'],['= books','3,000',1],['Spoiled sheets','8']],btn:'Add to stock'},
- {t:'alert',k:'ok',x:'Saved: MAT-STE-2026-00061 · +1,000 COV-PNC-A5-120PG-SL · run EBR-0001'}]},
-{id:'folds',n:'Folds: entry',st:['no','New'],where:'Exercise Book Production dev page › new Folds tab',who:'Folding supervisor',reads:'FLD- items (to be created)',writes:'Material Receipt of FLD- folds into Stores - VCL. Paper goes out of stock in Phase 2/3.',why:'Folds are an input to inserts, the same way covers are.',
- path:'Exercise Book Production › Folds',b:[
- {t:'form',f:[['Date','04 Nov 2026'],['Run number','EBR-0001 ▾'],['Brand','Prince'],['Size','A5'],['Pages','120'],['Ruling','Single line'],['Folds counted','2,988'],['Rejected','12'],['Item','FLD-PNC-A5-120PG-SL',1]],btn:'Save folds'}]},
-{id:'inserts',n:'Inserts: make sets',st:['part','Existing, changed'],where:'Exercise Book Production dev page › Inserts',who:'Binding supervisor',reads:'COV- and FLD- on hand',writes:'Repack: COV- out, FLD- out (sets × up-count), INS- in',why:'Covers + folds = inserts. Today only the cover is taken out.',
- path:'Exercise Book Production › Inserts',b:[
- {t:'form',f:[['Run number','EBR-0001 ▾'],['Group','Prince · A5 · 120 · SL',1],['Sets made','996'],['Covers used','996 sheets',1],['Folds used','2,988',1],['= books','2,988',1]],btn:'Post repack'},
- {t:'table',head:['On hand after','Covers','Folds','Inserts'],num:[1,2,3],rows:[['Prince A5 120 SL','4 sheets','0','996 sets']]},
- {t:'alert',k:'warn',x:'If folds on hand are fewer than sets × 3, the screen stops: "Only 2,400 folds on hand, enough for 800 sets."'}]},
-{id:'packing',n:'Packing: receive finished books',st:['part','Existing, changed'],where:'Exercise Book Production dev page › Packing + receiving backend (a84ef92)',who:'Packing and stores',reads:'INS- on hand, the book item\'s Carton conversion, empty cartons',writes:'Manufacture: INS- out, empty cartons out, book item in to Finished Goods - VCL',why:'Today packing is saved in the browser only. This is where production meets sales.',
- path:'Exercise Book Production › Packing',b:[
- {t:'form',f:[['Run number','EBR-0001 ▾'],['Book','PNCEB-A5-120PGS-CB-BP-SL',1],['Full cartons','16'],['Books per carton','186',1],['Loose books','12'],['Rejects','0'],['Carton used','A5 common ▾'],['= books in','2,988',1]],btn:'Receive into Finished Goods'},
- {t:'h',x:'Spot-weigh (about 1 in 20 cartons)'},
- {t:'table',head:['Carton','Weight','Expected','Result'],num:[1,2],rows:[['1 of 16','4.92 kg','4.95 kg','<span class="chip ok">Within 5%</span>']]}]},
-{id:'cartons',n:'Empty cartons: count',st:['part','Existing, changed'],where:'Exercise Book Production dev page › Empty Cartons',who:'Stores',reads:'Empty Cartons item group',writes:'Stock Reconciliation draft from the count (Tanuj submits)',why:'Book balances date from 2024–25 purchases and have never been issued. The team counts on 05 Nov.',
- path:'Exercise Book Production › Empty Cartons › Count',b:[
- {t:'table',head:['Carton','Size','On books','Counted','Difference'],num:[2,3,4],rows:[['Prince common 425×305×275','A4','7,086','',''],['Prince common 425×305×260','A4','4,425','',''],['Prince common 425×305×250','A4','2,647','',''],['Prince/Swara common A4','A4','961','',''],['Swara common 280 mm','A4','2,078','',''],['Prince/Swara A5 (disabled item)','A5','1,875','','']]},
- {t:'alert',k:'warn',x:'Count due 05 Nov. The A5 carton item is disabled, so enable it or replace it before packing A5.'}]}
-]],
-['Sales',[
-{id:'order',n:'Order entry with checks',st:['part','Existing, changed'],where:'Desk Quotation / Sales Order / Opportunity, and Compass Orders and Quotations',who:'Sales reps',reads:'Item, brand twin, price list, rate band',writes:'The document, plus "School order confirmed"',why:'Stops the two common mistakes: a school book picked by mistake, and a carton price typed against one book.',
- path:'Compass › Sales › New order',b:[
- {t:'table',head:['Item','Qty','Unit','Rate','Check'],num:[1,3],rows:[['PNCEB-A4-96PGS-CB-BP-SL','50','Carton','11,700','<span class="chip ok">OK</span>'],['SCH-BP-EB-A4-96PGS-CB-BP-SL','20','Carton','9,800','<span class="chip wait">Confirm school?</span>'],['PNCEB-A5-48PGS-CB-BP-SL','1','Nos','3,000','<span class="chip no">Did you mean 1 Carton?</span>']]},
- {t:'modal',title:'School exercise book',x:'This is a SCHOOL exercise book (no brand). Is this a school order? If you meant the Prince book, switch to it.',btns:['Yes, school order','Switch to PNCEB-A4-96PGS-CB-BP-SL']}]},
-{id:'ebo',n:'Exercise Book Orders',st:['ok','Built, not deployed'],where:'Compass › Exercise Books › Orders (vcl_compass 5709b0a)',who:'Sales and production',reads:'Open order lines, Finished Goods',writes:'Order stage (vcl_eb_stage) + a comment',why:'Shows each order line, what finished stock covers it (earliest delivery first) and what is still to make.',
- path:'Compass › Exercise Books › Orders',b:[
- {t:'filters',items:['Brand: All','Customer: All','Stage: All']},
- {t:'table',head:['Order','Customer','Due','Line','Ordered','From stock','To make','Stage'],num:[4,5,6],rows:[['00195-2','ESGA','04 Nov','A5 120 SL','80 ctn','18 ctn','62 ctn','In production'],['00194','Discount Office','06 Nov','A4 96 SL','100 ctn','100 ctn','0','Ready'],['00199','Mahavir','03 Nov','A4 120 SL Swara','8,000 ctn','86 ctn','7,914 ctn','Planned'],['00173','Vaghela','06 Nov','A4 200 SL Swara','200 ctn','23 ctn','177 ctn','Planned']]}]},
-{id:'dn',n:'Delivery from Finished Goods',st:['part','Existing, changed'],where:'Desk Delivery Note, or Compass',who:'Dispatch',reads:'Sales Order, Finished Goods - VCL',writes:'Delivery Note from Finished Goods - VCL',why:'Stops the same-day "book in to deliver" receipts once packing records stock.',
- path:'Delivery Note › New',b:[
- {t:'form',f:[['Customer','ESGA Enterprises',1],['Sales Order','SAL-ORD-2026-00195-2',1],['Item','PNCEB-A5-120PGS-CB-BP-SL',1],['Qty','16 Carton'],['From warehouse','Finished Goods - VCL',1],['Available','16 ctn + 12',1]],btn:'Submit'}]}
-]],
-['Dashboards',[
-{id:'d-floor',n:'Floor today',st:['no','New'],where:'Exercise Book Production dev page › Today (on a floor screen)',who:'Supervisors, production manager',reads:'Today\'s Stock Entries by station and run',writes:'Nothing',why:'Shows at a glance whether every station has entered today, and what each produced.',
- path:'Exercise Book Production › Today · 04 Nov',b:[
- {t:'tiles',items:[['Covers printed','2,400 sh','= 6,000 books','ok'],['Folds','5,820','','ok'],['Inserts','1,940 sets','= 5,820 books','ok'],['Packed','0','No entry yet','no']]},
- {t:'table',head:['Run','Group','Covers','Folds','Inserts','Packed','Yield'],num:[2,3,4,5],rows:[['EBR-0001','Prince A5 120 SL','1,000','2,988','996','2,988','99.6%'],['EBR-0002','Swara A4 120 SL','1,400','2,832','944','0','-']]},
- {t:'alert',k:'warn',x:'Packing has no entry today. Cartons on hand for A5: 1,875 (disabled item).'}]},
-{id:'d-plan',n:'Stock and shortfall',st:['no','New'],where:'Compass › Exercise Books › Dashboard',who:'Planner, sales manager',reads:'The Data flow netting, live',writes:'Nothing',why:'Where production and sales meet: stock at each stage against open orders, by group, with brand and customer filters.',
- path:'Compass › Exercise Books › Dashboard',b:[
- {t:'filters',items:['Brand: All','Customer: All','Size: All']},
- {t:'tiles',items:[['Open orders','1,546,590','books',''],['Finished','516,918','books','ok'],['Inserts','62,378','books',''],['Covers','1,260,230','books',''],['Still to make','1,085,336','books','no']]},
- {t:'bars',items:[['Open orders',1546590,'c-dem'],['After finished stock',1365736,'c-short'],['After inserts',1334808,'c-short'],['After covers',1085336,'c-short']]},
- {t:'table',head:['Group','Orders','Finished','Short'],num:[1,2,3],rows:[['Swara A4 120 SL','893,010','8,772','815,138'],['Swara A4 120 SQ','105,060','5,406','85,206'],['Swara A4 96 SL','66,000','600','39,400']]}]},
-{id:'d-mgmt',n:'Management summary',st:['no','New'],where:'Compass › Exercise Books › Summary',who:'Tanuj',reads:'Orders, stock, runs, deliveries',writes:'Nothing',why:'A weekly view: orders on hand, output, deliveries, waste and overdue orders.',
- path:'Compass › Exercise Books › Summary · week 45',b:[
- {t:'tiles',items:[['Orders on hand','13,205 ctn','10 orders',''],['Overdue lines','38','due before today','no'],['Packed this week','0 ctn','production not yet recorded','wait'],['Delivered this week','591 ctn','4 delivery notes',''],['Waste','-','needs runs','wait']]},
- {t:'table',head:['Customer','Open ctn','Due','Covered by stock'],num:[1,3],rows:[['Mahavir','10,550','03 Nov','2%'],['ESGA','780','04 Nov','46%'],['Jain Trading','550','12 Nov','0%'],['Vaghela','550','06 Nov','14%']]}]},
-{id:'d-health',n:'Data health and controls',st:['no','New'],where:'Compass › Exercise Books › Data health',who:'IT Development, Tanuj',reads:'Items, price list, invoice lines, guard logs',writes:'Nothing (links to the records to fix)',why:'Shows the clean-up still needed and what the order checks are catching.',
- path:'Compass › Exercise Books › Data health',b:[
- {t:'tiles',items:[['Items without a Carton conversion','847','807 enabled','no'],['Items with no current price','809','','no'],['Carton invoice lines with conversion 1','937 of 989','','no'],['Carton prices on Nos','13','','no']]},
- {t:'table',head:['Check','Stopped this week','Switched / corrected'],num:[1,2],rows:[['School or brand?','-','-'],['"Did you mean 1 Carton?"','-','-'],['"Did you mean Nos?"','-','-']]},
- {t:'alert',k:'info',x:'The check counts start when the pack goes live. Since 06 Aug the price rule would have caught 72 enquiry, 74 quotation and 1 order lines.'}]}
-]],
-['Masters',[
-{id:'itemset',n:'Item set per book',st:['no','New'],where:'Desk Item (a "Production set" section) or Compass',who:'IT Development, production',reads:'COV-, FLD-, INS-, book items, cartons',writes:'Links only (creates missing twins in after_migrate)',why:'Shows one book\'s full chain of items, so the mapping between stations is visible and gaps stand out.',
- path:'Item › PNCEB-A5-120PGS-CB-BP-SL › Production set',b:[
- {t:'table',head:['Stage','Item','Unit','Status'],rows:[['Covers','COV-PNC-A5-120PG-SL','Sheet (3-up)','<span class="chip ok">Exists</span>'],['Folds','FLD-PNC-A5-120PG-SL','Fold (1 per book)','<span class="chip no">To create</span>'],['Inserts','INS-PNC-A5-120PG-SL','Set (3 books)','<span class="chip ok">Exists</span>'],['Finished book','PNCEB-A5-120PGS-CB-BP-SL','Nos, Carton = 186','<span class="chip ok">Exists</span>'],['Carton','A5 common','Nos','<span class="chip wait">Item disabled</span>'],['School twin','SCH-BP-EB-A5-120PGS-CB-BP-SL','Nos','<span class="chip ok">Exists</span>']]}]}
-]]
-];
-var all=[];G.forEach(function(g){g[1].forEach(function(s){s.g=g[0];all.push(s)})});
-var nav=document.getElementById('sc-nav'),sel=document.getElementById('sc-sel');
-G.forEach(function(g){var h=document.createElement('p');h.className='label';h.textContent=g[0];nav.appendChild(h);var og=document.createElement('optgroup');og.label=g[0];
- g[1].forEach(function(s){var b=document.createElement('button');b.type='button';b.dataset.id=s.id;b.innerHTML='<span>'+s.n+'</span><span class="chip '+s.st[0]+'">'+s.st[1]+'</span>';b.addEventListener('click',function(){show(s.id)});nav.appendChild(b);
- var o=document.createElement('option');o.value=s.id;o.textContent=s.n+' ('+s.st[1]+')';og.appendChild(o)});sel.appendChild(og)});
-sel.addEventListener('change',function(){show(sel.value)});
-function blk(b){
- if(b.t==='tiles')return '<div class="tiles">'+b.items.map(function(t){return '<div class="tile'+(t[3]?' st-'+t[3]:'')+'"><span class="label">'+t[0]+'</span><span class="v">'+t[1]+'</span><span class="label" style="text-transform:none;letter-spacing:0">'+t[2]+'</span></div>'}).join('')+'</div>';
- if(b.t==='form')return '<div class="frow">'+b.f.map(function(f){return '<div class="fld"><span class="lb">'+f[0]+'</span><span class="in'+(f[2]?' auto':'')+'">'+f[1]+'</span></div>'}).join('')+'</div><span class="btnmock">'+b.btn+'</span>';
- if(b.t==='table')return '<div class="tw"><table><thead><tr>'+b.head.map(function(h){return '<th>'+h+'</th>'}).join('')+'</tr></thead><tbody>'+b.rows.map(function(r){return '<tr>'+r.map(function(c,i){return '<td'+((b.num||[]).indexOf(i)>=0?' class="num"':'')+'>'+c+'</td>'}).join('')+'</tr>'}).join('')+'</tbody></table></div>';
- if(b.t==='alert')return '<div class="callout'+(b.k==='warn'?' warn':'')+'"><p>'+b.x+'</p></div>';
- if(b.t==='h')return '<p class="label">'+b.x+'</p>';
- if(b.t==='chips')return '<div style="display:flex;flex-wrap:wrap;gap:6px">'+b.items.map(function(c){return '<span class="chip '+c[0]+'">'+c[1]+'</span>'}).join('')+'</div>';
- if(b.t==='filters')return '<div style="display:flex;flex-wrap:wrap;gap:6px">'+b.items.map(function(c){return '<span class="fpill">'+c+' ▾</span>'}).join('')+'</div>';
- if(b.t==='flow')return '<div class="rflow">'+b.items.map(function(c,i){return (i?'<span class="arr">→</span>':'')+'<div class="st prod"><span class="nm">'+c[0]+'</span><span class="v">'+c[1]+'</span><span class="u">'+c[2]+'</span></div>'}).join('')+'</div>';
- if(b.t==='bars'){var m=b.items[0][1];return '<div class="cascade">'+b.items.map(function(c){return '<div class="cas"><span>'+c[0]+'</span><span class="bar"><i class="'+c[2]+'" style="width:'+(c[1]/m*100).toFixed(1)+'%"></i></span><span class="n">'+c[1].toLocaleString('en-GB')+'</span></div>'}).join('')+'</div>';}
- if(b.t==='modal')return '<div class="mmodal"><div class="mock"><div class="bar">'+b.title+' <span>pop-up</span></div><div class="body"><p>'+b.x+'</p><div style="display:flex;flex-wrap:wrap;gap:8px"><span class="btnmock">'+b.btns[0]+'</span><span class="btnmock alt">'+b.btns[1]+'</span></div></div></div></div>';
- return '';}
-function show(id){var s=all.filter(function(x){return x.id===id})[0]||all[0];sel.value=s.id;
- [].forEach.call(nav.querySelectorAll('button'),function(b){b.setAttribute('aria-pressed',b.dataset.id===s.id?'true':'false')});
- document.getElementById('sc-view').innerHTML='<div class="mock"><div class="bar">'+s.path+' <span>'+s.st[1]+'</span></div><div class="body">'+s.b.map(blk).join('')+'</div></div>'+
- '<div class="card"><header style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><h3>'+s.n+'</h3><span class="chip '+s.st[0]+'">'+s.st[1]+'</span></header><p>'+s.why+'</p><dl class="facts"><dt>Who uses it</dt><dd>'+s.who+'</dd><dt>Where it\'s built</dt><dd>'+s.where+'</dd><dt>Reads</dt><dd>'+s.reads+'</dd><dt>Writes</dt><dd>'+s.writes+'</dd></dl></div>';}
-show('plan');
 })();
 </script>
 
