@@ -275,7 +275,7 @@ tr.flag td{background:var(--warn-tint)}
     <tbody>
       <tr><td>Paper <span class="chip wait">Phase 2/3</span></td><td>Raw paper</td><td><code>NP-Reels-610-42-…</code>, <code>WF/BP - Reel-…</code></td><td>Kg / Tonne / Ream</td><td><code>Stores - VCL</code></td><td>paper, width, gsm</td><td class="num">32 (15)</td><td>Ruled sheets</td></tr>
       <tr><td>Ruling <span class="chip wait">Phase 2/3</span></td><td>Ruled sheet</td><td><code>RL - SL - A4 - BP</code> (the only one, no stock)</td><td>Sheets</td><td>-</td><td>ruling, size, paper</td><td class="num">1 (0)</td><td>Folds</td></tr>
-      <tr><td>Folds <span class="chip no">Missing</span></td><td>Folded inner (proposed)</td><td><code>FLD-&lt;PNC|SWR&gt;-&lt;A4|A5&gt;-&lt;PPP&gt;PG-&lt;RULING&gt;</code> (proposed, twin of COV/INS)</td><td>Nos (one per book)</td><td><code>Stores - VCL</code></td><td>size, pages, paper, ruling</td><td class="num">0. None exists</td><td>Inserts</td></tr>
+      <tr><td>Folds <span class="chip no">Missing</span></td><td>Folded inner (proposed)</td><td><code>FLD-&lt;PNC|SWR&gt;-&lt;A4|A5&gt;-&lt;PPP&gt;PG-&lt;RULING&gt;</code> (approved 04 Nov, twin of COV/INS)</td><td>Nos (one per book)</td><td><code>Stores - VCL</code></td><td>size, pages, paper, ruling</td><td class="num">0. None exists</td><td>Inserts</td></tr>
       <tr><td>Covers</td><td>Printed cover sheet</td><td><code>COV-PNC-A5-120PG-SL</code></td><td>Sheets (A5 3-up, A4 2-up)</td><td><code>Stores - VCL</code></td><td>brand, size, pages, ruling</td><td class="num">80 (68)</td><td>Inserts</td></tr>
       <tr><td>Inserts</td><td>Cover + inner, not yet packed</td><td><code>INS-PNC-A5-120PG-SL</code></td><td>Sets (1 set = 1 cover sheet)</td><td><code>Stores - VCL</code></td><td>brand, size, pages, ruling</td><td class="num">80 (6)</td><td>Finished book</td></tr>
       <tr><td>Packing / finished</td><td>Finished book</td><td><code>PNCEB-A5-120PGS-CB-BP-SL</code></td><td>Nos, sold in Carton</td><td><code>Finished Goods - VCL</code></td><td>brand, size, pages, cover, paper, ruling</td><td class="num">1,302 (29)</td><td>Delivery</td></tr>
@@ -323,7 +323,7 @@ tr.flag td{background:var(--warn-tint)}
     <thead><tr><th>Step</th><th>What</th><th>Where it's built</th><th>Depends on</th></tr></thead>
     <tbody>
       <tr><td class="num">1</td><td>Put the dev pages in git, so sessions stop overwriting each other</td><td>Repo of their own, or <code>vcl-production</code></td><td>-</td></tr>
-      <tr><td class="num">2</td><td>Create the 80 <code>FLD-</code> items (twins of COV/INS) and a <code>custom_eb_run</code> field on Stock Entry</td><td>vcl-production, in <code>after_migrate</code></td><td>Approval of the FLD naming</td></tr>
+      <tr><td class="num">2</td><td>Create the 80 <code>FLD-</code> items (twins of COV/INS) and a <code>custom_eb_run</code> field on Stock Entry</td><td>vcl-production, in <code>after_migrate</code></td><td>FLD naming approved 04 Nov</td></tr>
       <tr><td class="num">3</td><td>New Folds screen. Inserts screen changed to take out covers and folds</td><td>Exercise Book Production dev page</td><td>2</td></tr>
       <tr><td class="num">4</td><td>Packing screen posts to <code>Finished Goods - VCL</code>, takes out inserts and empty cartons, spot-weighs</td><td>Dev page + the receiving backend (<code>a84ef92</code>, push it)</td><td>2, plus the carton count</td></tr>
       <tr><td class="num">5</td><td>Deliver from Finished Goods. Stop the same-day "book in to deliver" receipts</td><td>Existing Delivery Note, default warehouse</td><td>4</td></tr>
@@ -594,6 +594,7 @@ tr.flag td{background:var(--warn-tint)}
     <span class="n">P6</span><span>Settled: no work order per Sales Order. Still open: what a production run is recorded on (a run-level job card, a Work Order per SKU run, or just the stage stock entries), and what triggers a run (shortfall against open demand, a minimum stock level, or both).</span>
     <span class="n">P7</span><span>Who owns each handover (Nadeem and Peter are candidates), and where the run reference travels on the floor.</span>
     <span class="n">P8</span><span>How rejects, loose books and reversals are handled.</span>
+    <span class="n">P10</span><span>Settled 04 Nov: folds items are named <code>FLD-&lt;PNC|SWR&gt;-&lt;A4|A5&gt;-&lt;PPP&gt;PG-&lt;RULING&gt;</code>, twins of COV and INS. They will be created through the vcl-production app (step 2 of the build plan).</span>
     <span class="n">P9</span><span>Put the dev pages in git, so sessions stop overwriting each other.</span></div>
   </div>
   <div class="card"><h3>Stock and orders</h3>
@@ -636,7 +637,7 @@ tr.flag td{background:var(--warn-tint)}
       <tr><td class="num">6</td><td>By SKU · method note</td><td>"We need the flow by item type from each stage so that it can be mapped properly."</td><td>Added "Flow by item type, stage to stage": item type, code pattern, unit, warehouse, key fields, how many items exist (with stock), and what each becomes. Added "Flow by group" with all 75 groups (brand | size | pages | ruling) and their quantities at each stage: covers, inserts, finished, orders, the shortfall after each stage, and surplus. 34 groups have stock but no orders.</td><td><span class="chip ok">Done</span></td></tr>
     </tbody>
   </table></div>
-  <div class="callout"><p><strong>Cover unit settled (04 Nov):</strong> all cover stock is in printed sheets, including the 30 Oct opening. A4 = 2 books per sheet and A5 = 3. The "Covers counted as" switch has been removed, and the figures use sheets × up-count. Still to make (all orders): 1,085,336 books. Two follow-ups are yours to approve: correct the remark on <code>MAT-STE-2026-00007</code>, and fix the dev page code comment that says "1 cover = 1 book".</p></div>
+  <div class="callout"><p><strong>Cover unit settled (04 Nov):</strong> all cover stock is in printed sheets, including the 30 Oct opening. A4 = 2 books per sheet and A5 = 3. The "Covers counted as" switch has been removed, and the figures use sheets × up-count. Still to make (all orders): 1,085,336 books. Approved 04 Nov: correct the remark on <code>MAT-STE-2026-00007</code> (sent to the PC session to do). Still open: fix the dev page code comment that says "1 cover = 1 book".</p></div>
   <p class="lede">The comment threads on the page itself are still open. Claude can only reply to or resolve a thread once you send it to Claude, so resolve them in the page, or send them to Claude and I'll resolve them.</p>
 </section>
 
