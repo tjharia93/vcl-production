@@ -1,21 +1,3 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}
-/* screens gallery */
-.sgrid{display:grid;grid-template-columns:240px minmax(0,1fr);gap:16px;align-items:start}
-.snav{display:grid;gap:4px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 56px)}
-.snav .label{margin-top:8px}
-.snav button{display:flex;justify-content:space-between;align-items:center;gap:6px;text-align:left;font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--border);border-radius:4px;background:var(--raised);color:var(--ink);cursor:pointer}
-.snav button .chip{font-size:10px;padding:1px 4px}
-.snav button[aria-pressed="true"]{background:var(--brand-tint);outline:2px solid var(--focus);outline-offset:-2px}
-#sc-sel{display:none;font:15px var(--sans);padding:8px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);color:var(--ink);width:100%}
-#sc-view{display:grid;gap:16px;min-width:0}
-@media (max-width:860px){.sgrid{grid-template-columns:1fr}.snav{display:none}#sc-sel{display:block}}
-.fpill{border:1px solid var(--border-strong);border-radius:4px;padding:4px 10px;font-size:13px;background:var(--raised)}
-.rflow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.rflow .st{flex:1 1 110px}.rflow .arr{color:var(--muted)}
-.tile.st-ok{background:var(--ok-tint)}.tile.st-no{background:var(--warn-tint)}.tile.st-wait{background:var(--brand-tint)}
-.mmodal{background:var(--sunken);border-radius:4px;padding:16px;display:grid;justify-items:center}.mmodal .mock{max-width:440px;width:100%;box-shadow:0 4px 12px rgba(0,0,0,.18)}
-.mock .cas .bar{background:var(--sunken);padding:0;display:block;font-weight:400}
-.btnmock.alt{background:var(--surface);color:var(--brand-text);border:1px solid var(--border-strong)}
-</style></head><body>
 <title>Exercise Book Production</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -98,6 +80,104 @@ ul.tight{margin:0;padding-left:20px;display:grid;gap:4px}
 .fn.no .fst{fill:var(--warn-text)}
 a.fn:hover rect{filter:brightness(.95)}
 a.fn:focus-visible rect{stroke:var(--focus);stroke-width:3}
+/* entry-screen themes (click-through mock) */
+.themes{display:flex;flex-wrap:wrap;gap:6px}
+.themes button{font:inherit;font-size:13px;font-weight:700;padding:6px 10px;border-radius:4px;border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);cursor:pointer}
+.themes button[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.tnote{font-size:13px;color:var(--muted);max-width:none}
+.mock.mx{--p:#2B3990;--p-on:#fff;--ok:#2F5D50;--ok-bg:#E6EFEA;--warn:#B35A00;
+  font-family:var(--m-font);color:var(--m-ink);background:var(--m-page);border:1px solid var(--m-border);border-radius:var(--m-r);overflow:hidden;font-size:14px;line-height:20px}
+.mx *{box-sizing:border-box}
+.mx .mh{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--m-head);color:var(--m-head-ink);border-bottom:1px solid var(--m-border);box-shadow:var(--m-head-shadow)}
+.mx .ic{flex:none;width:36px;height:36px;border-radius:var(--m-ic-r);background:var(--m-ic-bg);color:var(--m-ic-ink);display:grid;place-items:center;font-weight:700;font-size:13px;letter-spacing:.3px}
+.mx .ht{display:grid;gap:0;min-width:0}
+.mx .ob{font-size:12px;line-height:16px;color:var(--m-head-muted)}
+.mx .tt{font-size:var(--m-title);line-height:1.2;font-weight:var(--m-title-w);overflow-wrap:anywhere}
+.mx .crumb{margin-left:auto;font-size:12px;color:var(--m-head-muted);white-space:nowrap}
+.mx .crumb b{font-family:var(--m-mono);color:var(--m-head-ink)}
+.mx .mb{padding:14px;display:grid;gap:12px}
+.mx .cardx{background:var(--m-card);border:var(--m-card-b);border-radius:var(--m-card-r);box-shadow:var(--m-shadow);padding:14px;display:grid;gap:12px}
+.mx .sec{font-size:var(--m-sec);font-weight:700;color:var(--m-ink);text-transform:var(--m-sec-t);letter-spacing:var(--m-sec-ls)}
+.mx .fx{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.mx .f{display:grid;gap:4px;min-width:0}
+.mx .f .l{font-size:var(--m-lbl);font-weight:var(--m-lbl-w);color:var(--m-muted)}
+.mx .f .i{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:var(--m-h);padding:0 10px;background:var(--m-in-bg);border:var(--m-in-b);border-bottom:var(--m-in-bb);border-radius:var(--m-in-r);color:var(--m-ink);overflow-wrap:anywhere}
+.mx .f .i.pick::after{content:"\25BE";color:var(--m-muted);font-size:12px}
+.mx .f .ro{min-height:var(--m-h);display:flex;align-items:center;color:var(--m-ink);font-weight:700;overflow-wrap:anywhere}
+.mx .f .ro::before{content:"\1F512\FE0E";font-size:11px;margin-right:6px;opacity:.45}
+.mx .f.qn .i,.mx .f.qn .ro{font-family:var(--m-mono);font-variant-numeric:tabular-nums;font-weight:700}
+.mx .sum{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;padding:10px 12px;border-radius:var(--m-in-r);background:var(--ok-bg);color:var(--ok)}
+.mx .sum b{font-family:var(--m-mono);font-size:18px;font-variant-numeric:tabular-nums}
+.mx .act{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.mx .bp{font:inherit;font-weight:700;border:0;cursor:pointer;background:var(--p);color:var(--p-on);border-radius:var(--m-btn-r);padding:0 18px;min-height:36px}
+.mx .bs{font:inherit;font-weight:700;cursor:pointer;background:var(--m-card);color:var(--p);border:1px solid var(--m-border-strong);border-radius:var(--m-btn-r);padding:0 14px;min-height:36px}
+.mx .toast{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 12px;border-radius:var(--m-in-r);background:var(--ok);color:#fff;font-weight:700}
+.mx .toast button{font:inherit;font-weight:700;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.7);border-radius:var(--m-btn-r);padding:4px 10px;cursor:pointer}
+.mx .hint{font-size:12px;color:var(--m-muted)}
+/* floor mode: touch, arm's length */
+.mx.floor{--m-h:52px}
+.mx.floor .f .i,.mx.floor .f .ro{font-size:18px}
+.mx.floor .f .l{font-size:14px}
+.mx.floor .f.qn .i,.mx.floor .f.qn .ro{font-size:28px;min-height:60px}
+.mx.floor .fx{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.mx.floor .act .bp{flex:1 1 100%;min-height:56px;font-size:18px}
+.mx.desk{--m-h:34px}
+/* desk dashboard bits */
+.mx .kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.mx .kp div{background:var(--m-card);border:var(--m-card-b);border-radius:var(--m-card-r);box-shadow:var(--m-shadow);padding:10px;display:grid;gap:2px}
+.mx .kp .k{font-size:12px;color:var(--m-muted)}
+.mx .kp .v{font-family:var(--m-mono);font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.mx .kp .v.bad{color:var(--warn)}
+.mx table{width:100%;border-collapse:collapse;font-size:13px;background:var(--m-card)}
+.mx th{background:var(--m-th);color:var(--m-muted);text-transform:none;letter-spacing:0;font-size:12px;font-weight:700;padding:8px 10px;text-align:left;border-bottom:1px solid var(--m-border)}
+.mx td{padding:8px 10px;border-bottom:1px solid var(--m-border);color:var(--m-ink)}
+.mx td.num{text-align:right;font-family:var(--m-mono)}
+.mx .tbw{border:var(--m-card-b);border-radius:var(--m-card-r);overflow-x:auto;box-shadow:var(--m-shadow)}
+.mx .pill{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px;background:#FBEBDD;color:var(--warn)}
+/* 1. VCL Lightning (Salesforce SLDS structure, VCL colours) */
+.mx.t-lightning{--m-font:Calibri,Carlito,"Segoe UI",Arial,sans-serif;--m-mono:"Courier New",Courier,monospace;--m-page:#F3F3F3;--m-card:#fff;--m-ink:#181818;--m-muted:#706E6B;--m-border:#DDDBDA;--m-border-strong:#C9C9C9;--m-r:4px;
+  --m-head:#fff;--m-head-ink:#181818;--m-head-muted:#706E6B;--m-head-shadow:0 2px 2px rgba(0,0,0,.08);--m-ic-bg:#2B3990;--m-ic-ink:#fff;--m-ic-r:4px;--m-title:18px;--m-title-w:700;
+  --m-card-b:1px solid #DDDBDA;--m-card-r:4px;--m-shadow:0 2px 2px rgba(0,0,0,.1);--m-sec:14px;--m-sec-t:none;--m-sec-ls:0;--m-lbl:12px;--m-lbl-w:400;
+  --m-in-bg:#fff;--m-in-b:1px solid #C9C9C9;--m-in-bb:1px solid #C9C9C9;--m-in-r:4px;--m-btn-r:4px;--m-th:#FAFAF9}
+/* 2. SAP Fiori Horizon */
+.mx.t-fiori{--m-font:"72","72full",Arial,Helvetica,sans-serif;--m-mono:"72Mono",Menlo,Consolas,monospace;--m-page:#F5F6F7;--m-card:#fff;--m-ink:#1D2D3E;--m-muted:#556B82;--m-border:#E5E5E5;--m-border-strong:#BCC3CA;--m-r:12px;
+  --m-head:#fff;--m-head-ink:#1D2D3E;--m-head-muted:#556B82;--m-head-shadow:0 0 2px rgba(34,53,72,.2),0 2px 4px rgba(34,53,72,.12);--m-ic-bg:#EBF8FF;--m-ic-ink:#2B3990;--m-ic-r:50%;--m-title:20px;--m-title-w:700;
+  --m-card-b:0;--m-card-r:12px;--m-shadow:0 0 2px rgba(34,53,72,.16),0 2px 4px rgba(34,53,72,.16);--m-sec:16px;--m-sec-t:none;--m-sec-ls:0;--m-lbl:14px;--m-lbl-w:400;
+  --m-in-bg:#fff;--m-in-b:1px solid #BCC3CA;--m-in-bb:1px solid #556B81;--m-in-r:8px;--m-btn-r:8px;--m-th:#fff}
+/* 3. Microsoft Fluent 2 (Dynamics 365 / Business Central) */
+.mx.t-fluent{--m-font:"Segoe UI Variable","Segoe UI",-apple-system,Roboto,sans-serif;--m-mono:Consolas,"Cascadia Mono",monospace;--m-page:#FAFAFA;--m-card:#fff;--m-ink:#242424;--m-muted:#616161;--m-border:#E0E0E0;--m-border-strong:#D1D1D1;--m-r:8px;
+  --m-head:#2B3990;--m-head-ink:#fff;--m-head-muted:rgba(255,255,255,.8);--m-head-shadow:none;--m-ic-bg:rgba(255,255,255,.16);--m-ic-ink:#fff;--m-ic-r:4px;--m-title:18px;--m-title-w:600;
+  --m-card-b:0;--m-card-r:8px;--m-shadow:0 0 2px rgba(0,0,0,.12),0 2px 4px rgba(0,0,0,.14);--m-sec:14px;--m-sec-t:none;--m-sec-ls:0;--m-lbl:14px;--m-lbl-w:600;
+  --m-in-bg:#fff;--m-in-b:1px solid #D1D1D1;--m-in-bb:1px solid #616161;--m-in-r:4px;--m-btn-r:4px;--m-th:#F5F5F5}
+/* 4. Frappe Espresso (ERPNext v15 desk) */
+.mx.t-espresso{--m-font:InterVariable,Inter,-apple-system,"Segoe UI",sans-serif;--m-mono:"SF Mono",Menlo,Consolas,monospace;--m-page:#fff;--m-card:#fff;--m-ink:#171717;--m-muted:#7C7C7C;--m-border:#EDEDED;--m-border-strong:#E2E2E2;--m-r:12px;
+  --m-head:#fff;--m-head-ink:#171717;--m-head-muted:#7C7C7C;--m-head-shadow:none;--m-ic-bg:#F3F3F3;--m-ic-ink:#171717;--m-ic-r:8px;--m-title:20px;--m-title-w:600;
+  --m-card-b:1px solid #EDEDED;--m-card-r:12px;--m-shadow:none;--m-sec:13px;--m-sec-t:uppercase;--m-sec-ls:.4px;--m-lbl:13px;--m-lbl-w:400;
+  --m-in-bg:#F3F3F3;--m-in-b:0;--m-in-bb:0;--m-in-r:8px;--m-btn-r:8px;--m-th:#F8F8F8}
+/* 5. IBM Carbon */
+.mx.t-carbon{--m-font:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;--m-mono:"IBM Plex Mono",Menlo,monospace;--m-page:#F4F4F4;--m-card:#fff;--m-ink:#161616;--m-muted:#525252;--m-border:#E0E0E0;--m-border-strong:#8D8D8D;--m-r:0;
+  --m-head:#161616;--m-head-ink:#F4F4F4;--m-head-muted:#C6C6C6;--m-head-shadow:none;--m-ic-bg:#2B3990;--m-ic-ink:#fff;--m-ic-r:0;--m-title:18px;--m-title-w:600;
+  --m-card-b:0;--m-card-r:0;--m-shadow:none;--m-sec:16px;--m-sec-t:none;--m-sec-ls:0;--m-lbl:12px;--m-lbl-w:400;
+  --m-in-bg:#F4F4F4;--m-in-b:0;--m-in-bb:1px solid #8D8D8D;--m-in-r:0;--m-btn-r:0;--m-th:#E0E0E0}
+.mx.t-carbon .bp{text-align:left}
+/* 6. Google Material 3 */
+.mx.t-material{--m-font:Roboto,"Google Sans","Segoe UI",Arial,sans-serif;--m-mono:"Roboto Mono",Menlo,monospace;--m-page:#F8F8FF;--m-card:#EFF0FA;--m-ink:#1B1B21;--m-muted:#46464F;--m-border:#E2E1EC;--m-border-strong:#767680;--m-r:16px;
+  --m-head:#F8F8FF;--m-head-ink:#1B1B21;--m-head-muted:#46464F;--m-head-shadow:none;--m-ic-bg:#DFE0FF;--m-ic-ink:#2B3990;--m-ic-r:50%;--m-title:22px;--m-title-w:400;
+  --m-card-b:0;--m-card-r:12px;--m-shadow:none;--m-sec:14px;--m-sec-t:none;--m-sec-ls:.1px;--m-lbl:12px;--m-lbl-w:500;
+  --m-in-bg:transparent;--m-in-b:1px solid #767680;--m-in-bb:1px solid #767680;--m-in-r:4px;--m-btn-r:20px;--m-th:#E8E9F4}
+/* 7. Shopify Polaris */
+.mx.t-polaris{--m-font:Inter,-apple-system,"Segoe UI",Roboto,sans-serif;--m-mono:"SF Mono",Menlo,Consolas,monospace;--m-page:#F1F1F1;--m-card:#fff;--m-ink:#303030;--m-muted:#616161;--m-border:#E3E3E3;--m-border-strong:#8A8A8A;--m-r:12px;
+  --m-head:#F1F1F1;--m-head-ink:#303030;--m-head-muted:#616161;--m-head-shadow:none;--m-ic-bg:#fff;--m-ic-ink:#2B3990;--m-ic-r:8px;--m-title:20px;--m-title-w:700;
+  --m-card-b:0;--m-card-r:12px;--m-shadow:0 1px 0 rgba(26,26,26,.07),inset 0 -1px 0 rgba(0,0,0,.13),inset 0 0 0 1px rgba(0,0,0,.08);--m-sec:14px;--m-sec-t:none;--m-sec-ls:0;--m-lbl:13px;--m-lbl-w:450;
+  --m-in-bg:#FDFDFD;--m-in-b:1px solid #8A8A8A;--m-in-bb:1px solid #8A8A8A;--m-in-r:8px;--m-btn-r:8px;--m-th:#F7F7F7}
+.mx.t-polaris .bp{box-shadow:inset 0 -2px 0 rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.25)}
+.mx.t-polaris .mh{border-bottom:0}
+/* 8. Industrial HMI (ISA-101 high-performance) */
+.mx.t-hmi{--m-font:"Segoe UI",Calibri,Arial,sans-serif;--m-mono:Consolas,"Courier New",monospace;--m-page:#C9CBCD;--m-card:#DCDDDE;--m-ink:#111;--m-muted:#3A3D40;--m-border:#9EA1A4;--m-border-strong:#6B6E71;--m-r:2px;
+  --m-head:#AEB1B4;--m-head-ink:#111;--m-head-muted:#2E3134;--m-head-shadow:none;--m-ic-bg:#6B6E71;--m-ic-ink:#fff;--m-ic-r:2px;--m-title:20px;--m-title-w:700;
+  --m-card-b:1px solid #9EA1A4;--m-card-r:2px;--m-shadow:none;--m-sec:14px;--m-sec-t:uppercase;--m-sec-ls:.6px;--m-lbl:13px;--m-lbl-w:700;
+  --m-in-bg:#fff;--m-in-b:2px solid #3A3D40;--m-in-bb:2px solid #3A3D40;--m-in-r:2px;--m-btn-r:2px;--m-th:#C9CBCD;--ok:#1F4D2C;--ok-bg:#E8E9EA}
+.mx.t-hmi .bp{border:2px solid #111}
 /* step detail */
 .step{scroll-margin-top:64px}
 .step header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
@@ -183,6 +263,23 @@ tr.flag td{background:var(--warn-tint)}
 .post .out{color:var(--warn-text)} .post .in{color:var(--ok-text)}
 .navrow{display:flex;justify-content:space-between;gap:8px}
 .navrow button{font:inherit;font-weight:700;padding:8px 14px;border-radius:4px;border:1px solid var(--border-strong);background:var(--surface);color:var(--brand-text);cursor:pointer}
+
+/* screens gallery */
+.sgrid{display:grid;grid-template-columns:240px minmax(0,1fr);gap:16px;align-items:start}
+.snav{display:grid;gap:4px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 56px)}
+.snav .label{margin-top:8px}
+.snav button{display:flex;justify-content:space-between;align-items:center;gap:6px;text-align:left;font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--border);border-radius:4px;background:var(--raised);color:var(--ink);cursor:pointer}
+.snav button .chip{font-size:10px;padding:1px 4px}
+.snav button[aria-pressed="true"]{background:var(--brand-tint);outline:2px solid var(--focus);outline-offset:-2px}
+#sc-sel{display:none;font:15px var(--sans);padding:8px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);color:var(--ink);width:100%}
+#sc-view{display:grid;gap:16px;min-width:0}
+@media (max-width:860px){.sgrid{grid-template-columns:1fr}.snav{display:none}#sc-sel{display:block}}
+.fpill{border:1px solid var(--border-strong);border-radius:4px;padding:4px 10px;font-size:13px;background:var(--raised)}
+.rflow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.rflow .st{flex:1 1 110px}.rflow .arr{color:var(--muted)}
+.tile.st-ok{background:var(--ok-tint)}.tile.st-no{background:var(--warn-tint)}.tile.st-wait{background:var(--brand-tint)}
+.mmodal{background:var(--sunken);border-radius:4px;padding:16px;display:grid;justify-items:center}.mmodal .mock{max-width:440px;width:100%;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.mock .cas .bar{background:var(--sunken);padding:0;display:block;font-weight:400}
+.btnmock.alt{background:var(--surface);color:var(--brand-text);border:1px solid var(--border-strong)}
 </style>
 
 <header class="bar"><div class="wrap">
@@ -353,7 +450,9 @@ tr.flag td{background:var(--warn-tint)}
       <div class="navrow"><button type="button" id="w-prev">← Previous</button><button type="button" id="w-next">Next →</button></div>
     </div>
     <div style="display:grid;gap:8px;align-content:start;min-width:0">
-      <p class="label">Entry screen (mock-up)</p>
+      <p class="label">Entry screen (mock-up) · style</p>
+      <div class="themes" id="w-themes" role="group" aria-label="Screen style"></div>
+      <p class="tnote" id="w-tnote"></p>
       <div class="mock" id="w-mock"></div>
       <p class="label" id="w-where"></p>
     </div>
@@ -378,11 +477,11 @@ tr.flag td{background:var(--warn-tint)}
 <!-- ============ SCREENS ============ -->
 <section class="panel" id="p-screens" data-tab="screens" hidden>
   <h2>Every proposed screen</h2>
-  <p class="lede">Mock-ups of every screen in the build: planning, floor entry, sales, dashboards and the item set. Each one says who uses it, where it's built, and what it reads and writes. The figures are today's real totals where they exist. Run EBR-0001 and its entries are an example.</p>
+  <p class="lede">Mock-ups of every screen in the build: planning, floor entry, sales, dashboards and the item set. Each one says who uses it, where it's built, and what it reads and writes. The figures are today's real totals where they exist. Run EBR-0001 and its entries are an example. For the look of the floor entry screens, see the style picker on the Click-through tab.</p>
   <div class="legend"><span><span class="chip no">New</span> to build</span><span><span class="chip part">Existing, changed</span> on a screen people already use</span><span><span class="chip ok">Built</span> exists today</span></div>
   <div class="sgrid">
     <nav class="snav" id="sc-nav" aria-label="Screens"></nav>
-    <div style="display:grid;gap:12px;min-width:0"><label for="sc-sel" class="label" style="display:none">Screen</label><select id="sc-sel" aria-label="Screen"></select><div id="sc-view"></div></div>
+    <div style="display:grid;gap:12px;min-width:0"><select id="sc-sel" aria-label="Screen"></select><div id="sc-view"></div></div>
   </div>
 </section>
 
@@ -913,6 +1012,43 @@ var S=[
  where:'Compass › Exercise Books › Dashboard (new tab beside Orders)',
  dash:true}
 ];
+
+var TH=[['lightning','VCL Lightning (recommended)','Salesforce Lightning structure in VCL colours and Calibri, the same family as the CRM. White cards on grey, square icon tile, plain labels. Floor stations switch to large touch mode.'],
+ ['fiori','SAP Fiori Horizon','SAP\'s current style, built for manufacturing and warehouse apps. Rounder corners, softer shadows, roomy spacing, big object header. Very readable on tablets; reads as "SAP", not as the CRM.'],
+ ['fluent','Microsoft Fluent 2','The Dynamics 365 / Business Central look. Solid brand header band, Segoe UI, semibold labels with an underlined input edge. Familiar to anyone who uses Office; slightly denser.'],
+ ['espresso','Frappe Espresso','ERPNext\'s own desk style (Inter, filled grey inputs, almost no borders). Matches what users see in ERPNext itself, but flat and low-contrast for the floor. Espresso normally uses near-black buttons; VCL Blue is kept here.'],
+ ['carbon','IBM Carbon','IBM\'s enterprise system. Square corners, dark shell bar, filled fields with an underline, IBM Plex type. Very crisp and dense; feels technical rather than friendly.'],
+ ['material','Google Material 3','Android\'s own style, so it matches the floor tablets and the VCL Android app. Tinted surfaces, pill buttons, outlined fields, round icon. Friendly, but it reads as Google rather than VCL.'],
+ ['polaris','Shopify Polaris','Shopify admin style. Soft grey page, raised white cards, tactile buttons, Inter type. Clean and modern for desk work; a little soft for the floor.'],
+ ['hmi','Industrial HMI (ISA-101)','The machine-panel standard for factory screens: grey everywhere, heavy black field borders, bold labels, and colour kept only for actions and alarms. Most legible on the floor and closest to what operators see on machines; plain at a desk.']];
+var theme='lightning';try{var sv=localStorage.getItem('eb-theme');if(sv&&TH.some(function(t){return t[0]===sv}))theme=sv}catch(e){}
+var tb=document.getElementById('w-themes');
+TH.forEach(function(t){var b=document.createElement('button');b.type='button';b.textContent=t[1];b.dataset.t=t[0];b.addEventListener('click',function(){theme=t[0];try{localStorage.setItem('eb-theme',theme)}catch(e){}renderMock(S[cur])});tb.appendChild(b)});
+var IC={'Covers':'CV','Folds':'FD','Inserts':'IN','Packing':'PK','Finished Goods':'FG','Delivery':'DN','Dashboard':'DB'};
+var QRE=/sheets|counted|sets made|cartons|loose|rejects|^qty|books in|covers|folds used|books$/i;
+function renderMock(st){
+ var m=document.getElementById('w-mock');var floor=st.side==='p';
+ [].forEach.call(tb.children,function(b){b.setAttribute('aria-pressed',b.dataset.t===theme?'true':'false')});
+ var tn=TH.filter(function(t){return t[0]===theme})[0];
+ document.getElementById('w-tnote').textContent=tn[2]+(floor?' Shown in floor mode (touch, arm\'s length).':' Shown in desk mode.');
+ m.className='mock mx t-'+theme+(floor?' floor':' desk');
+ var title=st.dash?'Exercise Books · Dashboard':st.mock.title, parts=title.split(' · ');
+ var head='<div class="mh"><span class="ic" aria-hidden="true">'+(IC[st.t]||'EB')+'</span><span class="ht"><span class="ob">'+esc(parts.length>1?parts[0]:'Exercise Books')+'</span><span class="tt">'+esc(parts.length>1?parts.slice(1).join(' · '):parts[0])+'</span></span>'+(st.side==='p'?'<span class="crumb">Run <b>EBR-0001</b></span>':'')+'</div>';
+ if(st.dash){
+  m.innerHTML=head+'<div class="mb"><div class="kp">'+[['Open orders','1,546,590'],['Finished','516,918'],['Inserts','62,378'],['Covers','1,260,230'],['Still to make','1,085,336',1]].map(function(t){return '<div><span class="k">'+t[0]+' (books)</span><span class="v'+(t[2]?' bad':'')+'">'+t[1]+'</span></div>'}).join('')+'</div>'+
+  '<div class="tbw"><table><thead><tr><th>Group</th><th>Orders</th><th>Finished</th><th>Short</th></tr></thead><tbody><tr><td>Swara A4 120 SL</td><td class="num">893,010</td><td class="num">8,772</td><td class="num">815,138</td></tr><tr><td>Swara A4 120 SQ</td><td class="num">105,060</td><td class="num">5,406</td><td class="num">85,206</td></tr><tr><td>Swara A4 96 SL</td><td class="num">66,000</td><td class="num">600</td><td class="num">39,400</td></tr></tbody></table></div>'+
+  '<div class="tbw"><table><thead><tr><th>Today by station</th><th>Entries</th><th>Qty</th></tr></thead><tbody><tr><td>Covers</td><td class="num">2</td><td class="num">1,000 sheets</td></tr><tr><td>Folds</td><td class="num">1</td><td class="num">3,000</td></tr><tr><td>Inserts</td><td class="num">1</td><td class="num">1,000 sets</td></tr><tr><td>Packing</td><td class="num">0</td><td><span class="pill">No entry yet</span></td></tr></tbody></table></div></div>';
+  return;}
+ var mk=st.mock, sums=[], fields=[];
+ mk.f.forEach(function(f){ if(f[2]&&/^=/.test(f[0])) sums.push(f); else fields.push(f); });
+ var fx=fields.map(function(f){var q=QRE.test(f[0])&&/\d/.test(f[1]);var auto=!!f[2];var pick=!auto&&!q&&!/date/i.test(f[0]);
+  return '<div class="f'+(q?' qn':'')+'"><span class="l">'+esc(f[0])+(auto?' · auto':'')+'</span>'+(auto?'<span class="ro">'+esc(f[1])+'</span>':'<span class="i'+(pick?' pick':'')+'">'+esc(f[1])+'</span>')+'</div>'}).join('');
+ var sum=sums.length?'<div class="sum">'+sums.map(function(f){return '<span>'+esc(f[0])+' <b>'+esc(f[1])+'</b></span>'}).join('')+(st.t==='Covers'?'<span class="hint" style="color:inherit">A5 is 3-up: 1,000 sheets make 3,000 books</span>':'')+'</div>':'';
+ m.innerHTML=head+'<div class="mb"><div class="cardx"><span class="sec">'+(floor?'Enter this run':'Details')+'</span><div class="fx">'+fx+'</div>'+sum+'</div><div class="act" id="w-act"><button type="button" class="bp" id="w-save">'+esc(mk.btn)+'</button>'+(floor?'':'<button type="button" class="bs">Cancel</button>')+'</div><p class="hint">'+(floor?'Pick lists for run, item and machine; numeric keypad for quantities. Locked fields are filled in by the screen. Tap the button to see the confirmation.':'Locked fields are filled in by the screen.')+'</p></div>';
+ document.getElementById('w-save').addEventListener('click',function(){var a=document.getElementById('w-act');
+  a.innerHTML='<div class="toast" style="flex:1 1 100%"><span>Posted ✓ '+(st.posts[st.posts.length-1]?esc(st.posts[st.posts.length-1][1]):'')+' · run EBR-0001 (demo)</span><button type="button" id="w-undo">Undo (10 s)</button></div>';
+  document.getElementById('w-undo').addEventListener('click',function(){renderMock(st)});});
+}
 var cur=0, box=document.getElementById('stations');
 S.forEach(function(st,i){var b=document.createElement('button');b.type='button';b.className='side-'+st.side;b.innerHTML='<span class="k">'+st.k+'</span><span class="t">'+st.t+'</span>';b.addEventListener('click',function(){show(i)});box.appendChild(b)});
 function esc(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
@@ -924,20 +1060,13 @@ function show(i){cur=i;var st=S[i];
  document.getElementById('w-facts').innerHTML=st.facts.map(function(f){return '<dt>'+esc(f[0])+'</dt><dd>'+esc(f[1])+'</dd>'}).join('');
  document.getElementById('w-posts').innerHTML=st.posts.map(function(p){var c=p[0]==='OUT'?'out':p[0]==='IN'?'in':'';return '<div class="post"><span class="dir '+c+'">'+p[0]+'</span><span><code>'+esc(p[1])+'</code>'+(p[3]?' · '+esc(p[3]):'')+'</span><span class="mono">'+esc(p[2])+'</span></div>'}).join('');
  document.getElementById('w-where').textContent='Where: '+st.where;
- var m=document.getElementById('w-mock');
- if(st.dash){m.innerHTML='<div class="bar">Exercise Books · Dashboard <span>Prince + Swara · all customers</span></div><div class="body"><div class="tiles">'+
-  [['Open orders','1,546,590','books'],['Finished','516,918','books'],['Inserts','62,378','books'],['Covers','1,260,230','books'],['Still to make','1,085,336','books']].map(function(t){return '<div class="tile"><span class="label">'+t[0]+'</span><span class="v">'+t[1]+'</span><span class="label" style="text-transform:none">'+t[2]+'</span></div>'}).join('')+
-  '</div><div class="tw"><table><thead><tr><th>Group</th><th>Orders</th><th>Finished</th><th>Short</th></tr></thead><tbody><tr><td>Swara A4 120 SL</td><td class="num">893,010</td><td class="num">8,772</td><td class="num">815,138</td></tr><tr><td>Swara A4 120 SQ</td><td class="num">105,060</td><td class="num">5,406</td><td class="num">85,206</td></tr><tr><td>Swara A4 96 SL</td><td class="num">66,000</td><td class="num">600</td><td class="num">39,400</td></tr></tbody></table></div>'+
-  '<div class="tw"><table><thead><tr><th>Today by station</th><th>Entries</th><th>Qty</th></tr></thead><tbody><tr><td>Covers</td><td class="num">2</td><td class="num">1,000 sheets</td></tr><tr><td>Folds</td><td class="num">1</td><td class="num">3,000</td></tr><tr><td>Inserts</td><td class="num">1</td><td class="num">1,000 sets</td></tr><tr><td>Packing</td><td class="num">0</td><td><span class="chip no">No entry yet</span></td></tr></tbody></table></div></div>';}
- else{var mk=st.mock;m.innerHTML='<div class="bar">'+esc(mk.title)+' <span>'+esc(mk.sub)+'</span></div><div class="body"><div class="frow">'+mk.f.map(function(f){return '<div class="fld"><span class="lb">'+esc(f[0])+'</span><span class="in'+(f[2]?' auto':'')+'">'+esc(f[1])+'</span></div>'}).join('')+'</div><span class="btnmock">'+esc(mk.btn)+'</span><p class="label" style="text-transform:none;letter-spacing:0">Grey fields are filled in by the screen.</p></div>';}
+ var m=document.getElementById('w-mock');renderMock(st);
  document.getElementById('w-prev').disabled=i===0;document.getElementById('w-next').disabled=i===S.length-1;}
 document.getElementById('w-prev').addEventListener('click',function(){if(cur>0)show(cur-1)});
 document.getElementById('w-next').addEventListener('click',function(){if(cur<S.length-1)show(cur+1)});
 show(0);
 })();
 </script>
-
-</body></html>
 <script>
 (function(){
 var G=[
