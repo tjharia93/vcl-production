@@ -31,3 +31,12 @@ People pick school items (Bank Paper / Newsprint, no brand) when they mean Princ
 1. Rename the school item names to "School Exercise Book - <Paper> - <Size> - <Pages> Pages - <Ruling> - <Cover>". Codes unchanged.
 2. A confirm prompt on Quotation and Sales Order lines ("Is this a school order?" / switch to the matching brand item, SCH-BP-EB → PNCEB, SCH-NP-EB → SWREB). Plus a server-side "School order confirmed" check.
 The PC does a read-only analysis and a dry run first. Nothing goes live until Tanuj approves.
+
+## Rate entered per Nos at the carton price (Tanuj, 04/11/2026)
+Users enter e.g. 3,000/= for 1 Nos when they mean 1 Carton, on Opportunity, Quotation and Sales Order. The earlier request to "show the UOM on Quotation and Sales Order" is NOT in vcl-production (no Property Setter or Client Script in its fixtures). If it exists at all, it is live-only or in another app; the PC is checking.
+Proposed control (sent to the PC as a dry-run pack together with the school guard):
+1. Exercise-book items default to sales UOM = Carton, and UOM is visible and mandatory on the line.
+2. A server-side validate on rate per stock unit vs the Standard Selling price per stock unit ("Did you mean 1 Carton?"), on every write path.
+3. The same check in Compass and Android.
+4. Clean the Standard Selling price list first (duplicate Carton rows, Nos prices at carton level). Related: TRK-00363.
+The school prompt also applies everywhere an item is picked (Opportunity, Quotation, SO, Invoice, DN, Compass, Android, API), with a server guard as the backstop.
