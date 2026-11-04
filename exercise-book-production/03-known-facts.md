@@ -37,3 +37,9 @@ Taken on 04/11/2026 from the second-brain notes `exercise-book-naming-standard-2
 - A quick-entry form for covers on production-dev (3-up/9-up and 2-up/4-up conversion),
   which submits straight to ERPNext. The PC session will fill in the details in
   `02-built-on-dev-pages.md`.
+
+## Planning principle (Tanuj, 04/11/2026)
+- Exercise books are made to stock, not to order. **No work order per Sales Order.**
+- Production and sales are two loops that meet at finished stock. Production runs by SKU, sales
+  draws stock down by order. The link between them is the shortfall per SKU (open demand −
+  finished stock − pipeline).

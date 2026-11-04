@@ -271,16 +271,27 @@ footer{color:var(--muted);font-size:13px}
   <h2>Proposed ERPNext model flow</h2>
   <div class="callout warn"><p><strong>Draft for discussion.</strong> Nothing here is decided or built. It's a starting point that maps each floor step to a record ERPNext already has, so the review has something concrete to change.</p></div>
 
-  <h3>Order to delivery</h3>
+  <div class="callout"><p><strong>Made to stock, not to order.</strong> A work order can't be raised for every Sales Order. Production and sales run as two separate loops that meet at finished stock. Production fills stock by SKU, in runs. Sales draws stock down, order by order.</p></div>
+
+  <h3>Production loop (by SKU, in runs)</h3>
+  <div class="chain">
+    <span class="box new">Run plan per SKU (from total open demand − stock, or a minimum level)</span><span class="arr">→</span>
+    <span class="box new">Ruling</span><span class="arr">→</span>
+    <span class="box">Covers (COV-)</span><span class="arr">→</span>
+    <span class="box new">Folding</span><span class="arr">→</span>
+    <span class="box">Inserts (INS-)</span><span class="arr">→</span>
+    <span class="box new">Packing receipt</span><span class="arr">→</span>
+    <span class="box">Finished Goods - VCL</span>
+  </div>
+
+  <h3>Sales loop (by order)</h3>
   <div class="chain">
     <span class="box">Sales Order (Carton)</span><span class="arr">→</span>
-    <span class="box new">Production plan per SKU</span><span class="arr">→</span>
-    <span class="box new">Work Order / job card</span><span class="arr">→</span>
-    <span class="box new">Stock Entry: Manufacture</span><span class="arr">→</span>
+    <span class="box new">Allot from stock (earliest delivery first)</span><span class="arr">→</span>
     <span class="box">Delivery Note</span><span class="arr">→</span>
     <span class="box">Sales Invoice</span>
   </div>
-  <p>A dashed box is a record that isn't used for exercise books today.</p>
+  <p>A dashed box is a record or step that isn't used for exercise books today. The only link between the loops is the shortfall per SKU: when open demand exceeds finished stock plus what's in the pipeline, that SKU gets a run. A run is planned by SKU, never by order.</p>
 
   <h3>Each floor step mapped to a record</h3>
   <div class="tw"><table>
@@ -289,6 +300,7 @@ footer{color:var(--muted);font-size:13px}
       <tr><td>1 · Ruling</td><td>Paper NP / BP (kg or sheets)</td><td>Ruled sheet, per paper and ruling</td><td>Stock Entry (Manufacture) from the daily ruling log</td><td>To decide</td></tr>
       <tr><td>2 · Covers</td><td>Cover board, ink (not consumed today)</td><td><code>COV-…</code> printed sheet <span class="chip ok">Exists</span></td><td>Material Receipt today. Could become a Manufacture that consumes the board.</td><td>To decide</td></tr>
       <tr><td>3 · Folding</td><td>Ruled sheets</td><td>Folded inner, per size and pages</td><td>Count only, or a WIP item</td><td>To decide</td></tr>
+      <tr><td colspan="5">Every record in this table belongs to a production run for one SKU. None of them points to a Sales Order.</td></tr>
       <tr><td>4 · Inserts</td><td><code>COV-…</code> (+ folded inner)</td><td><code>INS-…</code> insert set <span class="chip ok">Exists</span></td><td>Repack today</td><td>To decide</td></tr>
       <tr><td>5 · Packing</td><td><code>INS-…</code> + carton</td><td>The book item (<code>PNCEB-…</code>) in <code>Finished Goods - VCL</code>, in <code>Carton</code></td><td>Manufacture against the BOM, from the receiving record (<code>a84ef92</code>)</td><td>To decide</td></tr>
     </tbody>
@@ -387,7 +399,7 @@ footer{color:var(--muted);font-size:13px}
     <span class="n">P3</span><span>Smallest or fuller model (see Proposed flow): which steps post stock?</span>
     <span class="n">P4</span><span>Who on the floor enters each step, and on which screen.</span>
     <span class="n">P5</span><span>Does the daily ruling log feed ERPNext, or stay in CSV and Slack?</span>
-    <span class="n">P6</span><span>Exercise books: a job card of their own, or Work Orders?</span>
+    <span class="n">P6</span><span>Settled: no work order per Sales Order. Still open: what a production run is recorded on (a run-level job card, a Work Order per SKU run, or just the stage stock entries), and what triggers a run (shortfall against open demand, a minimum stock level, or both).</span>
     <span class="n">P7</span><span>Who owns each handover (Nadeem and Peter are candidates), and where the run reference travels on the floor.</span>
     <span class="n">P8</span><span>How rejects, loose books and reversals are handled.</span>
     <span class="n">P9</span><span>Put the dev pages in git, so sessions stop overwriting each other.</span></div>
