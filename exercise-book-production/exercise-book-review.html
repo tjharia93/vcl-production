@@ -186,7 +186,7 @@ tr.flag td{background:var(--warn-tint)}
     <div class="st prod"><span class="nm">Covers <code>COV-</code></span><span class="v">508,510</span><span class="u">sheets on hand (533,894 received 30 Oct–3 Nov)<br>= 1,260,230 books</span></div>
     <div class="st prod gap"><span class="nm">Folding</span><span class="v">0</span><span class="u">Nothing recorded</span></div>
     <div class="st prod"><span class="nm">Inserts <code>INS-</code></span><span class="v">25,384</span><span class="u">sets, from 25,384 cover sheets<br>= 62,378 books. None used.</span></div>
-    <div class="st prod gap"><span class="nm">Packing</span><span class="v">0</span><span class="u">No receipt has ever been posted</span></div>
+    <div class="st prod gap"><span class="nm">Packing</span><span class="v">0</span><span class="u">No receipt has ever been posted. Empty cartons on the books: A4 19,104, A5 1,875.</span></div>
     <div class="st mid"><span class="nm">Finished Goods - VCL</span><span class="v">516,918</span><span class="u">books = 3,566 cartons, 29 SKUs. From today's count only (<code>MAT-RECO-2026-00003</code>), nothing has moved since.</span></div>
     <div class="st sale"><span class="nm">Delivered</span><span class="v">136,764</span><span class="u">books, 1,191 cartons, 4 Delivery Notes since 1 Oct. All from Stores, each booked in on the same day.</span></div>
     <div class="st sale"><span class="nm">Open orders</span><span class="v">1,555,230</span><span class="u">books still to deliver (13,265 cartons), 10 orders, 43 SKUs</span></div>
@@ -221,12 +221,23 @@ tr.flag td{background:var(--warn-tint)}
       </ul></div>
   </div>
 
+  <div class="card"><h3>Packing capacity: empty cartons against the shortfall</h3>
+    <div class="tw"><table>
+      <thead><tr><th>Size</th><th>Short after finished stock</th><th>Empty cartons on the books</th><th>Comment</th></tr></thead>
+      <tbody>
+        <tr><td>A4</td><td class="num">11,644 ctn<br>(3,644 without Mahavir)</td><td class="num">19,104</td><td>Covers it on paper. Prince common 425×305 at 250/260/275 mm (14,158), Prince/Swara common 961, Swara common 280 mm 2,078, plus 1,907 on a disabled item.</td></tr>
+        <tr><td>A5</td><td class="num">516 ctn</td><td class="num">1,875</td><td>All on a disabled item (<code>PNCSWR-EMPTY-CARTON-A5-PLAINF-DPL</code>).</td></tr>
+      </tbody>
+    </table></div>
+    <p><span class="chip no">Unverified</span> These balances come from 11 purchase invoices between May 2024 and Aug 2025, and no carton has ever been issued in ERPNext. Count the cartons before relying on the figures. Only the common cartons have stock: all 47 page-specific carton items are at zero. ERPNext doesn't record which box height suits which page count.</p>
+  </div>
+
   <h3>By SKU: top 25 by open orders</h3>
   <div class="tw"><table>
     <thead><tr><th>Book item</th><th>Open orders</th><th>Finished stock</th><th>Short after FG</th><th>after inserts</th><th>after covers</th><th>Surplus FG</th><th>How it's covered</th></tr></thead>
     <tbody id="skurows"></tbody>
   </table></div>
-  <p class="lede">Finished stock is matched per SKU. Inserts and covers are matched as shared pools by brand, size, pages and ruling, because one cover serves every variant, with the largest order served first. Data: <code>exercise-book-production/data/netting-2026-11-04.json</code>. The other 18 SKUs are in the PC's full file. Not yet included: empty carton stock and a check of today's count against the live balance (they match, because nothing has moved).</p>
+  <p class="lede">Finished stock is matched per SKU. Inserts and covers are matched as shared pools by brand, size, pages and ruling, because one cover serves every variant, with the largest order served first. Data: <code>exercise-book-production/data/netting-2026-11-04.json</code>. The other 18 SKUs are in the PC's full file. Today's count (36 rows, 3,566 cartons, no loose books) matches the live <code>Finished Goods - VCL</code> balance exactly, and none of these SKUs has stock in any other warehouse.</p>
 </section>
 
 <!-- ============ PROCESS ============ -->
