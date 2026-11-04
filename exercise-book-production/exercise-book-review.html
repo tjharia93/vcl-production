@@ -1,4 +1,21 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}
+/* screens gallery */
+.sgrid{display:grid;grid-template-columns:240px minmax(0,1fr);gap:16px;align-items:start}
+.snav{display:grid;gap:4px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 56px)}
+.snav .label{margin-top:8px}
+.snav button{display:flex;justify-content:space-between;align-items:center;gap:6px;text-align:left;font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--border);border-radius:4px;background:var(--raised);color:var(--ink);cursor:pointer}
+.snav button .chip{font-size:10px;padding:1px 4px}
+.snav button[aria-pressed="true"]{background:var(--brand-tint);outline:2px solid var(--focus);outline-offset:-2px}
+#sc-sel{display:none;font:15px var(--sans);padding:8px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);color:var(--ink);width:100%}
+#sc-view{display:grid;gap:16px;min-width:0}
+@media (max-width:860px){.sgrid{grid-template-columns:1fr}.snav{display:none}#sc-sel{display:block}}
+.fpill{border:1px solid var(--border-strong);border-radius:4px;padding:4px 10px;font-size:13px;background:var(--raised)}
+.rflow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.rflow .st{flex:1 1 110px}.rflow .arr{color:var(--muted)}
+.tile.st-ok{background:var(--ok-tint)}.tile.st-no{background:var(--warn-tint)}.tile.st-wait{background:var(--brand-tint)}
+.mmodal{background:var(--sunken);border-radius:4px;padding:16px;display:grid;justify-items:center}.mmodal .mock{max-width:440px;width:100%;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.mock .cas .bar{background:var(--sunken);padding:0;display:block;font-weight:400}
+.btnmock.alt{background:var(--surface);color:var(--brand-text);border:1px solid var(--border-strong)}
+</style></head><body>
 <title>Exercise Book Production</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
@@ -177,6 +194,7 @@ tr.flag td{background:var(--warn-tint)}
   <a href="#overview">Overview</a>
   <a href="#flow">Data flow</a>
   <a href="#walk">Click-through</a>
+  <a href="#screens">Screens</a>
   <a href="#controls">Order controls</a>
   <a href="#process">Process</a>
   <a href="#erpnext">ERPNext today</a>
@@ -355,6 +373,17 @@ tr.flag td{background:var(--warn-tint)}
     </tbody>
   </table></div>
   <p class="lede">Recommendation: the floor keeps entering on the Exercise Book Production dev page it already uses, with the changes above, so nobody learns a new tool. The dashboard lives in Compass, next to the orders. Once the screens settle, they move from the dev page into the vcl-production app, in git.</p>
+</section>
+
+<!-- ============ SCREENS ============ -->
+<section class="panel" id="p-screens" data-tab="screens" hidden>
+  <h2>Every proposed screen</h2>
+  <p class="lede">Mock-ups of every screen in the build: planning, floor entry, sales, dashboards and the item set. Each one says who uses it, where it's built, and what it reads and writes. The figures are today's real totals where they exist. Run EBR-0001 and its entries are an example.</p>
+  <div class="legend"><span><span class="chip no">New</span> to build</span><span><span class="chip part">Existing, changed</span> on a screen people already use</span><span><span class="chip ok">Built</span> exists today</span></div>
+  <div class="sgrid">
+    <nav class="snav" id="sc-nav" aria-label="Screens"></nav>
+    <div style="display:grid;gap:12px;min-width:0"><label for="sc-sel" class="label" style="display:none">Screen</label><select id="sc-sel" aria-label="Screen"></select><div id="sc-view"></div></div>
+  </div>
 </section>
 
 <!-- ============ ORDER CONTROLS ============ -->
@@ -909,3 +938,114 @@ show(0);
 </script>
 
 </body></html>
+<script>
+(function(){
+var G=[
+['Plan',[
+{id:'plan',n:'Run plan: what to make',st:['no','New'],where:'Exercise Book Production dev page › Plan (later: vcl-production app)',who:'Production planner',reads:'Open order lines, Finished Goods, inserts, covers (the Data flow netting)',writes:'Creates a run number EBR-#### per group, with a target in sheets',why:'Turns the shortfall into runs by group. Production is planned by group, never per order.',
+ path:'Production › Exercise Books › Plan',b:[
+ {t:'filters',items:['Brand: All','Size: All','Due before: 13 Nov']},
+ {t:'table',head:['Group','On order','Finished','In pipeline','Short','Covers on hand','Plan run'],num:[1,2,3,4,5],rows:[
+  ['Swara A4 120 SL','893,010','8,772','69,100','815,138','25,070 sh','<b>Create run</b> 410,000 sh'],
+  ['Swara A4 120 SQ','105,060','5,406','14,448','85,206','6,000 sh','<b>Create run</b> 43,000 sh'],
+  ['Swara A4 96 SL','66,000','600','26,000','39,400','13,000 sh','<b>Create run</b> 20,000 sh'],
+  ['Prince A5 48 SL','30,720','0','0','30,720','0 sh','<b>Print covers first</b>'],
+  ['Swara A4 48 SL','40,800','0','12,000','28,800','6,000 sh','<b>Create run</b> 14,400 sh']]},
+ {t:'alert',k:'info',x:'Pipeline = inserts + printed covers, in books. A run target is in cover sheets: A4 = 2 books per sheet, A5 = 3.'}]},
+{id:'runs',n:'Run tracker',st:['no','New'],where:'Exercise Book Production dev page › Runs',who:'Production manager',reads:'Stock Entries carrying the run number',writes:'Nothing. Closing a run only stamps it closed.',why:'Follows one run across every station, so yield and waste can be read per run.',
+ path:'Production › Exercise Books › Runs › EBR-0001',b:[
+ {t:'chips',items:[['ok','Prince · A5 · 120 · SL'],['part','In progress'],['wait','Target 1,000 sheets']]},
+ {t:'flow',items:[['Covers','1,000 sheets','= 3,000 books'],['Folds','2,988','12 rejected'],['Inserts','996 sets','= 2,988 books'],['Packing','16 ctn + 12','= 2,988 books'],['Finished Goods','2,988','received']]},
+ {t:'tiles',items:[['Yield, covers → books','99.6%','','ok'],['Waste','12 folds','0.4%',''],['Days open','2','',''],['Cartons used','17','A5 common','']]},
+ {t:'table',head:['Date','Station','Entry','Qty','By'],num:[3],rows:[['04 Nov','Covers','MAT-STE-…','1,000 sheets','Printing'],['04 Nov','Folds','MAT-STE-…','2,988','Folding'],['05 Nov','Inserts','Repack','996 sets','Binding'],['05 Nov','Packing','Manufacture','2,988 books','Stores']]}]}
+]],
+['Floor entry',[
+{id:'covers',n:'Covers: quick entry',st:['part','Existing, changed'],where:'Exercise Book Production dev page › Cover Stock',who:'Printing supervisor',reads:'COV- items',writes:'Material Receipt of COV- sheets into Stores - VCL (later: a Manufacture that uses board and ink)',why:'Records printed cover sheets per run. Change: add the run number.',
+ path:'Exercise Book Production › Cover Stock › Quick entry',b:[
+ {t:'form',f:[['Date','04 Nov 2026'],['Run number','EBR-0001 ▾'],['Brand','Prince'],['Size','A5 (3-up)'],['Pages','120'],['Ruling','Single line'],['Printed sheets','1,000'],['= books','3,000',1],['Spoiled sheets','8']],btn:'Add to stock'},
+ {t:'alert',k:'ok',x:'Saved: MAT-STE-2026-00061 · +1,000 COV-PNC-A5-120PG-SL · run EBR-0001'}]},
+{id:'folds',n:'Folds: entry',st:['no','New'],where:'Exercise Book Production dev page › new Folds tab',who:'Folding supervisor',reads:'FLD- items (to be created)',writes:'Material Receipt of FLD- folds into Stores - VCL. Paper goes out of stock in Phase 2/3.',why:'Folds are an input to inserts, the same way covers are.',
+ path:'Exercise Book Production › Folds',b:[
+ {t:'form',f:[['Date','04 Nov 2026'],['Run number','EBR-0001 ▾'],['Brand','Prince'],['Size','A5'],['Pages','120'],['Ruling','Single line'],['Folds counted','2,988'],['Rejected','12'],['Item','FLD-PNC-A5-120PG-SL',1]],btn:'Save folds'}]},
+{id:'inserts',n:'Inserts: make sets',st:['part','Existing, changed'],where:'Exercise Book Production dev page › Inserts',who:'Binding supervisor',reads:'COV- and FLD- on hand',writes:'Repack: COV- out, FLD- out (sets × up-count), INS- in',why:'Covers + folds = inserts. Today only the cover is taken out.',
+ path:'Exercise Book Production › Inserts',b:[
+ {t:'form',f:[['Run number','EBR-0001 ▾'],['Group','Prince · A5 · 120 · SL',1],['Sets made','996'],['Covers used','996 sheets',1],['Folds used','2,988',1],['= books','2,988',1]],btn:'Post repack'},
+ {t:'table',head:['On hand after','Covers','Folds','Inserts'],num:[1,2,3],rows:[['Prince A5 120 SL','4 sheets','0','996 sets']]},
+ {t:'alert',k:'warn',x:'If folds on hand are fewer than sets × 3, the screen stops: "Only 2,400 folds on hand, enough for 800 sets."'}]},
+{id:'packing',n:'Packing: receive finished books',st:['part','Existing, changed'],where:'Exercise Book Production dev page › Packing + receiving backend (a84ef92)',who:'Packing and stores',reads:'INS- on hand, the book item\'s Carton conversion, empty cartons',writes:'Manufacture: INS- out, empty cartons out, book item in to Finished Goods - VCL',why:'Today packing is saved in the browser only. This is where production meets sales.',
+ path:'Exercise Book Production › Packing',b:[
+ {t:'form',f:[['Run number','EBR-0001 ▾'],['Book','PNCEB-A5-120PGS-CB-BP-SL',1],['Full cartons','16'],['Books per carton','186',1],['Loose books','12'],['Rejects','0'],['Carton used','A5 common ▾'],['= books in','2,988',1]],btn:'Receive into Finished Goods'},
+ {t:'h',x:'Spot-weigh (about 1 in 20 cartons)'},
+ {t:'table',head:['Carton','Weight','Expected','Result'],num:[1,2],rows:[['1 of 16','4.92 kg','4.95 kg','<span class="chip ok">Within 5%</span>']]}]},
+{id:'cartons',n:'Empty cartons: count',st:['part','Existing, changed'],where:'Exercise Book Production dev page › Empty Cartons',who:'Stores',reads:'Empty Cartons item group',writes:'Stock Reconciliation draft from the count (Tanuj submits)',why:'Book balances date from 2024–25 purchases and have never been issued. The team counts on 05 Nov.',
+ path:'Exercise Book Production › Empty Cartons › Count',b:[
+ {t:'table',head:['Carton','Size','On books','Counted','Difference'],num:[2,3,4],rows:[['Prince common 425×305×275','A4','7,086','',''],['Prince common 425×305×260','A4','4,425','',''],['Prince common 425×305×250','A4','2,647','',''],['Prince/Swara common A4','A4','961','',''],['Swara common 280 mm','A4','2,078','',''],['Prince/Swara A5 (disabled item)','A5','1,875','','']]},
+ {t:'alert',k:'warn',x:'Count due 05 Nov. The A5 carton item is disabled, so enable it or replace it before packing A5.'}]}
+]],
+['Sales',[
+{id:'order',n:'Order entry with checks',st:['part','Existing, changed'],where:'Desk Quotation / Sales Order / Opportunity, and Compass Orders and Quotations',who:'Sales reps',reads:'Item, brand twin, price list, rate band',writes:'The document, plus "School order confirmed"',why:'Stops the two common mistakes: a school book picked by mistake, and a carton price typed against one book.',
+ path:'Compass › Sales › New order',b:[
+ {t:'table',head:['Item','Qty','Unit','Rate','Check'],num:[1,3],rows:[['PNCEB-A4-96PGS-CB-BP-SL','50','Carton','11,700','<span class="chip ok">OK</span>'],['SCH-BP-EB-A4-96PGS-CB-BP-SL','20','Carton','9,800','<span class="chip wait">Confirm school?</span>'],['PNCEB-A5-48PGS-CB-BP-SL','1','Nos','3,000','<span class="chip no">Did you mean 1 Carton?</span>']]},
+ {t:'modal',title:'School exercise book',x:'This is a SCHOOL exercise book (no brand). Is this a school order? If you meant the Prince book, switch to it.',btns:['Yes, school order','Switch to PNCEB-A4-96PGS-CB-BP-SL']}]},
+{id:'ebo',n:'Exercise Book Orders',st:['ok','Built, not deployed'],where:'Compass › Exercise Books › Orders (vcl_compass 5709b0a)',who:'Sales and production',reads:'Open order lines, Finished Goods',writes:'Order stage (vcl_eb_stage) + a comment',why:'Shows each order line, what finished stock covers it (earliest delivery first) and what is still to make.',
+ path:'Compass › Exercise Books › Orders',b:[
+ {t:'filters',items:['Brand: All','Customer: All','Stage: All']},
+ {t:'table',head:['Order','Customer','Due','Line','Ordered','From stock','To make','Stage'],num:[4,5,6],rows:[['00195-2','ESGA','04 Nov','A5 120 SL','80 ctn','18 ctn','62 ctn','In production'],['00194','Discount Office','06 Nov','A4 96 SL','100 ctn','100 ctn','0','Ready'],['00199','Mahavir','03 Nov','A4 120 SL Swara','8,000 ctn','86 ctn','7,914 ctn','Planned'],['00173','Vaghela','06 Nov','A4 200 SL Swara','200 ctn','23 ctn','177 ctn','Planned']]}]},
+{id:'dn',n:'Delivery from Finished Goods',st:['part','Existing, changed'],where:'Desk Delivery Note, or Compass',who:'Dispatch',reads:'Sales Order, Finished Goods - VCL',writes:'Delivery Note from Finished Goods - VCL',why:'Stops the same-day "book in to deliver" receipts once packing records stock.',
+ path:'Delivery Note › New',b:[
+ {t:'form',f:[['Customer','ESGA Enterprises',1],['Sales Order','SAL-ORD-2026-00195-2',1],['Item','PNCEB-A5-120PGS-CB-BP-SL',1],['Qty','16 Carton'],['From warehouse','Finished Goods - VCL',1],['Available','16 ctn + 12',1]],btn:'Submit'}]}
+]],
+['Dashboards',[
+{id:'d-floor',n:'Floor today',st:['no','New'],where:'Exercise Book Production dev page › Today (on a floor screen)',who:'Supervisors, production manager',reads:'Today\'s Stock Entries by station and run',writes:'Nothing',why:'Shows at a glance whether every station has entered today, and what each produced.',
+ path:'Exercise Book Production › Today · 04 Nov',b:[
+ {t:'tiles',items:[['Covers printed','2,400 sh','= 6,000 books','ok'],['Folds','5,820','','ok'],['Inserts','1,940 sets','= 5,820 books','ok'],['Packed','0','No entry yet','no']]},
+ {t:'table',head:['Run','Group','Covers','Folds','Inserts','Packed','Yield'],num:[2,3,4,5],rows:[['EBR-0001','Prince A5 120 SL','1,000','2,988','996','2,988','99.6%'],['EBR-0002','Swara A4 120 SL','1,400','2,832','944','0','-']]},
+ {t:'alert',k:'warn',x:'Packing has no entry today. Cartons on hand for A5: 1,875 (disabled item).'}]},
+{id:'d-plan',n:'Stock and shortfall',st:['no','New'],where:'Compass › Exercise Books › Dashboard',who:'Planner, sales manager',reads:'The Data flow netting, live',writes:'Nothing',why:'Where production and sales meet: stock at each stage against open orders, by group, with brand and customer filters.',
+ path:'Compass › Exercise Books › Dashboard',b:[
+ {t:'filters',items:['Brand: All','Customer: All','Size: All']},
+ {t:'tiles',items:[['Open orders','1,546,590','books',''],['Finished','516,918','books','ok'],['Inserts','62,378','books',''],['Covers','1,260,230','books',''],['Still to make','1,085,336','books','no']]},
+ {t:'bars',items:[['Open orders',1546590,'c-dem'],['After finished stock',1365736,'c-short'],['After inserts',1334808,'c-short'],['After covers',1085336,'c-short']]},
+ {t:'table',head:['Group','Orders','Finished','Short'],num:[1,2,3],rows:[['Swara A4 120 SL','893,010','8,772','815,138'],['Swara A4 120 SQ','105,060','5,406','85,206'],['Swara A4 96 SL','66,000','600','39,400']]}]},
+{id:'d-mgmt',n:'Management summary',st:['no','New'],where:'Compass › Exercise Books › Summary',who:'Tanuj',reads:'Orders, stock, runs, deliveries',writes:'Nothing',why:'A weekly view: orders on hand, output, deliveries, waste and overdue orders.',
+ path:'Compass › Exercise Books › Summary · week 45',b:[
+ {t:'tiles',items:[['Orders on hand','13,205 ctn','10 orders',''],['Overdue lines','38','due before today','no'],['Packed this week','0 ctn','production not yet recorded','wait'],['Delivered this week','591 ctn','4 delivery notes',''],['Waste','-','needs runs','wait']]},
+ {t:'table',head:['Customer','Open ctn','Due','Covered by stock'],num:[1,3],rows:[['Mahavir','10,550','03 Nov','2%'],['ESGA','780','04 Nov','46%'],['Jain Trading','550','12 Nov','0%'],['Vaghela','550','06 Nov','14%']]}]},
+{id:'d-health',n:'Data health and controls',st:['no','New'],where:'Compass › Exercise Books › Data health',who:'IT Development, Tanuj',reads:'Items, price list, invoice lines, guard logs',writes:'Nothing (links to the records to fix)',why:'Shows the clean-up still needed and what the order checks are catching.',
+ path:'Compass › Exercise Books › Data health',b:[
+ {t:'tiles',items:[['Items without a Carton conversion','847','807 enabled','no'],['Items with no current price','809','','no'],['Carton invoice lines with conversion 1','937 of 989','','no'],['Carton prices on Nos','13','','no']]},
+ {t:'table',head:['Check','Stopped this week','Switched / corrected'],num:[1,2],rows:[['School or brand?','-','-'],['"Did you mean 1 Carton?"','-','-'],['"Did you mean Nos?"','-','-']]},
+ {t:'alert',k:'info',x:'The check counts start when the pack goes live. Since 06 Aug the price rule would have caught 72 enquiry, 74 quotation and 1 order lines.'}]}
+]],
+['Masters',[
+{id:'itemset',n:'Item set per book',st:['no','New'],where:'Desk Item (a "Production set" section) or Compass',who:'IT Development, production',reads:'COV-, FLD-, INS-, book items, cartons',writes:'Links only (creates missing twins in after_migrate)',why:'Shows one book\'s full chain of items, so the mapping between stations is visible and gaps stand out.',
+ path:'Item › PNCEB-A5-120PGS-CB-BP-SL › Production set',b:[
+ {t:'table',head:['Stage','Item','Unit','Status'],rows:[['Covers','COV-PNC-A5-120PG-SL','Sheet (3-up)','<span class="chip ok">Exists</span>'],['Folds','FLD-PNC-A5-120PG-SL','Fold (1 per book)','<span class="chip no">To create</span>'],['Inserts','INS-PNC-A5-120PG-SL','Set (3 books)','<span class="chip ok">Exists</span>'],['Finished book','PNCEB-A5-120PGS-CB-BP-SL','Nos, Carton = 186','<span class="chip ok">Exists</span>'],['Carton','A5 common','Nos','<span class="chip wait">Item disabled</span>'],['School twin','SCH-BP-EB-A5-120PGS-CB-BP-SL','Nos','<span class="chip ok">Exists</span>']]}]}
+]]
+];
+var all=[];G.forEach(function(g){g[1].forEach(function(s){s.g=g[0];all.push(s)})});
+var nav=document.getElementById('sc-nav'),sel=document.getElementById('sc-sel');
+G.forEach(function(g){var h=document.createElement('p');h.className='label';h.textContent=g[0];nav.appendChild(h);var og=document.createElement('optgroup');og.label=g[0];
+ g[1].forEach(function(s){var b=document.createElement('button');b.type='button';b.dataset.id=s.id;b.innerHTML='<span>'+s.n+'</span><span class="chip '+s.st[0]+'">'+s.st[1]+'</span>';b.addEventListener('click',function(){show(s.id)});nav.appendChild(b);
+ var o=document.createElement('option');o.value=s.id;o.textContent=s.n+' ('+s.st[1]+')';og.appendChild(o)});sel.appendChild(og)});
+sel.addEventListener('change',function(){show(sel.value)});
+function blk(b){
+ if(b.t==='tiles')return '<div class="tiles">'+b.items.map(function(t){return '<div class="tile'+(t[3]?' st-'+t[3]:'')+'"><span class="label">'+t[0]+'</span><span class="v">'+t[1]+'</span><span class="label" style="text-transform:none;letter-spacing:0">'+t[2]+'</span></div>'}).join('')+'</div>';
+ if(b.t==='form')return '<div class="frow">'+b.f.map(function(f){return '<div class="fld"><span class="lb">'+f[0]+'</span><span class="in'+(f[2]?' auto':'')+'">'+f[1]+'</span></div>'}).join('')+'</div><span class="btnmock">'+b.btn+'</span>';
+ if(b.t==='table')return '<div class="tw"><table><thead><tr>'+b.head.map(function(h){return '<th>'+h+'</th>'}).join('')+'</tr></thead><tbody>'+b.rows.map(function(r){return '<tr>'+r.map(function(c,i){return '<td'+((b.num||[]).indexOf(i)>=0?' class="num"':'')+'>'+c+'</td>'}).join('')+'</tr>'}).join('')+'</tbody></table></div>';
+ if(b.t==='alert')return '<div class="callout'+(b.k==='warn'?' warn':'')+'"><p>'+b.x+'</p></div>';
+ if(b.t==='h')return '<p class="label">'+b.x+'</p>';
+ if(b.t==='chips')return '<div style="display:flex;flex-wrap:wrap;gap:6px">'+b.items.map(function(c){return '<span class="chip '+c[0]+'">'+c[1]+'</span>'}).join('')+'</div>';
+ if(b.t==='filters')return '<div style="display:flex;flex-wrap:wrap;gap:6px">'+b.items.map(function(c){return '<span class="fpill">'+c+' ▾</span>'}).join('')+'</div>';
+ if(b.t==='flow')return '<div class="rflow">'+b.items.map(function(c,i){return (i?'<span class="arr">→</span>':'')+'<div class="st prod"><span class="nm">'+c[0]+'</span><span class="v">'+c[1]+'</span><span class="u">'+c[2]+'</span></div>'}).join('')+'</div>';
+ if(b.t==='bars'){var m=b.items[0][1];return '<div class="cascade">'+b.items.map(function(c){return '<div class="cas"><span>'+c[0]+'</span><span class="bar"><i class="'+c[2]+'" style="width:'+(c[1]/m*100).toFixed(1)+'%"></i></span><span class="n">'+c[1].toLocaleString('en-GB')+'</span></div>'}).join('')+'</div>';}
+ if(b.t==='modal')return '<div class="mmodal"><div class="mock"><div class="bar">'+b.title+' <span>pop-up</span></div><div class="body"><p>'+b.x+'</p><div style="display:flex;flex-wrap:wrap;gap:8px"><span class="btnmock">'+b.btns[0]+'</span><span class="btnmock alt">'+b.btns[1]+'</span></div></div></div></div>';
+ return '';}
+function show(id){var s=all.filter(function(x){return x.id===id})[0]||all[0];sel.value=s.id;
+ [].forEach.call(nav.querySelectorAll('button'),function(b){b.setAttribute('aria-pressed',b.dataset.id===s.id?'true':'false')});
+ document.getElementById('sc-view').innerHTML='<div class="mock"><div class="bar">'+s.path+' <span>'+s.st[1]+'</span></div><div class="body">'+s.b.map(blk).join('')+'</div></div>'+
+ '<div class="card"><header style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><h3>'+s.n+'</h3><span class="chip '+s.st[0]+'">'+s.st[1]+'</span></header><p>'+s.why+'</p><dl class="facts"><dt>Who uses it</dt><dd>'+s.who+'</dd><dt>Where it\'s built</dt><dd>'+s.where+'</dd><dt>Reads</dt><dd>'+s.reads+'</dd><dt>Writes</dt><dd>'+s.writes+'</dd></dl></div>';}
+show('plan');
+})();
+</script>
+
