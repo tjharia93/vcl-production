@@ -123,6 +123,10 @@ def show_diff(a, b, label):
 
 def main():
 	global BASE, AUTH
+	try:
+		sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # Windows consoles default to cp1252
+	except Exception:
+		pass
 	ap = argparse.ArgumentParser()
 	ap.add_argument("--page", default="v3", choices=sorted(PAGES))
 	mode = ap.add_mutually_exclusive_group()
