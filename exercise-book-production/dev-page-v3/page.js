@@ -280,7 +280,7 @@
   function pickFocus() { var b = $("v3-pickl").querySelector(".pick-o button:not(:disabled), [data-k]"); if (b) b.focus(); }
   function pickTile(f, v, label) {
     var open = pickMatchesFor(f, v).some(function (k) { return D.groups[k].dem > 0; });
-    return '<button type="button" data-f="' + f + '" data-v="' + esc(v) + '"><b>' + esc(label) + "</b><small>" + (open ? "On order" : "No open orders") + "</small></button>";
+    return '<button type="button" data-f="' + f + '" data-v="' + esc(v) + '"' + (f === "brand" ? ' data-b="' + esc(v) + '"' : "") + "><b>" + esc(label) + "</b><small>" + (open ? "On order" : "No open orders") + "</small></button>";
   }
   function pickMatchesFor(f, v) { return pickMatches().filter(function (k) { return D.groups[k][f] === v; }); }
   function groupKeys() { return Object.keys(D.groups).sort(function (a, b) { var x = D.groups[a], y = D.groups[b]; return (y.dem > 0) - (x.dem > 0) || y.dem - x.dem || a.localeCompare(b); }); }
@@ -297,12 +297,12 @@
       return;
     }
     if (PK.brand && PK.pages && PK.size == null) { var only = pickVals("size"); if (only.length === 1) PK.size = only[0]; }   // e.g. 100 pages is A5 only
-    var crumbs = PICK_ORDER.filter(function (f) { return PK[f] != null; }).map(function (f) { return '<button type="button" data-back="' + f + '" aria-label="Change ' + f + '">‹ ' + esc(f === "pages" ? PK[f] + " pages" : PK[f]) + "</button>"; }).join("");
+    var crumbs = PICK_ORDER.filter(function (f) { return PK[f] != null; }).map(function (f) { return '<button type="button" data-back="' + f + '"' + (f === "brand" ? ' data-b="' + esc(PK.brand) + '"' : "") + ' aria-label="Change ' + f + '">‹ ' + esc(f === "pages" ? PK[f] + " pages" : PK[f]) + "</button>"; }).join("");
     var head = crumbs ? '<div class="pick-c">' + crumbs + "</div>" : "";
     if (!PK.brand) {
       var tiles = PICK_BRANDS.map(function (b) {
         var has = keys.some(function (k) { return D.groups[k].brand === b; });
-        return has ? pickTile("brand", b, b) : '<button type="button" disabled><b>' + b + "</b><small>No cover, fold or insert items yet</small></button>";
+        return has ? pickTile("brand", b, b) : '<button type="button" data-b="' + b + '" disabled><b>' + b + "</b><small>No cover, fold or insert items yet</small></button>";
       }).join("");
       $("v3-pickl").innerHTML = sec("Recent", recents()) + '<p class="pick-h">Brand or school</p><div class="pick-o">' + tiles + "</div>";
     } else if (!PK.pages) {
