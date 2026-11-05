@@ -86,6 +86,28 @@ class TestPlan(unittest.TestCase):
 		self.assertTrue(t.startswith("Capture v3 · run EBR-0001 · confirmed twice by tanuj@vimit.com at 2026-11-05 08:00"))
 		self.assertIn("FOLD CHECK HELD OFF", t)
 
+	def test_remarks_date_and_shift(self):
+		import datetime
+		t = r.remarks("covers", A5, "EBR-0002", {}, user="u", at="x", date=datetime.date(2026, 11, 4), shift="Night Shift")
+		self.assertTrue(t.startswith("Capture v3 · run EBR-0002 · confirmed twice by u at x · Production 04-11-2026 Night Shift"))
+
+	def test_check_when(self):
+		import datetime
+		today = datetime.date(2026, 11, 5)
+		self.assertEqual(r.check_when("2026-11-05", "Day Shift", today), (today, "Day Shift"))
+		self.assertEqual(r.check_when("2026-10-29", "Night Shift", today)[0], datetime.date(2026, 10, 29))  # 7 days back
+		for bad in [("2026-11-06", "Day Shift"), ("2026-10-28", "Day Shift"), ("", "Day Shift"), ("05-11-2026", "Day Shift"),
+				("2026-11-05", "Evening Shift"), ("2026-11-05", "")]:
+			with self.assertRaises(r.CaptureError):
+				r.check_when(bad[0], bad[1], today)
+
+	def test_posting_time(self):
+		import datetime
+		today = datetime.date(2026, 11, 5)
+		self.assertEqual(r.posting_time(today, "Night Shift", today, "09:12:00"), "09:12:00")
+		self.assertEqual(r.posting_time(datetime.date(2026, 11, 4), "Day Shift", today, "09:12:00"), "17:00:00")
+		self.assertEqual(r.posting_time(datetime.date(2026, 11, 4), "Night Shift", today, "09:12:00"), "23:00:00")
+
 
 if __name__ == "__main__":
 	unittest.main()

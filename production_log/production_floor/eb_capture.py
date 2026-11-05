@@ -15,7 +15,7 @@ confirmed twice on the page).
 import json
 
 import frappe
-from frappe.utils import cint, format_datetime, now_datetime, time_diff_in_seconds
+from frappe.utils import cint, format_datetime, getdate, now_datetime, nowdate, nowtime, time_diff_in_seconds
 
 from production_log.production_floor import eb_capture_rules as rules
 
@@ -23,6 +23,7 @@ OFF_KEY = "eb_capture_disabled"
 ROLES = {"Stock Manager", "Stock User", "Manufacturing Manager", "Manufacturing User", "System Manager"}
 UNDO_SECONDS = 600
 RUN_FIELD = "custom_eb_run"  # used when it exists on Stock Entry; the run is in remarks either way
+SHIFT_FIELD = "custom_eb_shift"  # same: used when it exists; the date and shift are in remarks either way
 
 
 def _check_open(confirmed):
@@ -69,18 +70,25 @@ def get_mode():
 	"""For the page: is live posting on, and may this user post?"""
 	return {"server": True, "disabled": bool(cint(frappe.conf.get(OFF_KEY) or 0)),
 		"can_post": bool(ROLES.intersection(frappe.get_roles())),
-		"run_field": bool(frappe.get_meta("Stock Entry").has_field(RUN_FIELD)), "user": frappe.session.user}
+		"run_field": bool(frappe.get_meta("Stock Entry").has_field(RUN_FIELD)),
+		"shift_field": bool(frappe.get_meta("Stock Entry").has_field(SHIFT_FIELD)),
+		"shifts": list(rules.SHIFTS), "backdate_days": rules.BACKDATE_DAYS, "today": nowdate(), "user": frappe.session.user}
 
 
 @frappe.whitelist(methods=["POST"])
 def post_entry(payload):
-	"""payload = {station, group, book?, run, inputs:{...}, weights?, note?, confirmed: 2}. Returns the posted entry."""
+	"""payload = {station, group, book?, run, date, shift, inputs:{...}, weights?, note?, confirmed: 2}. Returns the posted entry."""
 	data = json.loads(payload) if isinstance(payload, str) else (payload or {})
 	_check_open(data.get("confirmed"))
 	_require_role()
 	station, group, run = data.get("station"), data.get("group"), (data.get("run") or "").strip()
 	if not run:
 		frappe.throw("Enter the run number.")
+	today = getdate(nowdate())
+	try:
+		date, shift = rules.check_when(data.get("date"), data.get("shift"), today)
+	except rules.CaptureError as e:
+		frappe.throw(str(e))
 	g, c, ups, cpc, carton_enabled, stock = _group_context(group, data.get("book"))
 	try:
 		p = rules.plan(station, ups, stock, data.get("inputs") or {}, books_per_carton=cpc,
@@ -97,10 +105,15 @@ def post_entry(payload):
 	se.company = rules.COMPANY
 	se.stock_entry_type = p["type"]
 	se.purpose = p["type"]
+	se.set_posting_time = 1
+	se.posting_date = date
+	se.posting_time = rules.posting_time(date, shift, today, nowtime())
 	se.remarks = rules.remarks(station, group, run, extra, data.get("note"), user=frappe.session.user,
-		at=format_datetime(now_datetime(), "dd-MM-yyyy HH:mm"))
+		at=format_datetime(now_datetime(), "dd-MM-yyyy HH:mm"), date=date, shift=shift)
 	if se.meta.has_field(RUN_FIELD):
 		se.set(RUN_FIELD, run)
+	if se.meta.has_field(SHIFT_FIELD):
+		se.set(SHIFT_FIELD, shift)
 	if station == "packing":
 		se.fg_completed_qty = extra["books"]
 		bom = frappe.db.get_value("BOM", {"item": c["book"], "is_active": 1, "is_default": 1, "docstatus": 1}, "name")
@@ -120,7 +133,7 @@ def post_entry(payload):
 		se.append("items", line)
 	se.insert()
 	se.submit()
-	return {"name": se.name, "type": p["type"], "rows": p["rows"], "msgs": p["msgs"], "remarks": se.remarks}
+	return {"name": se.name, "type": p["type"], "posting_date": str(date), "shift": shift, "rows": p["rows"], "msgs": p["msgs"], "remarks": se.remarks}
 
 
 @frappe.whitelist(methods=["POST"])

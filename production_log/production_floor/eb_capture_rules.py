@@ -16,8 +16,12 @@ Decided by Tanuj, 04/11/2026:
 - Packing: Manufacture into Finished Goods - VCL. Books = full cartons x books per
   carton + loose. Out INS-x = ceil((books + rejects) / ups) sets and the empty
   cartons. Books left over in the last set become rejects. Spot-weigh 1 in 20.
+
+Tanuj, 05/11/2026: every entry carries a production date and shift. The date is
+today or up to BACKDATE_DAYS back, never ahead; the shifts are PPC's (Day / Night).
 """
 
+import datetime
 import math
 import re
 
@@ -46,6 +50,11 @@ CARTONS = {
 	"A5|Prince": "PNCSWR-EMPTY-CARTON-A5-PLAINF-DPL",
 	"A5|Swara": "PNCSWR-EMPTY-CARTON-A5-PLAINF-DPL",
 }
+
+SHIFTS = ("Day Shift", "Night Shift")  # same as PPC Daily Plan / Production Actual
+BACKDATE_DAYS = 7
+# Posting time for a back-dated entry (today's entries post at the current time).
+SHIFT_POSTING_TIME = {"Day Shift": "17:00:00", "Night Shift": "23:00:00"}
 
 SAMPLE_EVERY = 20  # spot-weigh 1 carton in 20
 SAMPLE_SPREAD_PCT = 5.0
@@ -208,13 +217,41 @@ def plan(station, ups, stock, inputs, books_per_carton=None, carton_enabled=True
 	return {"ok": ok, "rows": rows, "msgs": msgs, "type": ENTRY_TYPE[station], "extra": extra}
 
 
-def remarks(station, group, run, extra, user_note="", user=None, at=None):
+def check_when(date, shift, today):
+	"""Production date (YYYY-MM-DD or a date) and shift -> (date, shift). Raises CaptureError."""
+	if isinstance(date, datetime.datetime):
+		date = date.date()
+	if not isinstance(date, datetime.date):
+		try:
+			date = datetime.date.fromisoformat(str(date or "").strip()[:10])
+		except ValueError:
+			raise CaptureError("Pick the production date.")
+	if date > today:
+		raise CaptureError("The production date can't be in the future.")
+	if date < today - datetime.timedelta(days=BACKDATE_DAYS):
+		raise CaptureError(f"The production date can only go back {BACKDATE_DAYS} days. Older entries: ask a Stock Manager.")
+	shift = (shift or "").strip()
+	if shift not in SHIFTS:
+		raise CaptureError("Pick the shift (" + " or ".join(SHIFTS) + ").")
+	return date, shift
+
+
+def posting_time(date, shift, today, now_time):
+	"""Today's entries post at the current time; back-dated ones at the shift's set time."""
+	return now_time if date == today else SHIFT_POSTING_TIME[shift]
+
+
+def remarks(station, group, run, extra, user_note="", user=None, at=None, date=None, shift=None):
 	"""The entry's remarks. The first line is the audit line Tanuj asked for:
 	"Capture v3 · run <run> · confirmed twice by <user> at <time>"; then the counts that are not stock rows."""
 	audit = f"{MARKER} · run {run or '-'}"
 	if user:
 		audit += f" · confirmed twice by {user} at {at or ''}".rstrip()
-	bits = [audit, f"Station {station}", f"Group {group}"]
+	bits = [audit]
+	if date or shift:
+		d = date.strftime("%d-%m-%Y") if hasattr(date, "strftime") else (date or "")
+		bits.append(f"Production {d} {shift or ''}".strip())
+	bits += [f"Station {station}", f"Group {group}"]
 	for k in ("spoiled", "rejects", "loose", "samples_due"):
 		if extra.get(k):
 			bits.append(f"{k.replace('_', ' ')} {extra[k]}")

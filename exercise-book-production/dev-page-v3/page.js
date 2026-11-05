@@ -41,8 +41,22 @@
   var LS = "vcl.eb-v3.";
 
   var D = null;          // loaded data
-  var S = { view: "capture", group: null, book: null, run: "", station: "covers", log: [], v: {} };
+  var S = { view: "capture", group: null, book: null, run: "", date: "", shift: "Day Shift", station: "covers", log: [], v: {} };
   var MODE = { checked: false, server: false, can_post: false, user: "" };
+  /* Production date and shift (Tanuj, 05/11/2026). Same shifts as PPC; mirrors eb_capture_rules.check_when. */
+  var SHIFTS = ["Day Shift", "Night Shift"], BACKDATE_DAYS = 7;
+  function iso(d) { return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2); }
+  function todayIso() { return iso(new Date()); }
+  function minIso() { var d = new Date(); d.setDate(d.getDate() - BACKDATE_DAYS); return iso(d); }
+  function dmy(v) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ""); return m ? m[3] + "-" + m[2] + "-" + m[1] : v; }
+  function whenText() { return dmy(S.date) + " · " + S.shift; }
+  function checkWhen() {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(S.date || "")) return "Pick the production date.";
+    if (S.date > todayIso()) return "The production date can't be in the future.";
+    if (S.date < minIso()) return "The production date can only go back " + BACKDATE_DAYS + " days. Older entries: ask a Stock Manager.";
+    if (SHIFTS.indexOf(S.shift) < 0) return "Pick the shift.";
+    return "";
+  }
   var NEED = "Server update needed: deploy vcl-production feat/eb-capture-v3 and migrate. Nothing was posted.";
 
   /* ---------- helpers ---------- */
@@ -143,6 +157,7 @@
     var gg = g(), s = stock(), bk = book(), u = gg.ups, st = S.station, V = S.v, P = { ok: true, rows: [], msgs: [], type: TYPE[st], extra: {} };
     function row(dir, key, item, wh, qty, before, unit) { P.rows.push({ dir: dir, key: key, item: item, wh: wh, qty: qty, before: before, after: before + qty, unit: unit }); }
     function bad(t) { P.ok = false; P.msgs.push(["bad", t]); }
+    var wErr = checkWhen(); if (wErr) bad(wErr); else if (S.date !== todayIso()) P.msgs.push(["warn", "Back-dated: this entry will post on " + dmy(S.date) + " (" + S.shift + "), not today."]);
     var fields = { covers: ["good", "spoiled"], folds: ["good", "rejects"], inserts: ["sets"], packing: ["cartons", "loose", "rejects"] }[st] || [];
     for (var i = 0; i < fields.length; i++) if (isNaN(num(V[fields[i]]))) { bad("Whole numbers only (0 or more)."); return P; }
     if (st === "covers") {
@@ -237,11 +252,13 @@
       (withOrders.length ? '<optgroup label="With open orders">' + withOrders.map(opt).join("") + "</optgroup>" : "") + '<optgroup label="Other groups">' + rest.map(opt).join("") + "</optgroup></select></label>" +
       '<label class="cap-grp" for="v3-book" style="flex:1 1 200px"><span class="lb">Book (packing)</span><select id="v3-book"></select></label>' +
       '<label class="cap-grp" for="v3-run" style="flex:0 1 200px"><span class="lb">Run number</span><input id="v3-run" autocomplete="off" placeholder="e.g. EBR-0001" value="' + esc(S.run) + '"></label>' +
+      '<label class="cap-grp" for="v3-date" style="flex:0 1 180px"><span class="lb">Production date</span><input id="v3-date" type="date" min="' + minIso() + '" max="' + todayIso() + '" value="' + esc(S.date) + '"></label>' +
+      '<label class="cap-grp" for="v3-shift" style="flex:0 1 170px"><span class="lb">Shift</span><select id="v3-shift">' + SHIFTS.map(function (x) { return '<option' + (x === S.shift ? " selected" : "") + ">" + x + "</option>"; }).join("") + "</select></label>" +
       '<div><button type="button" class="cap-sec" id="v3-reload">Reload stock</button></div></div>' +
       '<div class="cap-steps" id="v3-steps" role="tablist" aria-label="Stations"></div>' +
       '<div class="cap-grid"><div class="cap-card" id="v3-form"></div><div class="cap-card" id="v3-preview"></div></div>' +
       '<div class="cap-card"><div class="cap-h"><h3>Stock for this group</h3><span class="cap-note" id="v3-stocknote"></span></div><div class="cap-stock" id="v3-stock"></div></div>' +
-      '<div class="cap-card"><div class="cap-h"><h3>Entries (this session)</h3><span class="cap-note" id="v3-lognote"></span></div><div class="tw"><table><thead><tr><th>#</th><th>Run</th><th>Station</th><th>Entry</th><th>Out</th><th>In</th><th></th></tr></thead><tbody id="v3-log"></tbody></table></div></div></div>' +
+      '<div class="cap-card"><div class="cap-h"><h3>Entries (this session)</h3><span class="cap-note" id="v3-lognote"></span></div><div class="tw"><table><thead><tr><th>#</th><th>Run · date · shift</th><th>Station</th><th>Entry</th><th>Out</th><th>In</th><th></th></tr></thead><tbody id="v3-log"></tbody></table></div></div></div>' +
       '<p class="cap-note" style="margin-top:10px">Stock as read ' + D.loadedAt.toLocaleTimeString("en-GB") + ". Covers, folds and inserts are in sets (A4 2-up, A5 3-up); books = sets × up-count. Carton per size and brand is a proposal (P12, for Tanuj).</p>";
     var stepsEl = $("v3-steps");
     STEPS.forEach(function (s, i) {
@@ -253,6 +270,8 @@
     });
     $("v3-group").onchange = function (e) { S.group = e.target.value; S.book = null; S.v = { hold: S.v.hold }; lsSet("group", S.group); renderStation(); };
     $("v3-run").oninput = function (e) { S.run = e.target.value; lsSet("run", S.run); renderPreview(); };
+    $("v3-date").onchange = $("v3-date").oninput = function (e) { S.date = e.target.value; renderPreview(); };
+    $("v3-shift").onchange = function (e) { S.shift = e.target.value; lsSet("shift", S.shift); renderPreview(); };
     $("v3-reload").onclick = function () { $("v3-reload").textContent = "Reloading…"; load().then(function () { renderShell(); renderStation(); }); };
     renderStation();
   }
@@ -318,7 +337,7 @@
     }
     var P = planEntry(), run = (S.run || "").trim();
     if (!run) { P.ok = false; P.msgs.unshift(["info", "Enter the run number (it goes on the entry)."]); }
-    el.innerHTML = '<div class="cap-h"><h3>What this entry will do</h3><span class="cap-note">' + esc(P.type) + " · run " + esc(run || "-") + "</span></div>" +
+    el.innerHTML = '<div class="cap-h"><h3>What this entry will do</h3><span class="cap-note">' + esc(P.type) + " · run " + esc(run || "-") + " · " + esc(whenText()) + "</span></div>" +
       '<div class="cap-rows">' + P.rows.map(function (r) { return '<div class="cap-row ' + r.dir + '"><span class="d">' + (r.dir === "out" ? "OUT −" : "IN +") + '</span><span class="it"><code>' + esc(r.item) + "</code><span>" + (r.dir === "out" ? "from " : "into ") + esc(r.wh) + (r.unit !== "books" && r.unit !== "cartons" ? " · " + ctnBooks(Math.abs(r.qty) * g().ups) : "") + '</span></span><span class="q"><b>' + (r.qty > 0 ? "+" : "") + f(r.qty) + "</b><small>" + f(r.before) + " → " + f(r.after) + " " + r.unit + "</small></span></div>"; }).join("") + "</div>" +
       P.msgs.map(function (m) { return '<div class="cap-msg ' + m[0] + '">' + esc(m[1]) + "</div>"; }).join("") + '<div id="v3-result"></div>';
     var pb = $("v3-post"); if (pb) pb.disabled = !P.ok;
@@ -341,7 +360,7 @@
     if (!S.log.length) { tb.innerHTML = '<tr><td colspan="7" class="cap-note">Nothing yet. With no fold stock, start with a Folds opening count, then Inserts and Packing.</td></tr>'; return; }
     tb.innerHTML = S.log.slice().reverse().map(function (e) {
       var undo = e.live && e.name && !e.cancelled && (Date.now() - e.at) < 600000 ? '<button type="button" class="cap-sec" data-undo="' + esc(e.name) + '">Undo</button>' : (e.cancelled ? "cancelled" : "");
-      return '<tr><td class="num">' + e.n + "</td><td><code>" + esc(e.run) + "</code></td><td>" + esc(e.station) + '<br><span class="cap-note">' + esc(e.grp) + "</span></td><td>" + "<b>" + (e.name ? '<a href="/app/stock-entry/' + encodeURIComponent(e.name) + '" target="_blank" rel="noopener">' + esc(e.name) + "</a>" : "") + "</b><br>" + esc(e.type) + "</td><td>" +
+      return '<tr><td class="num">' + e.n + "</td><td><code>" + esc(e.run) + '</code><br><span class="cap-note">' + esc(e.when || "") + "</span></td><td>" + esc(e.station) + '<br><span class="cap-note">' + esc(e.grp) + "</span></td><td>" + "<b>" + (e.name ? '<a href="/app/stock-entry/' + encodeURIComponent(e.name) + '" target="_blank" rel="noopener">' + esc(e.name) + "</a>" : "") + "</b><br>" + esc(e.type) + "</td><td>" +
         (e.out.map(function (x) { return "<code>" + esc(x[0]) + "</code> −" + f(x[1]); }).join("<br>") || "-") + "</td><td>" + (e["in"].map(function (x) { return "<code>" + esc(x[0]) + "</code> +" + f(x[1]); }).join("<br>") || "-") + "</td><td>" + undo + "</td></tr>";
     }).join("");
     [].forEach.call(tb.querySelectorAll("[data-undo]"), function (b) { b.onclick = function () { doUndo(b.dataset.undo, b); }; });
@@ -350,7 +369,7 @@
   /* ---------- post / undo ---------- */
   var seq = 0;
   function logEntry(P, live, name) {
-    var e = { n: ++seq, run: (S.run || "").trim(), station: S.station, grp: gname(g()), type: P.type, live: live, name: name, at: Date.now(), out: [], "in": [] };
+    var e = { n: ++seq, run: (S.run || "").trim(), when: whenText(), station: S.station, grp: gname(g()), type: P.type, live: live, name: name, at: Date.now(), out: [], "in": [] };
     P.rows.forEach(function (r) { if (r.qty) (r.qty < 0 ? e.out : e["in"]).push([r.item, Math.abs(r.qty)]); });
     S.log.push(e);
   }
@@ -380,18 +399,18 @@
     if (!MODE.server) { $("v3-result").innerHTML = '<div class="cap-msg bad">' + esc(NEED) + "</div>"; return; }
     var warns = P.msgs.filter(function (m) { return m[0] === "warn" || m[0] === "bad"; });
     dialog("Step 1 of 2: is this correct?",
-      "<p><b>" + esc(P.type) + "</b> · run <code>" + esc(run) + "</code> · " + esc(gname(g())) + "</p>" + rowsHtml(P) +
+      "<p><b>" + esc(P.type) + "</b> · run <code>" + esc(run) + "</code> · " + esc(gname(g())) + "</p><p><b>Production date " + esc(dmy(S.date)) + " · " + esc(S.shift) + "</b></p>" + rowsHtml(P) +
       warns.map(function (m) { return '<div class="cap-msg ' + m[0] + '">' + esc(m[1]) + "</div>"; }).join(""),
       "Yes, this is correct", function () {
         dialog("Step 2 of 2: post to ERPNext now?",
-          '<p class="cap-msg warn">This changes stock in ERPNext.</p><p>' + esc(totals(P)) + '</p><p class="cap-note">' + esc(P.type) + " · run " + esc(run) + "</p>",
+          '<p class="cap-msg warn">This changes stock in ERPNext.</p><p>' + esc(totals(P)) + '</p><p class="cap-note">' + esc(P.type) + " · run " + esc(run) + " · " + esc(whenText()) + "</p>",
           "Post now", function () { send(P, run); });
       });
   }
   function send(P, run) {
     var btn = $("v3-post"); btn.disabled = true; btn.textContent = "Posting…";
     var bk = book();
-    var payload = { station: S.station, group: S.group, book: bk ? bk.code : null, run: run, weights: P.extra.weights || "", confirmed: 2,
+    var payload = { station: S.station, group: S.group, book: bk ? bk.code : null, run: run, date: S.date, shift: S.shift, weights: P.extra.weights || "", confirmed: 2,
       inputs: { good: S.v.good, spoiled: S.v.spoiled, rejects: S.v.rejects, opening: !!S.v.opening, sets: S.v.sets, hold_fold_check: !!S.v.hold, cartons: S.v.cartons, loose: S.v.loose } };
     post(M + "post_entry", { payload: JSON.stringify(payload) }).then(function (m) {
       logEntry(P, true, m.name);
@@ -660,7 +679,7 @@
 
   /* ---------- start ---------- */
   function start() {
-    S.group = lsGet("group", null); S.station = lsGet("station", "covers"); S.run = lsGet("run", "");
+    S.group = lsGet("group", null); S.station = lsGet("station", "covers"); S.run = lsGet("run", ""); S.date = todayIso(); S.shift = lsGet("shift", "Day Shift"); if (SHIFTS.indexOf(S.shift) < 0) S.shift = "Day Shift";
     if (STEPS.map(function (s) { return s[0]; }).indexOf(S.station) < 0) S.station = "covers";
     renderMode();
     var qv = null; try { qv = new URL(location.href).searchParams.get("view"); } catch (e) {}
