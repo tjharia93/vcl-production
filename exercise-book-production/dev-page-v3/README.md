@@ -47,3 +47,42 @@ Salesforce Lightning (SLDS) structure:
 - Lightning data tables, badges, scoped notifications, and a modal for the two confirmations.
 
 It's themed with VCL Blue #2B3990 as the brand colour and Calibri text. Touch targets stay at 44px or more for the floor tablets.
+
+## Date and shift (Tanuj, 05/11/2026)
+- Every capture has a **production date** and a **shift**, next to the run number.
+  - The date defaults to today. It can go back up to 7 days, never ahead.
+  - The shift is Day Shift or Night Shift, the same as PPC. It's remembered per browser.
+- A back-dated entry shows a warning. The date and shift appear in the preview and in both confirmations.
+- The server checks them again (`eb_capture_rules.check_when`), then posts the Stock Entry on that date with `set_posting_time`.
+  - Today's entries post at the current time.
+  - Back-dated ones post at the shift's set time: Day 17:00, Night 23:00.
+- Both go in the remarks ("Production 04-11-2026 Night Shift"). The shift also goes in `custom_eb_shift` when that field exists on Stock Entry. It isn't created yet.
+
+## Posting (Tanuj, 04/11/2026)
+- Every post is **confirmed twice**: "Is this correct?" (every row) and then "Post to ERPNext now?" (totals). Post now is never pre-focused, and Enter does nothing.
+- Undo is open to the same user for 10 minutes, and is also confirmed twice.
+- The server is `production_log/production_floor/eb_capture.py` (`get_mode`, `post_entry`, `undo_entry`).
+  - It is whitelisted and limited to Stock and Manufacturing roles.
+  - It re-plans each entry against live stock using `eb_capture_rules.py`, then inserts and submits in one request.
+  - It refuses anything that hasn't been confirmed twice (`confirmed=2`).
+  - Site config `eb_capture_disabled = 1` switches all posting off.
+- The remarks start with: `Capture v3 · run <run> · confirmed twice by <user> at <time>`.
+- Until vcl-production is deployed and migrated, the page says **"Server update needed"** and posts nothing.
+
+## Config to revisit
+- **Carton per size + brand** (`CARTONS` in `page.js` and in `eb_capture_rules.py`): this is the P12 proposal, still open for Tanuj.
+- **A5 carton item** (`PNCSWR-EMPTY-CARTON-A5-PLAINF-DPL`) is disabled. Until it is enabled, A5 packing doesn't take out cartons, and the page warns about it.
+- **Run number**: carried in the remarks. It also goes in `custom_eb_run` once that field exists.
+
+## Deploy (only with Tanuj's go)
+```bash
+py -3 scripts/deploy_eb_dev_page.py --page v3 --check
+py -3 scripts/deploy_eb_dev_page.py --page v3 --create
+```
+- **First deploy** creates the Web Page and writes `deploy-stamp.json`; commit that file.
+- **Later deploys** run without `--create`. The script refuses if the live page changed since the last stamp.
+- The server methods arrive only with a vcl-production deploy and migrate on Frappe Cloud.
+
+## Tests
+- `production_floor/tests/test_eb_capture_rules.py` (rules) and `tests/test_receiving_books.py` (spot-weigh, from a84ef92).
+- `page.js` mirrors the rules. It was checked by hand against live stock through a local read-only harness on 04/11 (screenshots are outside git, in `C:\Second_Brain\output\eb_capture_v3_screenshots\`).
