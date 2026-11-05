@@ -160,6 +160,77 @@
 .ebv3 .dlg-f .cap-sec{min-height:44px}.ebv3 .dlg-f .cap-post{width:auto;padding:0 20px;min-height:44px}
 @media (max-width:600px){.ebv3 .seg.views button{flex:1;padding:0 6px}.ebv3 .btn-grp{width:100%}.ebv3 .btn-grp .cap-sec{flex:1}}
 @media print{.ebv3{margin:0;background:#fff}.ebv3 .mode,.ebv3 #v3-banner,.ebv3 #v3-chart,.ebv3 .cap-top,.ebv3 [data-det],.ebv3 .ph-sub{display:none!important}.ebv3 .cap-card,.ebv3 .ph{box-shadow:none}.ebv3 .tw{overflow:visible}.navbar,.web-footer,footer,.page-breadcrumbs{display:none!important}}
+/* Order & stock (05/11/2026): one headline, a coverage bar per type, detail on tap */
+.ebv3{--c-fg:#2e844a;--c-pipe:#2b3990;--c-short:#ba0517;--c-none:#c9c9c9}
+.ebv3 .os-hero{background:var(--card);border:1px solid var(--border-input);border-radius:4px;box-shadow:var(--sh);padding:18px 20px;display:grid;gap:14px}
+.ebv3 .os-big{display:grid;gap:2px}
+.ebv3 .os-big .n{font-size:14px;font-weight:700;color:var(--weak)}
+.ebv3 .os-big .v{font-size:40px;line-height:46px;font-weight:700;color:var(--bad);font-variant-numeric:tabular-nums}
+.ebv3 .os-big .v small{font-size:18px;font-weight:700}
+.ebv3 .os-big .s{font-size:14px;color:var(--weak)}
+.ebv3 .os-bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--neutral-bg);gap:1px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.ebv3 .os-hero .os-bar{height:16px;border-radius:8px}
+.ebv3 .os-bar span{display:block;min-width:2px}
+.ebv3 .os-bar .fg,.ebv3 .os-lg i.fg{background:var(--c-fg)}.ebv3 .os-bar .pipe,.ebv3 .os-lg i.pipe{background:var(--c-pipe)}
+.ebv3 .os-bar .short,.ebv3 .os-lg i.short{background:var(--c-short)}.ebv3 .os-bar .none,.ebv3 .os-lg i.none{background:var(--c-none)}
+.ebv3 .os-legs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(190px,100%),1fr));gap:12px 20px}
+.ebv3 .os-lg{display:grid;grid-template-columns:12px minmax(0,1fr);column-gap:8px;align-items:center}
+.ebv3 .os-lg i{width:12px;height:12px;border-radius:3px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.ebv3 .os-lg .n{font-size:13px;color:var(--weak)}
+.ebv3 .os-lg .v,.ebv3 .os-lg .s{grid-column:2}
+.ebv3 .os-lg .v{font-size:18px;line-height:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.ebv3 .os-lg .v small{font-size:12px;color:var(--weak)}
+.ebv3 .os-lg .s{font-size:12px;color:var(--weak)}
+.ebv3 .os-card{padding-bottom:0}
+.ebv3 .os-card>.tw{margin-bottom:0}
+.ebv3 .os-card .cap-h .cap-note{display:block}
+.ebv3 table.osl thead th{background:var(--card);font-size:12px;color:var(--weak)}
+.ebv3 table.osl th,.ebv3 table.osl td{padding:12px 14px;vertical-align:middle;font-family:var(--sans)}
+.ebv3 table.osl tbody th{font-weight:400;min-width:220px}
+.ebv3 table.osl tbody th b{display:block;font-size:15px;line-height:20px}
+.ebv3 table.osl .sub{display:block;font-size:13px;line-height:18px;color:var(--weak)}
+.ebv3 table.osl .chip{margin-top:4px}
+.ebv3 .chip.low{background:var(--warn-bg);color:var(--warn)}
+.ebv3 table.osl .chip.okc{background:var(--ok-bg);color:var(--ok);margin:0}
+.ebv3 table.osl b.ct{font-size:16px}
+.ebv3 table.osl td small{font-size:12px;color:var(--weak)}
+.ebv3 table.osl .sh b.ct,.ebv3 table.osl .sh b.ct span{color:var(--bad)}
+.ebv3 table.osl .cv{width:30%;min-width:180px}
+.ebv3 table.osl .pc{display:block;margin-top:5px;font-size:12px;color:var(--weak)}
+.ebv3 table.osl .dash{color:var(--weaker)}
+.ebv3 table.osl .tg{width:44px;padding:0 8px 0 0}
+.ebv3 tr.osr{cursor:pointer}
+.ebv3 .os-tog{width:44px;height:44px;border:0;border-radius:4px;background:transparent;cursor:pointer;position:relative}
+.ebv3 .os-tog:hover{background:var(--neutral-bg)}
+.ebv3 .os-tog:focus-visible{outline:2px solid var(--brand)}
+.ebv3 .os-tog::after{content:"";position:absolute;left:17px;top:14px;width:9px;height:9px;border-right:2px solid var(--weak);border-bottom:2px solid var(--weak);transform:rotate(45deg);transition:transform .15s}
+.ebv3 .os-tog[aria-expanded="true"]::after{transform:translateY(5px) rotate(225deg)}
+.ebv3 table.osl tr.det>td{padding:14px 18px 18px;background:#fafaf9}
+.ebv3 tbody tr.det:hover>*{background:#fafaf9}
+.ebv3 .os-sts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(170px,100%),1fr));gap:10px;margin-bottom:14px}
+.ebv3 .os-st{display:grid;gap:1px;background:var(--card);border:1px solid var(--border);border-radius:4px;padding:8px 12px}
+.ebv3 .os-st .n{font-size:12px;color:var(--weak)}
+.ebv3 .os-st .v{font-size:18px;line-height:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.ebv3 .os-st .v small{font-size:12px;color:var(--weak)}
+.ebv3 .os-st .s{font-size:12px;color:var(--weak)}
+.ebv3 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.ebv3 .os-how{font-size:13px;color:var(--weak)}
+.ebv3 .os-how summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-weight:700;color:var(--link)}
+.ebv3 .os-how p{margin:0;max-width:80ch}
+@media (max-width:760px){
+  .ebv3 .os-big .v{font-size:32px;line-height:38px}
+  .ebv3 table.osl thead{display:none}
+  .ebv3 table.osl,.ebv3 table.osl tbody{display:block}
+  .ebv3 table.osl tr.osr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) 44px;gap:8px 10px;padding:12px 14px;border-top:1px solid var(--border)}
+  .ebv3 table.osl tr.osr>*{padding:0;border:0;min-width:0}
+  .ebv3 table.osl tr.osr th{grid-column:1/4;grid-row:1}
+  .ebv3 table.osl tr.osr .tg{grid-column:4;grid-row:1;width:auto}
+  .ebv3 table.osl tr.osr .cv{grid-column:1/-1;grid-row:2;width:auto;min-width:0}
+  .ebv3 table.osl tr.osr td.num{grid-row:3;text-align:left}
+  .ebv3 table.osl tr.osr td.num::before{content:attr(data-l);display:block;font-size:12px;color:var(--weak)}
+  .ebv3 table.osl tr.det{display:block}.ebv3 table.osl tr.det[hidden]{display:none}.ebv3 table.osl tr.det>td{display:block}
+}
+@media print{.ebv3 .os-act,.ebv3 .os-how,.ebv3 .tg{display:none!important}}
 </style>
 <div class="ebv3" id="ebv3">
   <header class="bar"><div class="wrap"><div class="ph"><span class="ph-ico" aria-hidden="true">EB</span><div class="ph-t"><p class="ph-k">Production · Vimit Converters Limited</p><h1>Exercise Book Production v3 (preview)</h1></div><p class="ph-sub">Covers → Folds → Inserts → Packing → Finished Goods</p></div></div></header>

@@ -24,6 +24,7 @@ Three screens, chosen with the switch at the top (`?view=capture|orders|ordersto
   - Filters: search, brand, customer, size, pages, ruling. Books or Cartons switch. Excel download (ExcelJS from `/files/vcl-exceljs-4.4.0.js`, or CSV if that file is missing). Print / PDF.
   - Reads everything in one `get_list` on Sales Order child rows, instead of v1's one fetch per order.
 - **Order & stock**: the v1 comparison, rebuilt on the sheet/set model. Each book type shows pending, Finished Goods (Finished Goods - VCL only), still to make, inserts / covers / folds in Stores (sets or sheets × up-count), short, sheets to print, and empty cartons (a shared pool per size and brand).
+  - Layout: the shortfall as one headline, a bar splitting open orders into Finished Goods, inserts and covers, short, and not tracked, then one row per book type. Tapping a row opens its inserts, covers, folds, empty cartons, order lines and item codes.
   - Short = still to make − (inserts + covers) × up-count. Folds aren't counted yet, because there's no fold count.
   - School and Hi5 have no cover/fold/insert items yet, so only their orders and Finished Goods are compared.
   - Fixes these v1 faults: covers were counted as books instead of sheets; Repacks were missing from inserts; finished stock came from every warehouse.
