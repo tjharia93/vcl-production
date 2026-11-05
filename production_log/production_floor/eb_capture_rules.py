@@ -241,6 +241,40 @@ def posting_time(date, shift, today, now_time):
 	return now_time if date == today else SHIFT_POSTING_TIME[shift]
 
 
+def _station_lines(text):
+	return [line.strip() for line in (text or "").splitlines() if line.strip()]
+
+
+def unknown_stations(text):
+	"""The lines of a machine's Exercise Book Stations that are not capture stations."""
+	return [line for line in _station_lines(text) if line.lower() not in STATIONS]
+
+
+def machines_by_station(rows):
+	"""Active machine rows (name, asset, eb_stations, display_order) -> {station: [{name, asset}]}.
+	Same order as the production screen: display_order first, 0 last, then by name."""
+	out = {}
+	for m in sorted(rows, key=lambda r: (r.get("display_order") or 10 ** 6, r.get("name") or "")):
+		for line in _station_lines(m.get("eb_stations")):
+			if line.lower() in STATIONS:
+				out.setdefault(line.lower(), []).append({"name": m.get("name"), "asset": m.get("asset") or ""})
+	return out
+
+
+def check_machine(station, machine, by_station):
+	"""The chosen machine for this station -> {name, asset}, or None when the station has no machines set up. Raises CaptureError."""
+	machine = (machine or "").strip()
+	options = by_station.get(station) or []
+	if not options and not machine:
+		return None
+	for m in options:
+		if m["name"] == machine:
+			return m
+	if not machine:
+		raise CaptureError("Pick the machine.")
+	raise CaptureError(f"{machine} is not an active machine for this station.")
+
+
 def remarks(station, group, run, extra, user_note="", user=None, at=None, date=None, shift=None):
 	"""The entry's remarks. The first line is the audit line Tanuj asked for:
 	"Capture v3 · run <run> · confirmed twice by <user> at <time>"; then the counts that are not stock rows."""
@@ -252,6 +286,8 @@ def remarks(station, group, run, extra, user_note="", user=None, at=None, date=N
 		d = date.strftime("%d-%m-%Y") if hasattr(date, "strftime") else (date or "")
 		bits.append(f"Production {d} {shift or ''}".strip())
 	bits += [f"Station {station}", f"Group {group}"]
+	if extra.get("machine"):
+		bits.append(f"Machine {extra['machine']}" + (f" (asset {extra['asset']})" if extra.get("asset") else ""))
 	for k in ("spoiled", "rejects", "loose", "samples_due"):
 		if extra.get(k):
 			bits.append(f"{k.replace('_', ' ')} {extra[k]}")

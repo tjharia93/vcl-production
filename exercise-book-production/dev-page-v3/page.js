@@ -49,7 +49,18 @@
   function todayIso() { return iso(new Date()); }
   function minIso() { var d = new Date(); d.setDate(d.getDate() - BACKDATE_DAYS); return iso(d); }
   function dmy(v) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ""); return m ? m[3] + "-" + m[2] + "-" + m[1] : v; }
-  function whenText() { return dmy(S.date) + " · " + S.shift; }
+  function whenText() { var m = machine(); return dmy(S.date) + " · " + S.shift + (m ? " · " + m.name : ""); }
+  /* Machines come from VCL Production Machine through get_mode, so a new one needs no change here. A station with none set up, or a server without them, shows nothing. */
+  function stationMachines() { return (MODE.machines || {})[S.station] || []; }
+  function machine() {
+    var ms = stationMachines(), name = ms.length === 1 ? ms[0].name : lsGet("machine." + S.station, "");
+    return ms.filter(function (m) { return m.name === name; })[0] || null;
+  }
+  function renderMachines() {
+    var ms = stationMachines(), el = $("v3-mach"), cur = machine(); if (!el) return;
+    el.hidden = !ms.length;
+    el.innerHTML = '<span class="lb">Machine</span><div class="mach-row">' + ms.map(function (m) { return '<button type="button" class="mach" data-m="' + esc(m.name) + '" aria-pressed="' + (cur && cur.name === m.name) + '">' + esc(m.name) + "</button>"; }).join("") + "</div>";
+  }
   function checkWhen() {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(S.date || "")) return "Pick the production date.";
     if (S.date > todayIso()) return "The production date can't be in the future.";
@@ -138,7 +149,7 @@
 
   function loadMode() {
     return get(M + "get_mode", {}).then(function (m) {
-      MODE = { checked: true, server: true, disabled: !!m.disabled, can_post: !!m.can_post, run_field: !!m.run_field, dated: Array.isArray(m.shifts), user: m.user || "" };
+      MODE = { checked: true, server: true, disabled: !!m.disabled, can_post: !!m.can_post, run_field: !!m.run_field, dated: Array.isArray(m.shifts), machines: m.machines || {}, user: m.user || "" };
     }).catch(function () { MODE = { checked: true, server: false, can_post: false, user: "" }; });
   }
 
@@ -159,6 +170,7 @@
     function row(dir, key, item, wh, qty, before, unit) { P.rows.push({ dir: dir, key: key, item: item, wh: wh, qty: qty, before: before, after: before + qty, unit: unit }); }
     function bad(t) { P.ok = false; P.msgs.push(["bad", t]); }
     var wErr = checkWhen(), oldServer = MODE.server && !MODE.dated; /* an older server ignores date and shift, so never promise them */
+    if (stationMachines().length && !machine()) bad("Pick the machine.");
     if (wErr) bad(wErr);
     else if (S.date !== todayIso()) { if (oldServer) bad(OLD_SERVER); else P.msgs.push(["warn", "Back-dated: this entry will post on " + dmy(S.date) + " (" + S.shift + "), not today."]); }
     else if (oldServer) P.msgs.push(["warn", "The shift won't be saved on this entry until the server is updated. It will post today."]);
@@ -237,7 +249,8 @@
       '<div class="cap-steps" id="v3-steps" role="tablist" aria-label="Stations"></div><div class="cap-top">' +
       '<label class="cap-grp" for="v3-run" style="flex:0 1 190px"><span class="lb">Run number</span><input id="v3-run" autocomplete="off" placeholder="e.g. EBR-0001" value="' + esc(S.run) + '"></label>' +
       '<label class="cap-grp" for="v3-date" style="flex:0 1 170px"><span class="lb">Production date</span><input id="v3-date" type="date" min="' + minIso() + '" max="' + todayIso() + '" value="' + esc(S.date) + '"></label>' +
-      '<label class="cap-grp" for="v3-shift" style="flex:0 1 150px"><span class="lb">Shift</span><select id="v3-shift">' + SHIFTS.map(function (x) { return '<option' + (x === S.shift ? " selected" : "") + ">" + x + "</option>"; }).join("") + "</select></label></div>" +
+      '<label class="cap-grp" for="v3-shift" style="flex:0 1 150px"><span class="lb">Shift</span><select id="v3-shift">' + SHIFTS.map(function (x) { return '<option' + (x === S.shift ? " selected" : "") + ">" + x + "</option>"; }).join("") + "</select></label>" +
+      '<div class="cap-grp mach-w" id="v3-mach" hidden></div></div>' +
       '<div class="cap-grid"><div class="cap-card" id="v3-form"></div><div class="cap-card" id="v3-preview"></div></div>' +
       '<div class="cap-card" id="v3-today"></div>' +
       '<div class="cap-card" id="v3-logcard" hidden><div class="cap-h"><h3>Posted from this screen</h3><span class="cap-note" id="v3-lognote"></span></div><div class="tw"><table><thead><tr><th>#</th><th>Run · date · shift</th><th>Station</th><th>Entry</th><th>Out</th><th>In</th><th></th></tr></thead><tbody id="v3-log"></tbody></table></div></div>' +
@@ -264,6 +277,7 @@
       else return;
       renderPick(""); pickFocus();
     };
+    $("v3-mach").onclick = function (e) { var b = e.target.closest("[data-m]"); if (!b) return; lsSet("machine." + S.station, b.dataset.m); renderMachines(); renderPreview(); };
     $("v3-run").oninput = function (e) { S.run = e.target.value; lsSet("run", S.run); renderPreview(); };
     $("v3-date").onchange = $("v3-date").oninput = function (e) { S.date = e.target.value; renderPreview(); renderToday(); };
     $("v3-shift").onchange = function (e) { S.shift = e.target.value; lsSet("shift", S.shift); renderPreview(); };
@@ -340,7 +354,7 @@
 
   function renderStation() {
     [].forEach.call($("v3-steps").querySelectorAll("button"), function (b) { b.setAttribute("aria-selected", b.dataset.s === S.station ? "true" : "false"); });
-    pickLabel(); renderBookPicker(); renderForm(); renderBookPicker(); renderPreview(); renderToday(); renderStock(); renderLog();
+    pickLabel(); renderMachines(); renderBookPicker(); renderForm(); renderBookPicker(); renderPreview(); renderToday(); renderStock(); renderLog();
   }
 
   function field(key, label, help, big) { var id = "v3-" + key, val = S.v[key] == null ? "" : S.v[key]; return '<div class="cap-f"><label class="lb" for="' + id + '">' + label + '</label><input class="qty' + (big ? " big" : "") + '" id="' + id + '" data-k="' + key + '" inputmode="numeric" autocomplete="off" value="' + esc(val) + '">' + (help ? '<span class="cap-note">' + help + "</span>" : "") + "</div>"; }
@@ -508,7 +522,7 @@
       if (!checked) P.msgs.push(["warn", "Could not check ERPNext for duplicates. Look at the list before posting."]);
       var warns = P.msgs.filter(function (m) { return m[0] === "warn" || m[0] === "bad"; });
       dialog("Step 1 of 2: is this correct?",
-        "<p><b>" + esc(P.type) + "</b> · run <code>" + esc(run) + "</code> · " + esc(gname(g())) + "</p><p><b>Production date " + esc(dmy(S.date)) + " · " + esc(S.shift) + "</b></p>" + rowsHtml(P) +
+        "<p><b>" + esc(P.type) + "</b> · run <code>" + esc(run) + "</code> · " + esc(gname(g())) + "</p><p><b>Production date " + esc(whenText()) + "</b></p>" + rowsHtml(P) +
         warns.map(function (m) { return '<div class="cap-msg ' + m[0] + '">' + esc(m[1]) + "</div>"; }).join(""),
         "Yes, this is correct", function () {
           dialog("Step 2 of 2: post to ERPNext now?",
@@ -520,7 +534,7 @@
   function send(P, run) {
     var btn = $("v3-post"); S.posting = true; btn.disabled = true; btn.textContent = "Posting…";
     var bk = book();
-    var payload = { station: S.station, group: S.group, book: bk ? bk.code : null, run: run, date: S.date, shift: S.shift, weights: P.extra.weights || "", confirmed: 2,
+    var payload = { station: S.station, group: S.group, book: bk ? bk.code : null, run: run, date: S.date, shift: S.shift, machine: (machine() || {}).name || "", weights: P.extra.weights || "", confirmed: 2,
       inputs: { good: S.v.good, spoiled: S.v.spoiled, rejects: S.v.rejects, opening: !!S.v.opening, sets: S.v.sets, hold_fold_check: !!S.v.hold, cartons: S.v.cartons, loose: S.v.loose } };
     post(M + "post_entry", { payload: JSON.stringify(payload) }).then(function (m) {
       logEntry(P, true, m.name); S.posting = false; clearProduction();

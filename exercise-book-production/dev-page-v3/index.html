@@ -343,6 +343,11 @@
 .ebv3 input.qty.big{font-size:40px;line-height:48px;font-weight:600;min-height:76px;border-radius:10px;padding:0 16px}
 .ebv3 input.need{border-color:var(--bad);box-shadow:0 0 0 1px var(--bad)}
 .ebv3 .cap-empty{margin:0;padding:28px 12px;text-align:center;color:var(--weak)}
+.ebv3 .mach-w{flex:1 1 200px}
+.ebv3 .mach-w[hidden]{display:none}
+.ebv3 .mach-row{display:flex;flex-wrap:wrap;gap:6px}
+.ebv3 .mach{min-height:44px;padding:4px 18px;font:inherit;font-weight:600;background:var(--card);color:var(--text);border:1px solid var(--border-input);border-radius:8px;cursor:pointer}
+.ebv3 .mach[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
 .ebv3 .pick-card{padding-top:14px}
 .ebv3 .pick-top{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
 .ebv3 .pick-now{display:grid}
@@ -392,6 +397,7 @@
   .ebv3[data-view="capture"] .wrap{padding-top:10px}
   .ebv3[data-view="capture"] .cap{gap:10px}
   .ebv3[data-view="capture"] .cap-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px;padding:10px 12px}
+  .ebv3[data-view="capture"] .cap-top .mach-w{grid-column:1/-1}
   .ebv3[data-view="capture"] .cap-card{padding-bottom:14px}
   .ebv3[data-view="capture"] .cap-steps{padding:6px}
   .ebv3[data-view="capture"] .cap-steps button{min-height:40px;padding:3px 6px}

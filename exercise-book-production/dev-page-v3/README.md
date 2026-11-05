@@ -67,6 +67,13 @@ Production also trials the newer Lightning style: soft shadows, rounder corners 
   - Back-dated ones post at the shift's set time: Day 17:00, Night 23:00.
 - Both go in the remarks ("Production 04-11-2026 Night Shift"). The shift also goes in `custom_eb_shift` when that field exists on Stock Entry. It isn't created yet.
 
+## Machines (Tanuj, 05/11/2026)
+- The list lives on **VCL Production Machine**: `asset` links to the Asset, and `eb_stations` lists the Capture stations it runs, one per line.
+- **To add a machine:** fill those two fields on its record. To retire one, untick Active; never delete it. Neither needs code or a deploy.
+- Each active machine listed for a station shows as a tile beside run, date and shift. A station with machines needs one on every entry, and the server checks it (`eb_capture_rules.check_machine`). A station with none, or a server without `get_mode.machines`, shows no tiles and posts as before.
+- The machine and its asset go in the remarks, and the machine goes in `custom_eb_machine` on the Stock Entry (created in `production_floor/install.py`).
+- Solna and Miller are set for Covers by patch `v10_10.link_cover_machines`.
+
 ## Posting (Tanuj, 04/11/2026)
 - Every post is **confirmed twice**: "Is this correct?" (every row) and then "Post to ERPNext now?" (totals). Post now is never pre-focused, and Enter does nothing.
 - Undo is open to the same user for 10 minutes, and is also confirmed twice.
