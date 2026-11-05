@@ -245,6 +245,7 @@
   }
 
   function gname(gg) { return gg.brand + " · " + gg.size + " · " + gg.pages + " pages · " + (RUL[gg.ruling] || gg.ruling); }
+  function bdot(brand) { return '<i class="bdot" data-b="' + esc(brand) + '" aria-hidden="true"></i>'; }
 
   function renderShell() {
     if (!D.groups[S.group]) S.group = groupKeys()[0];
@@ -739,7 +740,7 @@
         var rows = {}; bs.forEach(function (b) { var k = (b.d.size || "?") + "|" + (b.d.pages || 0); (rows[k] = rows[k] || { size: b.d.size || "Not stated", pages: b.d.pages, by: {} }).by[b.d.ruling || "?"] = b; });
         var rk = Object.keys(rows).sort(function (a, b) { var x = rows[a], y = rows[b]; return x.size.localeCompare(y.size) || (x.pages || 9999) - (y.pages || 9999); });
         var pc = bs.reduce(function (s, b) { return s + b.pc; }, 0), pb = bs.reduce(function (s, b) { return s + b.p; }, 0);
-        h += '<div class="cap-card"><div class="cap-h"><h3>' + esc(br) + '</h3><span class="cap-note"><b>' + c1(pc) + " ctn</b> (" + f(pb) + ' books) still to deliver</span></div><div class="tw"><table class="mx"><thead><tr><th rowspan="2">Size</th><th rowspan="2" class="num">Pages</th>' +
+        h += '<div class="cap-card" data-b="' + esc(br) + '"><div class="cap-h"><h3 class="bdot">' + esc(br) + '</h3><span class="cap-note"><b>' + c1(pc) + " ctn</b> (" + f(pb) + ' books) still to deliver</span></div><div class="tw"><table class="mx"><thead><tr><th rowspan="2">Size</th><th rowspan="2" class="num">Pages</th>' +
           rul.map(function (r) { return '<th colspan="3" class="grp">' + esc(r === "?" ? "Ruling not stated" : rulName(r)) + "</th>"; }).join("") + "</tr><tr>" +
           rul.map(function () { return '<th class="num st">Ordered</th><th class="num">Delivered</th><th class="num pend">Pending</th>'; }).join("") + "</tr></thead><tbody>" +
           rk.map(function (k) { var r = rows[k]; return "<tr><th>" + esc(r.size) + '</th><td class="num">' + (r.pages || "-") + "</td>" + rul.map(function (u) { var b = r.by[u]; return b ? cell(b, "o", "st") + cell(b, "dl", "") + cell(b, "p", "pend") : '<td class="num st empty">-</td><td class="num empty">-</td><td class="num empty">-</td>'; }).join("") + "</tr>"; }).join("") +
@@ -812,7 +813,7 @@
           var d = r.d, p = r.per, gg = r.gg, cov = r.pending ? Math.round((r.uFg + r.uPipe) / r.pending * 100) : 0;
           var low = r.ctnNeed != null && r.ctn != null && !r.ctnOff && r.ctn < r.ctnNeed;
           var bar = covBar([["fg", r.uFg, "Finished Goods " + f(r.uFg) + " books"], ["pipe", r.uPipe, "Inserts and covers " + f(r.uPipe) + " books"], ["short", r.short || 0, "Short " + f(r.short || 0) + " books"], ["none", r.uNone, "Not tracked " + f(r.uNone) + " books"]], cov + "% covered");
-          return '<tr class="osr" data-row="' + i + '"><th scope="row"><b>' + esc(d.brand + " " + (d.size || "?") + " · " + (d.pages || "?") + " pages") + '</b><span class="sub">' + esc(rulName(d.ruling)) + " · " + (p ? p + " books/ctn" : "no Carton unit") + (gg ? " · " + gg.ups + "-up" : "") + "</span>" + (low ? '<span class="chip low">Empty cartons low</span>' : "") + "</th>" +
+          return '<tr class="osr" data-row="' + i + '"><th scope="row"><b class="bdot" data-b="' + esc(d.brand) + '">' + esc(d.brand + " " + (d.size || "?") + " · " + (d.pages || "?") + " pages") + '</b><span class="sub">' + esc(rulName(d.ruling)) + " · " + (p ? p + " books/ctn" : "no Carton unit") + (gg ? " · " + gg.ups + "-up" : "") + "</span>" + (low ? '<span class="chip low">Empty cartons low</span>' : "") + "</th>" +
             '<td class="num" data-l="Pending">' + cb(r.pending, p) + "</td>" +
             '<td class="cv">' + bar + '<span class="pc">' + (gg ? cov + "% covered" : (r.uFg ? cov + "% from Finished Goods" : "Not tracked yet")) + "</span></td>" +
             '<td class="num" data-l="Short">' + (!gg ? '<span class="dash">-</span>' : r.short ? '<span class="sh">' + cb(r.short, p) + "</span>" : '<span class="chip okc">Covered</span>') + "</td>" +
@@ -972,7 +973,7 @@
       (keys.length ? '<div class="tw"><table class="osl pi"><thead><tr><th>Book type</th>' + PROCS.map(function (p) { return '<th class="num">' + p[1] + "</th>"; }).join("") + '<th><span class="vh">Details</span></th></tr></thead><tbody>' +
         keys.map(function (k, i) {
           var a = byK[k], r0 = a[0], gg = D.groups[k], name = r0.brand + " " + r0.size + " · " + r0.pages + " pages";
-          return '<tr class="osr"><th scope="row"><b>' + esc(name) + '</b><span class="sub">' + esc(rulName(r0.ruling)) + " · " + (r0.per ? r0.per + " books/ctn" : "no Carton unit") + (gg ? " · " + gg.ups + "-up" : "") + "</span></th>" +
+          return '<tr class="osr"><th scope="row"><b class="bdot" data-b="' + esc(String(name).split(" ")[0]) + '">' + esc(name) + '</b><span class="sub">' + esc(rulName(r0.ruling)) + " · " + (r0.per ? r0.per + " books/ctn" : "no Carton unit") + (gg ? " · " + gg.ups + "-up" : "") + "</span></th>" +
             PROCS.map(function (p) { return '<td class="num" data-l="' + p[1] + '">' + pcell(a.filter(function (r) { return r.proc === p[0]; }), p[2]) + "</td>"; }).join("") +
             '<td class="tg"><button type="button" class="os-tog" data-det="' + i + '" aria-expanded="false" aria-controls="p-det-' + i + '" aria-label="Days for ' + esc(name) + '"></button></td></tr>' +
             '<tr class="det" id="p-det-' + i + '" hidden><td colspan="6">' + pMatrix(rows.filter(function (r) { return r.k === k; }), w, false) + "</td></tr>";
