@@ -231,7 +231,7 @@
     var keys = Object.keys(D.groups).sort(function (a, b) { var x = D.groups[a], y = D.groups[b]; return (y.dem > 0) - (x.dem > 0) || y.dem - x.dem || a.localeCompare(b); });
     if (!D.groups[S.group]) S.group = keys[0];
     var withOrders = keys.filter(function (k) { return D.groups[k].dem > 0; }), rest = keys.filter(function (k) { return !D.groups[k].dem; });
-    function opt(k) { var gg = D.groups[k]; return '<option value="' + esc(k) + '"' + (k === S.group ? " selected" : "") + ">" + esc(gname(gg)) + (gg.dem ? "  (on order: " + f(gg.dem) + " books)" : "") + "</option>"; }
+    function opt(k) { var gg = D.groups[k]; return '<option value="' + esc(k) + '"' + (k === S.group ? " selected" : "") + ">" + esc(gname(gg)) + (gg.dem ? "  (on order: " + (gcpc(gg) ? c1(gg.dem / gcpc(gg)) + " ctn" : f(gg.dem) + " books") + ")" : "") + "</option>"; }
     $("v3-app").innerHTML = '<div class="cap"><div class="cap-top">' +
       '<label class="cap-grp" for="v3-group"><span class="lb">Working on (brand · size · pages · ruling)</span><select id="v3-group">' +
       (withOrders.length ? '<optgroup label="With open orders">' + withOrders.map(opt).join("") + "</optgroup>" : "") + '<optgroup label="Other groups">' + rest.map(opt).join("") + "</optgroup></select></label>" +
@@ -295,16 +295,17 @@
   }
 
   function renderFG(el) {
+    var cpcOf = function (code) { var b = g().books.filter(function (x) { return x.code === code; })[0]; return b && b.cpc ? b.cpc : gcpc(g()); };
     var gg = g(), codes = gg.books.map(function (b) { return b.code; });
     var fgRows = gg.books.map(function (b) { var q = D.bin[b.code + "|" + FG] || 0; return { b: b, q: q }; });
     var have = fgRows.reduce(function (s, r) { return s + r.q; }, 0);
     var ord = D.orders.filter(function (o) { return codes.indexOf(o.item) >= 0; }).sort(function (a, b) { return String(a.delivery).localeCompare(String(b.delivery)); });
     var left = have, shortBy = Math.max(0, gg.dem - have);
     el.innerHTML = '<div class="cap-h"><h3>Finished Goods: where production meets sales</h3><span class="chip">Finished Goods - VCL only</span></div>' +
-      '<div class="cap-fields">' + ro("In Finished Goods", f(have) + " books") + ro("On open orders", f(gg.dem) + " books") + ro(shortBy ? "Still short" : "Covered", shortBy ? f(shortBy) + " books" : "All open orders") + "</div>" +
-      '<div class="tw"><table><thead><tr><th>Book</th><th class="num">Books</th><th class="num">Cartons</th></tr></thead><tbody>' + fgRows.map(function (r) { return "<tr><td><code>" + esc(r.b.code) + '</code></td><td class="num">' + f(r.q) + '</td><td class="num">' + (r.b.cpc ? f(Math.floor(r.q / r.b.cpc)) + " + " + f(r.q % r.b.cpc) : "-") + "</td></tr>"; }).join("") + "</tbody></table></div>" +
-      '<h3 style="margin:6px 0 0">Open orders, earliest delivery first</h3><div class="tw"><table><thead><tr><th>Order</th><th>Customer</th><th>Due</th><th>Book</th><th class="num">Books</th><th>From stock</th></tr></thead><tbody>' +
-      (ord.length ? ord.map(function (o) { var take = Math.min(left, o.pending); left -= take; return "<tr><td>" + esc(o.so) + "</td><td>" + esc(o.customer) + "</td><td>" + esc(o.delivery || "") + "</td><td><code>" + esc(o.item) + '</code></td><td class="num">' + f(o.pending) + "</td><td>" + (take >= o.pending ? "covered" : take ? f(take) + " of " + f(o.pending) : "short") + "</td></tr>"; }).join("") : '<tr><td colspan="6" class="cap-note">No open orders for this group.</td></tr>') +
+      '<div class="cap-fields">' + ro("In Finished Goods", ctnBooks(have)) + ro("On open orders", ctnBooks(gg.dem)) + ro(shortBy ? "Still short" : "Covered", shortBy ? ctnBooks(shortBy) : "All open orders") + "</div>" +
+      '<div class="tw"><table><thead><tr><th>Book</th><th class="num">In stock</th><th class="num">Full cartons + loose</th></tr></thead><tbody>' + fgRows.map(function (r) { return "<tr><td><code>" + esc(r.b.code) + '</code></td><td class="num">' + cb(r.q, r.b.cpc) + '</td><td class="num">' + (r.b.cpc ? f(Math.floor(r.q / r.b.cpc)) + " + " + f(r.q % r.b.cpc) : "-") + "</td></tr>"; }).join("") + "</tbody></table></div>" +
+      '<h3 style="margin:6px 0 0">Open orders, earliest delivery first</h3><div class="tw"><table><thead><tr><th>Order</th><th>Customer</th><th>Due</th><th>Book</th><th class="num">Pending</th><th>From stock</th></tr></thead><tbody>' +
+      (ord.length ? ord.map(function (o) { var take = Math.min(left, o.pending); left -= take; return "<tr><td>" + esc(o.so) + "</td><td>" + esc(o.customer) + "</td><td>" + esc(o.delivery || "") + "</td><td><code>" + esc(o.item) + '</code></td><td class="num">' + cb(o.pending, cpcOf(o.item)) + "</td><td>" + (take >= o.pending ? "covered" : take ? ctnBooks(take, cpcOf(o.item)) + " of " + ctnBooks(o.pending, cpcOf(o.item)) : "short") + "</td></tr>"; }).join("") : '<tr><td colspan="6" class="cap-note">No open orders for this group.</td></tr>') +
       "</tbody></table></div>";
   }
 
@@ -312,22 +313,26 @@
     var el = $("v3-preview");
     if (S.station === "fg") {
       var gg = g(), s = stock(), u = gg.ups;
-      el.innerHTML = '<div class="cap-h"><h3>The chain for this group</h3></div><div class="cap-rows">' + [["Covers", s.cov, "sheets", s.cov * u], ["Folds", s.fld, "sets", s.fld * u], ["Inserts", s.ins, "sets", s.ins * u], ["Finished Goods", s.fg, "books", s.fg]].map(function (r) { return '<div class="cap-row in"><span class="d">' + r[0].slice(0, 3).toUpperCase() + '</span><span class="it">' + r[0] + "<span> = " + f(r[3]) + ' books</span></span><span class="q"><b>' + f(r[1]) + "</b><small>" + r[2] + "</small></span></div>"; }).join("") + "</div>";
+      el.innerHTML = '<div class="cap-h"><h3>The chain for this group</h3></div><div class="cap-rows">' + [["Covers", s.cov, "sheets", s.cov * u], ["Folds", s.fld, "sets", s.fld * u], ["Inserts", s.ins, "sets", s.ins * u], ["Finished Goods", s.fg, "books", s.fg]].map(function (r) { return '<div class="cap-row in"><span class="d">' + r[0].slice(0, 3).toUpperCase() + '</span><span class="it">' + r[0] + "<span>" + f(r[1]) + " " + r[2] + (r[2] === "books" ? "" : " × " + u) + " = " + f(r[3]) + ' books</span></span><span class="q"><b>' + (gcpc(gg) ? c1(r[3] / gcpc(gg)) + " ctn" : f(r[3]) + " books") + "</b><small>" + f(r[3]) + " books</small></span></div>"; }).join("") + "</div>";
       return;
     }
     var P = planEntry(), run = (S.run || "").trim();
     if (!run) { P.ok = false; P.msgs.unshift(["info", "Enter the run number (it goes on the entry)."]); }
     el.innerHTML = '<div class="cap-h"><h3>What this entry will do</h3><span class="cap-note">' + esc(P.type) + " · run " + esc(run || "-") + "</span></div>" +
-      '<div class="cap-rows">' + P.rows.map(function (r) { return '<div class="cap-row ' + r.dir + '"><span class="d">' + (r.dir === "out" ? "OUT −" : "IN +") + '</span><span class="it"><code>' + esc(r.item) + "</code><span>" + (r.dir === "out" ? "from " : "into ") + esc(r.wh) + (r.unit !== "books" && r.unit !== "cartons" ? " · " + f(Math.abs(r.qty) * g().ups) + " books" : "") + '</span></span><span class="q"><b>' + (r.qty > 0 ? "+" : "") + f(r.qty) + "</b><small>" + f(r.before) + " → " + f(r.after) + " " + r.unit + "</small></span></div>"; }).join("") + "</div>" +
+      '<div class="cap-rows">' + P.rows.map(function (r) { return '<div class="cap-row ' + r.dir + '"><span class="d">' + (r.dir === "out" ? "OUT −" : "IN +") + '</span><span class="it"><code>' + esc(r.item) + "</code><span>" + (r.dir === "out" ? "from " : "into ") + esc(r.wh) + (r.unit !== "books" && r.unit !== "cartons" ? " · " + ctnBooks(Math.abs(r.qty) * g().ups) : "") + '</span></span><span class="q"><b>' + (r.qty > 0 ? "+" : "") + f(r.qty) + "</b><small>" + f(r.before) + " → " + f(r.after) + " " + r.unit + "</small></span></div>"; }).join("") + "</div>" +
       P.msgs.map(function (m) { return '<div class="cap-msg ' + m[0] + '">' + esc(m[1]) + "</div>"; }).join("") + '<div id="v3-result"></div>';
     var pb = $("v3-post"); if (pb) pb.disabled = !P.ok;
   }
 
   function renderStock() {
     var gg = g(), s = stock(), u = gg.ups;
-    $("v3-stock").innerHTML = [["Covers", s.cov, "sheets", s.cov * u], ["Folds", s.fld, "sets", s.fld * u], ["Inserts", s.ins, "sets", s.ins * u], ["Finished Goods", s.fg, "books (" + (book() ? book().code : "-") + ")", null], ["Empty cartons", s.carton, "cartons" + (s.cartonEnabled ? "" : " · item disabled"), null]]
-      .map(function (it) { return '<div><span class="n">' + it[0] + '</span><span class="v">' + f(it[1]) + '</span><span class="s">' + it[2] + (it[3] != null ? " = " + f(it[3]) + " books" : "") + "</span></div>"; }).join("");
-    $("v3-stocknote").textContent = gname(gg) + " · " + gg.ups + "-up · on open orders: " + f(gg.dem) + " books";
+    var cp = gcpc(gg);
+    function asCtn(bk) { return cp ? c1(bk / cp) + " <small>ctn</small>" : f(bk) + " <small>books</small>"; }
+    function t(n, v, sub) { return '<div><span class="n">' + n + '</span><span class="v">' + v + '</span><span class="s">' + sub + "</span></div>"; }
+    $("v3-stock").innerHTML = t("Covers", asCtn(s.cov * u), f(s.cov) + " sheets × " + u + " = " + f(s.cov * u) + " books") + t("Folds", asCtn(s.fld * u), f(s.fld) + " sets × " + u + " = " + f(s.fld * u) + " books") +
+      t("Inserts", asCtn(s.ins * u), f(s.ins) + " sets × " + u + " = " + f(s.ins * u) + " books") + t("Finished Goods", asCtn(s.fg), f(s.fg) + " books · " + (book() ? book().code : "-")) +
+      t("Empty cartons", f(s.carton) + " <small>ctn</small>", s.cartonEnabled ? "empty, in Stores - VCL" : "item disabled in ERPNext");
+    $("v3-stocknote").textContent = gname(gg) + " · " + u + "-up · " + (cp ? cp + " books/carton · on open orders " + c1(gg.dem / cp) + " ctn (" + f(gg.dem) + " books)" : "no Carton unit · on open orders " + f(gg.dem) + " books");
   }
 
   function renderLog() {
@@ -363,7 +368,7 @@
     host.querySelector('[data-a="yes"]').onclick = function () { close(); onYes(); };
   }
   function rowsHtml(P) {
-    return '<div class="cap-rows">' + P.rows.filter(function (r) { return r.qty; }).map(function (r) { return '<div class="cap-row ' + r.dir + '"><span class="d">' + (r.dir === "out" ? "OUT −" : "IN +") + '</span><span class="it"><code>' + esc(r.item) + "</code><span>" + (r.dir === "out" ? "from " : "into ") + esc(r.wh) + (r.unit !== "books" && r.unit !== "cartons" ? " · " + f(Math.abs(r.qty) * g().ups) + " books" : "") + '</span></span><span class="q"><b>' + (r.qty > 0 ? "+" : "") + f(r.qty) + "</b><small>" + f(r.before) + " → " + f(r.after) + " " + r.unit + "</small></span></div>"; }).join("") + "</div>";
+    return '<div class="cap-rows">' + P.rows.filter(function (r) { return r.qty; }).map(function (r) { return '<div class="cap-row ' + r.dir + '"><span class="d">' + (r.dir === "out" ? "OUT −" : "IN +") + '</span><span class="it"><code>' + esc(r.item) + "</code><span>" + (r.dir === "out" ? "from " : "into ") + esc(r.wh) + (r.unit !== "books" && r.unit !== "cartons" ? " · " + ctnBooks(Math.abs(r.qty) * g().ups) : "") + '</span></span><span class="q"><b>' + (r.qty > 0 ? "+" : "") + f(r.qty) + "</b><small>" + f(r.before) + " → " + f(r.after) + " " + r.unit + "</small></span></div>"; }).join("") + "</div>";
   }
   function totals(P) {
     var out = P.rows.filter(function (r) { return r.qty < 0; }).map(function (r) { return f(-r.qty) + " " + r.unit + " of " + r.item; });
@@ -412,11 +417,28 @@
 
   /* ---------- Orders and Order & stock (ported from v1 /production-dev, 05/11/2026) ----------
    * Read-only. One get_list over Sales Order child rows (no per-order fetch).
-   * Fixes from the v1 inventory: covers are SHEETS (books = sheets x ups), inserts are read
-   * from Stores stock (so Repacks count), finished stock is Finished Goods - VCL only. */
+   * Units (Tanuj, 05/11/2026): cartons first, books in small print. Cartons come from each item's
+   * Carton UOM conversion. Covers/folds/inserts: sheets (or sets) x up-count = books, / books per carton.
+   * Fixes from the v1 inventory: covers are SHEETS, inserts are read from Stores stock (so Repacks
+   * count), finished stock is Finished Goods - VCL only. */
   var O = null;   // orders data
-  var OV = { scope: lsGet("o.scope", "open"), unit: lsGet("o.unit", "books"), brand: "", customer: "", size: "", pages: "", ruling: "", q: "" };
+  var OV = { scope: lsGet("o.scope", "open"), brand: "", customer: "", size: "", pages: "", ruling: "", q: "" };
   var NOT_ORDER_GROUPS = /covers|inserts|folds/i;
+
+  function c1(n) { return (Math.round((Number(n) || 0) * 10) / 10).toLocaleString("en-GB", { maximumFractionDigits: 1 }); }
+  /* Cell: cartons big, books small. Without a Carton UOM: books big, flagged. */
+  function cb(books, per) {
+    return per ? '<b class="ct">' + c1(books / per) + " <span>ctn</span></b><small>" + f(books) + " books</small>"
+      : '<b class="ct">' + f(books) + " <span>books</span></b><small>no carton unit</small>";
+  }
+  /* Sheets or sets -> cartons: n x up-count = books, / books per carton. */
+  function cs(n, ups, per, unit) {
+    var books = n * ups;
+    return '<b class="ct">' + (per ? c1(books / per) + " <span>ctn</span>" : f(books) + " <span>books</span>") + "</b><small>" + f(n) + " " + unit + " × " + ups + "<br>= " + f(books) + " books</small>";
+  }
+  /* Books per carton for a capture group: the chosen book, else the first with a Carton UOM. */
+  function gcpc(gg) { var bk = gg === g() ? book() : null; if (bk && bk.cpc) return bk.cpc; var x = gg.books.filter(function (b) { return b.cpc; })[0]; return x ? x.cpc : 0; }
+  function ctnBooks(b, cp) { cp = cp == null ? gcpc(g()) : cp; return (cp ? c1(b / cp) + " ctn · " : "") + f(b) + " books"; }
 
   function dims(code, name, group) {
     var c = String(code || ""), n = String(name || ""), t = c + " " + n;
@@ -458,8 +480,6 @@
   }
   function isOpen(l) { return l.ds === 1 && (l.status === "To Deliver and Bill" || l.status === "To Deliver") && l.pending > 0; }
   function isConfirmed(l) { return l.ds === 1 && l.status !== "Closed" && l.status !== "Cancelled"; }
-  function inUnit(books, per) { return OV.unit === "cartons" ? (per ? books / per : null) : books; }
-  function fu(books, per) { var v = inUnit(books, per); return v == null ? "-" : OV.unit === "cartons" ? (Math.round(v * 10) / 10).toLocaleString("en-GB") : f(v); }
   function passes(l) {
     var d = l.d, q = OV.q.trim().toLowerCase();
     return (!OV.brand || d.brand === OV.brand) && (!OV.customer || l.customer === OV.customer) && (!OV.size || d.size === OV.size) &&
@@ -471,9 +491,10 @@
     return '<label class="cap-grp of"><span class="lb">' + label + '</span><select id="' + id + '"><option value="">All</option>' +
       opts.map(function (o) { var v = Array.isArray(o) ? o[0] : o, t = Array.isArray(o) ? o[1] : o; return '<option value="' + esc(v) + '"' + (String(v) === String(cur) ? " selected" : "") + ">" + esc(t) + "</option>"; }).join("") + "</select></label>";
   }
+  function tile(label, ctn, books, extra) { return '<div><span class="n">' + label + '</span><span class="v">' + c1(ctn) + ' <small>ctn</small></span><span class="s">' + f(books) + " books" + (extra || "") + "</span></div>"; }
   function filterBar(withScope) {
     var L = O.lines;
-    var h = '<div class="cap-top">' +
+    return '<div class="cap-top">' +
       '<label class="cap-grp" style="flex:2 1 240px"><span class="lb">Search order, customer or item</span><input id="o-q" type="search" autocomplete="off" value="' + esc(OV.q) + '"></label>' +
       sel("o-brand", "Brand", OV.brand, uniq(L.map(function (l) { return l.d.brand; })).sort()) +
       sel("o-customer", "Customer", OV.customer, uniq(L.map(function (l) { return l.customer; })).sort()) +
@@ -482,16 +503,14 @@
       sel("o-ruling", "Ruling", OV.ruling, uniq(L.map(function (l) { return l.d.ruling; })).sort().map(function (r) { return [r, rulName(r)]; })) + "</div>" +
       '<div class="cap-top">' +
       (withScope ? '<div class="seg" role="group" aria-label="Which orders"><button type="button" data-scope="open" aria-pressed="' + (OV.scope === "open") + '">Open orders</button><button type="button" data-scope="all" aria-pressed="' + (OV.scope === "all") + '">All non-cancelled</button></div>' : "") +
-      '<div class="seg" role="group" aria-label="Unit"><button type="button" data-unit="books" aria-pressed="' + (OV.unit === "books") + '">Books</button><button type="button" data-unit="cartons" aria-pressed="' + (OV.unit === "cartons") + '">Cartons</button></div>' +
-      '<span style="flex:1"></span><button type="button" class="cap-sec" id="o-xlsx">Download Excel</button><button type="button" class="cap-sec" id="o-pdf">Print / PDF</button><button type="button" class="cap-sec" id="o-reload">Reload</button></div>';
-    return h;
+      '<span class="cap-note">Cartons from each item\'s Carton unit; books below in small print.</span>' +
+      '<span style="flex:1"></span><div class="btn-grp"><button type="button" class="cap-sec" id="o-xlsx">Download Excel</button><button type="button" class="cap-sec" id="o-pdf">Print / PDF</button><button type="button" class="cap-sec" id="o-reload">Reload</button></div></div>';
   }
   function wireBar(paint) {
     var a = $("v3-app");
     $("o-q").oninput = function (e) { OV.q = e.target.value; paint(true); };
     ["brand", "customer", "size", "pages", "ruling"].forEach(function (k) { $("o-" + k).onchange = function (e) { OV[k] = e.target.value; paint(); }; });
     [].forEach.call(a.querySelectorAll("[data-scope]"), function (b) { b.onclick = function () { OV.scope = b.dataset.scope; lsSet("o.scope", OV.scope); paint(); }; });
-    [].forEach.call(a.querySelectorAll("[data-unit]"), function (b) { b.onclick = function () { OV.unit = b.dataset.unit; lsSet("o.unit", OV.unit); paint(); }; });
     $("o-reload").onclick = function () { this.textContent = "Reloading…"; Promise.all([loadOrders(), load()]).then(function () { paint(); }); };
     $("o-pdf").onclick = function () { window.print(); };
   }
@@ -503,44 +522,49 @@
       var conf = O.lines.filter(function (l) { return isConfirmed(l) && passes(l); });
       var shown = O.lines.filter(function (l) { return passes(l) && (OV.scope === "all" ? true : isOpen(l)); })
         .sort(function (a, b) { return String(a.due || "9").localeCompare(String(b.due || "9")) || a.so.localeCompare(b.so); });
-      var T = { o: 0, d: 0, p: 0, oc: 0, dc: 0, pc: 0, miss: 0 }, B = {};
+      function z(d) { return { d: d, o: 0, dl: 0, p: 0, oc: 0, dc: 0, pc: 0, n: 0, np: 0 }; }
+      var T = z(null), B = {};
       conf.forEach(function (l) {
-        var k = bucketKey(l.d); B[k] = B[k] || { d: l.d, o: 0, dl: 0, p: 0, oc: 0, dc: 0, pc: 0 };
-        [T, B[k]].forEach(function (t) { t.o += l.books; t[t === T ? "d" : "dl"] += l.delivered; t.p += l.pending; if (l.per) { t.oc += l.books / l.per; t.dc += l.delivered / l.per; t.pc += l.pending / l.per; } });
-        if (!l.per) T.miss++;
+        var k = bucketKey(l.d); B[k] = B[k] || z(l.d);
+        [T, B[k]].forEach(function (t) { t.n++; t.o += l.books; t.dl += l.delivered; t.p += l.pending; if (l.per) { t.oc += l.books / l.per; t.dc += l.delivered / l.per; t.pc += l.pending / l.per; } else t.np++; });
       });
-      function v(t, which) { if (OV.unit === "cartons") { var x = t[which + "c"]; return (Math.round(x * 10) / 10).toLocaleString("en-GB"); } return f(t[which === "d" && t.dl != null ? "dl" : which]); }
+      function cell(t, w, cls) {
+        var bk = t[w], ct = t[w === "dl" ? "dc" : w + "c"];
+        if (t.np === t.n) return '<td class="num ' + cls + '"><b class="ct">' + f(bk) + " <span>books</span></b><small>no carton unit</small></td>";
+        return '<td class="num ' + cls + '"><b class="ct">' + c1(ct) + "</b><small>" + f(bk) + (t.np ? " books*" : " books") + "</small></td>";
+      }
       var brands = {}; Object.keys(B).forEach(function (k) { var b = B[k]; (brands[b.d.brand] = brands[b.d.brand] || []).push(b); });
       var h = filterBar(true) +
-        '<div class="cap-stock">' + [["Ordered", T.o, T.oc], ["Delivered", T.d, T.dc], ["Still to deliver", T.p, T.pc]].map(function (x) { return '<div><span class="n">' + x[0] + '</span><span class="v">' + (OV.unit === "cartons" ? (Math.round(x[2] * 10) / 10).toLocaleString("en-GB") : f(x[1])) + '</span><span class="s">' + (OV.unit === "cartons" ? "cartons" : "books") + "</span></div>"; }).join("") + "</div>" +
-        (OV.unit === "cartons" && T.miss ? '<div class="cap-msg warn">' + T.miss + " order lines have no Carton unit on the item, so they are left out of the carton figures.</div>" : "");
+        '<div class="cap-stock">' + tile("Ordered", T.oc, T.o) + tile("Delivered", T.dc, T.dl) + tile("Still to deliver", T.pc, T.p) + "</div>" +
+        (T.np ? '<div class="cap-msg warn">' + T.np + " order lines have no Carton unit on the item: their books are in the book figures but not in the cartons (marked *).</div>" : "");
       Object.keys(brands).sort().forEach(function (br) {
         var bs = brands[br], rul = uniq(bs.map(function (b) { return b.d.ruling || "?"; })).sort(function (a, b) { return Object.keys(RUL).indexOf(a) - Object.keys(RUL).indexOf(b); });
         var rows = {}; bs.forEach(function (b) { var k = (b.d.size || "?") + "|" + (b.d.pages || 0); (rows[k] = rows[k] || { size: b.d.size || "Not stated", pages: b.d.pages, by: {} }).by[b.d.ruling || "?"] = b; });
         var rk = Object.keys(rows).sort(function (a, b) { var x = rows[a], y = rows[b]; return x.size.localeCompare(y.size) || (x.pages || 9999) - (y.pages || 9999); });
-        var pend = bs.reduce(function (s, b) { return s + (OV.unit === "cartons" ? b.pc : b.p); }, 0);
-        h += '<div class="cap-card"><div class="cap-h"><h3>' + esc(br) + '</h3><span class="cap-note">' + (OV.unit === "cartons" ? (Math.round(pend * 10) / 10).toLocaleString("en-GB") + " cartons" : f(pend) + " books") + ' still to deliver</span></div><div class="tw"><table class="mx"><thead><tr><th rowspan="2">Size</th><th rowspan="2" class="num">Pages</th>' +
+        var pc = bs.reduce(function (s, b) { return s + b.pc; }, 0), pb = bs.reduce(function (s, b) { return s + b.p; }, 0);
+        h += '<div class="cap-card"><div class="cap-h"><h3>' + esc(br) + '</h3><span class="cap-note"><b>' + c1(pc) + " ctn</b> (" + f(pb) + ' books) still to deliver</span></div><div class="tw"><table class="mx"><thead><tr><th rowspan="2">Size</th><th rowspan="2" class="num">Pages</th>' +
           rul.map(function (r) { return '<th colspan="3" class="grp">' + esc(r === "?" ? "Ruling not stated" : rulName(r)) + "</th>"; }).join("") + "</tr><tr>" +
           rul.map(function () { return '<th class="num st">Ordered</th><th class="num">Delivered</th><th class="num pend">Pending</th>'; }).join("") + "</tr></thead><tbody>" +
-          rk.map(function (k) { var r = rows[k]; return "<tr><th>" + esc(r.size) + '</th><td class="num">' + (r.pages || "-") + "</td>" + rul.map(function (u) { var b = r.by[u]; return b ? '<td class="num st">' + v(b, "o") + '</td><td class="num">' + v(b, "d") + '</td><td class="num pend">' + v(b, "p") + "</td>" : '<td class="num st empty">-</td><td class="num empty">-</td><td class="num empty">-</td>'; }).join("") + "</tr>"; }).join("") +
+          rk.map(function (k) { var r = rows[k]; return "<tr><th>" + esc(r.size) + '</th><td class="num">' + (r.pages || "-") + "</td>" + rul.map(function (u) { var b = r.by[u]; return b ? cell(b, "o", "st") + cell(b, "dl", "") + cell(b, "p", "pend") : '<td class="num st empty">-</td><td class="num empty">-</td><td class="num empty">-</td>'; }).join("") + "</tr>"; }).join("") +
           "</tbody></table></div></div>";
       });
       if (!Object.keys(B).length) h += '<div class="cap-msg info">No confirmed orders match these filters.</div>';
       h += '<div class="cap-card"><div class="cap-h"><h3>' + (OV.scope === "open" ? "Open order lines" : "All non-cancelled order lines") + ', earliest delivery first</h3><span class="cap-note">' + shown.length + ' lines</span></div><div class="tw"><table><thead><tr><th>Due</th><th>Order</th><th>Customer</th><th>Item</th><th class="num">Ordered</th><th class="num">Delivered</th><th class="num">Pending</th><th>Status</th></tr></thead><tbody>' +
-        (shown.length ? shown.map(function (l) { return '<tr><td class="dt">' + esc(l.due || "") + '</td><td><a href="/app/sales-order/' + encodeURIComponent(l.so) + '" target="_blank" rel="noopener">' + esc(l.so) + "</a></td><td>" + esc(l.customer) + "</td><td><code>" + esc(l.code) + '</code><br><span class="cap-note">' + esc(l.name) + '</span></td><td class="num">' + fu(l.books, l.per) + '</td><td class="num">' + fu(l.delivered, l.per) + '</td><td class="num"><b>' + fu(l.pending, l.per) + "</b></td><td>" + esc(l.ds === 0 ? "Draft" : l.status) + "</td></tr>"; }).join("") : '<tr><td colspan="8" class="cap-note">No order lines match.</td></tr>') +
+        (shown.length ? shown.map(function (l) { return '<tr><td class="dt">' + esc(l.due || "") + '</td><td><a href="/app/sales-order/' + encodeURIComponent(l.so) + '" target="_blank" rel="noopener">' + esc(l.so) + "</a></td><td>" + esc(l.customer) + "</td><td><code>" + esc(l.code) + '</code><br><span class="cap-note">' + esc(l.name) + (l.per ? " · " + l.per + " books/carton" : "") + '</span></td><td class="num">' + cb(l.books, l.per) + '</td><td class="num">' + cb(l.delivered, l.per) + '</td><td class="num pend">' + cb(l.pending, l.per) + "</td><td>" + esc(l.ds === 0 ? "Draft" : l.status) + "</td></tr>"; }).join("") : '<tr><td colspan="8" class="cap-note">No order lines match.</td></tr>') +
         "</tbody></table></div></div>" +
-        '<p class="cap-note">Grid: confirmed orders, including delivered and on-hold; drafts, cancelled and closed left out. Books = order quantity × the line\'s unit conversion. Size, pages and ruling come from the item code, or from the item name for older items. Read ' + O.loadedAt.toLocaleTimeString("en-GB") + ".</p>";
+        '<p class="cap-note">Grid: confirmed orders, including delivered and on-hold; drafts, cancelled and closed left out. Cartons use each item\'s Carton unit (books per carton); books = order quantity × the line\'s unit conversion. Size, pages and ruling come from the item code, or from the item name for older items. Read ' + O.loadedAt.toLocaleTimeString("en-GB") + ".</p>";
       $("v3-app").innerHTML = '<div class="cap">' + h + "</div>";
       wireBar(paint);
       $("o-xlsx").onclick = function () {
-        download("EB open orders " + today(), ["Due", "Order", "Customer", "Item code", "Item", "Brand", "Size", "Pages", "Ruling", "Ordered (books)", "Delivered (books)", "Pending (books)", "Pending (cartons)", "Status"],
-          shown.map(function (l) { return [l.due || "", l.so, l.customer, l.code, l.name, l.d.brand, l.d.size, l.d.pages || "", rulName(l.d.ruling), l.books, l.delivered, l.pending, l.per ? Math.round(l.pending / l.per * 10) / 10 : "", l.ds === 0 ? "Draft" : l.status]; }));
+        var q = function (b, p) { return p ? Math.round(b / p * 10) / 10 : ""; };
+        download("EB orders " + today(), ["Due", "Order", "Customer", "Item code", "Item", "Brand", "Size", "Pages", "Ruling", "Books per carton", "Ordered (ctn)", "Delivered (ctn)", "Pending (ctn)", "Ordered (books)", "Delivered (books)", "Pending (books)", "Status"],
+          shown.map(function (l) { return [l.due || "", l.so, l.customer, l.code, l.name, l.d.brand, l.d.size, l.d.pages || "", rulName(l.d.ruling), l.per || "", q(l.books, l.per), q(l.delivered, l.per), q(l.pending, l.per), l.books, l.delivered, l.pending, l.ds === 0 ? "Draft" : l.status]; }));
       };
     });
     paint();
   }
 
-  /* Order & stock: the v1 comparison, rebuilt on the sheet/set model. */
+  /* Order & stock: the v1 comparison, rebuilt on the sheet/set model, in cartons. */
   function renderOrderStock() {
     var paint = keepSearchFocus(function () {
       var open = O.lines.filter(function (l) { return isOpen(l) && passes(l); }), R = {};
@@ -556,7 +580,7 @@
         r.gg = gg || null;
         if (gg) {
           var u = gg.ups; r.cov = D.bin[gg.cov + "|" + STORES] || 0; r.fld = D.bin[gg.fld + "|" + STORES] || 0; r.ins = D.bin[gg.ins + "|" + STORES] || 0;
-          r.pipe = (r.ins + r.cov) * u;                       // inserts ready + covers printed (each cover sheet makes `ups` books)
+          r.pipe = (r.ins + r.cov) * u;                       // inserts ready + covers printed (each sheet makes `ups` books)
           r.short = Math.max(0, r.need - r.pipe);
           r.sheets = Math.ceil(r.short / u);
           var ct = gg.carton ? D.cartons[gg.carton] : null; r.ctn = ct ? ct.qty : null; r.ctnOff = ct ? ct.disabled : false;
@@ -564,33 +588,33 @@
         }
         return r;
       }).sort(function (a, b) { return (b.short || 0) - (a.short || 0) || b.need - a.need || bucketKey(a.d).localeCompare(bucketKey(b.d)); });
-      var sum = function (k) { return rows.reduce(function (s, r) { return s + (r[k] || 0); }, 0); };
+      function tot(k) { var t = { c: 0, b: 0, miss: 0 }; rows.forEach(function (r) { var v = r[k] || 0; t.b += v; if (r.per) t.c += v / r.per; else if (v) t.miss++; }); return t; }
+      var tp = tot("pending"), tf = tot("fg"), tn = tot("need"), ts = tot("short");
       var h = filterBar(false) +
-        '<div class="cap-stock">' + [["On open orders", sum("pending"), "books"], ["In Finished Goods", sum("fg"), "books (matched)"], ["Still to make", sum("need"), "books"], ["Short after stock and pipeline", sum("short"), "books"]].map(function (x) { return '<div><span class="n">' + x[0] + '</span><span class="v">' + f(x[1]) + '</span><span class="s">' + x[2] + "</span></div>"; }).join("") + "</div>" +
-        (OV.unit === "cartons" ? '<div class="cap-msg info">Totals stay in books; each row shows cartons where the book has a Carton unit.</div>' : "") +
+        '<div class="cap-stock">' + tile("On open orders", tp.c, tp.b) + tile("In Finished Goods", tf.c, tf.b, " (matched)") + tile("Still to make", tn.c, tn.b) + tile("Short after stock and pipeline", ts.c, ts.b) + "</div>" +
+        (tp.miss ? '<div class="cap-msg warn">' + tp.miss + " book types have no Carton unit, so they are in the book figures but not the cartons.</div>" : "") +
         '<div class="cap-card"><div class="cap-h"><h3>Order & stock by book type</h3><span class="cap-note">' + rows.length + ' book types · biggest shortfall first</span></div><div class="tw"><table class="os"><thead><tr><th>Book type</th><th class="num">Pending</th><th class="num">Finished Goods</th><th class="num">Still to make</th><th class="num">Inserts</th><th class="num">Covers</th><th class="num">Folds</th><th class="num">Short</th><th class="num">Sheets to print</th><th class="num">Empty cartons</th><th></th></tr></thead><tbody>' +
         rows.map(function (r, i) {
           var d = r.d, p = r.per, gg = r.gg;
-          function bk(n) { return fu(n, p) + '<small>' + (OV.unit === "cartons" ? (p ? "ctn" : "no ctn unit") : "books") + "</small>"; }
-          function set(n, unit) { return f(n) + "<small>" + unit + " = " + f(n * gg.ups) + " books</small>"; }
           return '<tr><th><b>' + esc(d.brand + " · " + (d.size || "?") + " · " + (d.pages || "?") + " pages") + "</b><br>" + esc(rulName(d.ruling)) + '<br><span class="cap-note">' + (p ? p + " books/carton" : "no Carton unit") + (gg ? " · " + gg.ups + "-up" : "") + "</span></th>" +
-            '<td class="num">' + bk(r.pending) + '</td><td class="num">' + bk(r.fg) + '</td><td class="num"><b>' + bk(r.need) + "</b></td>" +
-            (gg ? '<td class="num">' + set(r.ins, "sets") + '</td><td class="num">' + set(r.cov, "sheets") + '</td><td class="num">' + set(r.fld, "sets") + "</td>" +
-              '<td class="num ' + (r.short ? "bad" : "ok") + '">' + (r.short ? "<b>" + bk(r.short) + "</b>" : "Covered") + '</td><td class="num">' + (r.sheets ? "<b>" + f(r.sheets) + "</b><small>" + esc(gg.cov) + "</small>" : "-") + "</td>" +
-              '<td class="num ' + (r.ctnNeed != null && r.ctn != null && r.ctn < r.ctnNeed ? "bad" : "") + '">' + (r.ctn == null ? "-" : f(r.ctn) + "<small>" + (r.ctnOff ? "item disabled" : "shared pool · need " + (r.ctnNeed == null ? "?" : f(r.ctnNeed))) + "</small>") + "</td>"
+            '<td class="num">' + cb(r.pending, p) + '</td><td class="num">' + cb(r.fg, p) + '</td><td class="num pend">' + cb(r.need, p) + "</td>" +
+            (gg ? '<td class="num">' + cs(r.ins, gg.ups, p, "sets") + '</td><td class="num">' + cs(r.cov, gg.ups, p, "sheets") + '</td><td class="num">' + cs(r.fld, gg.ups, p, "sets") + "</td>" +
+              '<td class="num ' + (r.short ? "bad" : "ok") + '">' + (r.short ? cb(r.short, p) : "Covered") + '</td><td class="num">' + (r.sheets ? '<b class="ct">' + f(r.sheets) + " <span>sheets</span></b><small>" + esc(gg.cov) + "</small>" : "-") + "</td>" +
+              '<td class="num ' + (r.ctnNeed != null && r.ctn != null && r.ctn < r.ctnNeed ? "bad" : "") + '">' + (r.ctn == null ? "-" : '<b class="ct">' + f(r.ctn) + " <span>ctn</span></b><small>" + (r.ctnOff ? "item disabled" : "shared pool · need " + (r.ctnNeed == null ? "?" : f(r.ctnNeed))) + "</small>") + "</td>"
               : '<td colspan="6" class="cap-note">No covers/folds/inserts items for this type yet (school and Hi5 are Phase 2/3). Only orders and Finished Goods are compared.</td>') +
             '<td><button type="button" class="cap-sec sm" data-det="' + i + '" aria-expanded="false">Details</button></td></tr>' +
-            '<tr class="det" id="o-det-' + i + '" hidden><td colspan="11"><div class="detg"><section><b>Finished Goods - VCL by item</b>' + Object.keys(r.codes).map(function (c) { return "<div><code>" + esc(c) + "</code> · " + f(D.bin[c + "|" + FG] || 0) + " books</div>"; }).join("") + "</section>" +
-            "<section><b>Open order lines</b>" + r.lines.map(function (l) { return "<div>" + esc(l.due || "") + " · " + esc(l.so) + " · " + esc(l.customer) + " · <b>" + f(l.pending) + "</b> books</div>"; }).join("") + "</section>" +
-            (gg ? "<section><b>Stores - VCL</b><div><code>" + esc(gg.cov) + "</code> · " + f(r.cov) + " sheets</div><div><code>" + esc(gg.fld) + "</code> · " + f(r.fld) + " sets</div><div><code>" + esc(gg.ins) + "</code> · " + f(r.ins) + " sets</div><div><code>" + esc(gg.carton || "no carton set") + "</code> · " + (r.ctn == null ? "-" : f(r.ctn)) + " cartons</div></section>" : "") + "</div></td></tr>";
+            '<tr class="det" id="o-det-' + i + '" hidden><td colspan="11"><div class="detg"><section><b>Finished Goods - VCL by item</b>' + Object.keys(r.codes).map(function (c) { var q = D.bin[c + "|" + FG] || 0, cp = r.codes[c] || p; return "<div><code>" + esc(c) + "</code> · " + (cp ? c1(q / cp) + " ctn · " : "") + f(q) + " books</div>"; }).join("") + "</section>" +
+            "<section><b>Open order lines</b>" + r.lines.map(function (l) { return "<div>" + esc(l.due || "") + " · " + esc(l.so) + " · " + esc(l.customer) + " · <b>" + (l.per ? c1(l.pending / l.per) + " ctn" : f(l.pending) + " books") + "</b>" + (l.per ? " (" + f(l.pending) + " books)" : "") + "</div>"; }).join("") + "</section>" +
+            (gg ? "<section><b>Stores - VCL</b><div><code>" + esc(gg.cov) + "</code> · " + f(r.cov) + " sheets</div><div><code>" + esc(gg.fld) + "</code> · " + f(r.fld) + " sets</div><div><code>" + esc(gg.ins) + "</code> · " + f(r.ins) + " sets</div><div><code>" + esc(gg.carton || "no carton set") + "</code> · " + (r.ctn == null ? "-" : f(r.ctn)) + " empty cartons</div></section>" : "") + "</div></td></tr>";
         }).join("") + (rows.length ? "" : '<tr><td colspan="11" class="cap-note">No open orders match these filters.</td></tr>') + "</tbody></table></div></div>" +
-        '<p class="cap-note">Finished Goods - VCL only (other warehouses are not counted as sellable). Inserts, covers and folds are Stores - VCL, counted in sheets/sets: books = sets × up-count (A4 2-up, A5 3-up). Short = still to make − (inserts + covers) × up-count; folds are shown but not yet counted in the pipeline until there is a fold count. Sheets to print = short ÷ up-count. Empty cartons use the size + brand carton (P12 proposal).</p>';
+        '<p class="cap-note">Cartons = books ÷ the book\'s Carton unit. Covers, folds and inserts: sheets (or sets) × up-count (A4 2-up, A5 3-up) = books, then ÷ books per carton. Finished Goods - VCL only. Short = still to make − (inserts + covers) × up-count; folds are shown but not yet counted in the pipeline until there is a fold count. Sheets to print = short ÷ up-count. Empty cartons use the size + brand carton (P12 proposal).</p>';
       $("v3-app").innerHTML = '<div class="cap">' + h + "</div>";
       wireBar(paint);
       [].forEach.call($("v3-app").querySelectorAll("[data-det]"), function (b) { b.onclick = function () { var row = $("o-det-" + b.dataset.det), op = row.hidden; row.hidden = !op; b.setAttribute("aria-expanded", String(op)); b.textContent = op ? "Close" : "Details"; }; });
       $("o-xlsx").onclick = function () {
-        download("EB order and stock " + today(), ["Brand", "Size", "Pages", "Ruling", "Books per carton", "Up-count", "Pending (books)", "Finished Goods (books)", "Still to make (books)", "Inserts (sets)", "Covers (sheets)", "Folds (sets)", "Short (books)", "Sheets to print", "Empty cartons", "Cartons needed"],
-          rows.map(function (r) { var gg = r.gg; return [r.d.brand, r.d.size, r.d.pages || "", rulName(r.d.ruling), r.per || "", gg ? gg.ups : "", r.pending, r.fg, r.need, gg ? r.ins : "", gg ? r.cov : "", gg ? r.fld : "", gg ? r.short : "", gg ? r.sheets : "", r.ctn == null ? "" : r.ctn, r.ctnNeed == null ? "" : r.ctnNeed]; }));
+        var q = function (b, p) { return p ? Math.round(b / p * 10) / 10 : ""; };
+        download("EB order and stock " + today(), ["Brand", "Size", "Pages", "Ruling", "Books per carton", "Up-count", "Pending (ctn)", "Finished Goods (ctn)", "Still to make (ctn)", "Inserts (ctn)", "Covers (ctn)", "Folds (ctn)", "Short (ctn)", "Pending (books)", "Finished Goods (books)", "Still to make (books)", "Inserts (sets)", "Covers (sheets)", "Folds (sets)", "Short (books)", "Sheets to print", "Empty cartons", "Cartons needed"],
+          rows.map(function (r) { var gg = r.gg, p = r.per, u = gg ? gg.ups : 0; return [r.d.brand, r.d.size, r.d.pages || "", rulName(r.d.ruling), p || "", u || "", q(r.pending, p), q(r.fg, p), q(r.need, p), gg ? q(r.ins * u, p) : "", gg ? q(r.cov * u, p) : "", gg ? q(r.fld * u, p) : "", gg ? q(r.short, p) : "", r.pending, r.fg, r.need, gg ? r.ins : "", gg ? r.cov : "", gg ? r.fld : "", gg ? r.short : "", gg ? r.sheets : "", r.ctn == null ? "" : r.ctn, r.ctnNeed == null ? "" : r.ctnNeed]; }));
       };
     });
     paint();
