@@ -3,13 +3,13 @@
    icon tile, bordered cards, labels above fields, neutral/brand buttons, path for the stations, data tables,
    badges, scoped notifications, modal) themed with VCL Blue #2B3990 as the brand colour, Calibri text.
    Touch targets stay >= 44px for the floor tablets (SLDS default is 32px). */
-.ebv3{--brand:#2b3990;--brand-dark:#1f2a6e;--brand-light:#eef1fb;--on-brand:#fff;--link:#0b5cab;
+.ebv3{--brand:#0176d3;--brand-dark:#014486;--brand-light:#eef4ff;--on-brand:#fff;--link:#0176d3;
   --bg:#f3f3f3;--card:#fff;--border:#e5e5e5;--border-input:#c9c9c9;--border-strong:#747474;--th:#f3f3f3;--hover:#f3f3f3;
   --text:#181818;--weak:#444;--weaker:#706e6b;--neutral-bg:#ecebea;
   --ok:#2e844a;--ok-bg:#ebf7e6;--bad:#ba0517;--bad-bg:#fef1ee;--warn:#8c4b02;--warn-bg:#fef1cd;--info:#0b5cab;--info-bg:#eef4ff;
-  --sans:Calibri,Carlito,"Salesforce Sans","Segoe UI",Arial,system-ui,sans-serif;--mono:"Courier New",Courier,"Liberation Mono",monospace;
+  --sans:"Salesforce Sans","Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;--mono:var(--sans);
   --sh:0 2px 2px 0 rgba(0,0,0,.10);--sh-modal:0 2px 6px rgba(0,0,0,.18);
-  background:var(--bg);color:var(--text);font:15px/21px var(--sans);margin:0 calc(50% - 50vw);padding:0 0 48px;min-height:100vh}
+  background:linear-gradient(#b0c4df 0,#d8e3f0 150px,#f3f3f3 340px) no-repeat var(--bg);color:var(--text);font:14px/20px var(--sans);font-variant-numeric:tabular-nums;margin:0 calc(50% - 50vw);padding:0 0 48px;min-height:100vh}
 .ebv3 *{box-sizing:border-box}
 .ebv3 .wrap{max-width:1240px;margin:0 auto;padding:0 16px}
 /* page header (slds-page-header) */
@@ -42,8 +42,8 @@
 .ebv3 .fn.grey rect{fill:var(--bg);stroke:var(--border-input)}
 .ebv3 .fn.grey text{fill:var(--weaker)}
 .ebv3 .fn.end rect{fill:var(--ok-bg);stroke:var(--ok);rx:28px;ry:28px}
-.ebv3 .fh{font-weight:700;font-size:16px;fill:var(--text)}.ebv3 .fs{font-size:13px;fill:var(--weak)}
-.ebv3 .fst{font-size:12px;font-weight:700;fill:var(--brand)}.ebv3 .fn.grey .fst{fill:var(--weaker)}
+.ebv3 .fh{font-weight:700;font-size:14px;fill:var(--text)}.ebv3 .fs{font-size:11px;fill:var(--weak)}
+.ebv3 .fst{font-size:10px;font-weight:700;fill:var(--brand)}.ebv3 .fn.grey .fst{fill:var(--weaker)}
 .ebv3 .fa{fill:none;stroke:var(--border-strong);stroke-width:1.5}.ebv3 .fah{fill:var(--border-strong)}
 .ebv3 .fh-narrow{display:none}
 @media (max-width:700px){.ebv3 .fh-wide{display:none}.ebv3 .fh-narrow{display:block;max-width:360px;margin:0 auto 14px}}
@@ -161,7 +161,7 @@
 @media (max-width:600px){.ebv3 .seg.views button{flex:1;padding:0 6px}.ebv3 .btn-grp{width:100%}.ebv3 .btn-grp .cap-sec{flex:1}}
 @media print{.ebv3{margin:0;background:#fff}.ebv3 .mode,.ebv3 #v3-banner,.ebv3 #v3-chart,.ebv3 .cap-top,.ebv3 [data-det],.ebv3 .ph-sub{display:none!important}.ebv3 .cap-card,.ebv3 .ph{box-shadow:none}.ebv3 .tw{overflow:visible}.navbar,.web-footer,footer,.page-breadcrumbs{display:none!important}}
 /* Order & stock (05/11/2026): one headline, a coverage bar per type, detail on tap */
-.ebv3{--c-fg:#2e844a;--c-pipe:#2b3990;--c-short:#ba0517;--c-none:#c9c9c9}
+.ebv3{--c-fg:#2e844a;--c-pipe:#0176d3;--c-short:#ba0517;--c-none:#c9c9c9}
 .ebv3 .os-hero{background:var(--card);border:1px solid var(--border-input);border-radius:4px;box-shadow:var(--sh);padding:18px 20px;display:grid;gap:14px}
 .ebv3 .os-big{display:grid;gap:2px}
 .ebv3 .os-big .n{font-size:14px;font-weight:700;color:var(--weak)}
@@ -184,7 +184,7 @@
 .ebv3 .os-card{padding-bottom:0}
 .ebv3 .os-card>.tw{margin-bottom:0}
 .ebv3 .os-card .cap-h .cap-note{display:block}
-.ebv3 table.osl thead th{background:var(--card);font-size:12px;color:var(--weak)}
+.ebv3 table.osl thead th{font-size:13px;color:var(--weak)}
 .ebv3 table.osl th,.ebv3 table.osl td{padding:12px 14px;vertical-align:middle;font-family:var(--sans)}
 .ebv3 table.osl tbody th{font-weight:400;min-width:220px}
 .ebv3 table.osl tbody th b{display:block;font-size:15px;line-height:20px}
@@ -231,11 +231,56 @@
   .ebv3 table.osl tr.det{display:block}.ebv3 table.osl tr.det[hidden]{display:none}.ebv3 table.osl tr.det>td{display:block}
 }
 @media print{.ebv3 .os-act,.ebv3 .os-how,.ebv3 .tg{display:none!important}}
+/* Lightning app shell: navigation bar with app launcher, tabs with the blue underline (05/11/2026) */
+.ebv3 .sf-nav{display:flex;align-items:stretch;gap:0 16px;background:var(--card);border-bottom:3px solid var(--brand);padding:0 16px;box-shadow:0 2px 3px rgba(0,0,0,.14);overflow-x:auto}
+.ebv3 .sf-waffle{display:grid;grid-template-columns:repeat(3,4px);gap:3px;align-content:center;flex:none}
+.ebv3 .sf-waffle i{width:4px;height:4px;border-radius:50%;background:var(--weak)}
+.ebv3 .sf-app{display:flex;align-items:center;font-size:18px;font-weight:400;white-space:nowrap;flex:none;padding-right:8px}
+.ebv3 .sf-nav .mode{padding:0;flex:1;min-width:0}
+.ebv3 .sf-nav .seg.views{border:0;gap:0;flex-wrap:nowrap}
+.ebv3 .sf-nav .seg.views button{flex:none;font-size:14px;font-weight:400;color:var(--text);min-height:46px;padding:0 14px;border-bottom:3px solid transparent;margin-bottom:-3px;white-space:nowrap}
+.ebv3 .sf-nav .seg.views button:hover{background:var(--brand-light);border-bottom-color:var(--brand)}
+.ebv3 .sf-nav .seg.views button[aria-pressed="true"]{background:var(--brand-light);font-weight:700;color:var(--text);border-bottom-color:var(--brand)}
+.ebv3 header.bar{padding:12px 0}
+.ebv3 .ph{border-radius:4px}
+.ebv3 header.bar h1{font-size:18px;line-height:24px}
+.ebv3 .cap-h h3{font-size:14px;line-height:20px}
+.ebv3 .cap-steps button[aria-selected="true"]{font-weight:700}
+.ebv3 .seg button:disabled{color:var(--weaker);cursor:not-allowed}
+/* Production */
+.ebv3 .pw{display:grid;gap:4px;flex:none}
+.ebv3 table.pm{min-width:760px}
+.ebv3 table.pm th,.ebv3 table.pm td{padding:10px 12px;vertical-align:middle}
+.ebv3 table.pm tbody th{font-weight:700;white-space:nowrap}
+.ebv3 table.pm thead th{padding-top:6px;padding-bottom:6px}
+.ebv3 table.pm .dd{display:block;font-size:12px;font-weight:400;color:var(--weak)}
+.ebv3 table.pm .now .dd,.ebv3 table.pm .now{color:var(--brand)}
+.ebv3 table.pm .tot{border-left:1px solid var(--border-input);background:#fafaf9}
+.ebv3 table.pm td.sel{background:var(--brand-light)}
+.ebv3 table.pm .dash,.ebv3 table.pi .dash{color:var(--weaker)}
+.ebv3 table.pm b.ct{font-size:14px}
+.ebv3 table.pm td small{font-size:12px;color:var(--weak)}
+.ebv3 .pm-day{font:inherit;font-weight:700;color:inherit;background:transparent;border:0;border-radius:4px;width:100%;min-height:44px;min-width:56px;padding:2px 6px;text-align:right;cursor:pointer}
+.ebv3 .pm-day:hover{background:var(--neutral-bg)}
+.ebv3 .pm-day:focus-visible{outline:2px solid var(--brand)}
+.ebv3 .pm-day[aria-pressed="true"]{background:var(--brand);color:var(--on-brand)}
+.ebv3 .pm-day[aria-pressed="true"] .dd{color:var(--on-brand)}
+.ebv3 table.pi td.num{white-space:nowrap}
+.ebv3 table.osl tr.det .tw{background:var(--card);border:1px solid var(--border);border-radius:4px}
+.ebv3 .pe{margin:0;padding:16px 0}
+@media (max-width:760px){
+  .ebv3 table.pi tr.osr{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .ebv3 table.pi tr.osr td.num{grid-row:2}
+  .ebv3 table.pi tr.osr td.num b.ct{font-size:14px;white-space:normal}
+  .ebv3 table.pi tr.osr td small{white-space:normal}
+  .ebv3 table.pi tr.osr .tg{justify-self:end}
+}
+@media print{.ebv3 .sf-nav{display:none!important}.ebv3{background:#fff}.ebv3 .pm-day{min-height:0}}
 </style>
 <div class="ebv3" id="ebv3">
-  <header class="bar"><div class="wrap"><div class="ph"><span class="ph-ico" aria-hidden="true">EB</span><div class="ph-t"><p class="ph-k">Production · Vimit Converters Limited</p><h1>Exercise Book Production v3 (preview)</h1></div><p class="ph-sub">Covers → Folds → Inserts → Packing → Finished Goods</p></div></div></header>
+  <nav class="sf-nav" aria-label="Exercise Books"><span class="sf-waffle" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="sf-app">Exercise Books</span><div class="mode" id="v3-mode"></div></nav>
+  <header class="bar"><div class="wrap"><div class="ph"><span class="ph-ico" aria-hidden="true">EB</span><div class="ph-t"><p class="ph-k">Exercise Book Production v3 (preview)</p><h1 id="v3-title">Capture</h1></div><p class="ph-sub">Covers → Folds → Inserts → Packing → Finished Goods</p></div></div></header>
   <div class="wrap">
-    <div class="mode" id="v3-mode"></div>
     <div id="v3-banner"></div>
     <div id="v3-chart"></div>
     <div id="v3-app"><div class="loading">Loading stock from ERPNext…</div></div>

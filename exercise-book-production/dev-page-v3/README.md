@@ -16,8 +16,12 @@ The stations run Covers → Folds → Inserts → Packing → Finished Goods, wi
 Covers, folds and inserts count in sets with the same up-count: A4 2-up, A5 3-up, read from the item name. Only packing counts books.
 
 ## Screens (05/11/2026)
-Three screens, chosen with the switch at the top (`?view=capture|orders|orderstock`, remembered per browser):
+Four screens, chosen on the navigation bar (`?view=capture|production|orders|orderstock`, remembered per browser):
 - **Capture**: the stations above.
+- **Production**: what each process made, one week at a time (Monday to Sunday).
+  - By date: covers, folds, inserts and packed against the days of the week, with a week total. Tapping a day narrows the item list to it.
+  - By item: the same four processes per book type. Tapping a row shows that type's days. Filters: brand, size, pages, ruling. Excel lists every entry.
+  - Reads submitted Stock Entries: COV-/FLD- Material Receipts and INS- Repacks into Stores, book Manufactures into Finished Goods. Remarks containing "opening" are left out, and so are book stock-ins for goods already delivered, because they aren't Manufactures.
 - **Orders**: the v1 "Orders Pending" screen. Covers all exercise-book item groups (Prince, Swara, Hi5, School), except Covers, Inserts and Folds.
   - Grid of ordered / delivered / pending per brand, as size × pages rows and ruling columns. It counts confirmed orders only: no drafts, cancelled or closed.
   - List of open lines, or all non-cancelled lines, earliest delivery first.
@@ -40,14 +44,14 @@ Cartons are the main figure everywhere, with books in small print underneath.
 ## Look
 Salesforce Lightning (SLDS) structure:
 - page header with an icon tile;
-- tabs for the three screens;
-- bordered white cards on #F3F3F3;
+- a navigation bar with app launcher, app name and tabs for the four screens;
+- bordered white cards on the Lightning blue-grey backdrop;
 - labels above the fields;
 - neutral and brand buttons;
 - a chevron path for the stations;
 - Lightning data tables, badges, scoped notifications, and a modal for the two confirmations.
 
-It's themed with VCL Blue #2B3990 as the brand colour and Calibri text. Touch targets stay at 44px or more for the floor tablets.
+It uses the Lightning brand blue #0176D3 and a Salesforce Sans / Segoe UI font stack, with no Salesforce logos. Touch targets stay at 44px or more for the floor tablets.
 
 ## Date and shift (Tanuj, 05/11/2026)
 - Every capture has a **production date** and a **shift**, next to the run number.

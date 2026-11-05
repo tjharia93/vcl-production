@@ -667,6 +667,105 @@
     paint();
   }
 
+  /* ---------- Production: what each process made, by date and by item (Tanuj, 05/11/2026) ----------
+     Read-only, from submitted Stock Entries, so undone (cancelled) entries drop out by themselves.
+     Counted: COV-/FLD- Material Receipts and INS- Repacks into Stores, book Manufactures into Finished Goods.
+     Left out: opening stock and opening fold counts, and book stock-ins for goods already delivered. */
+  var PROCS = [["cov", "Covers printed", "sheets"], ["fld", "Folds", "sets"], ["ins", "Inserts bound", "sets"], ["pack", "Packed", "books"]];
+  var PC = {};           // week start -> classified rows
+  var PV = { week: "", day: "", brand: "", size: "", pages: "", ruling: "" };
+  function parseIso(v) { var m = v.split("-"); return new Date(+m[0], +m[1] - 1, +m[2]); }
+  function addDays(v, n) { var d = parseIso(v); d.setDate(d.getDate() + n); return iso(d); }
+  function mondayOf(v) { return addDays(v, -((parseIso(v).getDay() + 6) % 7)); }
+  function weekDays(w) { return [0, 1, 2, 3, 4, 5, 6].map(function (n) { return addDays(w, n); }); }
+  function dayName(v) { return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][parseIso(v).getDay()]; }
+  function classify(r) {
+    if (/opening/i.test(r.remarks || "")) return null;
+    var code = r.item_code || "", proc = null, brand, size, pages, ruling, m;
+    if ((m = /^(COV|FLD|INS)-(PNC|SWR)-(A4|A5)-(\d{3})PG-([A-Z0-9]+)$/.exec(code))) {
+      if (r.t_warehouse !== STORES || r.stock_entry_type !== (m[1] === "INS" ? "Repack" : "Material Receipt")) return null;
+      proc = m[1].toLowerCase(); brand = m[2]; size = m[3]; pages = +m[4]; ruling = m[5];
+    } else if ((m = /^(PNC|SWR)EB-(A4|A5)-(\d+)PGS-[A-Z]+-[A-Z]+-([A-Z0-9]+)$/.exec(code))) {
+      if (r.t_warehouse !== FG || r.stock_entry_type !== "Manufacture") return null;
+      proc = "pack"; brand = m[1]; size = m[2]; pages = +m[3]; ruling = m[4];
+    } else return null;
+    brand = brand === "PNC" ? "Prince" : "Swara";
+    var k = brand + "|" + size + "|" + pages + "|" + ruling, gg = D.groups[k], ups = gg ? gg.ups : (size === "A4" ? 2 : 3), per = gg ? gcpc(gg) : 0, q = Number(r.qty) || 0;
+    return { date: String(r.posting_date).slice(0, 10), proc: proc, k: k, brand: brand, size: size, pages: pages, ruling: ruling, code: code, se: r.name, qty: q, books: proc === "pack" ? q : q * ups, per: per };
+  }
+  function loadWeek(w) {
+    var T = "`tabStock Entry Detail`.";
+    return list("Stock Entry", ["name", "stock_entry_type", "posting_date", "remarks", T + "item_code as item_code", T + "qty as qty", T + "t_warehouse as t_warehouse"],
+      [["docstatus", "=", 1], ["posting_date", "between", [w, addDays(w, 6)]], ["stock_entry_type", "in", ["Material Receipt", "Repack", "Manufacture"]], ["Stock Entry Detail", "t_warehouse", "in", [STORES, FG]]])
+      .then(function (rows) { PC[w] = rows.map(classify).filter(Boolean); });
+  }
+  function sum(rows) { var t = { q: 0, b: 0, c: 0 }; rows.forEach(function (r) { t.q += r.qty; t.b += r.books; if (r.per) t.c += r.books / r.per; }); return t; }
+  /* Cartons big, the process's own unit small. Without a Carton unit: books big. */
+  function pcell(rows, unit) {
+    if (!rows.length) return '<span class="dash">-</span>';
+    var t = sum(rows);
+    return t.c ? '<b class="ct">' + c1(t.c) + " <span>ctn</span></b><small>" + f(t.q) + " " + unit + "</small>" : '<b class="ct">' + f(t.b) + " <span>books</span></b><small>no carton unit</small>";
+  }
+  function pMatrix(rows, w, pickable) {
+    var days = weekDays(w), now = todayIso();
+    return '<div class="tw"><table class="pm"><thead><tr><th>Process</th>' + days.map(function (d) {
+      var t = dayName(d) + '<span class="dd">' + dmy(d).slice(0, 5) + "</span>";
+      return '<th class="num' + (d === now ? " now" : "") + '">' + (pickable ? '<button type="button" class="pm-day" data-day="' + d + '" aria-pressed="' + (PV.day === d) + '">' + t + "</button>" : t) + "</th>";
+    }).join("") + '<th class="num tot">Week</th></tr></thead><tbody>' + PROCS.map(function (p) {
+      var pr = rows.filter(function (r) { return r.proc === p[0]; });
+      return '<tr><th scope="row">' + p[1] + "</th>" + days.map(function (d) { return '<td class="num' + (PV.day === d && pickable ? " sel" : "") + '">' + pcell(pr.filter(function (r) { return r.date === d; }), p[2]) + "</td>"; }).join("") + '<td class="num tot">' + pcell(pr, p[2]) + "</td></tr>";
+    }).join("") + "</tbody></table></div>";
+  }
+  function renderProduction() {
+    if (!PV.week) PV.week = mondayOf(todayIso());
+    var w = PV.week;
+    if (!PC[w]) {
+      $("v3-app").innerHTML = '<div class="loading">Loading production from ERPNext…</div>';
+      loadWeek(w).then(function () { if (S.view === "production" && PV.week === w) renderProduction(); })
+        .catch(function (err) { $("v3-app").innerHTML = '<div class="cap-msg bad">Could not load production: ' + esc(err.message) + "</div>"; });
+      return;
+    }
+    var G = Object.keys(D.groups).map(function (k) { return D.groups[k]; });
+    var rows = PC[w].filter(function (r) { return (!PV.brand || r.brand === PV.brand) && (!PV.size || r.size === PV.size) && (!PV.pages || String(r.pages) === PV.pages) && (!PV.ruling || r.ruling === PV.ruling); });
+    var shown = PV.day ? rows.filter(function (r) { return r.date === PV.day; }) : rows, byK = {};
+    shown.forEach(function (r) { (byK[r.k] = byK[r.k] || []).push(r); });
+    var keys = Object.keys(byK).sort(function (a, b) { return sum(byK[b]).b - sum(byK[a]).b || a.localeCompare(b); });
+    var thisWeek = w === mondayOf(todayIso()), span = dmy(w) + " to " + dmy(addDays(w, 6));
+    var h = '<div class="cap-top"><div class="pw"><span class="lb">Week</span><div class="seg" role="group" aria-label="Choose week"><button type="button" id="p-prev" aria-label="Previous week">‹</button><button type="button" id="p-now" aria-pressed="' + thisWeek + '">This week</button><button type="button" id="p-next" aria-label="Next week"' + (thisWeek ? " disabled" : "") + ">›</button></div></div>" +
+      sel("p-brand", "Brand", PV.brand, uniq(G.map(function (x) { return x.brand; })).sort()) + sel("p-size", "Size", PV.size, uniq(G.map(function (x) { return x.size; })).sort()) +
+      sel("p-pages", "Pages", PV.pages, uniq(G.map(function (x) { return x.pages; })).sort(function (a, b) { return a - b; })) +
+      sel("p-ruling", "Ruling", PV.ruling, uniq(G.map(function (x) { return x.ruling; })).sort().map(function (r) { return [r, rulName(r)]; })) + "</div>" +
+      '<div class="cap-card os-card"><div class="cap-h"><div><h3>By date</h3><span class="cap-note">' + span + (rows.length ? " · tap a day to see its items" : "") + '</span></div><div class="os-act btn-grp"><button type="button" class="cap-sec" id="p-xlsx">Download Excel</button><button type="button" class="cap-sec" id="p-pdf">Print / PDF</button><button type="button" class="cap-sec" id="p-reload">Reload</button></div></div>' + pMatrix(rows, w, true) + "</div>" +
+      '<div class="cap-card os-card"><div class="cap-h"><div><h3>By item' + (PV.day ? " · " + dayName(PV.day) + " " + dmy(PV.day) : "") + '</h3><span class="cap-note">' + keys.length + " book types · most made first" + (keys.length ? " · tap a row for its days" : "") + "</span></div>" + (PV.day ? '<button type="button" class="cap-sec" id="p-all">Show whole week</button>' : "") + "</div>" +
+      (keys.length ? '<div class="tw"><table class="osl pi"><thead><tr><th>Book type</th>' + PROCS.map(function (p) { return '<th class="num">' + p[1] + "</th>"; }).join("") + '<th><span class="vh">Details</span></th></tr></thead><tbody>' +
+        keys.map(function (k, i) {
+          var a = byK[k], r0 = a[0], gg = D.groups[k], name = r0.brand + " " + r0.size + " · " + r0.pages + " pages";
+          return '<tr class="osr"><th scope="row"><b>' + esc(name) + '</b><span class="sub">' + esc(rulName(r0.ruling)) + " · " + (r0.per ? r0.per + " books/ctn" : "no Carton unit") + (gg ? " · " + gg.ups + "-up" : "") + "</span></th>" +
+            PROCS.map(function (p) { return '<td class="num" data-l="' + p[1] + '">' + pcell(a.filter(function (r) { return r.proc === p[0]; }), p[2]) + "</td>"; }).join("") +
+            '<td class="tg"><button type="button" class="os-tog" data-det="' + i + '" aria-expanded="false" aria-controls="p-det-' + i + '" aria-label="Days for ' + esc(name) + '"></button></td></tr>' +
+            '<tr class="det" id="p-det-' + i + '" hidden><td colspan="6">' + pMatrix(rows.filter(function (r) { return r.k === k; }), w, false) + "</td></tr>";
+        }).join("") + "</tbody></table></div>" : '<p class="cap-note pe">Nothing recorded ' + (PV.day ? "on this day." : "this week.") + "</p>") + "</div>" +
+      '<details class="os-how"><summary>What is counted</summary><p>Submitted Stock Entries by posting date: covers and folds received into Stores - VCL, inserts repacked in Stores - VCL, and books manufactured into Finished Goods - VCL. Opening stock, opening fold counts and book stock-ins for goods already delivered are left out, and undone entries drop out. Cartons = sheets or sets × up-count ÷ books per carton. Weeks run Monday to Sunday.</p></details>';
+    $("v3-app").innerHTML = '<div class="cap">' + h + "</div>";
+    function go(week) { PV.week = week; PV.day = ""; renderProduction(); }
+    $("p-prev").onclick = function () { go(addDays(w, -7)); };
+    $("p-next").onclick = function () { if (!thisWeek) go(addDays(w, 7)); };
+    $("p-now").onclick = function () { go(mondayOf(todayIso())); };
+    ["brand", "size", "pages", "ruling"].forEach(function (k) { $("p-" + k).onchange = function (e) { PV[k] = e.target.value; renderProduction(); }; });
+    if ($("p-all")) $("p-all").onclick = function () { PV.day = ""; renderProduction(); };
+    $("p-pdf").onclick = function () { window.print(); };
+    $("p-reload").onclick = function () { delete PC[w]; renderProduction(); };
+    $("p-xlsx").onclick = function () {
+      var names = {}; PROCS.forEach(function (p) { names[p[0]] = p; });
+      download("EB production " + (PV.day || w), ["Date", "Process", "Item", "Brand", "Size", "Pages", "Ruling", "Quantity", "Unit", "Books", "Cartons", "Stock Entry"],
+        shown.slice().sort(function (a, b) { return a.date.localeCompare(b.date) || a.code.localeCompare(b.code); }).map(function (r) { return [r.date, names[r.proc][1], r.code, r.brand, r.size, r.pages, rulName(r.ruling), r.qty, names[r.proc][2], r.books, r.per ? Math.round(r.books / r.per * 10) / 10 : "", r.se]; }));
+    };
+    var app = $("v3-app");
+    [].forEach.call(app.querySelectorAll("[data-day]"), function (b) { b.onclick = function () { PV.day = PV.day === b.dataset.day ? "" : b.dataset.day; renderProduction(); }; });
+    [].forEach.call(app.querySelectorAll("[data-det]"), function (b) { b.onclick = function () { var row = $("p-det-" + b.dataset.det), op = row.hidden; row.hidden = !op; b.setAttribute("aria-expanded", String(op)); }; });
+    [].forEach.call(app.querySelectorAll("tr.osr"), function (t) { t.onclick = function (e) { if (!e.target.closest("button")) t.querySelector("[data-det]").click(); }; });
+  }
+
   function today() { return new Date().toISOString().slice(0, 10); }
   /* Excel download: an .xlsx through the site's ExcelJS (/files/vcl-exceljs-4.4.0.js, used by v1); CSV if it can't load. */
   function download(title, head, rows) {
@@ -688,7 +787,7 @@
   }
 
   /* ---------- views: Capture | Orders | Order & stock ---------- */
-  var VIEWS = [["capture", "Capture"], ["orders", "Orders"], ["orderstock", "Order & stock"]];
+  var VIEWS = [["capture", "Capture"], ["production", "Production"], ["orders", "Orders"], ["orderstock", "Order & stock"]];
   function renderViews() {
     $("v3-mode").innerHTML = '<div class="seg views" role="tablist" aria-label="Screens">' + VIEWS.map(function (v) { return '<button type="button" role="tab" data-view="' + v[0] + '" aria-pressed="' + (S.view === v[0]) + '">' + v[1] + "</button>"; }).join("") + "</div>";
     [].forEach.call($("v3-mode").querySelectorAll("[data-view]"), function (b) { b.onclick = function () { showView(b.dataset.view); }; });
@@ -697,8 +796,10 @@
     S.view = v; lsSet("view", v);
     try { var u = new URL(location.href); u.searchParams.set("view", v); history.replaceState(null, "", u); } catch (e) {}
     renderViews();
+    $("v3-title").textContent = VIEWS.filter(function (x) { return x[0] === v; })[0][1];
     $("v3-chart").hidden = v !== "capture"; $("v3-banner").hidden = v !== "capture";
     if (v === "capture") { renderShell(); return; }
+    if (v === "production") { renderProduction(); return; }
     var go = function () { if (S.view === v) (v === "orders" ? renderOrders : renderOrderStock)(); };
     if (O) { go(); return; }
     $("v3-app").innerHTML = '<div class="loading">Loading exercise book orders…</div>';
