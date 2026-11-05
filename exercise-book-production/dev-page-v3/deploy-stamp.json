@@ -1,9 +1,9 @@
 {
  "name": "exercise-book-production-v3-preview",
- "modified": "2026-11-05 16:16:25.765412",
- "sha256_js": "6930fd2dead8acdbebf763b86b64a947f08771dec7691cefcec88700ab90e9bd",
- "sha256_html": "26d205f6467141547df759f40948ff4458554aae9fe0911392be1d2dda2c0b97",
+ "modified": "2026-11-05 16:30:09.911742",
+ "sha256_js": "1756efd70cf9b60657b92fadbc1afc2bc0fc7a8d5dc800448d1f487bb70cd6a7",
+ "sha256_html": "f4f6420bb7eda9a10101a5e0c0e0bc2b2f11ac4ac8fb5389e6ec2b06d722ba84",
  "sha256_css": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
- "deployed_at": "2026-11-05T16:16:27",
- "git_commit": "875e8433e3601ec8d8d65052793742d13e0da1e7"
+ "deployed_at": "2026-11-05T16:30:11",
+ "git_commit": "bd3f774772074354bbd00697d8845781bf860adb"
 }
