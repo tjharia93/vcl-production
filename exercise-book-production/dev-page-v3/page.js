@@ -59,7 +59,7 @@
   function renderMachines() {
     var ms = stationMachines(), el = $("v3-mach"), cur = machine(); if (!el) return;
     el.hidden = !ms.length;
-    el.innerHTML = '<span class="lb">Machine</span><div class="mach-row">' + ms.map(function (m) { return '<button type="button" class="mach" data-m="' + esc(m.name) + '" aria-pressed="' + (cur && cur.name === m.name) + '">' + esc(m.name) + "</button>"; }).join("") + "</div>";
+    el.innerHTML = '<span class="lb">Machine</span><div class="mach-row">' + ms.map(function (m) { return '<button type="button" class="mach" data-m="' + esc(m.name) + '" aria-pressed="' + !!(cur && cur.name === m.name) + '">' + esc(m.name) + "</button>"; }).join("") + "</div>";
   }
   function checkWhen() {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(S.date || "")) return "Pick the production date.";
