@@ -61,7 +61,25 @@ def after_migrate():
 	align_machines()
 	# Stores receiving standards: add-only, same contract as the machines.
 	seed_carton_standards()
+	ensure_capture_machine_field()
 	frappe.db.commit()
+
+
+def ensure_capture_machine_field():
+	"""Stock Entry -> VCL Production Machine, so capture entries can be filtered by machine.
+
+	Must never abort a migrate: a throw in after_migrate stops it for every app on the
+	bench. Without this field the machine and its asset are still in the remarks.
+	"""
+	if frappe.db.exists("Custom Field", {"dt": "Stock Entry", "fieldname": "custom_eb_machine"}):
+		return
+	try:
+		from frappe.custom.doctype.custom_field.custom_field import create_custom_field
+
+		create_custom_field("Stock Entry", {"fieldname": "custom_eb_machine", "label": "Machine", "fieldtype": "Link",
+			"options": "VCL Production Machine", "insert_after": "remarks", "read_only": 1, "no_copy": 1})
+	except Exception:
+		frappe.log_error(title="custom_eb_machine not created", message=frappe.get_traceback())
 
 
 def create_roles():

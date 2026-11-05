@@ -179,3 +179,7 @@ production_log.patches.v10_8.correct_cp_print_fields
 # Customer Product Specification. Sets allow_on_submit on those fields and the
 # Colour of Parts child fields. Print Type stays fixed. Idempotent.
 production_log.patches.v10_9.allow_cps_size_parts_details_on_submit
+# Adds Asset and Exercise Book Stations to VCL Production Machine (schema, so this
+# runs after the sync). Links Solna and Miller to their assets and lists them on the
+# Covers station of the exercise-book Capture page. Idempotent.
+production_log.patches.v10_10.link_cover_machines

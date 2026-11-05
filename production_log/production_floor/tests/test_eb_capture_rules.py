@@ -26,6 +26,51 @@ class TestCodes(unittest.TestCase):
 		self.assertEqual(r.ups_from_name("no count", "A4"), 2)
 
 
+class TestMachines(unittest.TestCase):
+	ROWS = [
+		{"name": "Miller", "asset": "PRINTING MACHINE 05", "eb_stations": "Covers", "display_order": 20},
+		{"name": "Solna", "asset": "ACC-ASS-2024-00010", "eb_stations": "covers\nFolds", "display_order": 10},
+		{"name": "M1", "asset": "", "eb_stations": None, "display_order": 10},
+		{"name": "Kord", "asset": "", "eb_stations": "Covers", "display_order": 0},
+	]
+
+	def test_grouped_by_station_in_display_order_with_zero_last(self):
+		got = r.machines_by_station(self.ROWS)
+		self.assertEqual([m["name"] for m in got["covers"]], ["Solna", "Miller", "Kord"])
+		self.assertEqual([m["name"] for m in got["folds"]], ["Solna"])
+		self.assertNotIn("inserts", got)
+
+	def test_adding_a_machine_is_only_a_new_row(self):
+		rows = self.ROWS + [{"name": "New Press", "asset": "X", "eb_stations": "Covers", "display_order": 30}]
+		self.assertIn("New Press", [m["name"] for m in r.machines_by_station(rows)["covers"]])
+
+	def test_a_station_with_machines_needs_one(self):
+		by = r.machines_by_station(self.ROWS)
+		with self.assertRaises(r.CaptureError):
+			r.check_machine("covers", "", by)
+
+	def test_the_machine_must_serve_the_station(self):
+		by = r.machines_by_station(self.ROWS)
+		self.assertEqual(r.check_machine("covers", "Solna", by)["asset"], "ACC-ASS-2024-00010")
+		with self.assertRaises(r.CaptureError):
+			r.check_machine("folds", "Miller", by)
+		with self.assertRaises(r.CaptureError):
+			r.check_machine("covers", "M1", by)
+
+	def test_a_station_without_machines_posts_without_one(self):
+		self.assertIsNone(r.check_machine("packing", "", r.machines_by_station(self.ROWS)))
+		with self.assertRaises(r.CaptureError):
+			r.check_machine("packing", "Solna", r.machines_by_station(self.ROWS))
+
+	def test_a_typo_in_stations_is_reported(self):
+		self.assertEqual(r.unknown_stations("Covers\nCover\n\nfolds"), ["Cover"])
+
+	def test_remarks_carry_machine_and_asset_and_keep_the_audit_line_first(self):
+		text = r.remarks("covers", "Swara|A4|120|SL", "EBR-1", {"machine": "Solna", "asset": "ACC-ASS-2024-00010"})
+		self.assertTrue(text.startswith("Capture v3 · run EBR-1"))
+		self.assertIn("Machine Solna (asset ACC-ASS-2024-00010)", text)
+
+
 class TestPlan(unittest.TestCase):
 	def stock(self, **k):
 		s = {"cov": 0, "fld": 0, "ins": 0, "fg": 0, "carton": 0}

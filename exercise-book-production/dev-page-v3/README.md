@@ -3,7 +3,7 @@
 Route `/exercise-book-production-v3-dev`, Web Page `exercise-book-production-v3-dev`, title "Exercise Book Production v3 (preview)". This page is new. It does not touch `exercise-book-production-v2-dev` or `/production-dev`.
 
 ## What it does
-The stations run Covers → Folds → Inserts → Packing → Finished Goods, with the process flowchart on top. Ruling is greyed out (Phase 2/3).
+The stations run Covers → Folds → Inserts → Packing → Finished Goods, on the path at the top of Capture. Ruling is Phase 2/3.
 
 | Station | Entry posted | Rows |
 |---|---|---|
@@ -16,8 +16,16 @@ The stations run Covers → Folds → Inserts → Packing → Finished Goods, wi
 Covers, folds and inserts count in sets with the same up-count: A4 2-up, A5 3-up, read from the item name. Only packing counts books.
 
 ## Screens (05/11/2026)
-Three screens, chosen with the switch at the top (`?view=capture|orders|orderstock`, remembered per browser):
-- **Capture**: the stations above.
+Four screens, chosen on the navigation bar (`?view=capture|production|orders|orderstock`, remembered per browser):
+- **Capture**: the stations above, laid out for one person entering one count.
+  - The item comes first, then the station, run, date and shift, then the count. Post stays in a bar fixed to the bottom of the screen.
+  - The item choice sits on the screen, not in a dropdown: brand or school, pages, size and ruling as chips, with a search box beside them. Tap a chip to change from that step. A step with one choice is skipped. While an item is half chosen, the count, preview and Post are hidden, and Cancel keeps the current item. Recent items show under the brand tiles. Hi5 and School show greyed out until they have cover, fold and insert items.
+  - "Already posted" lists what ERPNext holds for this station and item on the chosen date, from every tablet. It refreshes every minute and again when Post is pressed. The same count for the same item and date gives a duplicate warning, which also shows at step 1. It warns; it doesn't block.
+- **Production**: what each process made, one week at a time (Monday to Sunday).
+  - Headline cards: each process's week total, today and a seven-day trend.
+  - By date: a chart of cartons per day for each process, with a Table switch for the exact figures. Tapping a day narrows the item list to it.
+  - By item: the same four processes per book type. Tapping a row shows that type's days. Filters: brand, size, pages, ruling. Excel lists every entry.
+  - Reads submitted Stock Entries: COV-/FLD- Material Receipts and INS- Repacks into Stores, book Manufactures into Finished Goods. Remarks containing "opening" are left out, and so are book stock-ins for goods already delivered, because they aren't Manufactures.
 - **Orders**: the v1 "Orders Pending" screen. Covers all exercise-book item groups (Prince, Swara, Hi5, School), except Covers, Inserts and Folds.
   - Grid of ordered / delivered / pending per brand, as size × pages rows and ruling columns. It counts confirmed orders only: no drafts, cancelled or closed.
   - List of open lines, or all non-cancelled lines, earliest delivery first.
@@ -40,14 +48,14 @@ Cartons are the main figure everywhere, with books in small print underneath.
 ## Look
 Salesforce Lightning (SLDS) structure:
 - page header with an icon tile;
-- tabs for the three screens;
-- bordered white cards on #F3F3F3;
+- a navigation bar with app launcher, app name and tabs for the four screens;
+- bordered white cards on the Lightning blue-grey backdrop;
 - labels above the fields;
 - neutral and brand buttons;
 - a chevron path for the stations;
 - Lightning data tables, badges, scoped notifications, and a modal for the two confirmations.
 
-It's themed with VCL Blue #2B3990 as the brand colour and Calibri text. Touch targets stay at 44px or more for the floor tablets.
+Production also trials the newer Lightning style: soft shadows, rounder corners and fewer lines, scoped with `[data-view="production"]`. It uses the Lightning brand blue #0176D3 and a Salesforce Sans / Segoe UI font stack, with no Salesforce logos. Touch targets stay at 44px or more for the floor tablets.
 
 ## Date and shift (Tanuj, 05/11/2026)
 - Every capture has a **production date** and a **shift**, next to the run number.
@@ -58,6 +66,13 @@ It's themed with VCL Blue #2B3990 as the brand colour and Calibri text. Touch ta
   - Today's entries post at the current time.
   - Back-dated ones post at the shift's set time: Day 17:00, Night 23:00.
 - Both go in the remarks ("Production 04-11-2026 Night Shift"). The shift also goes in `custom_eb_shift` when that field exists on Stock Entry. It isn't created yet.
+
+## Machines (Tanuj, 05/11/2026)
+- The list lives on **VCL Production Machine**: `asset` links to the Asset, and `eb_stations` lists the Capture stations it runs, one per line.
+- **To add a machine:** fill those two fields on its record. To retire one, untick Active; never delete it. Neither needs code or a deploy.
+- Each active machine listed for a station shows as a tile beside run, date and shift. A station with machines needs one on every entry, and the server checks it (`eb_capture_rules.check_machine`). A station with none, or a server without `get_mode.machines`, shows no tiles and posts as before.
+- The machine and its asset go in the remarks, and the machine goes in `custom_eb_machine` on the Stock Entry (created in `production_floor/install.py`).
+- Solna and Miller are set for Covers by patch `v10_10.link_cover_machines`.
 
 ## Posting (Tanuj, 04/11/2026)
 - Every post is **confirmed twice**: "Is this correct?" (every row) and then "Post to ERPNext now?" (totals). Post now is never pre-focused, and Enter does nothing.

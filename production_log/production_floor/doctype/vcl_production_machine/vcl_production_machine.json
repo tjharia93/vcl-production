@@ -16,7 +16,10 @@
   "active",
   "section_erpnext",
   "stage",
-  "erpnext_workstation"
+  "erpnext_workstation",
+  "asset",
+  "section_exercise_books",
+  "eb_stations"
  ],
  "fields": [
   {
@@ -94,11 +97,29 @@
    "label": "ERPNext Workstation",
    "read_only": 0,
    "options": "Workstation"
+  },
+  {
+   "description": "The fixed asset this machine is, from the asset register.",
+   "fieldname": "asset",
+   "fieldtype": "Link",
+   "label": "Asset",
+   "options": "Asset"
+  },
+  {
+   "fieldname": "section_exercise_books",
+   "fieldtype": "Section Break",
+   "label": "Exercise Books"
+  },
+  {
+   "description": "Capture stations this machine runs, one per line: Covers, Folds, Inserts or Packing. An active machine listed here shows as a tile on that station, and that station then needs a machine on every entry. To add a machine, fill this in. Nothing else changes.",
+   "fieldname": "eb_stations",
+   "fieldtype": "Small Text",
+   "label": "Exercise Book Stations"
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-08-26 00:00:00.000000",
+ "modified": "2026-11-05 16:30:00.000000",
  "modified_by": "Administrator",
  "module": "Production Floor",
  "name": "VCL Production Machine",
