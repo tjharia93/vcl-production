@@ -286,7 +286,7 @@
     $("v3-shift").onchange = function (e) { S.shift = e.target.value; lsSet("shift", S.shift); renderPreview(); };
     $("v3-reload").onclick = function () { $("v3-reload").textContent = "Reloading…"; clearProduction(); load().then(function () { renderShell(); }); };
     $("v3-post").onclick = doPost;
-    pickSync(); renderPick(""); renderStation();
+    pickSync(); if (!S.chosen) PK = {}; renderPick(""); renderStation();
   }
 
   /* Item choice: part of the Capture screen, at the top. Brand, pages, size, ruling as chips; tap a chip to change from there, or type to search.
@@ -295,7 +295,7 @@
   var PICK_BRANDS = ["Prince", "Swara", "Hi5", "School"], PICK_ORDER = ["brand", "pages", "size", "ruling"];
   function pickSync() { var gg = g(); PK = { brand: gg.brand, pages: gg.pages, size: gg.size, ruling: gg.ruling }; }
   function pickBusy() { return PICK_ORDER.some(function (f) { return PK[f] == null; }); }
-  function pickCancel() { $("v3-pickq").value = ""; pickSync(); renderPick(""); }
+  function pickCancel() { if (!S.chosen) return; $("v3-pickq").value = ""; pickSync(); renderPick(""); }
   function pickBack(f) { PICK_ORDER.slice(PICK_ORDER.indexOf(f)).forEach(function (x) { delete PK[x]; }); }
   function pickMatches() { return groupKeys().filter(function (k) { var gg = D.groups[k]; return PICK_ORDER.every(function (f) { return PK[f] == null || gg[f] === PK[f]; }); }); }
   function pickVals(f) { return uniq(pickMatches().map(function (k) { return D.groups[k][f]; })).sort(function (a, b) { return f === "pages" ? a - b : String(a).localeCompare(String(b)); }); }
@@ -309,7 +309,7 @@
   function groupKeys() { return Object.keys(D.groups).sort(function (a, b) { var x = D.groups[a], y = D.groups[b]; return (y.dem > 0) - (x.dem > 0) || y.dem - x.dem || a.localeCompare(b); }); }
   function onOrder(gg) { return gg.dem ? "On order " + (gcpc(gg) ? c1(gg.dem / gcpc(gg)) + " ctn" : f(gg.dem) + " books") : "No open orders"; }
   function recents() { try { return JSON.parse(lsGet("recent", "[]")).filter(function (k) { return D.groups[k]; }); } catch (e) { return []; } }
-  function pickLabel() { $("v3-picks").textContent = pickBusy() ? "Choosing. Cancel keeps " + gname(g()) : onOrder(g()); }
+  function pickLabel() { $("v3-picks").textContent = pickBusy() ? (S.chosen ? "Choosing. Cancel keeps " + gname(g()) : "Choose the brand first, then pages, size and ruling.") : onOrder(g()); }
   function pickChipText(f) { return f === "pages" ? PK[f] + " pages" : f === "ruling" ? (RUL[PK[f]] || PK[f]) : PK[f]; }
   function renderPick(q) {
     var keys = groupKeys(), toks = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
@@ -320,17 +320,19 @@
       if (!pickBusy()) { var done = pickMatches()[0]; if (done !== S.group) return pickChoose(done); }
     }
     var head = '<div class="pick-c">' + PICK_ORDER.filter(function (f) { return PK[f] != null; }).map(function (f) { return '<button type="button" data-back="' + f + '"' + (f === "brand" ? ' data-b="' + esc(PK.brand) + '"' : "") + ' aria-label="Change ' + f + '">' + esc(pickChipText(f)) + "</button>"; }).join("") +
-      (pickBusy() ? '<button type="button" class="pick-x" data-cancel="1">Cancel</button>' : "") + "</div>", body = "";
+      (pickBusy() && S.chosen ? '<button type="button" class="pick-x" data-cancel="1">Cancel</button>' : "") + "</div>", body = "";
     function tiles(t, html) { return '<p class="pick-h">' + t + '</p><div class="pick-o">' + html + "</div>"; }
     if (toks.length) {
       var hit = keys.filter(function (k) { var gg = D.groups[k], hay = (gname(gg) + " " + gg.ruling + " " + gg.cov).toLowerCase(); return toks.every(function (t) { return hay.indexOf(t) >= 0; }); });
       body = hit.length ? '<div class="pick-hits">' + hit.map(row).join("") + "</div>" : '<p class="pick-h">No items match.</p>';
     } else if (!PK.brand) {
-      var rec = recents();
       body = tiles("Brand or school", PICK_BRANDS.map(function (b) {
         return keys.some(function (k) { return D.groups[k].brand === b; }) ? pickTile("brand", b, b) : '<button type="button" data-b="' + b + '" disabled><b>' + b + "</b><small>No cover, fold or insert items yet</small></button>";
-      }).join("")) + (rec.length ? '<p class="pick-h">Recent</p><div class="pick-hits">' + rec.map(row).join("") + "</div>" : "");
-    } else if (!PK.pages) body = tiles("Pages", pickVals("pages").map(function (p) { return pickTile("pages", p, p + " pages"); }).join(""));
+      }).join(""));
+    } else if (!PK.pages) {
+      var rec = recents().filter(function (k) { return D.groups[k].brand === PK.brand; });
+      body = tiles("Pages", pickVals("pages").map(function (p) { return pickTile("pages", p, p + " pages"); }).join("")) + (rec.length ? '<p class="pick-h">Recent ' + esc(PK.brand) + '</p><div class="pick-hits">' + rec.map(row).join("") + "</div>" : "");
+    }
     else if (!PK.size) body = tiles("Size", pickVals("size").map(function (s) { return pickTile("size", s, s); }).join(""));
     else if (!PK.ruling) body = tiles("Ruling", pickVals("ruling").map(function (r) { return pickTile("ruling", r, RUL[r] || r); }).join(""));
     $("v3-pickl").innerHTML = head + body;
@@ -339,6 +341,7 @@
   }
   function pickChoose(k) {
     var changed = k !== S.group;
+    S.chosen = true;
     if (changed) { S.group = k; S.book = null; S.v = {}; lsSet("group", k); }
     lsSet("recent", JSON.stringify([k].concat(recents().filter(function (x) { return x !== k; })).slice(0, 4)));
     $("v3-pickq").value = ""; pickSync(); renderPick("");
@@ -1275,7 +1278,7 @@
 
   /* ---------- start ---------- */
   function start() {
-    S.group = lsGet("group", null); S.station = lsGet("station", "covers"); S.run = lsGet("run", ""); S.date = todayIso(); S.shift = lsGet("shift", "Day Shift"); if (SHIFTS.indexOf(S.shift) < 0) S.shift = "Day Shift";
+    S.group = lsGet("group", null); S.chosen = false; S.station = lsGet("station", "covers"); S.run = lsGet("run", ""); S.date = todayIso(); S.shift = lsGet("shift", "Day Shift"); if (SHIFTS.indexOf(S.shift) < 0) S.shift = "Day Shift";
     if (STEPS.map(function (s) { return s[0]; }).indexOf(S.station) < 0) S.station = "covers";
     renderMode();
     var qv = null; try { qv = new URL(location.href).searchParams.get("view"); } catch (e) {}
