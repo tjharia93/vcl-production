@@ -358,6 +358,11 @@
 .ebv3 .pick-l button[aria-current="true"]{background:var(--brand-light)}
 .ebv3 .pick-l b{font-weight:600;font-size:14px;line-height:19px}
 .ebv3 .pick-l small{font-size:12px;line-height:15px;color:var(--weak)}
+.ebv3 .pick-o{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px}
+.ebv3 .pick-l .pick-o button{min-height:60px;align-content:center;text-align:center;border:1px solid var(--border-input)}
+.ebv3 .pick-l .pick-o button:disabled{background:transparent;color:var(--weak);cursor:not-allowed;border-style:dashed}
+.ebv3 .pick-c{display:flex;flex-wrap:wrap;gap:6px}
+.ebv3 .pick-l .pick-c button{min-height:44px;align-content:center;padding:4px 14px;background:var(--brand-light);border-radius:999px;font-weight:600}
 .ebv3 .cap-bar{position:sticky;bottom:12px;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px 20px;background:var(--card);border-radius:12px;box-shadow:0 2px 6px rgba(24,24,24,.1),0 8px 24px rgba(24,24,24,.16);padding:10px 12px 10px 20px}
 .ebv3 .cap-bar[hidden]{display:none}
 .ebv3 .cap-bar .t{display:grid;min-width:0}

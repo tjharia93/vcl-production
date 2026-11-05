@@ -19,7 +19,7 @@ Covers, folds and inserts count in sets with the same up-count: A4 2-up, A5 3-up
 Four screens, chosen on the navigation bar (`?view=capture|production|orders|orderstock`, remembered per browser):
 - **Capture**: the stations above, laid out for one person entering one count.
   - The station comes first, then the item, run, date and shift, then one large count field. Post stays in a bar fixed to the bottom of the screen.
-  - The item picker shows full names, with search and recent items.
+  - The item picker goes brand or school, then pages, then size, then ruling. A step with one choice is skipped. Search and recent items stay as shortcuts. Hi5 and School show greyed out until they have cover, fold and insert items.
   - "Already posted" lists what ERPNext holds for this station and item on the chosen date, from every tablet. It refreshes every minute and again when Post is pressed. The same count for the same item and date gives a duplicate warning, which also shows at step 1. It warns; it doesn't block.
 - **Production**: what each process made, one week at a time (Monday to Sunday).
   - Headline cards: each process's week total, today and a seven-day trend.

@@ -254,8 +254,13 @@
     });
     $("v3-pick").onclick = function () { pickOpen($("v3-pickp").hidden); };
     $("v3-pickq").oninput = function (e) { renderPick(e.target.value); };
-    $("v3-pickq").onkeydown = function (e) { if (e.key === "Escape") { pickOpen(false); $("v3-pick").focus(); } };
-    $("v3-pickl").onclick = function (e) { var b = e.target.closest("[data-k]"); if (b) pickChoose(b.dataset.k); };
+    $("v3-pickp").onkeydown = function (e) { if (e.key === "Escape") { pickOpen(false); $("v3-pick").focus(); } };
+    $("v3-pickl").onclick = function (e) {
+      var b = e.target.closest("button"); if (!b || b.disabled) return;
+      if (b.dataset.k) return pickChoose(b.dataset.k);
+      if (b.dataset.back) { pickBack(b.dataset.back); renderPick(""); pickFocus(); return; }
+      if (b.dataset.f) { PK[b.dataset.f] = b.dataset.f === "pages" ? +b.dataset.v : b.dataset.v; renderPick(""); pickFocus(); }
+    };
     if (!pickWired) { pickWired = true; document.addEventListener("pointerdown", function (e) { var w = $("v3-pickp"); if (w && !w.hidden && !e.target.closest(".pick-w")) pickOpen(false); }); }
     $("v3-run").oninput = function (e) { S.run = e.target.value; lsSet("run", S.run); renderPreview(); };
     $("v3-date").onchange = $("v3-date").oninput = function (e) { S.date = e.target.value; renderPreview(); renderToday(); };
@@ -265,8 +270,19 @@
     renderStation();
   }
 
-  /* Item picker: full names, search, recent items first. */
-  var pickWired = false;
+  /* Item picker: brand, then pages, then size, then ruling. Search and recent items stay as shortcuts.
+     S.group only changes on the last step, so the screen below never holds a half-picked item. */
+  var pickWired = false, PK = {};
+  var PICK_BRANDS = ["Prince", "Swara", "Hi5", "School"], PICK_ORDER = ["brand", "pages", "size"];
+  function pickBack(f) { PICK_ORDER.slice(PICK_ORDER.indexOf(f)).forEach(function (x) { delete PK[x]; }); }
+  function pickMatches() { return groupKeys().filter(function (k) { var gg = D.groups[k]; return PICK_ORDER.every(function (f) { return PK[f] == null || gg[f] === PK[f]; }); }); }
+  function pickVals(f) { return uniq(pickMatches().map(function (k) { return D.groups[k][f]; })).sort(function (a, b) { return f === "pages" ? a - b : String(a).localeCompare(String(b)); }); }
+  function pickFocus() { var b = $("v3-pickl").querySelector(".pick-o button:not(:disabled), [data-k]"); if (b) b.focus(); }
+  function pickTile(f, v, label) {
+    var open = pickMatchesFor(f, v).some(function (k) { return D.groups[k].dem > 0; });
+    return '<button type="button" data-f="' + f + '" data-v="' + esc(v) + '"><b>' + esc(label) + "</b><small>" + (open ? "On order" : "No open orders") + "</small></button>";
+  }
+  function pickMatchesFor(f, v) { return pickMatches().filter(function (k) { return D.groups[k][f] === v; }); }
   function groupKeys() { return Object.keys(D.groups).sort(function (a, b) { var x = D.groups[a], y = D.groups[b]; return (y.dem > 0) - (x.dem > 0) || y.dem - x.dem || a.localeCompare(b); }); }
   function onOrder(gg) { return gg.dem ? "On order " + (gcpc(gg) ? c1(gg.dem / gcpc(gg)) + " ctn" : f(gg.dem) + " books") : "No open orders"; }
   function recents() { try { return JSON.parse(lsGet("recent", "[]")).filter(function (k) { return D.groups[k]; }); } catch (e) { return []; } }
@@ -280,12 +296,28 @@
       $("v3-pickl").innerHTML = hit.length ? hit.map(row).join("") : '<p class="pick-h">No items match.</p>';
       return;
     }
-    var rec = recents();
-    $("v3-pickl").innerHTML = sec("Recent", rec) + sec("With open orders", keys.filter(function (k) { return D.groups[k].dem > 0 && rec.indexOf(k) < 0; })) + sec("Other items", keys.filter(function (k) { return !D.groups[k].dem && rec.indexOf(k) < 0; }));
+    if (PK.brand && PK.pages && PK.size == null) { var only = pickVals("size"); if (only.length === 1) PK.size = only[0]; }   // e.g. 100 pages is A5 only
+    var crumbs = PICK_ORDER.filter(function (f) { return PK[f] != null; }).map(function (f) { return '<button type="button" data-back="' + f + '" aria-label="Change ' + f + '">‹ ' + esc(f === "pages" ? PK[f] + " pages" : PK[f]) + "</button>"; }).join("");
+    var head = crumbs ? '<div class="pick-c">' + crumbs + "</div>" : "";
+    if (!PK.brand) {
+      var tiles = PICK_BRANDS.map(function (b) {
+        var has = keys.some(function (k) { return D.groups[k].brand === b; });
+        return has ? pickTile("brand", b, b) : '<button type="button" disabled><b>' + b + "</b><small>No cover, fold or insert items yet</small></button>";
+      }).join("");
+      $("v3-pickl").innerHTML = sec("Recent", recents()) + '<p class="pick-h">Brand or school</p><div class="pick-o">' + tiles + "</div>";
+    } else if (!PK.pages) {
+      $("v3-pickl").innerHTML = head + '<p class="pick-h">Pages</p><div class="pick-o">' + pickVals("pages").map(function (p) { return pickTile("pages", p, p + " pages"); }).join("") + "</div>";
+    } else if (!PK.size) {
+      $("v3-pickl").innerHTML = head + '<p class="pick-h">Size</p><div class="pick-o">' + pickVals("size").map(function (s) { return pickTile("size", s, s); }).join("") + "</div>";
+    } else {
+      var last = pickMatches();
+      if (last.length === 1) return pickChoose(last[0]);
+      $("v3-pickl").innerHTML = head + '<p class="pick-h">Ruling</p>' + last.map(function (k) { var gg = D.groups[k]; return '<button type="button" data-k="' + esc(k) + '"' + (k === S.group ? ' aria-current="true"' : "") + "><b>" + esc(RUL[gg.ruling] || gg.ruling) + "</b><small>" + esc(onOrder(gg)) + "</small></button>"; }).join("");
+    }
   }
   function pickOpen(on) {
     $("v3-pickp").hidden = !on; $("v3-pick").setAttribute("aria-expanded", String(on));
-    if (on) { $("v3-pickq").value = ""; renderPick(""); $("v3-pickq").focus(); }
+    if (on) { PK = {}; $("v3-pickq").value = ""; renderPick(""); pickFocus(); }   // not the search box: that opens the tablet keyboard
   }
   function pickChoose(k) {
     S.group = k; S.book = null; S.v = { hold: S.v.hold }; lsSet("group", k);
