@@ -67,7 +67,8 @@ It's themed with VCL Blue #2B3990 as the brand colour and Calibri text. Touch ta
   - It refuses anything that hasn't been confirmed twice (`confirmed=2`).
   - Site config `eb_capture_disabled = 1` switches all posting off.
 - The remarks start with: `Capture v3 · run <run> · confirmed twice by <user> at <time>`.
-- Until vcl-production is deployed and migrated, the page says **"Server update needed"** and posts nothing.
+- If the server methods are missing, the page says **"Server update needed"** and posts nothing.
+- The server on the site can be older than the page. `get_mode` returning `shifts` is how the page knows it handles date and shift. Without it, a past date blocks Post, and today's entries post with a warning that the shift isn't saved.
 
 ## Config to revisit
 - **Carton per size + brand** (`CARTONS` in `page.js` and in `eb_capture_rules.py`): this is the P12 proposal, still open for Tanuj.

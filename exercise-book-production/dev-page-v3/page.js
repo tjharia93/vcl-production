@@ -57,6 +57,7 @@
     if (SHIFTS.indexOf(S.shift) < 0) return "Pick the shift.";
     return "";
   }
+  var OLD_SERVER = "Back-dating needs the server update. Until vcl-production is deployed on Frappe Cloud, entries can only post today.";
   var NEED = "Server update needed: deploy vcl-production feat/eb-capture-v3 and migrate. Nothing was posted.";
 
   /* ---------- helpers ---------- */
@@ -137,7 +138,7 @@
 
   function loadMode() {
     return get(M + "get_mode", {}).then(function (m) {
-      MODE = { checked: true, server: true, disabled: !!m.disabled, can_post: !!m.can_post, run_field: !!m.run_field, user: m.user || "" };
+      MODE = { checked: true, server: true, disabled: !!m.disabled, can_post: !!m.can_post, run_field: !!m.run_field, dated: Array.isArray(m.shifts), user: m.user || "" };
     }).catch(function () { MODE = { checked: true, server: false, can_post: false, user: "" }; });
   }
 
@@ -157,7 +158,10 @@
     var gg = g(), s = stock(), bk = book(), u = gg.ups, st = S.station, V = S.v, P = { ok: true, rows: [], msgs: [], type: TYPE[st], extra: {} };
     function row(dir, key, item, wh, qty, before, unit) { P.rows.push({ dir: dir, key: key, item: item, wh: wh, qty: qty, before: before, after: before + qty, unit: unit }); }
     function bad(t) { P.ok = false; P.msgs.push(["bad", t]); }
-    var wErr = checkWhen(); if (wErr) bad(wErr); else if (S.date !== todayIso()) P.msgs.push(["warn", "Back-dated: this entry will post on " + dmy(S.date) + " (" + S.shift + "), not today."]);
+    var wErr = checkWhen(), oldServer = MODE.server && !MODE.dated; /* an older server ignores date and shift, so never promise them */
+    if (wErr) bad(wErr);
+    else if (S.date !== todayIso()) { if (oldServer) bad(OLD_SERVER); else P.msgs.push(["warn", "Back-dated: this entry will post on " + dmy(S.date) + " (" + S.shift + "), not today."]); }
+    else if (oldServer) P.msgs.push(["warn", "The shift won't be saved on this entry until the server is updated. It will post today."]);
     var fields = { covers: ["good", "spoiled"], folds: ["good", "rejects"], inserts: ["sets"], packing: ["cartons", "loose", "rejects"] }[st] || [];
     for (var i = 0; i < fields.length; i++) if (isNaN(num(V[fields[i]]))) { bad("Whole numbers only (0 or more)."); return P; }
     if (st === "covers") {
