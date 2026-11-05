@@ -19,6 +19,10 @@ Decided by Tanuj, 04/11/2026:
 
 Tanuj, 05/11/2026: every entry carries a production date and shift. The date is
 today or up to BACKDATE_DAYS back, never ahead; the shifts are PPC's (Day / Night).
+
+Tanuj, 05/11/2026: back-posting, while past days are still being entered. When Packing
+is short of inserts a System Manager may post the missing inserts and the packing
+together, until BACKFILL_UNTIL. Cover sheets must exist: short covers stay blocked.
 """
 
 import datetime
@@ -55,6 +59,9 @@ SHIFTS = ("Day Shift", "Night Shift")  # same as PPC Daily Plan / Production Act
 BACKDATE_DAYS = 7
 # Posting time for a back-dated entry (today's entries post at the current time).
 SHIFT_POSTING_TIME = {"Day Shift": "17:00:00", "Night Shift": "23:00:00"}
+
+BACKFILL_ROLE = "System Manager"
+BACKFILL_UNTIL = datetime.date(2026, 11, 26)  # three weeks from 05/11/2026, then it closes by itself
 
 SAMPLE_EVERY = 20  # spot-weigh 1 carton in 20
 SAMPLE_SPREAD_PCT = 5.0
@@ -215,6 +222,35 @@ def plan(station, ups, stock, inputs, books_per_carton=None, carton_enabled=True
 		extra = {"books": books, "sets": sets, "rejects": rejects + over, "cartons": cartons, "loose": loose, "samples_due": due}
 
 	return {"ok": ok, "rows": rows, "msgs": msgs, "type": ENTRY_TYPE[station], "extra": extra}
+
+
+def backfill_open(today):
+	return today <= BACKFILL_UNTIL
+
+
+def backfill_plan(ups, stock, inputs, books_per_carton=None, carton_enabled=True, item=None):
+	"""The two entries of a back-post: the missing inserts, then the packing that needed them.
+
+	Plans both before anything is written. Returns {'need','inserts','packing'}; raises
+	CaptureError when there is nothing to back-post or either entry could not post. Folds
+	are only left alone when none are recorded; a part fold stock has to cover the need.
+	"""
+	first = plan("packing", ups, stock, inputs, books_per_carton=books_per_carton, carton_enabled=carton_enabled, item=item)
+	need = first["extra"]["sets"] - stock.get("ins", 0)
+	if first["extra"]["books"] <= 0:
+		raise CaptureError("Enter the full cartons and any loose books.")
+	if need <= 0:
+		raise CaptureError("There are enough inserts for this packing, so nothing needs back-posting.")
+	hold = stock.get("fld", 0) == 0
+	inserts = plan("inserts", ups, stock, {"sets": need, "hold_fold_check": hold}, item=item)
+	if not inserts["ok"]:
+		raise CaptureError(" ".join(m[1] for m in inserts["msgs"] if m[0] == "bad"))
+	after = dict(stock, cov=stock.get("cov", 0) - need, ins=stock.get("ins", 0) + need,
+		fld=stock.get("fld", 0) - (0 if hold else need))
+	packing = plan("packing", ups, after, inputs, books_per_carton=books_per_carton, carton_enabled=carton_enabled, item=item)
+	if not packing["ok"]:
+		raise CaptureError(" ".join(m[1] for m in packing["msgs"] if m[0] == "bad"))
+	return {"need": need, "inserts": inserts, "packing": packing}
 
 
 def check_when(date, shift, today):

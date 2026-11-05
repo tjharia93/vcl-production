@@ -1,3 +1,4 @@
+import datetime
 import unittest
 
 from production_log.production_floor import eb_capture_rules as r
@@ -152,6 +153,53 @@ class TestPlan(unittest.TestCase):
 		self.assertEqual(r.posting_time(today, "Night Shift", today, "09:12:00"), "09:12:00")
 		self.assertEqual(r.posting_time(datetime.date(2026, 11, 4), "Day Shift", today, "09:12:00"), "17:00:00")
 		self.assertEqual(r.posting_time(datetime.date(2026, 11, 4), "Night Shift", today, "09:12:00"), "23:00:00")
+
+
+class TestBackfill(unittest.TestCase):
+	ITEM = r.codes(A4)
+	STOCK = {"cov": 1000, "fld": 0, "ins": 100, "fg": 0, "carton": 50}
+
+	def plan(self, stock=None, cartons=2, **kw):
+		return r.backfill_plan(2, stock or self.STOCK, {"cartons": cartons}, books_per_carton=120, item=self.ITEM, **kw)
+
+	def test_posts_only_the_missing_inserts(self):
+		b = self.plan(cartons=2)  # 240 books = 120 inserts, 100 on hand
+		self.assertEqual(b["need"], 20)
+		self.assertEqual(b["inserts"]["extra"], {"sets": 20, "hold_fold_check": True})
+		self.assertTrue(b["packing"]["ok"])
+		self.assertEqual([x["after"] for x in b["packing"]["rows"] if x["key"] == "ins"], [0])
+
+	def test_no_folds_are_taken_when_none_are_recorded(self):
+		self.assertNotIn("fld", [x["key"] for x in self.plan()["inserts"]["rows"]])
+
+	def test_folds_are_taken_when_they_cover_the_need(self):
+		b = self.plan(dict(self.STOCK, fld=500))
+		self.assertFalse(b["inserts"]["extra"]["hold_fold_check"])
+		self.assertIn("fld", [x["key"] for x in b["inserts"]["rows"]])
+
+	def test_part_fold_stock_is_refused(self):
+		with self.assertRaisesRegex(r.CaptureError, "Not enough folds"):
+			self.plan(dict(self.STOCK, fld=5))
+
+	def test_short_covers_stay_blocked(self):
+		with self.assertRaisesRegex(r.CaptureError, "Not enough covers"):
+			self.plan(dict(self.STOCK, cov=10))
+
+	def test_short_cartons_refuse_before_anything_posts(self):
+		with self.assertRaisesRegex(r.CaptureError, "empty cartons"):
+			self.plan(dict(self.STOCK, carton=1))
+
+	def test_nothing_to_back_post(self):
+		with self.assertRaisesRegex(r.CaptureError, "enough inserts"):
+			self.plan(cartons=1)
+
+	def test_no_count(self):
+		with self.assertRaisesRegex(r.CaptureError, "Enter the full cartons"):
+			self.plan(cartons=0)
+
+	def test_closes_after_three_weeks(self):
+		self.assertTrue(r.backfill_open(datetime.date(2026, 11, 26)))
+		self.assertFalse(r.backfill_open(datetime.date(2026, 11, 27)))
 
 
 if __name__ == "__main__":

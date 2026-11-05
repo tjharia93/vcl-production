@@ -152,7 +152,7 @@
 
   function loadMode() {
     return get(M + "get_mode", {}).then(function (m) {
-      MODE = { checked: true, server: true, disabled: !!m.disabled, can_post: !!m.can_post, run_field: !!m.run_field, dated: Array.isArray(m.shifts), machines: m.machines || {}, user: m.user || "" };
+      MODE = { checked: true, server: true, disabled: !!m.disabled, can_post: !!m.can_post, can_backfill: !!m.can_backfill, backfill_until: m.backfill_until || "", run_field: !!m.run_field, dated: Array.isArray(m.shifts), machines: m.machines || {}, user: m.user || "" };
     }).catch(function () { MODE = { checked: true, server: false, can_post: false, user: "" }; });
   }
 
@@ -397,6 +397,18 @@
       "</tbody></table></div>";
   }
 
+  /* Back-post (Tanuj, 05/11/2026): System Manager only, until the server's date. The server decides;
+   * this only offers it when eb_capture.post_backfill_packing would accept. Mirrors rules.backfill_plan. */
+  function backfillNeed(P) {
+    if (S.station !== "packing" || !MODE.can_backfill || !(S.run || "").trim() || S.posting) return 0;
+    var s = stock(), need = (P.extra.sets || 0) - s.ins;
+    if (need <= 0 || !P.extra.books || need > s.cov || (s.fld > 0 && s.fld < need)) return 0;
+    if (P.msgs.some(function (m) { return m[0] === "bad" && !/^Not enough inserts/.test(m[1]); })) return 0;
+    return need;
+  }
+  function backfillBox(need) {
+    return '<div class="cap-msg warn">Short by ' + f(need) + " inserts. As System Manager you can post them with this packing while past days are being entered" + (MODE.backfill_until ? " (open until " + esc(dmy(MODE.backfill_until)) + ")" : "") + '.</div><button type="button" class="cap-sec" id="v3-bf" data-need="' + need + '">Post ' + f(need) + " inserts, then pack</button>";
+  }
   function renderPreview() {
     var el = $("v3-preview");
     $("v3-bar").hidden = S.station === "fg";
@@ -411,7 +423,8 @@
     el.innerHTML = '<div class="cap-h"><h3>What this entry will do</h3><span class="cap-note">' + esc(PLAIN[S.station] || P.type) + " · run " + esc(run || "-") + " · " + esc(whenText()) + "</span></div>" +
       (has ? '<div class="cap-rows">' + P.rows.map(function (r) { return '<div class="cap-row ' + r.dir + '"><span class="d">' + (r.dir === "out" ? "OUT −" : "IN +") + '</span><span class="it"><b title="' + esc(r.item) + '">' + esc(RL[r.key] || r.item) + "</b><span>" + (r.dir === "out" ? "from " : "into ") + esc(r.wh) + (r.unit !== "books" && r.unit !== "cartons" ? " · " + ctnBooks(Math.abs(r.qty) * g().ups) : "") + '</span></span><span class="q"><b>' + (r.qty > 0 ? "+" : "") + f(r.qty) + "</b><small>" + f(r.before) + " → " + f(r.after) + " " + r.unit + "</small></span></div>"; }).join("") + "</div>"
         : '<p class="cap-empty">Enter a count to see exactly what will post.</p>') +
-      msgs.map(function (m) { return '<div class="cap-msg ' + m[0] + '">' + esc(m[1]) + "</div>"; }).join("") + '<div id="v3-result"></div>';
+      msgs.map(function (m) { return '<div class="cap-msg ' + m[0] + '">' + esc(m[1]) + "</div>"; }).join("") + (backfillNeed(P) ? backfillBox(backfillNeed(P)) : "") + '<div id="v3-result"></div>';
+    var bf = $("v3-bf"); if (bf) bf.onclick = function () { doBackfill(+bf.dataset.need); };
     $("v3-run").classList.toggle("need", has && !run);
     var pb = $("v3-post");
     pb.disabled = !!S.posting || !P.ok;
@@ -489,8 +502,8 @@
 
   /* ---------- post / undo ---------- */
   var seq = 0;
-  function logEntry(P, live, name) {
-    var e = { n: ++seq, run: (S.run || "").trim(), when: whenText(), station: S.station, grp: gname(g()), type: PLAIN[S.station] || P.type, live: live, name: name, at: Date.now(), out: [], "in": [] };
+  function logEntry(P, live, name, st) {
+    var e = { n: ++seq, run: (S.run || "").trim(), when: whenText(), station: st || S.station, grp: gname(g()), type: PLAIN[st || S.station] || P.type, live: live, name: name, at: Date.now(), out: [], "in": [] };
     P.rows.forEach(function (r) { if (r.qty) (r.qty < 0 ? e.out : e["in"]).push([r.item, Math.abs(r.qty)]); });
     S.log.push(e);
   }
@@ -535,12 +548,42 @@
         });
     });
   }
+  function entryPayload(P, run) {
+    var bk = book();
+    return { station: S.station, group: S.group, book: bk ? bk.code : null, run: run, date: S.date, shift: S.shift, machine: (machine() || {}).name || "", weights: P.extra.weights || "", confirmed: 2,
+      inputs: { good: S.v.good, spoiled: S.v.spoiled, rejects: S.v.rejects, opening: !!S.v.opening, sets: S.v.sets, hold_fold_check: !!S.v.hold, cartons: S.v.cartons, loose: S.v.loose } };
+  }
+  function doBackfill(need) {
+    if (S.posting) return;
+    var P = planEntry(), run = (S.run || "").trim(), s = stock();
+    if (backfillNeed(P) !== need) return;
+    var folds = s.fld === 0 ? "Folds are not deducted: none are recorded yet." : f(need) + " folds come out of stock.";
+    dialog("Step 1 of 2: back-post " + f(need) + " inserts and pack?",
+      "<p><b>" + esc(gname(g())) + "</b> · run <code>" + esc(run) + "</code></p><p><b>Production date " + esc(whenText()) + "</b></p>" +
+      "<p><b>Entry 1:</b> " + f(need) + " cover sheets out, " + f(need) + " inserts in. " + esc(folds) + "</p>" +
+      "<p><b>Entry 2:</b> pack " + f(P.extra.books) + " books into Finished Goods.</p>" +
+      '<div class="cap-msg warn">Both are marked as back-posted by you. If either fails, neither posts.</div>',
+      "Yes, this is correct", function () {
+        dialog("Step 2 of 2: post both to ERPNext now?", '<p class="cap-msg warn">This changes stock in ERPNext.</p><p>' + f(need) + " inserts, then " + f(P.extra.books) + " books packed.</p>", "Post both now", function () { sendBackfill(P, run); });
+      });
+  }
+  function sendBackfill(P, run) {
+    var btn = $("v3-post"); S.posting = true; btn.disabled = true; btn.textContent = "Posting…";
+    post(M + "post_backfill_packing", { payload: JSON.stringify(entryPayload(P, run)) }).then(function (m) {
+      logEntry({ rows: m.inserts.rows, type: m.inserts.type }, true, m.inserts.name, "inserts");
+      logEntry({ rows: m.packing.rows, type: m.packing.type }, true, m.packing.name, "packing");
+      S.posting = false; clearProduction();
+      return load().catch(function () {}).then(function () { S.v = {}; renderStation();
+        $("v3-result").innerHTML = '<div class="cap-msg ok">Posted ✓ ' + f(m.need) + ' inserts (<a href="/app/stock-entry/' + encodeURIComponent(m.inserts.name) + '" target="_blank" rel="noopener">' + esc(m.inserts.name) + '</a>) and the packing (<a href="/app/stock-entry/' + encodeURIComponent(m.packing.name) + '" target="_blank" rel="noopener">' + esc(m.packing.name) + "</a>). To undo, cancel the packing first.</div>"; });
+    }).catch(function (err) {
+      S.posting = false; btn.textContent = "Post and receive"; renderPreview();
+      var msg = /404|not found|has no attribute|No module|not whitelisted/i.test(err.message) ? NEED : "Not posted. Neither entry went through. " + err.message;
+      $("v3-result").innerHTML = '<div class="cap-msg bad">' + esc(msg) + "</div>";
+    });
+  }
   function send(P, run) {
     var btn = $("v3-post"); S.posting = true; btn.disabled = true; btn.textContent = "Posting…";
-    var bk = book();
-    var payload = { station: S.station, group: S.group, book: bk ? bk.code : null, run: run, date: S.date, shift: S.shift, machine: (machine() || {}).name || "", weights: P.extra.weights || "", confirmed: 2,
-      inputs: { good: S.v.good, spoiled: S.v.spoiled, rejects: S.v.rejects, opening: !!S.v.opening, sets: S.v.sets, hold_fold_check: !!S.v.hold, cartons: S.v.cartons, loose: S.v.loose } };
-    post(M + "post_entry", { payload: JSON.stringify(payload) }).then(function (m) {
+    post(M + "post_entry", { payload: JSON.stringify(entryPayload(P, run)) }).then(function (m) {
       logEntry(P, true, m.name); S.posting = false; clearProduction();
       /* it has posted: a failed stock refresh must not read as "Not posted" */
       return load().catch(function () {}).then(function () { S.v = {}; renderStation();

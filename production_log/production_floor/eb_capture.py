@@ -10,6 +10,8 @@ a failure rolls the whole entry back. The remarks start with the audit line
 Kill switch: site config eb_capture_disabled = 1 refuses every post and undo.
 Undo: the same user may cancel an entry this page posted within 10 minutes (also
 confirmed twice on the page).
+Back-post: post_backfill_packing posts the missing inserts and the packing in one request.
+System Manager only, until rules.BACKFILL_UNTIL; both are checked here, not on the page.
 """
 
 import json
@@ -37,6 +39,10 @@ def _check_open(confirmed):
 def _require_role():
 	if not ROLES.intersection(frappe.get_roles()):
 		frappe.throw("Posting exercise-book stock needs a Stock or Manufacturing role.", frappe.PermissionError)
+
+
+def _can_backfill():
+	return rules.BACKFILL_ROLE in frappe.get_roles() and rules.backfill_open(getdate(nowdate()))
 
 
 def _bin(item, warehouse):
@@ -82,7 +88,7 @@ def get_mode():
 		"run_field": bool(frappe.get_meta("Stock Entry").has_field(RUN_FIELD)),
 		"shift_field": bool(frappe.get_meta("Stock Entry").has_field(SHIFT_FIELD)),
 		"shifts": list(rules.SHIFTS), "backdate_days": rules.BACKDATE_DAYS, "today": nowdate(), "user": frappe.session.user,
-		"machines": _machines()}
+		"machines": _machines(), "can_backfill": _can_backfill(), "backfill_until": str(rules.BACKFILL_UNTIL)}
 
 
 @frappe.whitelist(methods=["POST"])
@@ -108,8 +114,13 @@ def post_entry(payload):
 		frappe.throw(str(e))
 	if not p["ok"]:
 		frappe.throw("<br>".join(m[1] for m in p["msgs"] if m[0] == "bad") or "Nothing to post.")
+	return _write_entry(station, group, run, p, c, date, shift, machine, today, data)
+
+
+def _write_entry(station, group, run, p, c, date, shift, machine, today, data, note=None):
+	"""Insert and submit one planned entry. Returns what the page needs to show it."""
 	extra = dict(p["extra"])
-	if data.get("weights"):
+	if data.get("weights") and station == "packing":
 		extra["weights"] = str(data["weights"])[:200]
 	if machine:
 		extra["machine"], extra["asset"] = machine["name"], machine["asset"]
@@ -121,7 +132,7 @@ def post_entry(payload):
 	se.set_posting_time = 1
 	se.posting_date = date
 	se.posting_time = rules.posting_time(date, shift, today, nowtime())
-	se.remarks = rules.remarks(station, group, run, extra, data.get("note"), user=frappe.session.user,
+	se.remarks = rules.remarks(station, group, run, extra, note or data.get("note"), user=frappe.session.user,
 		at=format_datetime(now_datetime(), "dd-MM-yyyy HH:mm"), date=date, shift=shift)
 	if se.meta.has_field(RUN_FIELD):
 		se.set(RUN_FIELD, run)
@@ -149,6 +160,39 @@ def post_entry(payload):
 	se.insert()
 	se.submit()
 	return {"name": se.name, "type": p["type"], "posting_date": str(date), "shift": shift, "machine": machine["name"] if machine else None, "rows": p["rows"], "msgs": p["msgs"], "remarks": se.remarks}
+
+
+@frappe.whitelist(methods=["POST"])
+def post_backfill_packing(payload):
+	"""Packing short of inserts: post the missing inserts, then the packing. Same payload as post_entry.
+	Both are planned before either is written, and a failure rolls both back."""
+	data = json.loads(payload) if isinstance(payload, str) else (payload or {})
+	_check_open(data.get("confirmed"))
+	_require_role()
+	if rules.BACKFILL_ROLE not in frappe.get_roles():
+		frappe.throw("Back-posting needs the System Manager role.", frappe.PermissionError)
+	today = getdate(nowdate())
+	if not rules.backfill_open(today):
+		frappe.throw(f"Back-posting closed on {rules.BACKFILL_UNTIL.strftime('%d/%m/%Y')}. Enter the inserts on the Inserts station.")
+	group, run = data.get("group"), (data.get("run") or "").strip()
+	if not run:
+		frappe.throw("Enter the run number.")
+	try:
+		date, shift = rules.check_when(data.get("date"), data.get("shift"), today)
+		machine = rules.check_machine("packing", data.get("machine"), _machines())
+		g, c, ups, cpc, carton_enabled, stock = _group_context(group, data.get("book"))
+		b = rules.backfill_plan(ups, stock, data.get("inputs") or {}, books_per_carton=cpc, carton_enabled=carton_enabled, item=c)
+	except rules.CaptureError as e:
+		frappe.throw(str(e))
+	try:
+		ins = _write_entry("inserts", group, run, b["inserts"], c, date, shift, None, today, data,
+			note=f"BACK-POSTED FROM PACKING by {frappe.session.user}: {b['need']:,} inserts")
+		pack = _write_entry("packing", group, run, b["packing"], c, date, shift, machine, today, data,
+			note=f"Includes {b['need']:,} back-posted inserts ({ins['name']})")
+	except Exception:
+		frappe.db.rollback()
+		raise
+	return {"need": b["need"], "inserts": ins, "packing": pack}
 
 
 @frappe.whitelist(methods=["POST"])
