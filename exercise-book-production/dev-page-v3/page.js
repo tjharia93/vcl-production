@@ -41,7 +41,7 @@
   var LS = "vcl.eb-v3.";
 
   var D = null;          // loaded data
-  var S = { group: null, book: null, run: "", station: "covers", log: [], v: {} };
+  var S = { view: "capture", group: null, book: null, run: "", station: "covers", log: [], v: {} };
   var MODE = { checked: false, server: false, can_post: false, user: "" };
   var NEED = "Server update needed: deploy vcl-production feat/eb-capture-v3 and migrate. Nothing was posted.";
 
@@ -205,7 +205,6 @@
     else if (MODE.disabled) b = '<div class="banner live">Posting is switched off on this site (eb_capture_disabled).</div>';
     else if (!MODE.can_post) b = '<div class="banner live">Your login has no Stock or Manufacturing role, so Post is refused.</div>';
     else b = '<div class="banner preview">Posting changes stock in ERPNext. Every post asks you to confirm twice, and can be undone for 10 minutes.</div>';
-    $("v3-mode").innerHTML = "";
     $("v3-banner").innerHTML = b;
     renderChart();
   }
@@ -411,12 +410,238 @@
     });
   }
 
+  /* ---------- Orders and Order & stock (ported from v1 /production-dev, 05/11/2026) ----------
+   * Read-only. One get_list over Sales Order child rows (no per-order fetch).
+   * Fixes from the v1 inventory: covers are SHEETS (books = sheets x ups), inserts are read
+   * from Stores stock (so Repacks count), finished stock is Finished Goods - VCL only. */
+  var O = null;   // orders data
+  var OV = { scope: lsGet("o.scope", "open"), unit: lsGet("o.unit", "books"), brand: "", customer: "", size: "", pages: "", ruling: "", q: "" };
+  var NOT_ORDER_GROUPS = /covers|inserts|folds/i;
+
+  function dims(code, name, group) {
+    var c = String(code || ""), n = String(name || ""), t = c + " " + n;
+    var m = /^(PNCEB|SWREB|SCH-(?:BP|NP|WBP)-EB)-(A\d)-(\d+)PGS-([A-Z]+)-[A-Z]+-([A-Z0-9]+)$/.exec(c);
+    var brand = /^PNC/.test(c) || /prince/i.test(t + " " + group) ? "Prince" : /^SWR/.test(c) || /swara/i.test(t + " " + group) ? "Swara" : /hi5/i.test(t + " " + group) ? "Hi5" : /^SCH-|school/i.test(c + " " + group) ? "School" : "Other";
+    if (m) return { brand: brand, size: m[2], pages: +m[3], board: m[4], ruling: m[5] };
+    var size = (/\b(A[3-6])\b/i.exec(t) || [])[1], pages = (/(\d+)\s*-?\s*(?:pages?|pgs?)\b/i.exec(t) || / - (\d{2,3})\b/.exec(t) || [])[1];
+    var rul = /\bHSL\b/i.test(t) ? "HSL" : /\bHSQ\b/i.test(t) ? "HSQ" : /\b(?:Irish|IRS)\b/i.test(t) ? "IRS" : /\b(?:Graph|GPH)\b/i.test(t) ? "GPH" : /\b(?:Plain|PLN)\b/i.test(t) ? "PLN" : /square|\bS\/?Q\b/i.test(t) ? "SQ" : /single|\bS\/?L\b/i.test(t) ? "SL" : /music/i.test(t) ? "MSC" : "";
+    var board = /chipboard|\bCB\b/i.test(t) ? "CB" : /manil+a|\bMNL\b/i.test(t) ? "MNL" : /\bMG\s*C(?:over)?\b|\bMGC\b/i.test(t) ? "MGC" : "";
+    return { brand: brand, size: size ? size.toUpperCase() : "", pages: pages ? +pages : 0, board: board, ruling: rul };
+  }
+  function rulName(r) { return r ? (RUL[r] || r) : "Ruling not stated"; }
+  function bucketKey(d) { return [d.brand, d.size || "?", d.pages || 0, d.ruling || "?"].join("|"); }
+
+  function loadOrders() {
+    return list("Item Group", ["name", "parent_item_group"], []).then(function (gs) {
+      var sel = {}; gs.forEach(function (g0) { if (/exercise[\s-]*books?/i.test(g0.name)) sel[g0.name] = 1; });
+      var ch = true; while (ch) { ch = false; gs.forEach(function (g0) { if (sel[g0.parent_item_group] && !sel[g0.name]) { sel[g0.name] = 1; ch = true; } }); }
+      var groups = Object.keys(sel).filter(function (x) { return !NOT_ORDER_GROUPS.test(x); });
+      var cols = ["name", "customer", "customer_name", "transaction_date", "delivery_date", "status", "docstatus",
+        "`tabSales Order Item`.item_code as item_code", "`tabSales Order Item`.item_name as item_name", "`tabSales Order Item`.item_group as item_group",
+        "`tabSales Order Item`.qty as qty", "`tabSales Order Item`.delivered_qty as delivered_qty", "`tabSales Order Item`.uom as uom",
+        "`tabSales Order Item`.conversion_factor as cf", "`tabSales Order Item`.delivery_date as line_due", "`tabSales Order Item`.idx as idx"];
+      return Promise.all([
+        list("Sales Order", cols, [["Sales Order Item", "item_group", "in", groups], ["docstatus", "<", 2]]),
+        list("Item", ["name", "`tabUOM Conversion Detail`.conversion_factor as cf"], [["UOM Conversion Detail", "uom", "=", "Carton"], ["item_group", "in", groups]])
+      ]).then(function (r) {
+        var cpc = {}; r[1].forEach(function (x) { cpc[x.name] = Number(x.cf) || 0; });
+        var lines = r[0].map(function (l) {
+          var cf = Number(l.cf) || 1, qty = Number(l.qty) || 0, del = Number(l.delivered_qty) || 0, carton = /^cartons?$/i.test(l.uom);
+          var per = carton ? cf : (cpc[l.item_code] || 0);
+          return { so: l.name, customer: l.customer_name || l.customer, date: l.transaction_date, due: l.line_due || l.delivery_date, status: l.status, ds: Number(l.docstatus),
+            code: l.item_code, name: l.item_name, group: l.item_group, d: dims(l.item_code, l.item_name, l.item_group), per: per, uom: l.uom,
+            books: qty * cf, delivered: del * cf, pending: Math.max(0, (qty - del) * cf) };
+        });
+        O = { lines: lines, cpc: cpc, loadedAt: new Date() };
+      });
+    });
+  }
+  function isOpen(l) { return l.ds === 1 && (l.status === "To Deliver and Bill" || l.status === "To Deliver") && l.pending > 0; }
+  function isConfirmed(l) { return l.ds === 1 && l.status !== "Closed" && l.status !== "Cancelled"; }
+  function inUnit(books, per) { return OV.unit === "cartons" ? (per ? books / per : null) : books; }
+  function fu(books, per) { var v = inUnit(books, per); return v == null ? "-" : OV.unit === "cartons" ? (Math.round(v * 10) / 10).toLocaleString("en-GB") : f(v); }
+  function passes(l) {
+    var d = l.d, q = OV.q.trim().toLowerCase();
+    return (!OV.brand || d.brand === OV.brand) && (!OV.customer || l.customer === OV.customer) && (!OV.size || d.size === OV.size) &&
+      (!OV.pages || String(d.pages) === OV.pages) && (!OV.ruling || d.ruling === OV.ruling) &&
+      (!q || [l.so, l.customer, l.code, l.name].join(" ").toLowerCase().indexOf(q) >= 0);
+  }
+  function uniq(a) { return a.filter(function (v, i) { return v !== "" && v != null && a.indexOf(v) === i; }); }
+  function sel(id, label, cur, opts) {
+    return '<label class="cap-grp of"><span class="lb">' + label + '</span><select id="' + id + '"><option value="">All</option>' +
+      opts.map(function (o) { var v = Array.isArray(o) ? o[0] : o, t = Array.isArray(o) ? o[1] : o; return '<option value="' + esc(v) + '"' + (String(v) === String(cur) ? " selected" : "") + ">" + esc(t) + "</option>"; }).join("") + "</select></label>";
+  }
+  function filterBar(withScope) {
+    var L = O.lines;
+    var h = '<div class="cap-top">' +
+      '<label class="cap-grp" style="flex:2 1 240px"><span class="lb">Search order, customer or item</span><input id="o-q" type="search" autocomplete="off" value="' + esc(OV.q) + '"></label>' +
+      sel("o-brand", "Brand", OV.brand, uniq(L.map(function (l) { return l.d.brand; })).sort()) +
+      sel("o-customer", "Customer", OV.customer, uniq(L.map(function (l) { return l.customer; })).sort()) +
+      sel("o-size", "Size", OV.size, uniq(L.map(function (l) { return l.d.size; })).sort()) +
+      sel("o-pages", "Pages", OV.pages, uniq(L.map(function (l) { return l.d.pages || ""; })).sort(function (a, b) { return a - b; })) +
+      sel("o-ruling", "Ruling", OV.ruling, uniq(L.map(function (l) { return l.d.ruling; })).sort().map(function (r) { return [r, rulName(r)]; })) + "</div>" +
+      '<div class="cap-top">' +
+      (withScope ? '<div class="seg" role="group" aria-label="Which orders"><button type="button" data-scope="open" aria-pressed="' + (OV.scope === "open") + '">Open orders</button><button type="button" data-scope="all" aria-pressed="' + (OV.scope === "all") + '">All non-cancelled</button></div>' : "") +
+      '<div class="seg" role="group" aria-label="Unit"><button type="button" data-unit="books" aria-pressed="' + (OV.unit === "books") + '">Books</button><button type="button" data-unit="cartons" aria-pressed="' + (OV.unit === "cartons") + '">Cartons</button></div>' +
+      '<span style="flex:1"></span><button type="button" class="cap-sec" id="o-xlsx">Download Excel</button><button type="button" class="cap-sec" id="o-pdf">Print / PDF</button><button type="button" class="cap-sec" id="o-reload">Reload</button></div>';
+    return h;
+  }
+  function wireBar(paint) {
+    var a = $("v3-app");
+    $("o-q").oninput = function (e) { OV.q = e.target.value; paint(true); };
+    ["brand", "customer", "size", "pages", "ruling"].forEach(function (k) { $("o-" + k).onchange = function (e) { OV[k] = e.target.value; paint(); }; });
+    [].forEach.call(a.querySelectorAll("[data-scope]"), function (b) { b.onclick = function () { OV.scope = b.dataset.scope; lsSet("o.scope", OV.scope); paint(); }; });
+    [].forEach.call(a.querySelectorAll("[data-unit]"), function (b) { b.onclick = function () { OV.unit = b.dataset.unit; lsSet("o.unit", OV.unit); paint(); }; });
+    $("o-reload").onclick = function () { this.textContent = "Reloading…"; Promise.all([loadOrders(), load()]).then(function () { paint(); }); };
+    $("o-pdf").onclick = function () { window.print(); };
+  }
+  function keepSearchFocus(fn) { return function (fromSearch) { var pos = fromSearch ? $("o-q").selectionStart : null; fn(); if (fromSearch) { var i = $("o-q"); i.focus(); try { i.setSelectionRange(pos, pos); } catch (e) {} } }; }
+
+  /* Orders: the v1 "Orders Pending" screen. */
+  function renderOrders() {
+    var paint = keepSearchFocus(function () {
+      var conf = O.lines.filter(function (l) { return isConfirmed(l) && passes(l); });
+      var shown = O.lines.filter(function (l) { return passes(l) && (OV.scope === "all" ? true : isOpen(l)); })
+        .sort(function (a, b) { return String(a.due || "9").localeCompare(String(b.due || "9")) || a.so.localeCompare(b.so); });
+      var T = { o: 0, d: 0, p: 0, oc: 0, dc: 0, pc: 0, miss: 0 }, B = {};
+      conf.forEach(function (l) {
+        var k = bucketKey(l.d); B[k] = B[k] || { d: l.d, o: 0, dl: 0, p: 0, oc: 0, dc: 0, pc: 0 };
+        [T, B[k]].forEach(function (t) { t.o += l.books; t[t === T ? "d" : "dl"] += l.delivered; t.p += l.pending; if (l.per) { t.oc += l.books / l.per; t.dc += l.delivered / l.per; t.pc += l.pending / l.per; } });
+        if (!l.per) T.miss++;
+      });
+      function v(t, which) { if (OV.unit === "cartons") { var x = t[which + "c"]; return (Math.round(x * 10) / 10).toLocaleString("en-GB"); } return f(t[which === "d" && t.dl != null ? "dl" : which]); }
+      var brands = {}; Object.keys(B).forEach(function (k) { var b = B[k]; (brands[b.d.brand] = brands[b.d.brand] || []).push(b); });
+      var h = filterBar(true) +
+        '<div class="cap-stock">' + [["Ordered", T.o, T.oc], ["Delivered", T.d, T.dc], ["Still to deliver", T.p, T.pc]].map(function (x) { return '<div><span class="n">' + x[0] + '</span><span class="v">' + (OV.unit === "cartons" ? (Math.round(x[2] * 10) / 10).toLocaleString("en-GB") : f(x[1])) + '</span><span class="s">' + (OV.unit === "cartons" ? "cartons" : "books") + "</span></div>"; }).join("") + "</div>" +
+        (OV.unit === "cartons" && T.miss ? '<div class="cap-msg warn">' + T.miss + " order lines have no Carton unit on the item, so they are left out of the carton figures.</div>" : "");
+      Object.keys(brands).sort().forEach(function (br) {
+        var bs = brands[br], rul = uniq(bs.map(function (b) { return b.d.ruling || "?"; })).sort(function (a, b) { return Object.keys(RUL).indexOf(a) - Object.keys(RUL).indexOf(b); });
+        var rows = {}; bs.forEach(function (b) { var k = (b.d.size || "?") + "|" + (b.d.pages || 0); (rows[k] = rows[k] || { size: b.d.size || "Not stated", pages: b.d.pages, by: {} }).by[b.d.ruling || "?"] = b; });
+        var rk = Object.keys(rows).sort(function (a, b) { var x = rows[a], y = rows[b]; return x.size.localeCompare(y.size) || (x.pages || 9999) - (y.pages || 9999); });
+        var pend = bs.reduce(function (s, b) { return s + (OV.unit === "cartons" ? b.pc : b.p); }, 0);
+        h += '<div class="cap-card"><div class="cap-h"><h3>' + esc(br) + '</h3><span class="cap-note">' + (OV.unit === "cartons" ? (Math.round(pend * 10) / 10).toLocaleString("en-GB") + " cartons" : f(pend) + " books") + ' still to deliver</span></div><div class="tw"><table class="mx"><thead><tr><th rowspan="2">Size</th><th rowspan="2" class="num">Pages</th>' +
+          rul.map(function (r) { return '<th colspan="3" class="grp">' + esc(r === "?" ? "Ruling not stated" : rulName(r)) + "</th>"; }).join("") + "</tr><tr>" +
+          rul.map(function () { return '<th class="num st">Ordered</th><th class="num">Delivered</th><th class="num pend">Pending</th>'; }).join("") + "</tr></thead><tbody>" +
+          rk.map(function (k) { var r = rows[k]; return "<tr><th>" + esc(r.size) + '</th><td class="num">' + (r.pages || "-") + "</td>" + rul.map(function (u) { var b = r.by[u]; return b ? '<td class="num st">' + v(b, "o") + '</td><td class="num">' + v(b, "d") + '</td><td class="num pend">' + v(b, "p") + "</td>" : '<td class="num st empty">-</td><td class="num empty">-</td><td class="num empty">-</td>'; }).join("") + "</tr>"; }).join("") +
+          "</tbody></table></div></div>";
+      });
+      if (!Object.keys(B).length) h += '<div class="cap-msg info">No confirmed orders match these filters.</div>';
+      h += '<div class="cap-card"><div class="cap-h"><h3>' + (OV.scope === "open" ? "Open order lines" : "All non-cancelled order lines") + ', earliest delivery first</h3><span class="cap-note">' + shown.length + ' lines</span></div><div class="tw"><table><thead><tr><th>Due</th><th>Order</th><th>Customer</th><th>Item</th><th class="num">Ordered</th><th class="num">Delivered</th><th class="num">Pending</th><th>Status</th></tr></thead><tbody>' +
+        (shown.length ? shown.map(function (l) { return '<tr><td class="dt">' + esc(l.due || "") + '</td><td><a href="/app/sales-order/' + encodeURIComponent(l.so) + '" target="_blank" rel="noopener">' + esc(l.so) + "</a></td><td>" + esc(l.customer) + "</td><td><code>" + esc(l.code) + '</code><br><span class="cap-note">' + esc(l.name) + '</span></td><td class="num">' + fu(l.books, l.per) + '</td><td class="num">' + fu(l.delivered, l.per) + '</td><td class="num"><b>' + fu(l.pending, l.per) + "</b></td><td>" + esc(l.ds === 0 ? "Draft" : l.status) + "</td></tr>"; }).join("") : '<tr><td colspan="8" class="cap-note">No order lines match.</td></tr>') +
+        "</tbody></table></div></div>" +
+        '<p class="cap-note">Grid: confirmed orders, including delivered and on-hold; drafts, cancelled and closed left out. Books = order quantity × the line\'s unit conversion. Size, pages and ruling come from the item code, or from the item name for older items. Read ' + O.loadedAt.toLocaleTimeString("en-GB") + ".</p>";
+      $("v3-app").innerHTML = '<div class="cap">' + h + "</div>";
+      wireBar(paint);
+      $("o-xlsx").onclick = function () {
+        download("EB open orders " + today(), ["Due", "Order", "Customer", "Item code", "Item", "Brand", "Size", "Pages", "Ruling", "Ordered (books)", "Delivered (books)", "Pending (books)", "Pending (cartons)", "Status"],
+          shown.map(function (l) { return [l.due || "", l.so, l.customer, l.code, l.name, l.d.brand, l.d.size, l.d.pages || "", rulName(l.d.ruling), l.books, l.delivered, l.pending, l.per ? Math.round(l.pending / l.per * 10) / 10 : "", l.ds === 0 ? "Draft" : l.status]; }));
+      };
+    });
+    paint();
+  }
+
+  /* Order & stock: the v1 comparison, rebuilt on the sheet/set model. */
+  function renderOrderStock() {
+    var paint = keepSearchFocus(function () {
+      var open = O.lines.filter(function (l) { return isOpen(l) && passes(l); }), R = {};
+      open.forEach(function (l) {
+        var k = bucketKey(l.d); R[k] = R[k] || { d: l.d, lines: [], codes: {}, pending: 0, per: 0 };
+        R[k].lines.push(l); R[k].codes[l.code] = l.per; R[k].pending += l.pending; if (l.per && !R[k].per) R[k].per = l.per;
+      });
+      var rows = Object.keys(R).map(function (k) {
+        var r = R[k], d = r.d, gk = d.brand + "|" + d.size + "|" + d.pages + "|" + d.ruling, gg = D && D.groups[gk];
+        if (gg) gg.books.forEach(function (b) { if (!(b.code in r.codes)) r.codes[b.code] = b.cpc; if (!r.per && b.cpc) r.per = b.cpc; });
+        r.fg = Object.keys(r.codes).reduce(function (s, c) { return s + (D.bin[c + "|" + FG] || 0); }, 0);
+        r.need = Math.max(0, r.pending - r.fg);
+        r.gg = gg || null;
+        if (gg) {
+          var u = gg.ups; r.cov = D.bin[gg.cov + "|" + STORES] || 0; r.fld = D.bin[gg.fld + "|" + STORES] || 0; r.ins = D.bin[gg.ins + "|" + STORES] || 0;
+          r.pipe = (r.ins + r.cov) * u;                       // inserts ready + covers printed (each cover sheet makes `ups` books)
+          r.short = Math.max(0, r.need - r.pipe);
+          r.sheets = Math.ceil(r.short / u);
+          var ct = gg.carton ? D.cartons[gg.carton] : null; r.ctn = ct ? ct.qty : null; r.ctnOff = ct ? ct.disabled : false;
+          r.ctnNeed = r.per ? Math.ceil(r.need / r.per) : null;
+        }
+        return r;
+      }).sort(function (a, b) { return (b.short || 0) - (a.short || 0) || b.need - a.need || bucketKey(a.d).localeCompare(bucketKey(b.d)); });
+      var sum = function (k) { return rows.reduce(function (s, r) { return s + (r[k] || 0); }, 0); };
+      var h = filterBar(false) +
+        '<div class="cap-stock">' + [["On open orders", sum("pending"), "books"], ["In Finished Goods", sum("fg"), "books (matched)"], ["Still to make", sum("need"), "books"], ["Short after stock and pipeline", sum("short"), "books"]].map(function (x) { return '<div><span class="n">' + x[0] + '</span><span class="v">' + f(x[1]) + '</span><span class="s">' + x[2] + "</span></div>"; }).join("") + "</div>" +
+        (OV.unit === "cartons" ? '<div class="cap-msg info">Totals stay in books; each row shows cartons where the book has a Carton unit.</div>' : "") +
+        '<div class="cap-card"><div class="cap-h"><h3>Order & stock by book type</h3><span class="cap-note">' + rows.length + ' book types · biggest shortfall first</span></div><div class="tw"><table class="os"><thead><tr><th>Book type</th><th class="num">Pending</th><th class="num">Finished Goods</th><th class="num">Still to make</th><th class="num">Inserts</th><th class="num">Covers</th><th class="num">Folds</th><th class="num">Short</th><th class="num">Sheets to print</th><th class="num">Empty cartons</th><th></th></tr></thead><tbody>' +
+        rows.map(function (r, i) {
+          var d = r.d, p = r.per, gg = r.gg;
+          function bk(n) { return fu(n, p) + '<small>' + (OV.unit === "cartons" ? (p ? "ctn" : "no ctn unit") : "books") + "</small>"; }
+          function set(n, unit) { return f(n) + "<small>" + unit + " = " + f(n * gg.ups) + " books</small>"; }
+          return '<tr><th><b>' + esc(d.brand + " · " + (d.size || "?") + " · " + (d.pages || "?") + " pages") + "</b><br>" + esc(rulName(d.ruling)) + '<br><span class="cap-note">' + (p ? p + " books/carton" : "no Carton unit") + (gg ? " · " + gg.ups + "-up" : "") + "</span></th>" +
+            '<td class="num">' + bk(r.pending) + '</td><td class="num">' + bk(r.fg) + '</td><td class="num"><b>' + bk(r.need) + "</b></td>" +
+            (gg ? '<td class="num">' + set(r.ins, "sets") + '</td><td class="num">' + set(r.cov, "sheets") + '</td><td class="num">' + set(r.fld, "sets") + "</td>" +
+              '<td class="num ' + (r.short ? "bad" : "ok") + '">' + (r.short ? "<b>" + bk(r.short) + "</b>" : "Covered") + '</td><td class="num">' + (r.sheets ? "<b>" + f(r.sheets) + "</b><small>" + esc(gg.cov) + "</small>" : "-") + "</td>" +
+              '<td class="num ' + (r.ctnNeed != null && r.ctn != null && r.ctn < r.ctnNeed ? "bad" : "") + '">' + (r.ctn == null ? "-" : f(r.ctn) + "<small>" + (r.ctnOff ? "item disabled" : "shared pool · need " + (r.ctnNeed == null ? "?" : f(r.ctnNeed))) + "</small>") + "</td>"
+              : '<td colspan="6" class="cap-note">No covers/folds/inserts items for this type yet (school and Hi5 are Phase 2/3). Only orders and Finished Goods are compared.</td>') +
+            '<td><button type="button" class="cap-sec sm" data-det="' + i + '" aria-expanded="false">Details</button></td></tr>' +
+            '<tr class="det" id="o-det-' + i + '" hidden><td colspan="11"><div class="detg"><section><b>Finished Goods - VCL by item</b>' + Object.keys(r.codes).map(function (c) { return "<div><code>" + esc(c) + "</code> · " + f(D.bin[c + "|" + FG] || 0) + " books</div>"; }).join("") + "</section>" +
+            "<section><b>Open order lines</b>" + r.lines.map(function (l) { return "<div>" + esc(l.due || "") + " · " + esc(l.so) + " · " + esc(l.customer) + " · <b>" + f(l.pending) + "</b> books</div>"; }).join("") + "</section>" +
+            (gg ? "<section><b>Stores - VCL</b><div><code>" + esc(gg.cov) + "</code> · " + f(r.cov) + " sheets</div><div><code>" + esc(gg.fld) + "</code> · " + f(r.fld) + " sets</div><div><code>" + esc(gg.ins) + "</code> · " + f(r.ins) + " sets</div><div><code>" + esc(gg.carton || "no carton set") + "</code> · " + (r.ctn == null ? "-" : f(r.ctn)) + " cartons</div></section>" : "") + "</div></td></tr>";
+        }).join("") + (rows.length ? "" : '<tr><td colspan="11" class="cap-note">No open orders match these filters.</td></tr>') + "</tbody></table></div></div>" +
+        '<p class="cap-note">Finished Goods - VCL only (other warehouses are not counted as sellable). Inserts, covers and folds are Stores - VCL, counted in sheets/sets: books = sets × up-count (A4 2-up, A5 3-up). Short = still to make − (inserts + covers) × up-count; folds are shown but not yet counted in the pipeline until there is a fold count. Sheets to print = short ÷ up-count. Empty cartons use the size + brand carton (P12 proposal).</p>';
+      $("v3-app").innerHTML = '<div class="cap">' + h + "</div>";
+      wireBar(paint);
+      [].forEach.call($("v3-app").querySelectorAll("[data-det]"), function (b) { b.onclick = function () { var row = $("o-det-" + b.dataset.det), op = row.hidden; row.hidden = !op; b.setAttribute("aria-expanded", String(op)); b.textContent = op ? "Close" : "Details"; }; });
+      $("o-xlsx").onclick = function () {
+        download("EB order and stock " + today(), ["Brand", "Size", "Pages", "Ruling", "Books per carton", "Up-count", "Pending (books)", "Finished Goods (books)", "Still to make (books)", "Inserts (sets)", "Covers (sheets)", "Folds (sets)", "Short (books)", "Sheets to print", "Empty cartons", "Cartons needed"],
+          rows.map(function (r) { var gg = r.gg; return [r.d.brand, r.d.size, r.d.pages || "", rulName(r.d.ruling), r.per || "", gg ? gg.ups : "", r.pending, r.fg, r.need, gg ? r.ins : "", gg ? r.cov : "", gg ? r.fld : "", gg ? r.short : "", gg ? r.sheets : "", r.ctn == null ? "" : r.ctn, r.ctnNeed == null ? "" : r.ctnNeed]; }));
+      };
+    });
+    paint();
+  }
+
+  function today() { return new Date().toISOString().slice(0, 10); }
+  /* Excel download: an .xlsx through the site's ExcelJS (/files/vcl-exceljs-4.4.0.js, used by v1); CSV if it can't load. */
+  function download(title, head, rows) {
+    function csv() {
+      var s = [head].concat(rows).map(function (r) { return r.map(function (c) { c = String(c == null ? "" : c); return /[",\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(","); }).join("\r\n");
+      save(new Blob(["﻿" + s], { type: "text/csv" }), title + ".csv");
+    }
+    function save(blob, name) { var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+    (window.ExcelJS ? Promise.resolve() : new Promise(function (ok, no) { var s = document.createElement("script"); s.src = "/files/vcl-exceljs-4.4.0.js"; s.onload = ok; s.onerror = no; document.head.appendChild(s); }))
+      .then(function () {
+        var wb = new ExcelJS.Workbook(), ws = wb.addWorksheet("Sheet1");
+        ws.addRow([title + " · read " + new Date().toLocaleString("en-GB")]).font = { bold: true, size: 13 };
+        var hr = ws.addRow(head); hr.font = { bold: true, color: { argb: "FFFFFFFF" } }; hr.eachCell(function (c) { c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF2B3990" } }; });
+        rows.forEach(function (r) { ws.addRow(r); });
+        ws.columns.forEach(function (c, i) { c.width = Math.min(40, Math.max(10, String(head[i] || "").length + 2)); });
+        ws.views = [{ state: "frozen", ySplit: 2 }];
+        return wb.xlsx.writeBuffer().then(function (buf) { save(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), title + ".xlsx"); });
+      }).catch(csv);
+  }
+
+  /* ---------- views: Capture | Orders | Order & stock ---------- */
+  var VIEWS = [["capture", "Capture"], ["orders", "Orders"], ["orderstock", "Order & stock"]];
+  function renderViews() {
+    $("v3-mode").innerHTML = '<div class="seg views" role="tablist" aria-label="Screens">' + VIEWS.map(function (v) { return '<button type="button" role="tab" data-view="' + v[0] + '" aria-pressed="' + (S.view === v[0]) + '">' + v[1] + "</button>"; }).join("") + "</div>";
+    [].forEach.call($("v3-mode").querySelectorAll("[data-view]"), function (b) { b.onclick = function () { showView(b.dataset.view); }; });
+  }
+  function showView(v) {
+    S.view = v; lsSet("view", v);
+    try { var u = new URL(location.href); u.searchParams.set("view", v); history.replaceState(null, "", u); } catch (e) {}
+    renderViews();
+    $("v3-chart").hidden = v !== "capture"; $("v3-banner").hidden = v !== "capture";
+    if (v === "capture") { renderShell(); return; }
+    var go = function () { if (S.view === v) (v === "orders" ? renderOrders : renderOrderStock)(); };
+    if (O) { go(); return; }
+    $("v3-app").innerHTML = '<div class="loading">Loading exercise book orders…</div>';
+    loadOrders().then(go).catch(function (err) { $("v3-app").innerHTML = '<div class="cap-msg bad">Could not load orders: ' + esc(err.message) + "</div>"; });
+  }
+
   /* ---------- start ---------- */
   function start() {
     S.group = lsGet("group", null); S.station = lsGet("station", "covers"); S.run = lsGet("run", "");
     if (STEPS.map(function (s) { return s[0]; }).indexOf(S.station) < 0) S.station = "covers";
     renderMode();
-    Promise.all([loadMode(), load()]).then(function () { renderMode(); renderShell(); })
+    var qv = null; try { qv = new URL(location.href).searchParams.get("view"); } catch (e) {}
+    S.view = qv || lsGet("view", "capture"); if (!VIEWS.some(function (v) { return v[0] === S.view; })) S.view = "capture";
+    Promise.all([loadMode(), load()]).then(function () { renderMode(); showView(S.view); })
       .catch(function (err) { $("v3-app").innerHTML = '<div class="cap-msg bad">Could not read stock from ERPNext: ' + esc(err.message) + ". Are you signed in?</div>"; });
   }
   if (window.frappe && frappe.session && frappe.session.user === "Guest") { location.href = "/login?redirect-to=" + encodeURIComponent(location.pathname + location.search); return; }

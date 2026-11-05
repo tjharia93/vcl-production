@@ -15,6 +15,28 @@ The stations run Covers → Folds → Inserts → Packing → Finished Goods, wi
 
 Covers, folds and inserts count in sets with the same up-count: A4 2-up, A5 3-up, read from the item name. Only packing counts books.
 
+## Screens (05/11/2026)
+Three screens, chosen with the switch at the top (`?view=capture|orders|orderstock`, remembered per browser):
+- **Capture**: the stations above.
+- **Orders**: the v1 "Orders Pending" screen. Covers all exercise-book item groups (Prince, Swara, Hi5, School), except Covers, Inserts and Folds.
+  - Grid of ordered / delivered / pending per brand, as size × pages rows and ruling columns. It counts confirmed orders only: no drafts, cancelled or closed.
+  - List of open lines, or all non-cancelled lines, earliest delivery first.
+  - Filters: search, brand, customer, size, pages, ruling. Books or Cartons switch. Excel download (ExcelJS from `/files/vcl-exceljs-4.4.0.js`, or CSV if that file is missing). Print / PDF.
+  - Reads everything in one `get_list` on Sales Order child rows, instead of v1's one fetch per order.
+- **Order & stock**: the v1 comparison, rebuilt on the sheet/set model. Each book type shows pending, Finished Goods (Finished Goods - VCL only), still to make, inserts / covers / folds in Stores (sets or sheets × up-count), short, sheets to print, and empty cartons (a shared pool per size and brand).
+  - Short = still to make − (inserts + covers) × up-count. Folds aren't counted yet, because there's no fold count.
+  - School and Hi5 have no cover/fold/insert items yet, so only their orders and Finished Goods are compared.
+  - Fixes these v1 faults: covers were counted as books instead of sheets; Repacks were missing from inserts; finished stock came from every warehouse.
+- Left out of v1: the aging board and the Packing/Materials modes. They read one person's browser storage only.
+
+## Look
+Material 3, using the VCL Android app's own tokens and shapes (`ui/theme/Color.kt`, `Shapes.kt`):
+- VCL Blue #2B3990 primary on cool tinted surfaces (#F4F6FA page, white cards).
+- Carlito/Calibri text.
+- Outlined fields with the label on the outline.
+- Pill buttons and segmented buttons.
+- 16px cards, 12px fields, 28px dialogs.
+
 ## Posting (Tanuj, 04/11/2026)
 - Every post is **confirmed twice**: "Is this correct?" (every row) and then "Post to ERPNext now?" (totals). Post now is never pre-focused, and Enter does nothing.
 - Undo is open to the same user for 10 minutes, and is also confirmed twice.
