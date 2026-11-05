@@ -515,7 +515,8 @@
       opts.map(function (o) { var v = Array.isArray(o) ? o[0] : o, t = Array.isArray(o) ? o[1] : o; return '<option value="' + esc(v) + '"' + (String(v) === String(cur) ? " selected" : "") + ">" + esc(t) + "</option>"; }).join("") + "</select></label>";
   }
   function tile(label, ctn, books, extra) { return '<div><span class="n">' + label + '</span><span class="v">' + c1(ctn) + ' <small>ctn</small></span><span class="s">' + f(books) + " books" + (extra || "") + "</span></div>"; }
-  function filterBar(withScope) {
+  function barBtns() { return '<div class="btn-grp"><button type="button" class="cap-sec" id="o-xlsx">Download Excel</button><button type="button" class="cap-sec" id="o-pdf">Print / PDF</button><button type="button" class="cap-sec" id="o-reload">Reload</button></div>'; }
+  function filterBar(withScope, noActions) {
     var L = O.lines;
     return '<div class="cap-top">' +
       '<label class="cap-grp" style="flex:2 1 240px"><span class="lb">Search order, customer or item</span><input id="o-q" type="search" autocomplete="off" value="' + esc(OV.q) + '"></label>' +
@@ -523,11 +524,11 @@
       sel("o-customer", "Customer", OV.customer, uniq(L.map(function (l) { return l.customer; })).sort()) +
       sel("o-size", "Size", OV.size, uniq(L.map(function (l) { return l.d.size; })).sort()) +
       sel("o-pages", "Pages", OV.pages, uniq(L.map(function (l) { return l.d.pages || ""; })).sort(function (a, b) { return a - b; })) +
-      sel("o-ruling", "Ruling", OV.ruling, uniq(L.map(function (l) { return l.d.ruling; })).sort().map(function (r) { return [r, rulName(r)]; })) + "</div>" +
+      sel("o-ruling", "Ruling", OV.ruling, uniq(L.map(function (l) { return l.d.ruling; })).sort().map(function (r) { return [r, rulName(r)]; })) + "</div>" + (noActions ? "" :
       '<div class="cap-top">' +
       (withScope ? '<div class="seg" role="group" aria-label="Which orders"><button type="button" data-scope="open" aria-pressed="' + (OV.scope === "open") + '">Open orders</button><button type="button" data-scope="all" aria-pressed="' + (OV.scope === "all") + '">All non-cancelled</button></div>' : "") +
       '<span class="cap-note">Cartons from each item\'s Carton unit; books below in small print.</span>' +
-      '<span style="flex:1"></span><div class="btn-grp"><button type="button" class="cap-sec" id="o-xlsx">Download Excel</button><button type="button" class="cap-sec" id="o-pdf">Print / PDF</button><button type="button" class="cap-sec" id="o-reload">Reload</button></div></div>';
+      '<span style="flex:1"></span>' + barBtns() + "</div>");
   }
   function wireBar(paint) {
     var a = $("v3-app");
@@ -588,6 +589,19 @@
   }
 
   /* Order & stock: the v1 comparison, rebuilt on the sheet/set model, in cartons. */
+  /* Sorting only: a type with no Carton unit counts as about 100 books a carton. */
+  function shortCtn(r) { return (r.short || 0) / (r.per || 100); }
+  /* Stacked bar: Finished Goods, inserts + covers, short, not tracked. parts = [class, value, label]. */
+  function covBar(parts, text) {
+    var all = parts.reduce(function (t, p) { return t + p[1]; }, 0);
+    return '<div class="os-bar" role="img" aria-label="' + esc(text) + '">' + parts.map(function (p) { return p[1] > 0 && all ? '<span class="' + p[0] + '" style="width:' + (p[1] / all * 100).toFixed(2) + '%" title="' + esc(p[2]) + '"></span>' : ""; }).join("") + "</div>";
+  }
+  function osStat(label, big, unit, sub) { return '<div class="os-st"><span class="n">' + label + '</span><span class="v">' + big + (unit ? " <small>" + unit + "</small>" : "") + '</span><span class="s">' + sub + "</span></div>"; }
+  function osStore(label, n, gg, p, unit) {
+    if (!n) return osStat(label, "None", "", "in Stores - VCL");
+    var bk = n * gg.ups;
+    return osStat(label, p ? c1(bk / p) : f(bk), p ? "ctn" : "books", f(n) + " " + unit + " × " + gg.ups + " = " + f(bk) + " books");
+  }
   function renderOrderStock() {
     var paint = keepSearchFocus(function () {
       var open = O.lines.filter(function (l) { return isOpen(l) && passes(l); }), R = {};
@@ -609,31 +623,41 @@
           var ct = gg.carton ? D.cartons[gg.carton] : null; r.ctn = ct ? ct.qty : null; r.ctnOff = ct ? ct.disabled : false;
           r.ctnNeed = r.per ? Math.ceil(r.need / r.per) : null;
         }
+        r.uFg = r.pending - r.need; r.uPipe = gg ? r.need - r.short : 0; r.uNone = gg ? 0 : r.need;
         return r;
-      }).sort(function (a, b) { return (b.short || 0) - (a.short || 0) || b.need - a.need || bucketKey(a.d).localeCompare(bucketKey(b.d)); });
+      }).sort(function (a, b) { return shortCtn(b) - shortCtn(a) || b.need - a.need || bucketKey(a.d).localeCompare(bucketKey(b.d)); });
       function tot(k) { var t = { c: 0, b: 0, miss: 0 }; rows.forEach(function (r) { var v = r[k] || 0; t.b += v; if (r.per) t.c += v / r.per; else if (v) t.miss++; }); return t; }
-      var tp = tot("pending"), tf = tot("fg"), tn = tot("need"), ts = tot("short");
-      var h = filterBar(false) +
-        '<div class="cap-stock">' + tile("On open orders", tp.c, tp.b) + tile("In Finished Goods", tf.c, tf.b, " (matched)") + tile("Still to make", tn.c, tn.b) + tile("Short after stock and pipeline", ts.c, ts.b) + "</div>" +
+      var tp = tot("pending"), tf = tot("fg"), tn = tot("need"), ts = tot("short"), tuf = tot("uFg"), tup = tot("uPipe"), tun = tot("uNone");
+      function leg(cls, label, t, sub) { return '<div class="os-lg"><i class="' + cls + '"></i><span class="n">' + label + '</span><span class="v">' + c1(t.c) + ' <small>ctn</small></span><span class="s">' + f(t.b) + " books" + (sub || "") + "</span></div>"; }
+      var h = filterBar(false, true) +
+        '<section class="os-hero"><div class="os-big"><span class="n">Short after stock and pipeline</span><span class="v">' + c1(ts.c) + ' <small>ctn</small></span><span class="s">' + f(ts.b) + " books · from " + c1(tp.c) + " ctn on open orders, " + c1(tn.c) + " ctn still to make</span></div>" +
+        covBar([["fg", tuf.c, "Finished Goods"], ["pipe", tup.c, "Inserts and covers"], ["short", ts.c, "Short"], ["none", tun.c, "Not tracked"]], c1(tuf.c) + " cartons from Finished Goods, " + c1(tup.c) + " from inserts and covers, " + c1(ts.c) + " short, " + c1(tun.c) + " not tracked") +
+        '<div class="os-legs">' + leg("fg", "From Finished Goods", tuf, " · " + c1(tf.c) + " ctn in stock") + leg("pipe", "From inserts and covers", tup) + leg("short", "Short", ts) + leg("none", "Not tracked yet", tun, " · School and Hi5") + "</div></section>" +
         (tp.miss ? '<div class="cap-msg warn">' + tp.miss + " book types have no Carton unit, so they are in the book figures but not the cartons.</div>" : "") +
-        '<div class="cap-card"><div class="cap-h"><h3>Order & stock by book type</h3><span class="cap-note">' + rows.length + ' book types · biggest shortfall first</span></div><div class="tw"><table class="os"><thead><tr><th>Book type</th><th class="num">Pending</th><th class="num">Finished Goods</th><th class="num">Still to make</th><th class="num">Inserts</th><th class="num">Covers</th><th class="num">Folds</th><th class="num">Short</th><th class="num">Sheets to print</th><th class="num">Empty cartons</th><th></th></tr></thead><tbody>' +
+        '<div class="cap-card os-card"><div class="cap-h"><div><h3>By book type</h3><span class="cap-note">' + rows.length + ' book types · biggest shortfall first · tap a row for stock and orders</span></div><div class="os-act">' + barBtns() + '</div></div><div class="tw"><table class="osl"><thead><tr><th>Book type</th><th class="num">Pending</th><th>Covered</th><th class="num">Short</th><th class="num">Sheets to print</th><th><span class="vh">Details</span></th></tr></thead><tbody>' +
         rows.map(function (r, i) {
-          var d = r.d, p = r.per, gg = r.gg;
-          return '<tr><th><b>' + esc(d.brand + " · " + (d.size || "?") + " · " + (d.pages || "?") + " pages") + "</b><br>" + esc(rulName(d.ruling)) + '<br><span class="cap-note">' + (p ? p + " books/carton" : "no Carton unit") + (gg ? " · " + gg.ups + "-up" : "") + "</span></th>" +
-            '<td class="num">' + cb(r.pending, p) + '</td><td class="num">' + cb(r.fg, p) + '</td><td class="num pend">' + cb(r.need, p) + "</td>" +
-            (gg ? '<td class="num">' + cs(r.ins, gg.ups, p, "sets") + '</td><td class="num">' + cs(r.cov, gg.ups, p, "sheets") + '</td><td class="num">' + cs(r.fld, gg.ups, p, "sets") + "</td>" +
-              '<td class="num ' + (r.short ? "bad" : "ok") + '">' + (r.short ? cb(r.short, p) : "Covered") + '</td><td class="num">' + (r.sheets ? '<b class="ct">' + f(r.sheets) + " <span>sheets</span></b><small>" + esc(gg.cov) + "</small>" : "-") + "</td>" +
-              '<td class="num ' + (r.ctnNeed != null && r.ctn != null && r.ctn < r.ctnNeed ? "bad" : "") + '">' + (r.ctn == null ? "-" : '<b class="ct">' + f(r.ctn) + " <span>ctn</span></b><small>" + (r.ctnOff ? "item disabled" : "shared pool · need " + (r.ctnNeed == null ? "?" : f(r.ctnNeed))) + "</small>") + "</td>"
-              : '<td colspan="6" class="cap-note">No covers/folds/inserts items for this type yet (school and Hi5 are Phase 2/3). Only orders and Finished Goods are compared.</td>') +
-            '<td><button type="button" class="cap-sec sm" data-det="' + i + '" aria-expanded="false">Details</button></td></tr>' +
-            '<tr class="det" id="o-det-' + i + '" hidden><td colspan="11"><div class="detg"><section><b>Finished Goods - VCL by item</b>' + Object.keys(r.codes).map(function (c) { var q = D.bin[c + "|" + FG] || 0, cp = r.codes[c] || p; return "<div><code>" + esc(c) + "</code> · " + (cp ? c1(q / cp) + " ctn · " : "") + f(q) + " books</div>"; }).join("") + "</section>" +
-            "<section><b>Open order lines</b>" + r.lines.map(function (l) { return "<div>" + esc(l.due || "") + " · " + esc(l.so) + " · " + esc(l.customer) + " · <b>" + (l.per ? c1(l.pending / l.per) + " ctn" : f(l.pending) + " books") + "</b>" + (l.per ? " (" + f(l.pending) + " books)" : "") + "</div>"; }).join("") + "</section>" +
-            (gg ? "<section><b>Stores - VCL</b><div><code>" + esc(gg.cov) + "</code> · " + f(r.cov) + " sheets</div><div><code>" + esc(gg.fld) + "</code> · " + f(r.fld) + " sets</div><div><code>" + esc(gg.ins) + "</code> · " + f(r.ins) + " sets</div><div><code>" + esc(gg.carton || "no carton set") + "</code> · " + (r.ctn == null ? "-" : f(r.ctn)) + " empty cartons</div></section>" : "") + "</div></td></tr>";
-        }).join("") + (rows.length ? "" : '<tr><td colspan="11" class="cap-note">No open orders match these filters.</td></tr>') + "</tbody></table></div></div>" +
-        '<p class="cap-note">Cartons = books ÷ the book\'s Carton unit. Covers, folds and inserts: sheets (or sets) × up-count (A4 2-up, A5 3-up) = books, then ÷ books per carton. Finished Goods - VCL only. Short = still to make − (inserts + covers) × up-count; folds are shown but not yet counted in the pipeline until there is a fold count. Sheets to print = short ÷ up-count. Empty cartons use the size + brand carton (P12 proposal).</p>';
+          var d = r.d, p = r.per, gg = r.gg, cov = r.pending ? Math.round((r.uFg + r.uPipe) / r.pending * 100) : 0;
+          var low = r.ctnNeed != null && r.ctn != null && !r.ctnOff && r.ctn < r.ctnNeed;
+          var bar = covBar([["fg", r.uFg, "Finished Goods " + f(r.uFg) + " books"], ["pipe", r.uPipe, "Inserts and covers " + f(r.uPipe) + " books"], ["short", r.short || 0, "Short " + f(r.short || 0) + " books"], ["none", r.uNone, "Not tracked " + f(r.uNone) + " books"]], cov + "% covered");
+          return '<tr class="osr" data-row="' + i + '"><th scope="row"><b>' + esc(d.brand + " " + (d.size || "?") + " · " + (d.pages || "?") + " pages") + '</b><span class="sub">' + esc(rulName(d.ruling)) + " · " + (p ? p + " books/ctn" : "no Carton unit") + (gg ? " · " + gg.ups + "-up" : "") + "</span>" + (low ? '<span class="chip low">Empty cartons low</span>' : "") + "</th>" +
+            '<td class="num" data-l="Pending">' + cb(r.pending, p) + "</td>" +
+            '<td class="cv">' + bar + '<span class="pc">' + (gg ? cov + "% covered" : (r.uFg ? cov + "% from Finished Goods" : "Not tracked yet")) + "</span></td>" +
+            '<td class="num" data-l="Short">' + (!gg ? '<span class="dash">-</span>' : r.short ? '<span class="sh">' + cb(r.short, p) + "</span>" : '<span class="chip okc">Covered</span>') + "</td>" +
+            '<td class="num" data-l="Sheets to print">' + (r.sheets ? '<b class="ct">' + f(r.sheets) + "</b><small>sheets</small>" : '<span class="dash">-</span>') + "</td>" +
+            '<td class="tg"><button type="button" class="os-tog" data-det="' + i + '" aria-expanded="false" aria-controls="o-det-' + i + '" aria-label="Details for ' + esc(d.brand + " " + (d.size || "") + " " + (d.pages || "") + " pages") + '"></button></td></tr>' +
+            '<tr class="det" id="o-det-' + i + '" hidden><td colspan="6"><div class="os-sts">' +
+            (gg ? osStore("Inserts", r.ins, gg, p, "sets") + osStore("Covers", r.cov, gg, p, "sheets") + osStore("Folds", r.fld, gg, p, "sets") +
+              osStat("Empty cartons", r.ctn == null ? "-" : f(r.ctn), r.ctn == null ? "" : "ctn", r.ctn == null ? "no carton set" : r.ctnOff ? "item disabled" : "shared pool · need " + (r.ctnNeed == null ? "?" : f(r.ctnNeed)))
+              : '<p class="cap-note">No covers, folds or inserts items for this type yet (School and Hi5 are Phase 2/3). Only orders and Finished Goods are compared.</p>') + '</div><div class="detg"><section><b>Open order lines</b>' +
+            r.lines.map(function (l) { return "<div>" + esc(l.due || "") + " · " + esc(l.so) + " · " + esc(l.customer) + " · <b>" + (l.per ? c1(l.pending / l.per) + " ctn" : f(l.pending) + " books") + "</b>" + (l.per ? " (" + f(l.pending) + " books)" : "") + "</div>"; }).join("") + "</section>" +
+            "<section><b>Finished Goods - VCL by item</b>" + Object.keys(r.codes).map(function (c) { var q = D.bin[c + "|" + FG] || 0, cp = r.codes[c] || p; return "<div><code>" + esc(c) + "</code> · " + (cp ? c1(q / cp) + " ctn · " : "") + f(q) + " books</div>"; }).join("") + "</section>" +
+            (gg ? "<section><b>Item codes in Stores - VCL</b><div><code>" + esc(gg.cov) + "</code></div><div><code>" + esc(gg.fld) + "</code></div><div><code>" + esc(gg.ins) + "</code></div><div><code>" + esc(gg.carton || "no carton set") + "</code></div></section>" : "") + "</div></td></tr>";
+        }).join("") + (rows.length ? "" : '<tr><td colspan="6" class="cap-note">No open orders match these filters.</td></tr>') + "</tbody></table></div></div>" +
+        '<details class="os-how"><summary>How these figures work</summary><p>Cartons = books ÷ the book\'s Carton unit. Covers, folds and inserts: sheets (or sets) × up-count (A4 2-up, A5 3-up) = books, then ÷ books per carton. Finished Goods - VCL only. Short = still to make − (inserts + covers) × up-count; folds are shown but not yet counted in the pipeline until there is a fold count. Sheets to print = short ÷ up-count. Empty cartons use the size + brand carton (P12 proposal).</p></details>';
       $("v3-app").innerHTML = '<div class="cap">' + h + "</div>";
       wireBar(paint);
-      [].forEach.call($("v3-app").querySelectorAll("[data-det]"), function (b) { b.onclick = function () { var row = $("o-det-" + b.dataset.det), op = row.hidden; row.hidden = !op; b.setAttribute("aria-expanded", String(op)); b.textContent = op ? "Close" : "Details"; }; });
+      [].forEach.call($("v3-app").querySelectorAll("[data-det]"), function (b) { b.onclick = function () { var row = $("o-det-" + b.dataset.det), op = row.hidden; row.hidden = !op; b.setAttribute("aria-expanded", String(op)); }; });
+      [].forEach.call($("v3-app").querySelectorAll("tr.osr"), function (t) { t.onclick = function (e) { if (!e.target.closest("button")) t.querySelector("[data-det]").click(); }; });
       $("o-xlsx").onclick = function () {
         var q = function (b, p) { return p ? Math.round(b / p * 10) / 10 : ""; };
         download("EB order and stock " + today(), ["Brand", "Size", "Pages", "Ruling", "Books per carton", "Up-count", "Pending (ctn)", "Finished Goods (ctn)", "Still to make (ctn)", "Inserts (ctn)", "Covers (ctn)", "Folds (ctn)", "Short (ctn)", "Pending (books)", "Finished Goods (books)", "Still to make (books)", "Inserts (sets)", "Covers (sheets)", "Folds (sets)", "Short (books)", "Sheets to print", "Empty cartons", "Cartons needed"],
