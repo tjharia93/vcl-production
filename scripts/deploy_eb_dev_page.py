@@ -30,7 +30,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 PAGES = {
 	"v3": {
 		"dir": ROOT / "exercise-book-production" / "dev-page-v3",
-		"name": "exercise-book-production-v3-dev",
+		"name": "exercise-book-production-v3-preview",  # Frappe names Web Pages from the title; the route is the URL
 		"route": "exercise-book-production-v3-dev",
 		"title": "Exercise Book Production v3 (preview)",
 	},
@@ -174,7 +174,9 @@ def main():
 		new = {"doctype": "Web Page", "name": cfg["name"], "title": cfg["title"], "route": cfg["route"], "published": 1,
 			"content_type": "HTML", **repo}
 		created = call("frappe.client.insert", {"doc": new})
-		got = live_doc(cfg)
+		got = call("frappe.client.get", {"doctype": "Web Page", "name": created["name"]}, get=True)
+		if created["name"] != cfg["name"]:
+			print(f"NOTE: Frappe named the page {created['name']}; set PAGES['{args.page}']['name'] to that.")
 		write_stamp(cfg, got)
 		print(f"Created {created['name']} at /{cfg['route']} ({got['modified']}). Commit deploy-stamp.json.")
 		return 0
