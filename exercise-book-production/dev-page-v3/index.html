@@ -276,6 +276,73 @@
   .ebv3 table.pi tr.osr .tg{justify-self:end}
 }
 @media print{.ebv3 .sf-nav{display:none!important}.ebv3{background:#fff}.ebv3 .pm-day{min-height:0}}
+/* Production, newer Lightning style (05/11/2026): soft cards, fewer lines, headline cards, daily chart.
+   Series colours passed the dataviz palette check; a Table switch backs up the two below 3:1. */
+.ebv3{--k-cov:#0176d3;--k-fld:#dd7a01;--k-ins:#06a59a;--k-pack:#9050e9}
+.ebv3 .k-cov{background:var(--k-cov)}.ebv3 .k-fld{background:var(--k-fld)}.ebv3 .k-ins{background:var(--k-ins)}.ebv3 .k-pack{background:var(--k-pack)}
+.ebv3[data-view="production"] .cap{gap:16px}
+.ebv3[data-view="production"] .ph,.ebv3[data-view="production"] .cap-top,.ebv3[data-view="production"] .cap-card,.ebv3[data-view="production"] .pk{border:0;border-radius:12px;box-shadow:0 1px 2px rgba(24,24,24,.06),0 4px 14px rgba(24,24,24,.07)}
+.ebv3[data-view="production"] .cap-top{padding:14px 18px}
+.ebv3[data-view="production"] .cap-card>.cap-h{padding:16px 20px 12px;border-bottom:0}
+.ebv3[data-view="production"] .cap-card{padding-left:20px;padding-right:20px}
+.ebv3[data-view="production"] .cap-card>.cap-h,.ebv3[data-view="production"] .cap-card>.tw{margin-left:-20px;margin-right:-20px}
+.ebv3[data-view="production"] select,.ebv3[data-view="production"] input{border-radius:8px}
+.ebv3[data-view="production"] .cap-sec{border-radius:999px}
+.ebv3[data-view="production"] .seg button:first-child{border-radius:999px 0 0 999px}.ebv3[data-view="production"] .seg button:last-child{border-radius:0 999px 999px 0}
+.ebv3[data-view="production"] .seg button{font-weight:600}
+.ebv3[data-view="production"] .os-act{align-items:center}
+.ebv3[data-view="production"] table.osl thead th,.ebv3[data-view="production"] table.pm thead th{background:transparent;font-weight:600;border-bottom:1px solid var(--border)}
+.ebv3[data-view="production"] table.osl tbody th b{font-weight:600}
+.ebv3[data-view="production"] table.pm .tot{background:transparent}
+.ebv3[data-view="production"] .os-tog{border-radius:50%}
+.ebv3 .pk-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.ebv3 .pk{background:var(--card);padding:16px 18px;display:grid;gap:2px;align-content:start;min-width:0}
+.ebv3 .pk .n{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--weak)}
+.ebv3 .pk .n i{width:14px;height:3px;border-radius:2px;flex:none}
+.ebv3 .pk .v{font-size:30px;line-height:38px;font-weight:600;letter-spacing:-.3px}
+.ebv3 .pk .v small{font-size:14px;font-weight:400;letter-spacing:0;color:var(--weak)}
+.ebv3 .pk .v.none{font-size:18px;font-weight:400;color:var(--weak)}
+.ebv3 .pk .s{font-size:12px;line-height:16px;color:var(--weak)}
+.ebv3 .pk-sp{display:flex;align-items:flex-end;justify-content:space-between;gap:3px;height:30px;margin-top:10px;border-bottom:1px solid var(--border)}
+.ebv3 .pk-sp i{flex:0 1 14px;border-radius:2px 2px 0 0;min-width:0}
+.ebv3 .pc-leg{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--text)}
+.ebv3 .pc-leg span{display:inline-flex;align-items:center;gap:7px}
+.ebv3 .pc-leg .off{color:var(--weak)}
+.ebv3 .pc-leg .off i{opacity:.35}
+.ebv3 .pc-leg i{width:10px;height:10px;border-radius:3px}
+.ebv3 .pc{position:relative;height:300px;padding-left:44px}
+.ebv3 .pc-grid{position:absolute;left:0;right:0;top:22px;bottom:46px}
+.ebv3 .pc-grid span{position:absolute;left:0;right:0;border-top:1px solid var(--border)}
+.ebv3 .pc-grid span:first-child{border-top-color:var(--border-input)}
+.ebv3 .pc-grid b{position:absolute;left:0;top:-9px;width:38px;text-align:right;font-size:11px;font-weight:400;line-height:16px;color:var(--weak);background:var(--card);padding-right:4px}
+.ebv3 .pc-days{position:relative;display:flex;height:100%;gap:4px}
+.ebv3 .pc-day{flex:1 1 0;min-width:0;display:flex;flex-direction:column;background:transparent;border:0;border-radius:8px;padding:22px 0 0;cursor:pointer;font:inherit;color:var(--text)}
+.ebv3 .pc-day:hover{background:rgba(1,118,211,.06)}
+.ebv3 .pc-day:focus-visible{outline:2px solid var(--brand)}
+.ebv3 .pc-day[aria-pressed="true"]{background:var(--brand-light)}
+.ebv3 .pc-bars{flex:1;min-height:0;display:flex;align-items:flex-end;justify-content:center;gap:2px;padding:0 4px}
+.ebv3 .pc-bars i{position:relative;flex:0 1 20px;min-width:0;border-radius:4px 4px 0 0;min-height:2px}
+.ebv3 .pc-bars i.e{background:transparent;min-height:0}
+.ebv3 .pc-v{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font-size:12px;line-height:18px;font-weight:600;font-style:normal;white-space:nowrap;color:var(--text)}
+.ebv3 .pc-x{height:46px;display:grid;align-content:center;justify-items:center;font-size:13px;line-height:17px;font-weight:600}
+.ebv3 .pc-x small{font-size:11px;font-weight:400;color:var(--weak)}
+.ebv3 .pc-day.now .pc-x{color:var(--brand)}
+.ebv3 .pc-tip{position:absolute;top:0;z-index:3;min-width:190px;background:var(--card);border-radius:8px;box-shadow:0 4px 18px rgba(24,24,24,.2);padding:8px 12px;font-size:12px;line-height:18px;pointer-events:none}
+.ebv3 .pc-tip .t{font-weight:600;color:var(--weak)}
+.ebv3 .pc-tip .r{display:grid;grid-template-columns:12px auto 1fr;gap:6px;align-items:center;white-space:nowrap}
+.ebv3 .pc-tip .r i{width:12px;height:3px;border-radius:2px}
+.ebv3 .pc-tip .r span{color:var(--weak)}
+.ebv3 .pc-unit{margin:0 0 14px;font-size:12px;color:var(--weak)}
+@media (max-width:1000px){.ebv3 .pk-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){
+  .ebv3[data-view="production"] .cap-card{padding-left:14px;padding-right:14px}
+  .ebv3[data-view="production"] .cap-card>.cap-h,.ebv3[data-view="production"] .cap-card>.tw{margin-left:-14px;margin-right:-14px;padding-left:14px;padding-right:14px}
+  .ebv3[data-view="production"] .cap-card>.tw{padding:0}
+  .ebv3 .pk-row{gap:10px}.ebv3 .pk{padding:12px 14px}.ebv3 .pk .v{font-size:24px;line-height:30px}
+  .ebv3 .pc{height:260px;padding-left:36px}.ebv3 .pc-grid b{width:32px;font-size:10px}.ebv3 .pc-days{gap:0}.ebv3 .pc-bars{padding:0 2px}.ebv3 .pc-v{font-size:10px}
+  .ebv3[data-view="production"] .os-act .seg{width:100%}.ebv3[data-view="production"] .os-act .seg button{flex:1;justify-content:center}
+}
+@media print{.ebv3[data-view="production"] .ph,.ebv3[data-view="production"] .cap-card,.ebv3[data-view="production"] .pk{box-shadow:none;border:1px solid var(--border)}.ebv3 .pc-day,.ebv3 .pk-sp i,.ebv3 .pc-leg i,.ebv3 .pc-bars i{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 </style>
 <div class="ebv3" id="ebv3">
   <nav class="sf-nav" aria-label="Exercise Books"><span class="sf-waffle" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="sf-app">Exercise Books</span><div class="mode" id="v3-mode"></div></nav>

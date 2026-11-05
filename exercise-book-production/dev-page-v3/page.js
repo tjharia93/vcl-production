@@ -716,7 +716,65 @@
       return '<tr><th scope="row">' + p[1] + "</th>" + days.map(function (d) { return '<td class="num' + (PV.day === d && pickable ? " sel" : "") + '">' + pcell(pr.filter(function (r) { return r.date === d; }), p[2]) + "</td>"; }).join("") + '<td class="num tot">' + pcell(pr, p[2]) + "</td></tr>";
     }).join("") + "</tbody></table></div>";
   }
+  function pAmount(t) { return t.c ? c1(t.c) + " ctn" : f(t.b) + " books"; }
+  /* One card per process: week total, today, and a seven-day trend. */
+  function pCards(rows, w, thisWeek) {
+    var days = weekDays(w), now = todayIso();
+    return '<div class="pk-row">' + PROCS.map(function (p) {
+      var pr = rows.filter(function (r) { return r.proc === p[0]; }), t = sum(pr);
+      var byDay = days.map(function (d) { return sum(pr.filter(function (r) { return r.date === d; })); });
+      var top = Math.max.apply(null, byDay.map(function (x) { return x.c || x.b; }));
+      var key = '<span class="n"><i class="k-' + p[0] + '"></i>' + p[1] + "</span>";
+      if (!pr.length) return '<div class="pk">' + key + '<span class="v none">None yet</span><span class="s">No entries this week</span></div>';
+      var td = sum(pr.filter(function (r) { return r.date === now; }));
+      return '<div class="pk">' + key + '<span class="v">' + (t.c ? c1(t.c) + " <small>ctn</small>" : f(t.b) + " <small>books</small>") + '</span><span class="s">' + f(t.q) + " " + p[2] + (thisWeek ? " · today " + (td.q ? pAmount(td) : "none") : "") + "</span>" +
+        '<div class="pk-sp" aria-hidden="true">' + byDay.map(function (x) { var v = x.c || x.b; return '<i class="' + (v ? "k-" + p[0] : "z") + '" style="height:' + (v ? Math.max(8, v / top * 100).toFixed(1) : 0) + '%"></i>'; }).join("") + "</div></div>";
+    }).join("") + "</div>";
+  }
+  function niceMax(v) { var e = Math.pow(10, Math.floor(Math.log(v) / Math.LN10)), m = v / e, n = [1, 2, 4, 6, 8, 10].filter(function (x) { return m <= x; })[0]; return n * e; }
+  /* Columns per day on one carton axis. The day is the button; a table view sits behind the Table switch. */
+  function pChart(rows, w) {
+    var days = weekDays(w), now = todayIso();
+    var data = days.map(function (d) { return PROCS.map(function (p) { return sum(rows.filter(function (r) { return r.date === d && r.proc === p[0]; })).c; }); });
+    var top = Math.max.apply(null, data.map(function (v) { return Math.max.apply(null, v); }));
+    var leg = '<div class="pc-leg">' + PROCS.map(function (p, i) { var any = data.some(function (v) { return v[i] > 0; }); return '<span class="' + (any ? "" : "off") + '"><i class="k-' + p[0] + '"></i>' + p[1] + (any ? "" : " · none") + "</span>"; }).join("") + "</div>";
+    if (!top) return leg + '<p class="cap-note pe">Nothing recorded this week.</p>';
+    var max = niceMax(top), live = PROCS.map(function (p, i) { return data.some(function (v) { return v[i] > 0; }) ? i : -1; }).filter(function (i) { return i >= 0; });
+    var ticks = [0, 1, 2, 3, 4].map(function (n) { return '<span style="bottom:' + n * 25 + '%"><b>' + f(max * n / 4) + "</b></span>"; }).join("");
+    return leg + '<div class="pc"><div class="pc-grid" aria-hidden="true">' + ticks + '</div><div class="pc-days">' + days.map(function (d, di) {
+      var v = data[di], big = Math.max.apply(null, v);
+      var said = dayName(d) + " " + dmy(d).slice(0, 5) + ": " + (big ? PROCS.map(function (p, i) { return v[i] ? p[1] + " " + c1(v[i]) + " cartons" : ""; }).filter(Boolean).join(", ") : "nothing recorded");
+      return '<button type="button" class="pc-day' + (d === now ? " now" : "") + '" data-day="' + d + '" data-i="' + di + '" aria-pressed="' + (PV.day === d) + '" aria-label="' + esc(said) + '"><span class="pc-bars">' +
+        live.map(function (i) { return '<i class="' + (v[i] ? "k-" + PROCS[i][0] : "e") + '" style="height:' + (v[i] / max * 100).toFixed(2) + '%">' + (v[i] && v[i] === big ? '<b class="pc-v">' + f(v[i]) + "</b>" : "") + "</i>"; }).join("") +
+        '</span><span class="pc-x">' + dayName(d) + "<small>" + dmy(d).slice(0, 5) + "</small></span></button>";
+    }).join("") + '</div><div class="pc-tip" id="p-tip" hidden></div></div><p class="pc-unit">Cartons per day</p>';
+  }
+  function pChartWire(rows, w) {
+    var tip = $("p-tip"); if (!tip) return;
+    var days = weekDays(w);
+    function hide() { tip.hidden = true; }
+    [].forEach.call(document.querySelectorAll(".pc-day"), function (b) {
+      function show() {
+        var d = days[+b.dataset.i]; tip.textContent = "";
+        var h = document.createElement("div"); h.className = "t"; h.textContent = dayName(d) + " " + dmy(d); tip.appendChild(h);
+        var any = false;
+        PROCS.forEach(function (p) {
+          var pr = rows.filter(function (r) { return r.date === d && r.proc === p[0]; }); if (!pr.length) return;
+          any = true; var t = sum(pr), row = document.createElement("div"), k = document.createElement("i"), v = document.createElement("b"), l = document.createElement("span");
+          row.className = "r"; k.className = "k-" + p[0]; v.textContent = pAmount(t); l.textContent = p[1] + " · " + f(t.q) + " " + p[2];
+          row.appendChild(k); row.appendChild(v); row.appendChild(l); tip.appendChild(row);
+        });
+        if (!any) { var e = document.createElement("div"); e.textContent = "Nothing recorded"; tip.appendChild(e); }
+        tip.hidden = false;
+        var box = tip.parentNode.clientWidth, x = b.offsetLeft + b.offsetWidth / 2 - tip.offsetWidth / 2;
+        tip.style.left = Math.max(0, Math.min(box - tip.offsetWidth, x)) + "px";
+      }
+      b.addEventListener("pointerenter", show); b.addEventListener("focus", show);
+      b.addEventListener("pointerleave", hide); b.addEventListener("blur", hide);
+    });
+  }
   function renderProduction() {
+    if (!PV.mode) PV.mode = lsGet("p.mode", "chart");
     if (!PV.week) PV.week = mondayOf(todayIso());
     var w = PV.week;
     if (!PC[w]) {
@@ -734,8 +792,8 @@
     var h = '<div class="cap-top"><div class="pw"><span class="lb">Week</span><div class="seg" role="group" aria-label="Choose week"><button type="button" id="p-prev" aria-label="Previous week">‹</button><button type="button" id="p-now" aria-pressed="' + thisWeek + '">This week</button><button type="button" id="p-next" aria-label="Next week"' + (thisWeek ? " disabled" : "") + ">›</button></div></div>" +
       sel("p-brand", "Brand", PV.brand, uniq(G.map(function (x) { return x.brand; })).sort()) + sel("p-size", "Size", PV.size, uniq(G.map(function (x) { return x.size; })).sort()) +
       sel("p-pages", "Pages", PV.pages, uniq(G.map(function (x) { return x.pages; })).sort(function (a, b) { return a - b; })) +
-      sel("p-ruling", "Ruling", PV.ruling, uniq(G.map(function (x) { return x.ruling; })).sort().map(function (r) { return [r, rulName(r)]; })) + "</div>" +
-      '<div class="cap-card os-card"><div class="cap-h"><div><h3>By date</h3><span class="cap-note">' + span + (rows.length ? " · tap a day to see its items" : "") + '</span></div><div class="os-act btn-grp"><button type="button" class="cap-sec" id="p-xlsx">Download Excel</button><button type="button" class="cap-sec" id="p-pdf">Print / PDF</button><button type="button" class="cap-sec" id="p-reload">Reload</button></div></div>' + pMatrix(rows, w, true) + "</div>" +
+      sel("p-ruling", "Ruling", PV.ruling, uniq(G.map(function (x) { return x.ruling; })).sort().map(function (r) { return [r, rulName(r)]; })) + "</div>" + pCards(rows, w, thisWeek) +
+      '<div class="cap-card os-card"><div class="cap-h"><div><h3>By date</h3><span class="cap-note">' + span + (rows.length ? " · tap a day to see its items" : "") + '</span></div><div class="os-act btn-grp"><div class="seg" role="group" aria-label="Chart or table"><button type="button" data-mode="chart" aria-pressed="' + (PV.mode !== "table") + '">Chart</button><button type="button" data-mode="table" aria-pressed="' + (PV.mode === "table") + '">Table</button></div><button type="button" class="cap-sec" id="p-xlsx">Download Excel</button><button type="button" class="cap-sec" id="p-pdf">Print / PDF</button><button type="button" class="cap-sec" id="p-reload">Reload</button></div></div>' + (PV.mode === "table" ? pMatrix(rows, w, true) : pChart(rows, w)) + "</div>" +
       '<div class="cap-card os-card"><div class="cap-h"><div><h3>By item' + (PV.day ? " · " + dayName(PV.day) + " " + dmy(PV.day) : "") + '</h3><span class="cap-note">' + keys.length + " book types · most made first" + (keys.length ? " · tap a row for its days" : "") + "</span></div>" + (PV.day ? '<button type="button" class="cap-sec" id="p-all">Show whole week</button>' : "") + "</div>" +
       (keys.length ? '<div class="tw"><table class="osl pi"><thead><tr><th>Book type</th>' + PROCS.map(function (p) { return '<th class="num">' + p[1] + "</th>"; }).join("") + '<th><span class="vh">Details</span></th></tr></thead><tbody>' +
         keys.map(function (k, i) {
@@ -754,6 +812,8 @@
     ["brand", "size", "pages", "ruling"].forEach(function (k) { $("p-" + k).onchange = function (e) { PV[k] = e.target.value; renderProduction(); }; });
     if ($("p-all")) $("p-all").onclick = function () { PV.day = ""; renderProduction(); };
     $("p-pdf").onclick = function () { window.print(); };
+    [].forEach.call($("v3-app").querySelectorAll("[data-mode]"), function (b) { b.onclick = function () { PV.mode = b.dataset.mode; lsSet("p.mode", PV.mode); renderProduction(); }; });
+    pChartWire(rows, w);
     $("p-reload").onclick = function () { delete PC[w]; renderProduction(); };
     $("p-xlsx").onclick = function () {
       var names = {}; PROCS.forEach(function (p) { names[p[0]] = p; });
@@ -796,6 +856,7 @@
     S.view = v; lsSet("view", v);
     try { var u = new URL(location.href); u.searchParams.set("view", v); history.replaceState(null, "", u); } catch (e) {}
     renderViews();
+    $("ebv3").dataset.view = v;
     $("v3-title").textContent = VIEWS.filter(function (x) { return x[0] === v; })[0][1];
     $("v3-chart").hidden = v !== "capture"; $("v3-banner").hidden = v !== "capture";
     if (v === "capture") { renderShell(); return; }

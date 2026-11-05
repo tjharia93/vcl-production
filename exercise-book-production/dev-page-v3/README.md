@@ -19,7 +19,8 @@ Covers, folds and inserts count in sets with the same up-count: A4 2-up, A5 3-up
 Four screens, chosen on the navigation bar (`?view=capture|production|orders|orderstock`, remembered per browser):
 - **Capture**: the stations above.
 - **Production**: what each process made, one week at a time (Monday to Sunday).
-  - By date: covers, folds, inserts and packed against the days of the week, with a week total. Tapping a day narrows the item list to it.
+  - Headline cards: each process's week total, today and a seven-day trend.
+  - By date: a chart of cartons per day for each process, with a Table switch for the exact figures. Tapping a day narrows the item list to it.
   - By item: the same four processes per book type. Tapping a row shows that type's days. Filters: brand, size, pages, ruling. Excel lists every entry.
   - Reads submitted Stock Entries: COV-/FLD- Material Receipts and INS- Repacks into Stores, book Manufactures into Finished Goods. Remarks containing "opening" are left out, and so are book stock-ins for goods already delivered, because they aren't Manufactures.
 - **Orders**: the v1 "Orders Pending" screen. Covers all exercise-book item groups (Prince, Swara, Hi5, School), except Covers, Inserts and Folds.
@@ -51,7 +52,7 @@ Salesforce Lightning (SLDS) structure:
 - a chevron path for the stations;
 - Lightning data tables, badges, scoped notifications, and a modal for the two confirmations.
 
-It uses the Lightning brand blue #0176D3 and a Salesforce Sans / Segoe UI font stack, with no Salesforce logos. Touch targets stay at 44px or more for the floor tablets.
+Production also trials the newer Lightning style: soft shadows, rounder corners and fewer lines, scoped with `[data-view="production"]`. It uses the Lightning brand blue #0176D3 and a Salesforce Sans / Segoe UI font stack, with no Salesforce logos. Touch targets stay at 44px or more for the floor tablets.
 
 ## Date and shift (Tanuj, 05/11/2026)
 - Every capture has a **production date** and a **shift**, next to the run number.
