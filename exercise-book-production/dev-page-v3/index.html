@@ -343,15 +343,14 @@
 .ebv3 input.qty.big{font-size:40px;line-height:48px;font-weight:600;min-height:76px;border-radius:10px;padding:0 16px}
 .ebv3 input.need{border-color:var(--bad);box-shadow:0 0 0 1px var(--bad)}
 .ebv3 .cap-empty{margin:0;padding:28px 12px;text-align:center;color:var(--weak)}
-.ebv3 .pick-w{position:relative}
-.ebv3 .pick-btn{display:grid;gap:0;text-align:left;width:100%;min-height:44px;padding:4px 34px 4px 12px;font:inherit;background:var(--card);color:var(--text);border:1px solid var(--border-input);border-radius:8px;cursor:pointer;position:relative}
-.ebv3 .pick-btn:focus-visible{border-color:var(--brand);box-shadow:0 0 3px var(--brand);outline:0}
-.ebv3 .pick-btn::after{content:"";position:absolute;right:14px;top:50%;margin-top:-6px;width:8px;height:8px;border-right:2px solid var(--weak);border-bottom:2px solid var(--weak);transform:rotate(45deg)}
-.ebv3 .pick-btn b{font-size:15px;line-height:20px;font-weight:600}
-.ebv3 .pick-btn small{font-size:12px;line-height:15px;color:var(--weak)}
-.ebv3 .pick{position:absolute;z-index:6;top:100%;left:0;margin-top:4px;width:min(460px,calc(100vw - 32px));background:var(--card);border-radius:12px;box-shadow:0 6px 24px rgba(24,24,24,.22);padding:10px;display:grid;gap:8px}
-.ebv3 .pick[hidden]{display:none}
-.ebv3 .pick-l{max-height:340px;overflow:auto;display:grid;gap:2px}
+.ebv3 .pick-card{padding-top:14px}
+.ebv3 .pick-top{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
+.ebv3 .pick-now{display:grid}
+.ebv3 .pick-now small{font-size:13px;line-height:17px;color:var(--weak)}
+.ebv3 .pick-top input{flex:1 1 260px;max-width:420px;min-height:44px}
+.ebv3 .pick-l{display:grid;gap:8px}
+.ebv3 .pick-hits{max-height:280px;overflow:auto;display:grid;gap:2px}
+.ebv3 .cap[data-picking="1"] > :not(.pick-card):not(.cap-steps):not(.cap-top){display:none}
 .ebv3 .pick-h{margin:6px 8px 2px;font-size:12px;color:var(--weak)}
 .ebv3 .pick-l button{display:grid;text-align:left;font:inherit;min-height:48px;padding:6px 10px;border:0;border-radius:8px;background:transparent;color:var(--text);cursor:pointer}
 .ebv3 .pick-l button:hover,.ebv3 .pick-l button:focus-visible{background:var(--brand-light);outline:0}
@@ -362,7 +361,8 @@
 .ebv3 .pick-l .pick-o button{min-height:60px;align-content:center;text-align:center;border:1px solid var(--border-input)}
 .ebv3 .pick-l .pick-o button:disabled{background:transparent;color:var(--weak);cursor:not-allowed;border-style:dashed}
 .ebv3 .pick-c{display:flex;flex-wrap:wrap;gap:6px}
-.ebv3 .pick-l .pick-c button{min-height:44px;align-content:center;padding:4px 14px;background:var(--brand-light);border-radius:999px;font-weight:600}
+.ebv3 .pick-l .pick-c button{min-height:44px;align-content:center;padding:4px 16px;background:var(--brand-light);border-radius:999px;font-weight:600;font-size:15px}
+.ebv3 .pick-l .pick-c button.pick-x{background:transparent;border:1px solid var(--border-input);font-weight:400}
 .ebv3 .pick-l [data-b="Prince"]{--bc:#0B6B3A}
 .ebv3 .pick-l [data-b="Swara"]{--bc:#9B111E}
 .ebv3 .pick-l [data-b="Hi5"]{--bc:#1F3FA8}
@@ -392,7 +392,6 @@
   .ebv3[data-view="capture"] .wrap{padding-top:10px}
   .ebv3[data-view="capture"] .cap{gap:10px}
   .ebv3[data-view="capture"] .cap-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px;padding:10px 12px}
-  .ebv3[data-view="capture"] .cap-top .pick-w{grid-column:1/-1}
   .ebv3[data-view="capture"] .cap-card{padding-bottom:14px}
   .ebv3[data-view="capture"] .cap-steps{padding:6px}
   .ebv3[data-view="capture"] .cap-steps button{min-height:40px;padding:3px 6px}

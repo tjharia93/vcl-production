@@ -232,9 +232,9 @@
 
   function renderShell() {
     if (!D.groups[S.group]) S.group = groupKeys()[0];
-    $("v3-app").innerHTML = '<div class="cap"><div class="cap-steps" id="v3-steps" role="tablist" aria-label="Stations"></div>' +
-      '<div class="cap-top"><div class="cap-grp pick-w" style="flex:2 1 300px"><span class="lb">Working on</span><button type="button" class="pick-btn" id="v3-pick" aria-expanded="false" aria-controls="v3-pickp"><b id="v3-pickt"></b><small id="v3-picks"></small></button>' +
-      '<div class="pick" id="v3-pickp" hidden><input id="v3-pickq" type="search" autocomplete="off" placeholder="Search brand, size, pages, ruling" aria-label="Search items"><div class="pick-l" id="v3-pickl"></div></div></div>' +
+    $("v3-app").innerHTML = '<div class="cap" id="v3-cap"><div class="cap-card pick-card"><div class="pick-top"><div class="pick-now"><span class="lb">Working on</span><small id="v3-picks"></small></div>' +
+      '<input id="v3-pickq" type="search" autocomplete="off" placeholder="Type to search, e.g. prince 96 square" aria-label="Search items"></div><div class="pick-l" id="v3-pickl"></div></div>' +
+      '<div class="cap-steps" id="v3-steps" role="tablist" aria-label="Stations"></div><div class="cap-top">' +
       '<label class="cap-grp" for="v3-run" style="flex:0 1 190px"><span class="lb">Run number</span><input id="v3-run" autocomplete="off" placeholder="e.g. EBR-0001" value="' + esc(S.run) + '"></label>' +
       '<label class="cap-grp" for="v3-date" style="flex:0 1 170px"><span class="lb">Production date</span><input id="v3-date" type="date" min="' + minIso() + '" max="' + todayIso() + '" value="' + esc(S.date) + '"></label>' +
       '<label class="cap-grp" for="v3-shift" style="flex:0 1 150px"><span class="lb">Shift</span><select id="v3-shift">' + SHIFTS.map(function (x) { return '<option' + (x === S.shift ? " selected" : "") + ">" + x + "</option>"; }).join("") + "</select></label></div>" +
@@ -252,77 +252,80 @@
       b.onclick = function () { S.station = s[0]; S.v = { hold: S.v.hold }; lsSet("station", S.station); renderStation(); };
       stepsEl.appendChild(b);
     });
-    $("v3-pick").onclick = function () { pickOpen($("v3-pickp").hidden); };
     $("v3-pickq").oninput = function (e) { renderPick(e.target.value); };
-    $("v3-pickp").onkeydown = function (e) { if (e.key === "Escape") { pickOpen(false); $("v3-pick").focus(); } };
+    $("v3-pickq").parentNode.parentNode.onkeydown = function (e) { if (e.key === "Escape") pickCancel(); };
     $("v3-pickl").onclick = function (e) {
       var b = e.target.closest("button"); if (!b || b.disabled) return;
+      if (b.dataset.cancel) return pickCancel();
       if (b.dataset.k) return pickChoose(b.dataset.k);
-      if (b.dataset.back) { pickBack(b.dataset.back); renderPick(""); pickFocus(); return; }
-      if (b.dataset.f) { PK[b.dataset.f] = b.dataset.f === "pages" ? +b.dataset.v : b.dataset.v; renderPick(""); pickFocus(); }
+      $("v3-pickq").value = "";
+      if (b.dataset.back) pickBack(b.dataset.back);
+      else if (b.dataset.f) PK[b.dataset.f] = b.dataset.f === "pages" ? +b.dataset.v : b.dataset.v;
+      else return;
+      renderPick(""); pickFocus();
     };
-    if (!pickWired) { pickWired = true; document.addEventListener("pointerdown", function (e) { var w = $("v3-pickp"); if (w && !w.hidden && !e.target.closest(".pick-w")) pickOpen(false); }); }
     $("v3-run").oninput = function (e) { S.run = e.target.value; lsSet("run", S.run); renderPreview(); };
     $("v3-date").onchange = $("v3-date").oninput = function (e) { S.date = e.target.value; renderPreview(); renderToday(); };
     $("v3-shift").onchange = function (e) { S.shift = e.target.value; lsSet("shift", S.shift); renderPreview(); };
     $("v3-reload").onclick = function () { $("v3-reload").textContent = "Reloading…"; clearProduction(); load().then(function () { renderShell(); }); };
     $("v3-post").onclick = doPost;
-    renderStation();
+    pickSync(); renderPick(""); renderStation();
   }
 
-  /* Item picker: brand, then pages, then size, then ruling. Search and recent items stay as shortcuts.
-     S.group only changes on the last step, so the screen below never holds a half-picked item. */
-  var pickWired = false, PK = {};
-  var PICK_BRANDS = ["Prince", "Swara", "Hi5", "School"], PICK_ORDER = ["brand", "pages", "size"];
+  /* Item choice: part of the Capture screen, at the top. Brand, pages, size, ruling as chips; tap a chip to change from there, or type to search.
+     S.group only changes once all four are set. Until then #v3-cap has data-picking and the count, preview and Post are hidden, so nothing can post against a half-picked item. */
+  var PK = {};
+  var PICK_BRANDS = ["Prince", "Swara", "Hi5", "School"], PICK_ORDER = ["brand", "pages", "size", "ruling"];
+  function pickSync() { var gg = g(); PK = { brand: gg.brand, pages: gg.pages, size: gg.size, ruling: gg.ruling }; }
+  function pickBusy() { return PICK_ORDER.some(function (f) { return PK[f] == null; }); }
+  function pickCancel() { $("v3-pickq").value = ""; pickSync(); renderPick(""); }
   function pickBack(f) { PICK_ORDER.slice(PICK_ORDER.indexOf(f)).forEach(function (x) { delete PK[x]; }); }
   function pickMatches() { return groupKeys().filter(function (k) { var gg = D.groups[k]; return PICK_ORDER.every(function (f) { return PK[f] == null || gg[f] === PK[f]; }); }); }
   function pickVals(f) { return uniq(pickMatches().map(function (k) { return D.groups[k][f]; })).sort(function (a, b) { return f === "pages" ? a - b : String(a).localeCompare(String(b)); }); }
-  function pickFocus() { var b = $("v3-pickl").querySelector(".pick-o button:not(:disabled), [data-k]"); if (b) b.focus(); }
-  function pickTile(f, v, label) {
-    var open = pickMatchesFor(f, v).some(function (k) { return D.groups[k].dem > 0; });
-    return '<button type="button" data-f="' + f + '" data-v="' + esc(v) + '"' + (f === "brand" ? ' data-b="' + esc(v) + '"' : "") + "><b>" + esc(label) + "</b><small>" + (open ? "On order" : "No open orders") + "</small></button>";
-  }
+  function pickFocus() { var l = $("v3-pickl"), b = l.querySelector(".pick-o button:not(:disabled)") || l.querySelector(".pick-c button"); if (b) b.focus(); }
   function pickMatchesFor(f, v) { return pickMatches().filter(function (k) { return D.groups[k][f] === v; }); }
+  function pickTile(f, v, label) {
+    var ks = pickMatchesFor(f, v), open = ks.some(function (k) { return D.groups[k].dem > 0; });
+    var note = f === "ruling" ? onOrder(D.groups[ks[0]]) : open ? "On order" : "No open orders";
+    return '<button type="button" data-f="' + f + '" data-v="' + esc(v) + '"' + (f === "brand" ? ' data-b="' + esc(v) + '"' : "") + "><b>" + esc(label) + "</b><small>" + esc(note) + "</small></button>";
+  }
   function groupKeys() { return Object.keys(D.groups).sort(function (a, b) { var x = D.groups[a], y = D.groups[b]; return (y.dem > 0) - (x.dem > 0) || y.dem - x.dem || a.localeCompare(b); }); }
   function onOrder(gg) { return gg.dem ? "On order " + (gcpc(gg) ? c1(gg.dem / gcpc(gg)) + " ctn" : f(gg.dem) + " books") : "No open orders"; }
   function recents() { try { return JSON.parse(lsGet("recent", "[]")).filter(function (k) { return D.groups[k]; }); } catch (e) { return []; } }
-  function pickLabel() { var gg = g(); $("v3-pickt").textContent = gname(gg); $("v3-picks").textContent = onOrder(gg); }
+  function pickLabel() { $("v3-picks").textContent = pickBusy() ? "Choosing. Cancel keeps " + gname(g()) : onOrder(g()); }
+  function pickChipText(f) { return f === "pages" ? PK[f] + " pages" : f === "ruling" ? (RUL[PK[f]] || PK[f]) : PK[f]; }
   function renderPick(q) {
     var keys = groupKeys(), toks = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
     function row(k) { var gg = D.groups[k]; return '<button type="button" data-k="' + esc(k) + '"' + (k === S.group ? ' aria-current="true"' : "") + "><b>" + esc(gname(gg)) + "</b><small>" + esc(onOrder(gg)) + "</small></button>"; }
-    function sec(t, ks) { return ks.length ? '<p class="pick-h">' + t + "</p>" + ks.map(row).join("") : ""; }
+    if (!toks.length) {
+      if (PK.brand && PK.pages && PK.size == null) { var sz = pickVals("size"); if (sz.length === 1) PK.size = sz[0]; }        // e.g. 100 pages is A5 only
+      if (PK.size && PK.ruling == null) { var ru = pickVals("ruling"); if (ru.length === 1) PK.ruling = ru[0]; }
+      if (!pickBusy()) { var done = pickMatches()[0]; if (done !== S.group) return pickChoose(done); }
+    }
+    var head = '<div class="pick-c">' + PICK_ORDER.filter(function (f) { return PK[f] != null; }).map(function (f) { return '<button type="button" data-back="' + f + '"' + (f === "brand" ? ' data-b="' + esc(PK.brand) + '"' : "") + ' aria-label="Change ' + f + '">' + esc(pickChipText(f)) + "</button>"; }).join("") +
+      (pickBusy() ? '<button type="button" class="pick-x" data-cancel="1">Cancel</button>' : "") + "</div>", body = "";
+    function tiles(t, html) { return '<p class="pick-h">' + t + '</p><div class="pick-o">' + html + "</div>"; }
     if (toks.length) {
       var hit = keys.filter(function (k) { var gg = D.groups[k], hay = (gname(gg) + " " + gg.ruling + " " + gg.cov).toLowerCase(); return toks.every(function (t) { return hay.indexOf(t) >= 0; }); });
-      $("v3-pickl").innerHTML = hit.length ? hit.map(row).join("") : '<p class="pick-h">No items match.</p>';
-      return;
-    }
-    if (PK.brand && PK.pages && PK.size == null) { var only = pickVals("size"); if (only.length === 1) PK.size = only[0]; }   // e.g. 100 pages is A5 only
-    var crumbs = PICK_ORDER.filter(function (f) { return PK[f] != null; }).map(function (f) { return '<button type="button" data-back="' + f + '"' + (f === "brand" ? ' data-b="' + esc(PK.brand) + '"' : "") + ' aria-label="Change ' + f + '">‹ ' + esc(f === "pages" ? PK[f] + " pages" : PK[f]) + "</button>"; }).join("");
-    var head = crumbs ? '<div class="pick-c">' + crumbs + "</div>" : "";
-    if (!PK.brand) {
-      var tiles = PICK_BRANDS.map(function (b) {
-        var has = keys.some(function (k) { return D.groups[k].brand === b; });
-        return has ? pickTile("brand", b, b) : '<button type="button" data-b="' + b + '" disabled><b>' + b + "</b><small>No cover, fold or insert items yet</small></button>";
-      }).join("");
-      $("v3-pickl").innerHTML = sec("Recent", recents()) + '<p class="pick-h">Brand or school</p><div class="pick-o">' + tiles + "</div>";
-    } else if (!PK.pages) {
-      $("v3-pickl").innerHTML = head + '<p class="pick-h">Pages</p><div class="pick-o">' + pickVals("pages").map(function (p) { return pickTile("pages", p, p + " pages"); }).join("") + "</div>";
-    } else if (!PK.size) {
-      $("v3-pickl").innerHTML = head + '<p class="pick-h">Size</p><div class="pick-o">' + pickVals("size").map(function (s) { return pickTile("size", s, s); }).join("") + "</div>";
-    } else {
-      var last = pickMatches();
-      if (last.length === 1) return pickChoose(last[0]);
-      $("v3-pickl").innerHTML = head + '<p class="pick-h">Ruling</p>' + last.map(function (k) { var gg = D.groups[k]; return '<button type="button" data-k="' + esc(k) + '"' + (k === S.group ? ' aria-current="true"' : "") + "><b>" + esc(RUL[gg.ruling] || gg.ruling) + "</b><small>" + esc(onOrder(gg)) + "</small></button>"; }).join("");
-    }
-  }
-  function pickOpen(on) {
-    $("v3-pickp").hidden = !on; $("v3-pick").setAttribute("aria-expanded", String(on));
-    if (on) { PK = {}; $("v3-pickq").value = ""; renderPick(""); pickFocus(); }   // not the search box: that opens the tablet keyboard
+      body = hit.length ? '<div class="pick-hits">' + hit.map(row).join("") + "</div>" : '<p class="pick-h">No items match.</p>';
+    } else if (!PK.brand) {
+      var rec = recents();
+      body = tiles("Brand or school", PICK_BRANDS.map(function (b) {
+        return keys.some(function (k) { return D.groups[k].brand === b; }) ? pickTile("brand", b, b) : '<button type="button" data-b="' + b + '" disabled><b>' + b + "</b><small>No cover, fold or insert items yet</small></button>";
+      }).join("")) + (rec.length ? '<p class="pick-h">Recent</p><div class="pick-hits">' + rec.map(row).join("") + "</div>" : "");
+    } else if (!PK.pages) body = tiles("Pages", pickVals("pages").map(function (p) { return pickTile("pages", p, p + " pages"); }).join(""));
+    else if (!PK.size) body = tiles("Size", pickVals("size").map(function (s) { return pickTile("size", s, s); }).join(""));
+    else if (!PK.ruling) body = tiles("Ruling", pickVals("ruling").map(function (r) { return pickTile("ruling", r, RUL[r] || r); }).join(""));
+    $("v3-pickl").innerHTML = head + body;
+    $("v3-cap").dataset.picking = pickBusy() ? "1" : "";
+    pickLabel();
   }
   function pickChoose(k) {
-    S.group = k; S.book = null; S.v = { hold: S.v.hold }; lsSet("group", k);
+    var changed = k !== S.group;
+    if (changed) { S.group = k; S.book = null; S.v = { hold: S.v.hold }; lsSet("group", k); }
     lsSet("recent", JSON.stringify([k].concat(recents().filter(function (x) { return x !== k; })).slice(0, 4)));
-    pickOpen(false); renderStation(); $("v3-pick").focus();
+    $("v3-pickq").value = ""; pickSync(); renderPick("");
+    if (changed) renderStation();
   }
 
   function renderBookPicker() {
