@@ -213,57 +213,37 @@
       }
       P.extra = { books: books, sets: sets, rejects: rj2 + over, cartons: ct, loose: lo, samples_due: due, weights: w.join("; ") };
     }
+    dupWarn(P);
     return P;
   }
 
   /* ---------- render ---------- */
   function renderMode() {
     var b;
-    if (!MODE.checked) b = '<div class="banner preview">Checking the server…</div>';
+    if (!MODE.checked) b = "";
     else if (!MODE.server) b = '<div class="banner live">Server update needed: deploy vcl-production feat/eb-capture-v3 and migrate. Until then Post shows what it would do and posts nothing.</div>';
     else if (MODE.disabled) b = '<div class="banner live">Posting is switched off on this site (eb_capture_disabled).</div>';
     else if (!MODE.can_post) b = '<div class="banner live">Your login has no Stock or Manufacturing role, so Post is refused.</div>';
-    else b = '<div class="banner preview">Posting changes stock in ERPNext. Every post asks you to confirm twice, and can be undone for 10 minutes.</div>';
+    else b = "";
     $("v3-banner").innerHTML = b;
-    renderChart();
-  }
-
-  function renderChart() {
-    var st = MODE.server ? "Ready" : "Server update needed";
-    function node(x, y, w, n, t, s, cls, stt) { return '<g class="fn ' + cls + '"><rect x="' + x + '" y="' + y + '" width="' + w + '" height="76" rx="4"/><text x="' + (x + 12) + '" y="' + (y + 24) + '" class="fh">' + n + "  " + t + '</text><text x="' + (x + 12) + '" y="' + (y + 44) + '" class="fs">' + s + '</text><text x="' + (x + 12) + '" y="' + (y + 63) + '" class="fst">' + stt + "</text></g>"; }
-    var wide = '<svg class="fchart fh-wide" viewBox="0 0 840 196" role="img" aria-label="Production flow: ruling to folds, and covers, both feed inserts, then packing into finished stock"><defs><marker id="v3a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fah"/></marker></defs>' +
-      '<path d="M132 48H172" class="fa" marker-end="url(#v3a1)"/><path d="M304 48H336V86H366" class="fa" marker-end="url(#v3a1)"/><path d="M218 152H336V114H366" class="fa" marker-end="url(#v3a1)"/><path d="M498 100H542" class="fa" marker-end="url(#v3a1)"/><path d="M674 100H714" class="fa" marker-end="url(#v3a1)"/>' +
-      node(4, 10, 128, 1, "Ruling", "Inner papers", "grey", "Phase 2/3") + node(176, 10, 128, 3, "Folds", "Fold sets", "ok", st) + node(90, 114, 128, 2, "Covers", "Printed sheets", "ok", st) +
-      node(370, 62, 128, 4, "Inserts", "Covers + folds", "ok", st) + node(546, 62, 128, 5, "Packing", "Cartons", "ok", st) +
-      '<g class="fn end"><rect x="718" y="72" width="118" height="56" rx="28"/><text x="777" y="96" text-anchor="middle" class="fh">Finished stock</text><text x="777" y="114" text-anchor="middle" class="fs">Finished Goods - VCL</text></g></svg>';
-    var narrow = '<svg class="fchart fh-narrow" viewBox="0 0 340 500" role="img" aria-label="Production flow"><defs><marker id="v3a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fah"/></marker></defs>' +
-      '<path d="M85 86V110" class="fa" marker-end="url(#v3a2)"/><path d="M85 190V208H140V226" class="fa" marker-end="url(#v3a2)"/><path d="M255 190V208H200V226" class="fa" marker-end="url(#v3a2)"/><path d="M170 306V330" class="fa" marker-end="url(#v3a2)"/><path d="M170 410V434" class="fa" marker-end="url(#v3a2)"/>' +
-      node(10, 10, 150, 1, "Ruling", "Inner papers", "grey", "Phase 2/3") + node(10, 114, 150, 3, "Folds", "Fold sets", "ok", st) + node(180, 114, 150, 2, "Covers", "Printed sheets", "ok", st) +
-      node(95, 230, 150, 4, "Inserts", "Covers + folds", "ok", st) + node(95, 334, 150, 5, "Packing", "Cartons", "ok", st) +
-      '<g class="fn end"><rect x="95" y="438" width="150" height="56" rx="28"/><text x="170" y="462" text-anchor="middle" class="fh">Finished stock</text><text x="170" y="480" text-anchor="middle" class="fs">Finished Goods - VCL</text></g></svg>';
-    $("v3-chart").innerHTML = wide + narrow;
   }
 
   function gname(gg) { return gg.brand + " · " + gg.size + " · " + gg.pages + " pages · " + (RUL[gg.ruling] || gg.ruling); }
 
   function renderShell() {
-    var keys = Object.keys(D.groups).sort(function (a, b) { var x = D.groups[a], y = D.groups[b]; return (y.dem > 0) - (x.dem > 0) || y.dem - x.dem || a.localeCompare(b); });
-    if (!D.groups[S.group]) S.group = keys[0];
-    var withOrders = keys.filter(function (k) { return D.groups[k].dem > 0; }), rest = keys.filter(function (k) { return !D.groups[k].dem; });
-    function opt(k) { var gg = D.groups[k]; return '<option value="' + esc(k) + '"' + (k === S.group ? " selected" : "") + ">" + esc(gname(gg)) + (gg.dem ? "  (on order: " + (gcpc(gg) ? c1(gg.dem / gcpc(gg)) + " ctn" : f(gg.dem) + " books") + ")" : "") + "</option>"; }
-    $("v3-app").innerHTML = '<div class="cap"><div class="cap-top">' +
-      '<label class="cap-grp" for="v3-group"><span class="lb">Working on (brand · size · pages · ruling)</span><select id="v3-group">' +
-      (withOrders.length ? '<optgroup label="With open orders">' + withOrders.map(opt).join("") + "</optgroup>" : "") + '<optgroup label="Other groups">' + rest.map(opt).join("") + "</optgroup></select></label>" +
-      '<label class="cap-grp" for="v3-book" style="flex:1 1 200px"><span class="lb">Book (packing)</span><select id="v3-book"></select></label>' +
-      '<label class="cap-grp" for="v3-run" style="flex:0 1 200px"><span class="lb">Run number</span><input id="v3-run" autocomplete="off" placeholder="e.g. EBR-0001" value="' + esc(S.run) + '"></label>' +
-      '<label class="cap-grp" for="v3-date" style="flex:0 1 180px"><span class="lb">Production date</span><input id="v3-date" type="date" min="' + minIso() + '" max="' + todayIso() + '" value="' + esc(S.date) + '"></label>' +
-      '<label class="cap-grp" for="v3-shift" style="flex:0 1 170px"><span class="lb">Shift</span><select id="v3-shift">' + SHIFTS.map(function (x) { return '<option' + (x === S.shift ? " selected" : "") + ">" + x + "</option>"; }).join("") + "</select></label>" +
-      '<div><button type="button" class="cap-sec" id="v3-reload">Reload stock</button></div></div>' +
-      '<div class="cap-steps" id="v3-steps" role="tablist" aria-label="Stations"></div>' +
+    if (!D.groups[S.group]) S.group = groupKeys()[0];
+    $("v3-app").innerHTML = '<div class="cap"><div class="cap-steps" id="v3-steps" role="tablist" aria-label="Stations"></div>' +
+      '<div class="cap-top"><div class="cap-grp pick-w" style="flex:2 1 300px"><span class="lb">Working on</span><button type="button" class="pick-btn" id="v3-pick" aria-expanded="false" aria-controls="v3-pickp"><b id="v3-pickt"></b><small id="v3-picks"></small></button>' +
+      '<div class="pick" id="v3-pickp" hidden><input id="v3-pickq" type="search" autocomplete="off" placeholder="Search brand, size, pages, ruling" aria-label="Search items"><div class="pick-l" id="v3-pickl"></div></div></div>' +
+      '<label class="cap-grp" for="v3-run" style="flex:0 1 190px"><span class="lb">Run number</span><input id="v3-run" autocomplete="off" placeholder="e.g. EBR-0001" value="' + esc(S.run) + '"></label>' +
+      '<label class="cap-grp" for="v3-date" style="flex:0 1 170px"><span class="lb">Production date</span><input id="v3-date" type="date" min="' + minIso() + '" max="' + todayIso() + '" value="' + esc(S.date) + '"></label>' +
+      '<label class="cap-grp" for="v3-shift" style="flex:0 1 150px"><span class="lb">Shift</span><select id="v3-shift">' + SHIFTS.map(function (x) { return '<option' + (x === S.shift ? " selected" : "") + ">" + x + "</option>"; }).join("") + "</select></label></div>" +
       '<div class="cap-grid"><div class="cap-card" id="v3-form"></div><div class="cap-card" id="v3-preview"></div></div>' +
-      '<div class="cap-card"><div class="cap-h"><h3>Stock for this group</h3><span class="cap-note" id="v3-stocknote"></span></div><div class="cap-stock" id="v3-stock"></div></div>' +
-      '<div class="cap-card"><div class="cap-h"><h3>Entries (this session)</h3><span class="cap-note" id="v3-lognote"></span></div><div class="tw"><table><thead><tr><th>#</th><th>Run · date · shift</th><th>Station</th><th>Entry</th><th>Out</th><th>In</th><th></th></tr></thead><tbody id="v3-log"></tbody></table></div></div></div>' +
-      '<p class="cap-note" style="margin-top:10px">Stock as read ' + D.loadedAt.toLocaleTimeString("en-GB") + ". Covers, folds and inserts are in sets (A4 2-up, A5 3-up); books = sets × up-count. Carton per size and brand is a proposal (P12, for Tanuj).</p>";
+      '<div class="cap-card" id="v3-today"></div>' +
+      '<div class="cap-card" id="v3-logcard" hidden><div class="cap-h"><h3>Posted from this screen</h3><span class="cap-note" id="v3-lognote"></span></div><div class="tw"><table><thead><tr><th>#</th><th>Run · date · shift</th><th>Station</th><th>Entry</th><th>Out</th><th>In</th><th></th></tr></thead><tbody id="v3-log"></tbody></table></div></div>' +
+      '<div class="cap-card"><div class="cap-h"><div><h3>Stock for this item</h3><span class="cap-note" id="v3-stocknote"></span></div><button type="button" class="cap-sec" id="v3-reload">Reload stock</button></div><div class="cap-stock" id="v3-stock"></div></div>' +
+      '<p class="cap-note">Stock as read ' + D.loadedAt.toLocaleTimeString("en-GB") + ". Covers, folds and inserts are in sets (A4 2-up, A5 3-up); books = sets × up-count. Carton per size and brand is a proposal (P12, for Tanuj).</p>" +
+      '<div class="cap-bar" id="v3-bar"><div class="t"><b id="v3-barsum"></b><small>Every post is confirmed twice, and can be undone for 10 minutes.</small></div><button type="button" class="cap-post" id="v3-post">Post entry</button></div></div>';
     var stepsEl = $("v3-steps");
     STEPS.forEach(function (s, i) {
       if (i) { var a = document.createElement("span"); a.className = "arr"; a.textContent = "→"; stepsEl.appendChild(a); }
@@ -272,18 +252,52 @@
       b.onclick = function () { S.station = s[0]; S.v = { hold: S.v.hold }; lsSet("station", S.station); renderStation(); };
       stepsEl.appendChild(b);
     });
-    $("v3-group").onchange = function (e) { S.group = e.target.value; S.book = null; S.v = { hold: S.v.hold }; lsSet("group", S.group); renderStation(); };
+    $("v3-pick").onclick = function () { pickOpen($("v3-pickp").hidden); };
+    $("v3-pickq").oninput = function (e) { renderPick(e.target.value); };
+    $("v3-pickq").onkeydown = function (e) { if (e.key === "Escape") { pickOpen(false); $("v3-pick").focus(); } };
+    $("v3-pickl").onclick = function (e) { var b = e.target.closest("[data-k]"); if (b) pickChoose(b.dataset.k); };
+    if (!pickWired) { pickWired = true; document.addEventListener("pointerdown", function (e) { var w = $("v3-pickp"); if (w && !w.hidden && !e.target.closest(".pick-w")) pickOpen(false); }); }
     $("v3-run").oninput = function (e) { S.run = e.target.value; lsSet("run", S.run); renderPreview(); };
-    $("v3-date").onchange = $("v3-date").oninput = function (e) { S.date = e.target.value; renderPreview(); };
+    $("v3-date").onchange = $("v3-date").oninput = function (e) { S.date = e.target.value; renderPreview(); renderToday(); };
     $("v3-shift").onchange = function (e) { S.shift = e.target.value; lsSet("shift", S.shift); renderPreview(); };
-    $("v3-reload").onclick = function () { $("v3-reload").textContent = "Reloading…"; load().then(function () { renderShell(); renderStation(); }); };
+    $("v3-reload").onclick = function () { $("v3-reload").textContent = "Reloading…"; clearProduction(); load().then(function () { renderShell(); }); };
+    $("v3-post").onclick = doPost;
     renderStation();
+  }
+
+  /* Item picker: full names, search, recent items first. */
+  var pickWired = false;
+  function groupKeys() { return Object.keys(D.groups).sort(function (a, b) { var x = D.groups[a], y = D.groups[b]; return (y.dem > 0) - (x.dem > 0) || y.dem - x.dem || a.localeCompare(b); }); }
+  function onOrder(gg) { return gg.dem ? "On order " + (gcpc(gg) ? c1(gg.dem / gcpc(gg)) + " ctn" : f(gg.dem) + " books") : "No open orders"; }
+  function recents() { try { return JSON.parse(lsGet("recent", "[]")).filter(function (k) { return D.groups[k]; }); } catch (e) { return []; } }
+  function pickLabel() { var gg = g(); $("v3-pickt").textContent = gname(gg); $("v3-picks").textContent = onOrder(gg); }
+  function renderPick(q) {
+    var keys = groupKeys(), toks = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
+    function row(k) { var gg = D.groups[k]; return '<button type="button" data-k="' + esc(k) + '"' + (k === S.group ? ' aria-current="true"' : "") + "><b>" + esc(gname(gg)) + "</b><small>" + esc(onOrder(gg)) + "</small></button>"; }
+    function sec(t, ks) { return ks.length ? '<p class="pick-h">' + t + "</p>" + ks.map(row).join("") : ""; }
+    if (toks.length) {
+      var hit = keys.filter(function (k) { var gg = D.groups[k], hay = (gname(gg) + " " + gg.ruling + " " + gg.cov).toLowerCase(); return toks.every(function (t) { return hay.indexOf(t) >= 0; }); });
+      $("v3-pickl").innerHTML = hit.length ? hit.map(row).join("") : '<p class="pick-h">No items match.</p>';
+      return;
+    }
+    var rec = recents();
+    $("v3-pickl").innerHTML = sec("Recent", rec) + sec("With open orders", keys.filter(function (k) { return D.groups[k].dem > 0 && rec.indexOf(k) < 0; })) + sec("Other items", keys.filter(function (k) { return !D.groups[k].dem && rec.indexOf(k) < 0; }));
+  }
+  function pickOpen(on) {
+    $("v3-pickp").hidden = !on; $("v3-pick").setAttribute("aria-expanded", String(on));
+    if (on) { $("v3-pickq").value = ""; renderPick(""); $("v3-pickq").focus(); }
+  }
+  function pickChoose(k) {
+    S.group = k; S.book = null; S.v = { hold: S.v.hold }; lsSet("group", k);
+    lsSet("recent", JSON.stringify([k].concat(recents().filter(function (x) { return x !== k; })).slice(0, 4)));
+    pickOpen(false); renderStation(); $("v3-pick").focus();
   }
 
   function renderBookPicker() {
     var gg = g(), el = $("v3-book");
+    if (gg.books.length && (!S.book || !gg.books.some(function (b) { return b.code === S.book; }))) S.book = gg.books[0].code;
+    if (!el) return;
     if (!gg.books.length) { el.innerHTML = "<option>No book item</option>"; el.disabled = true; return; }
-    if (!S.book || !gg.books.some(function (b) { return b.code === S.book; })) S.book = gg.books[0].code;
     el.disabled = gg.books.length < 2;
     el.innerHTML = gg.books.map(function (b) { return '<option value="' + esc(b.code) + '"' + (b.code === S.book ? " selected" : "") + ">" + esc(b.code) + (b.cpc ? " · " + b.cpc + "/ctn" : " · no Carton UOM") + "</option>"; }).join("");
     el.onchange = function () { S.book = el.value; renderStation(); };
@@ -291,30 +305,29 @@
 
   function renderStation() {
     [].forEach.call($("v3-steps").querySelectorAll("button"), function (b) { b.setAttribute("aria-selected", b.dataset.s === S.station ? "true" : "false"); });
-    renderBookPicker(); renderForm(); renderPreview(); renderStock(); renderLog();
+    pickLabel(); renderBookPicker(); renderForm(); renderBookPicker(); renderPreview(); renderToday(); renderStock(); renderLog();
   }
 
-  function field(key, label, help) { var id = "v3-" + key, val = S.v[key] == null ? "" : S.v[key]; return '<div class="cap-f"><label class="lb" for="' + id + '">' + label + '</label><input class="qty" id="' + id + '" data-k="' + key + '" inputmode="numeric" autocomplete="off" value="' + esc(val) + '">' + (help ? '<span class="cap-note">' + help + "</span>" : "") + "</div>"; }
+  function field(key, label, help, big) { var id = "v3-" + key, val = S.v[key] == null ? "" : S.v[key]; return '<div class="cap-f"><label class="lb" for="' + id + '">' + label + '</label><input class="qty' + (big ? " big" : "") + '" id="' + id + '" data-k="' + key + '" inputmode="numeric" autocomplete="off" value="' + esc(val) + '">' + (help ? '<span class="cap-note">' + help + "</span>" : "") + "</div>"; }
   function ro(label, val, mono) { return '<div class="cap-f"><span class="lb">' + label + ' · auto</span><span class="cap-ro' + (mono ? " mono" : "") + '">' + val + "</span></div>"; }
+  function formHead(title, code, note) { return '<div class="cap-h"><div><h3>' + title + '</h3><span class="cap-note"><code>' + esc(code) + "</code> · " + note + "</span></div></div>"; }
 
   function renderForm() {
     var gg = g(), bk = book(), s = stock(), el = $("v3-form"), h = "";
-    if (S.station === "covers") h = '<div class="cap-h"><h3>Covers: quick entry</h3><span class="chip">Material Receipt</span></div><div class="cap-fields">' + ro("Item", esc(gg.cov), 1) + ro("Sheet", "1 sheet = " + gg.ups + " covers") + field("good", "Good printed sheets", "Count of good sheets off the press") + field("spoiled", "Spoiled sheets", "Recorded, not added") + "</div>";
-    if (S.station === "folds") h = '<div class="cap-h"><h3>Folds: entry</h3><span class="chip new">New station</span></div><div class="cap-fields">' + ro("Item", esc(gg.fld), 1) + ro("Unit", "1 fold set = " + gg.ups + " books' inners") + field("good", "Good fold sets") + field("rejects", "Rejected fold sets", "Recorded, not added") + "</div>" +
+    if (S.station === "covers") h = formHead("Covers", gg.cov, "1 sheet = " + gg.ups + " covers") + field("good", "Good printed sheets", "", 1) + '<div class="cap-fields">' + field("spoiled", "Spoiled sheets", "Recorded, not added") + "</div>";
+    if (S.station === "folds") h = formHead("Folds", gg.fld, "1 fold set = " + gg.ups + " books' inners") + field("good", "Good fold sets", "", 1) + '<div class="cap-fields">' + field("rejects", "Rejected fold sets", "Recorded, not added") + "</div>" +
       '<label class="cap-check"><input type="checkbox" id="v3-opening"' + (S.v.opening ? " checked" : "") + "> This is the opening count of folds already on the floor" + (s.fld === 0 ? " (no fold stock yet)" : "") + "</label>";
-    if (S.station === "inserts") h = '<div class="cap-h"><h3>Inserts: make sets</h3><span class="chip">Repack, no BOM</span></div><div class="cap-fields">' + ro("Makes", esc(gg.ins), 1) + ro("Uses", "1 cover sheet + 1 fold set per set") + field("sets", "Insert sets made") + "</div>" +
+    if (S.station === "inserts") h = formHead("Inserts", gg.ins, "1 cover sheet + 1 fold set per set") + field("sets", "Insert sets made", "", 1) +
       '<label class="cap-check"><input type="checkbox" id="v3-hold"' + (S.v.hold ? " checked" : "") + "> Hold off the fold check (no fold count yet). Logged on the entry.</label>";
-    if (S.station === "packing") h = '<div class="cap-h"><h3>Packing: receive finished books</h3><span class="chip">Manufacture</span></div><div class="cap-fields">' + ro("Book", bk ? esc(bk.code) : "none", 1) + ro("Books per carton", bk && bk.cpc ? bk.cpc : "not set") +
-      field("cartons", "Full cartons") + field("loose", "Loose books") + field("rejects", "Rejected books") + "</div>" +
+    if (S.station === "packing") h = '<div class="cap-h"><div><h3>Packing</h3><span class="cap-note">' + (bk && bk.cpc ? bk.cpc + " books per carton" : "Books per carton not set") + '</span></div></div><label class="cap-f" for="v3-book"><span class="lb">Book</span><select id="v3-book"></select></label>' +
+      field("cartons", "Full cartons", "", 1) + '<div class="cap-fields">' + field("loose", "Loose books") + field("rejects", "Rejected books") + "</div>" +
       '<div class="cap-f"><label class="lb" for="v3-weights">Spot weights, kg (1 carton in 20)</label><input id="v3-weights" data-k="weights" autocomplete="off" placeholder="e.g. 9.8; 9.9; 10.1" value="' + esc(S.v.weights || "") + '"></div>' +
       '<p class="cap-note">Empty carton: <code>' + esc(gg.carton) + "</code> · " + f(s.carton) + " in stock" + (s.cartonEnabled ? "" : " · <b>item disabled in ERPNext</b>") + "</p>";
     if (S.station === "fg") { renderFG(el); return; }
-    h += '<button type="button" class="cap-post" id="v3-post">Post ' + (S.station === "packing" ? "and receive into Finished Goods" : "entry") + "</button>";
     el.innerHTML = h;
     [].forEach.call(el.querySelectorAll("input[data-k]"), function (x) { x.oninput = function () { S.v[x.dataset.k] = x.value; renderPreview(); }; });
     var hd = $("v3-hold"); if (hd) hd.onchange = function () { S.v.hold = hd.checked; renderPreview(); };
     var op = $("v3-opening"); if (op) op.onchange = function () { S.v.opening = op.checked; renderPreview(); };
-    $("v3-post").onclick = doPost;
   }
 
   function renderFG(el) {
@@ -334,17 +347,67 @@
 
   function renderPreview() {
     var el = $("v3-preview");
+    $("v3-bar").hidden = S.station === "fg";
     if (S.station === "fg") {
       var gg = g(), s = stock(), u = gg.ups;
       el.innerHTML = '<div class="cap-h"><h3>The chain for this group</h3></div><div class="cap-rows">' + [["Covers", s.cov, "sheets", s.cov * u], ["Folds", s.fld, "sets", s.fld * u], ["Inserts", s.ins, "sets", s.ins * u], ["Finished Goods", s.fg, "books", s.fg]].map(function (r) { return '<div class="cap-row in"><span class="d">' + r[0].slice(0, 3).toUpperCase() + '</span><span class="it">' + r[0] + "<span>" + f(r[1]) + " " + r[2] + (r[2] === "books" ? "" : " × " + u) + " = " + f(r[3]) + ' books</span></span><span class="q"><b>' + (gcpc(gg) ? c1(r[3] / gcpc(gg)) + " ctn" : f(r[3]) + " books") + "</b><small>" + f(r[3]) + " books</small></span></div>"; }).join("") + "</div>";
       return;
     }
-    var P = planEntry(), run = (S.run || "").trim();
-    if (!run) { P.ok = false; P.msgs.unshift(["info", "Enter the run number (it goes on the entry)."]); }
+    var P = planEntry(), run = (S.run || "").trim(), has = P.rows.some(function (r) { return r.qty; });
+    if (!run) P.ok = false;
+    var msgs = P.msgs.filter(function (m) { return has || m[0] !== "info"; });
     el.innerHTML = '<div class="cap-h"><h3>What this entry will do</h3><span class="cap-note">' + esc(P.type) + " · run " + esc(run || "-") + " · " + esc(whenText()) + "</span></div>" +
-      '<div class="cap-rows">' + P.rows.map(function (r) { return '<div class="cap-row ' + r.dir + '"><span class="d">' + (r.dir === "out" ? "OUT −" : "IN +") + '</span><span class="it"><code>' + esc(r.item) + "</code><span>" + (r.dir === "out" ? "from " : "into ") + esc(r.wh) + (r.unit !== "books" && r.unit !== "cartons" ? " · " + ctnBooks(Math.abs(r.qty) * g().ups) : "") + '</span></span><span class="q"><b>' + (r.qty > 0 ? "+" : "") + f(r.qty) + "</b><small>" + f(r.before) + " → " + f(r.after) + " " + r.unit + "</small></span></div>"; }).join("") + "</div>" +
-      P.msgs.map(function (m) { return '<div class="cap-msg ' + m[0] + '">' + esc(m[1]) + "</div>"; }).join("") + '<div id="v3-result"></div>';
-    var pb = $("v3-post"); if (pb) pb.disabled = !P.ok;
+      (has ? '<div class="cap-rows">' + P.rows.map(function (r) { return '<div class="cap-row ' + r.dir + '"><span class="d">' + (r.dir === "out" ? "OUT −" : "IN +") + '</span><span class="it"><code>' + esc(r.item) + "</code><span>" + (r.dir === "out" ? "from " : "into ") + esc(r.wh) + (r.unit !== "books" && r.unit !== "cartons" ? " · " + ctnBooks(Math.abs(r.qty) * g().ups) : "") + '</span></span><span class="q"><b>' + (r.qty > 0 ? "+" : "") + f(r.qty) + "</b><small>" + f(r.before) + " → " + f(r.after) + " " + r.unit + "</small></span></div>"; }).join("") + "</div>"
+        : '<p class="cap-empty">Enter a count to see exactly what will post.</p>') +
+      msgs.map(function (m) { return '<div class="cap-msg ' + m[0] + '">' + esc(m[1]) + "</div>"; }).join("") + '<div id="v3-result"></div>';
+    $("v3-run").classList.toggle("need", has && !run);
+    var pb = $("v3-post");
+    pb.disabled = !!S.posting || !P.ok;
+    pb.textContent = S.posting ? "Posting…" : (S.station === "packing" ? "Post and receive" : "Post entry");
+    $("v3-barsum").textContent = barText(P, run, has);
+  }
+  function barText(P, run, has) {
+    var ask = P.msgs.filter(function (m) { return m[0] === "info" && /^Enter/.test(m[1]); })[0];
+    if (P.msgs.some(function (m) { return m[0] === "bad"; })) return "Can't post yet. See the notes above.";
+    if (ask) return ask[1];
+    if (!run) return "Enter the run number.";
+    var r = P.rows.filter(function (x) { return x.qty > 0; })[0];
+    if (!r || !has) return "";
+    var cp = gcpc(g()), books = r.unit === "books" ? r.qty : r.qty * g().ups;
+    return "+" + f(r.qty) + " " + r.unit + (cp ? " · " + c1(books / cp) + " ctn" : "") + " · " + r.item;
+  }
+
+  /* What is already in ERPNext for this station on the chosen date (other tablets included). */
+  var PROC_OF = { covers: "cov", folds: "fld", inserts: "ins", packing: "pack" };
+  function validDate() { return /^\d{4}-\d{2}-\d{2}$/.test(S.date || ""); }
+  function stationRows() {
+    if (!validDate()) return [];
+    return (PC[mondayOf(S.date)] || []).filter(function (r) { return r.date === S.date && r.proc === PROC_OF[S.station]; });
+  }
+  function dupWarn(P) {
+    var r = P.rows.filter(function (x) { return x.qty > 0; })[0]; if (!r) return;
+    var hit = stationRows().filter(function (x) { return x.k === S.group && x.qty === r.qty; })[0];
+    if (hit) P.msgs.push(["warn", "Possible duplicate: " + f(hit.qty) + " " + r.unit + " already posted for this item on " + dmy(S.date) + " (" + hit.se + (hit.run ? ", run " + hit.run : "") + "). Check before posting."]);
+  }
+  function renderToday() {
+    var el = $("v3-today"); if (!el) return;
+    el.hidden = S.station === "fg" || !validDate(); if (el.hidden) return;
+    var w = mondayOf(S.date), when = S.date === todayIso() ? "today" : "on " + dmy(S.date);
+    var head = '<div class="cap-h"><div><h3>Already posted ' + when + "</h3>";
+    if (!PC[w] || Date.now() - (PCat[w] || 0) > 60000) {
+      if (!PC[w]) el.innerHTML = head + '</div></div><p class="cap-note">Reading ERPNext…</p>';
+      var again = function () { if (S.view === "capture") { renderToday(); renderPreview(); } };
+      loadWeek(w).then(again).catch(function () { PC[w] = PC[w] || []; PCat[w] = Date.now(); PCerr[w] = true; again(); });
+      if (!PC[w]) return;
+    }
+    var unit = PROCS.filter(function (p) { return p[0] === PROC_OF[S.station]; })[0][2], all = stationRows(), mine = all.filter(function (r) { return r.k === S.group; });
+    var name = STEPS.filter(function (s) { return s[0] === S.station; })[0][2], entries = {};
+    all.forEach(function (r) { entries[r.se] = 1; });
+    el.innerHTML = head + '<span class="cap-note">' + esc(name) + " · all items: " + (all.length ? f(sum(all).q) + " " + unit + " in " + Object.keys(entries).length + (Object.keys(entries).length === 1 ? " entry" : " entries") : "nothing yet") + "</span></div></div>" +
+      (PCerr[w] ? '<div class="cap-msg warn">Could not read ERPNext, so this list and the duplicate check may be incomplete.</div>' : "") +
+      (mine.length ? '<div class="tw"><table><thead><tr><th>Time</th><th>Run</th><th class="num">This item</th><th>By</th><th>Entry</th></tr></thead><tbody>' +
+        mine.slice().sort(function (a, b) { return String(b.at).localeCompare(String(a.at)); }).map(function (r) { return '<tr><td class="dt">' + esc(String(r.at).slice(11, 16)) + "</td><td>" + esc(r.run || "-") + '</td><td class="num">' + pcell([r], unit) + "</td><td>" + esc(String(r.by || "").split("@")[0]) + '</td><td><a href="/app/stock-entry/' + encodeURIComponent(r.se) + '" target="_blank" rel="noopener">' + esc(r.se) + "</a></td></tr>"; }).join("") + "</tbody></table></div>"
+        : '<p class="cap-note">Nothing posted for this item ' + when + ".</p>");
   }
 
   function renderStock() {
@@ -361,7 +424,8 @@
   function renderLog() {
     var tb = $("v3-log");
     $("v3-lognote").textContent = "Each row is a submitted Stock Entry. Undo is open 10 minutes for the person who posted it.";
-    if (!S.log.length) { tb.innerHTML = '<tr><td colspan="7" class="cap-note">Nothing yet. With no fold stock, start with a Folds opening count, then Inserts and Packing.</td></tr>'; return; }
+    $("v3-logcard").hidden = !S.log.length;
+    if (!S.log.length) return;
     tb.innerHTML = S.log.slice().reverse().map(function (e) {
       var undo = e.live && e.name && !e.cancelled && (Date.now() - e.at) < 600000 ? '<button type="button" class="cap-sec" data-undo="' + esc(e.name) + '">Undo</button>' : (e.cancelled ? "cancelled" : "");
       return '<tr><td class="num">' + e.n + "</td><td><code>" + esc(e.run) + '</code><br><span class="cap-note">' + esc(e.when || "") + "</span></td><td>" + esc(e.station) + '<br><span class="cap-note">' + esc(e.grp) + "</span></td><td>" + "<b>" + (e.name ? '<a href="/app/stock-entry/' + encodeURIComponent(e.name) + '" target="_blank" rel="noopener">' + esc(e.name) + "</a>" : "") + "</b><br>" + esc(e.type) + "</td><td>" +
@@ -399,29 +463,37 @@
     return (out.length ? "Takes out " + out.join(", ") + ". " : "") + (inn.length ? "Puts in " + inn.join(", ") + "." : "");
   }
   function doPost() {
-    var P = planEntry(), run = (S.run || "").trim(); if (!P.ok || !run) return;
+    if (S.posting) return;
+    var P0 = planEntry(), run0 = (S.run || "").trim(); if (!P0.ok || !run0) return;
     if (!MODE.server) { $("v3-result").innerHTML = '<div class="cap-msg bad">' + esc(NEED) + "</div>"; return; }
-    var warns = P.msgs.filter(function (m) { return m[0] === "warn" || m[0] === "bad"; });
-    dialog("Step 1 of 2: is this correct?",
-      "<p><b>" + esc(P.type) + "</b> · run <code>" + esc(run) + "</code> · " + esc(gname(g())) + "</p><p><b>Production date " + esc(dmy(S.date)) + " · " + esc(S.shift) + "</b></p>" + rowsHtml(P) +
-      warns.map(function (m) { return '<div class="cap-msg ' + m[0] + '">' + esc(m[1]) + "</div>"; }).join(""),
-      "Yes, this is correct", function () {
-        dialog("Step 2 of 2: post to ERPNext now?",
-          '<p class="cap-msg warn">This changes stock in ERPNext.</p><p>' + esc(totals(P)) + '</p><p class="cap-note">' + esc(P.type) + " · run " + esc(run) + " · " + esc(whenText()) + "</p>",
-          "Post now", function () { send(P, run); });
-      });
+    var btn = $("v3-post"), checked = true; btn.disabled = true; btn.textContent = "Checking…";
+    loadWeek(mondayOf(S.date)).catch(function () { checked = false; }).then(function () {
+      renderToday(); renderPreview();
+      var P = planEntry(), run = (S.run || "").trim(); if (!P.ok || !run) return;
+      if (!checked) P.msgs.push(["warn", "Could not check ERPNext for duplicates. Look at the list before posting."]);
+      var warns = P.msgs.filter(function (m) { return m[0] === "warn" || m[0] === "bad"; });
+      dialog("Step 1 of 2: is this correct?",
+        "<p><b>" + esc(P.type) + "</b> · run <code>" + esc(run) + "</code> · " + esc(gname(g())) + "</p><p><b>Production date " + esc(dmy(S.date)) + " · " + esc(S.shift) + "</b></p>" + rowsHtml(P) +
+        warns.map(function (m) { return '<div class="cap-msg ' + m[0] + '">' + esc(m[1]) + "</div>"; }).join(""),
+        "Yes, this is correct", function () {
+          dialog("Step 2 of 2: post to ERPNext now?",
+            '<p class="cap-msg warn">This changes stock in ERPNext.</p><p>' + esc(totals(P)) + '</p><p class="cap-note">' + esc(P.type) + " · run " + esc(run) + " · " + esc(whenText()) + "</p>",
+            "Post now", function () { send(P, run); });
+        });
+    });
   }
   function send(P, run) {
-    var btn = $("v3-post"); btn.disabled = true; btn.textContent = "Posting…";
+    var btn = $("v3-post"); S.posting = true; btn.disabled = true; btn.textContent = "Posting…";
     var bk = book();
     var payload = { station: S.station, group: S.group, book: bk ? bk.code : null, run: run, date: S.date, shift: S.shift, weights: P.extra.weights || "", confirmed: 2,
       inputs: { good: S.v.good, spoiled: S.v.spoiled, rejects: S.v.rejects, opening: !!S.v.opening, sets: S.v.sets, hold_fold_check: !!S.v.hold, cartons: S.v.cartons, loose: S.v.loose } };
     post(M + "post_entry", { payload: JSON.stringify(payload) }).then(function (m) {
-      logEntry(P, true, m.name);
-      return load().then(function () { S.v = { hold: S.v.hold }; renderStation();
+      logEntry(P, true, m.name); S.posting = false; clearProduction();
+      /* it has posted: a failed stock refresh must not read as "Not posted" */
+      return load().catch(function () {}).then(function () { S.v = { hold: S.v.hold }; renderStation();
         $("v3-result").innerHTML = '<div class="cap-msg ok">Posted ✓ <a href="/app/stock-entry/' + encodeURIComponent(m.name) + '" target="_blank" rel="noopener">' + esc(m.name) + "</a> (" + esc(m.type) + "). Undo is open for 10 minutes in the Entries table.</div>"; });
     }).catch(function (err) {
-      btn.disabled = false; btn.textContent = "Post entry";
+      S.posting = false; btn.disabled = false; btn.textContent = "Post entry";
       var msg = /404|not found|has no attribute|No module|not whitelisted/i.test(err.message) ? NEED : "Not posted. " + err.message;
       $("v3-result").innerHTML = '<div class="cap-msg bad">' + esc(msg) + "</div>";
     });
@@ -432,6 +504,7 @@
         btn.disabled = true; btn.textContent = "Undoing…";
         post(M + "undo_entry", { name: name, confirmed: 2 }).then(function () {
           S.log.forEach(function (e) { if (e.name === name) e.cancelled = true; });
+          clearProduction();
           return load().then(renderStation);
         }).catch(function (err) { btn.disabled = false; btn.textContent = "Undo"; var r = $("v3-result"); if (r) r.innerHTML = '<div class="cap-msg bad">Not undone. ' + esc(err.message) + "</div>"; });
       });
@@ -672,7 +745,8 @@
      Counted: COV-/FLD- Material Receipts and INS- Repacks into Stores, book Manufactures into Finished Goods.
      Left out: opening stock and opening fold counts, and book stock-ins for goods already delivered. */
   var PROCS = [["cov", "Covers printed", "sheets"], ["fld", "Folds", "sets"], ["ins", "Inserts bound", "sets"], ["pack", "Packed", "books"]];
-  var PC = {};           // week start -> classified rows
+  var PC = {}, PCat = {}, PCerr = {};   // week start -> classified rows, when read, read failed
+  function clearProduction() { PC = {}; PCat = {}; PCerr = {}; }
   var PV = { week: "", day: "", brand: "", size: "", pages: "", ruling: "" };
   function parseIso(v) { var m = v.split("-"); return new Date(+m[0], +m[1] - 1, +m[2]); }
   function addDays(v, n) { var d = parseIso(v); d.setDate(d.getDate() + n); return iso(d); }
@@ -691,13 +765,13 @@
     } else return null;
     brand = brand === "PNC" ? "Prince" : "Swara";
     var k = brand + "|" + size + "|" + pages + "|" + ruling, gg = D.groups[k], ups = gg ? gg.ups : (size === "A4" ? 2 : 3), per = gg ? gcpc(gg) : 0, q = Number(r.qty) || 0;
-    return { date: String(r.posting_date).slice(0, 10), proc: proc, k: k, brand: brand, size: size, pages: pages, ruling: ruling, code: code, se: r.name, qty: q, books: proc === "pack" ? q : q * ups, per: per };
+    return { date: String(r.posting_date).slice(0, 10), proc: proc, k: k, brand: brand, size: size, pages: pages, ruling: ruling, code: code, se: r.name, at: r.creation, by: r.owner, run: (/Capture v3 · run ([^·]+?) ·/.exec(r.remarks || "") || [])[1] || "", qty: q, books: proc === "pack" ? q : q * ups, per: per };
   }
   function loadWeek(w) {
     var T = "`tabStock Entry Detail`.";
-    return list("Stock Entry", ["name", "stock_entry_type", "posting_date", "remarks", T + "item_code as item_code", T + "qty as qty", T + "t_warehouse as t_warehouse"],
+    return list("Stock Entry", ["name", "stock_entry_type", "posting_date", "remarks", "owner", "creation", T + "item_code as item_code", T + "qty as qty", T + "t_warehouse as t_warehouse"],
       [["docstatus", "=", 1], ["posting_date", "between", [w, addDays(w, 6)]], ["stock_entry_type", "in", ["Material Receipt", "Repack", "Manufacture"]], ["Stock Entry Detail", "t_warehouse", "in", [STORES, FG]]])
-      .then(function (rows) { PC[w] = rows.map(classify).filter(Boolean); });
+      .then(function (rows) { PC[w] = rows.map(classify).filter(Boolean); PCat[w] = Date.now(); delete PCerr[w]; });
   }
   function sum(rows) { var t = { q: 0, b: 0, c: 0 }; rows.forEach(function (r) { t.q += r.qty; t.b += r.books; if (r.per) t.c += r.books / r.per; }); return t; }
   /* Cartons big, the process's own unit small. Without a Carton unit: books big. */
@@ -858,7 +932,7 @@
     renderViews();
     $("ebv3").dataset.view = v;
     $("v3-title").textContent = VIEWS.filter(function (x) { return x[0] === v; })[0][1];
-    $("v3-chart").hidden = v !== "capture"; $("v3-banner").hidden = v !== "capture";
+    $("v3-banner").hidden = v !== "capture";
     if (v === "capture") { renderShell(); return; }
     if (v === "production") { renderProduction(); return; }
     var go = function () { if (S.view === v) (v === "orders" ? renderOrders : renderOrderStock)(); };

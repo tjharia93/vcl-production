@@ -3,7 +3,7 @@
 Route `/exercise-book-production-v3-dev`, Web Page `exercise-book-production-v3-dev`, title "Exercise Book Production v3 (preview)". This page is new. It does not touch `exercise-book-production-v2-dev` or `/production-dev`.
 
 ## What it does
-The stations run Covers → Folds → Inserts → Packing → Finished Goods, with the process flowchart on top. Ruling is greyed out (Phase 2/3).
+The stations run Covers → Folds → Inserts → Packing → Finished Goods, on the path at the top of Capture. Ruling is Phase 2/3.
 
 | Station | Entry posted | Rows |
 |---|---|---|
@@ -17,7 +17,10 @@ Covers, folds and inserts count in sets with the same up-count: A4 2-up, A5 3-up
 
 ## Screens (05/11/2026)
 Four screens, chosen on the navigation bar (`?view=capture|production|orders|orderstock`, remembered per browser):
-- **Capture**: the stations above.
+- **Capture**: the stations above, laid out for one person entering one count.
+  - The station comes first, then the item, run, date and shift, then one large count field. Post stays in a bar fixed to the bottom of the screen.
+  - The item picker shows full names, with search and recent items.
+  - "Already posted" lists what ERPNext holds for this station and item on the chosen date, from every tablet. It refreshes every minute and again when Post is pressed. The same count for the same item and date gives a duplicate warning, which also shows at step 1. It warns; it doesn't block.
 - **Production**: what each process made, one week at a time (Monday to Sunday).
   - Headline cards: each process's week total, today and a seven-day trend.
   - By date: a chart of cartons per day for each process, with a Table switch for the exact figures. Tapping a day narrows the item list to it.

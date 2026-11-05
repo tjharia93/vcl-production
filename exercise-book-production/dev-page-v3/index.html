@@ -36,17 +36,6 @@
 .ebv3 .banner{padding:10px 14px;border-radius:4px;font-weight:700;margin:0 0 12px;border:1px solid transparent;border-left-width:4px}
 .ebv3 .banner.preview{background:var(--info-bg);color:var(--info);border-color:#b8d0f5;border-left-color:var(--info)}
 .ebv3 .banner.live{background:var(--warn-bg);color:var(--warn);border-color:#f5d78a;border-left-color:#dd7a01}
-/* flowchart */
-.ebv3 .fchart{width:100%;height:auto;display:block;font-family:var(--sans);margin:4px 0 14px;background:var(--card);border:1px solid var(--border-input);border-radius:4px;box-shadow:var(--sh);padding:8px}
-.ebv3 .fn rect{fill:var(--card);stroke:var(--brand);stroke-width:1.5;rx:4px;ry:4px}
-.ebv3 .fn.grey rect{fill:var(--bg);stroke:var(--border-input)}
-.ebv3 .fn.grey text{fill:var(--weaker)}
-.ebv3 .fn.end rect{fill:var(--ok-bg);stroke:var(--ok);rx:28px;ry:28px}
-.ebv3 .fh{font-weight:700;font-size:14px;fill:var(--text)}.ebv3 .fs{font-size:11px;fill:var(--weak)}
-.ebv3 .fst{font-size:10px;font-weight:700;fill:var(--brand)}.ebv3 .fn.grey .fst{fill:var(--weaker)}
-.ebv3 .fa{fill:none;stroke:var(--border-strong);stroke-width:1.5}.ebv3 .fah{fill:var(--border-strong)}
-.ebv3 .fh-narrow{display:none}
-@media (max-width:700px){.ebv3 .fh-wide{display:none}.ebv3 .fh-narrow{display:block;max-width:360px;margin:0 auto 14px}}
 /* layout + cards (slds-card) */
 .ebv3 .cap{display:grid;gap:12px}
 .ebv3 .cap-top{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:end;background:var(--card);border:1px solid var(--border-input);border-radius:4px;box-shadow:var(--sh);padding:12px 14px}
@@ -159,7 +148,7 @@
 .ebv3 .dlg-f{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;background:var(--th);border-top:1px solid var(--border)}
 .ebv3 .dlg-f .cap-sec{min-height:44px}.ebv3 .dlg-f .cap-post{width:auto;padding:0 20px;min-height:44px}
 @media (max-width:600px){.ebv3 .seg.views button{flex:1;padding:0 6px}.ebv3 .btn-grp{width:100%}.ebv3 .btn-grp .cap-sec{flex:1}}
-@media print{.ebv3{margin:0;background:#fff}.ebv3 .mode,.ebv3 #v3-banner,.ebv3 #v3-chart,.ebv3 .cap-top,.ebv3 [data-det],.ebv3 .ph-sub{display:none!important}.ebv3 .cap-card,.ebv3 .ph{box-shadow:none}.ebv3 .tw{overflow:visible}.navbar,.web-footer,footer,.page-breadcrumbs{display:none!important}}
+@media print{.ebv3{margin:0;background:#fff}.ebv3 .mode,.ebv3 #v3-banner,.ebv3 .cap-top,.ebv3 [data-det],.ebv3 .ph-sub{display:none!important}.ebv3 .cap-card,.ebv3 .ph{box-shadow:none}.ebv3 .tw{overflow:visible}.navbar,.web-footer,footer,.page-breadcrumbs{display:none!important}}
 /* Order & stock (05/11/2026): one headline, a coverage bar per type, detail on tap */
 .ebv3{--c-fg:#2e844a;--c-pipe:#0176d3;--c-short:#ba0517;--c-none:#c9c9c9}
 .ebv3 .os-hero{background:var(--card);border:1px solid var(--border-input);border-radius:4px;box-shadow:var(--sh);padding:18px 20px;display:grid;gap:14px}
@@ -280,21 +269,21 @@
    Series colours passed the dataviz palette check; a Table switch backs up the two below 3:1. */
 .ebv3{--k-cov:#0176d3;--k-fld:#dd7a01;--k-ins:#06a59a;--k-pack:#9050e9}
 .ebv3 .k-cov{background:var(--k-cov)}.ebv3 .k-fld{background:var(--k-fld)}.ebv3 .k-ins{background:var(--k-ins)}.ebv3 .k-pack{background:var(--k-pack)}
-.ebv3[data-view="production"] .cap{gap:16px}
-.ebv3[data-view="production"] .ph,.ebv3[data-view="production"] .cap-top,.ebv3[data-view="production"] .cap-card,.ebv3[data-view="production"] .pk{border:0;border-radius:12px;box-shadow:0 1px 2px rgba(24,24,24,.06),0 4px 14px rgba(24,24,24,.07)}
-.ebv3[data-view="production"] .cap-top{padding:14px 18px}
-.ebv3[data-view="production"] .cap-card>.cap-h{padding:16px 20px 12px;border-bottom:0}
-.ebv3[data-view="production"] .cap-card{padding-left:20px;padding-right:20px}
-.ebv3[data-view="production"] .cap-card>.cap-h,.ebv3[data-view="production"] .cap-card>.tw{margin-left:-20px;margin-right:-20px}
-.ebv3[data-view="production"] select,.ebv3[data-view="production"] input{border-radius:8px}
-.ebv3[data-view="production"] .cap-sec{border-radius:999px}
-.ebv3[data-view="production"] .seg button:first-child{border-radius:999px 0 0 999px}.ebv3[data-view="production"] .seg button:last-child{border-radius:0 999px 999px 0}
-.ebv3[data-view="production"] .seg button{font-weight:600}
-.ebv3[data-view="production"] .os-act{align-items:center}
-.ebv3[data-view="production"] table.osl thead th,.ebv3[data-view="production"] table.pm thead th{background:transparent;font-weight:600;border-bottom:1px solid var(--border)}
-.ebv3[data-view="production"] table.osl tbody th b{font-weight:600}
-.ebv3[data-view="production"] table.pm .tot{background:transparent}
-.ebv3[data-view="production"] .os-tog{border-radius:50%}
+.ebv3:is([data-view="production"],[data-view="capture"]) .cap{gap:16px}
+.ebv3:is([data-view="production"],[data-view="capture"]) .ph,.ebv3:is([data-view="production"],[data-view="capture"]) .cap-top,.ebv3:is([data-view="production"],[data-view="capture"]) .cap-card,.ebv3:is([data-view="production"],[data-view="capture"]) .pk{border:0;border-radius:12px;box-shadow:0 1px 2px rgba(24,24,24,.06),0 4px 14px rgba(24,24,24,.07)}
+.ebv3:is([data-view="production"],[data-view="capture"]) .cap-top{padding:14px 18px}
+.ebv3:is([data-view="production"],[data-view="capture"]) .cap-card>.cap-h{padding:16px 20px 12px;border-bottom:0}
+.ebv3:is([data-view="production"],[data-view="capture"]) .cap-card{padding-left:20px;padding-right:20px}
+.ebv3:is([data-view="production"],[data-view="capture"]) .cap-card>.cap-h,.ebv3:is([data-view="production"],[data-view="capture"]) .cap-card>.tw{margin-left:-20px;margin-right:-20px}
+.ebv3:is([data-view="production"],[data-view="capture"]) select,.ebv3:is([data-view="production"],[data-view="capture"]) input{border-radius:8px}
+.ebv3:is([data-view="production"],[data-view="capture"]) .cap-sec{border-radius:999px}
+.ebv3:is([data-view="production"],[data-view="capture"]) .seg button:first-child{border-radius:999px 0 0 999px}.ebv3:is([data-view="production"],[data-view="capture"]) .seg button:last-child{border-radius:0 999px 999px 0}
+.ebv3:is([data-view="production"],[data-view="capture"]) .seg button{font-weight:600}
+.ebv3:is([data-view="production"],[data-view="capture"]) .os-act{align-items:center}
+.ebv3:is([data-view="production"],[data-view="capture"]) table.osl thead th,.ebv3:is([data-view="production"],[data-view="capture"]) table.pm thead th{background:transparent;font-weight:600;border-bottom:1px solid var(--border)}
+.ebv3:is([data-view="production"],[data-view="capture"]) table.osl tbody th b{font-weight:600}
+.ebv3:is([data-view="production"],[data-view="capture"]) table.pm .tot{background:transparent}
+.ebv3:is([data-view="production"],[data-view="capture"]) .os-tog{border-radius:50%}
 .ebv3 .pk-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
 .ebv3 .pk{background:var(--card);padding:16px 18px;display:grid;gap:2px;align-content:start;min-width:0}
 .ebv3 .pk .n{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--weak)}
@@ -335,21 +324,71 @@
 .ebv3 .pc-unit{margin:0 0 14px;font-size:12px;color:var(--weak)}
 @media (max-width:1000px){.ebv3 .pk-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:600px){
-  .ebv3[data-view="production"] .cap-card{padding-left:14px;padding-right:14px}
-  .ebv3[data-view="production"] .cap-card>.cap-h,.ebv3[data-view="production"] .cap-card>.tw{margin-left:-14px;margin-right:-14px;padding-left:14px;padding-right:14px}
-  .ebv3[data-view="production"] .cap-card>.tw{padding:0}
+  .ebv3:is([data-view="production"],[data-view="capture"]) .cap-card{padding-left:14px;padding-right:14px}
+  .ebv3:is([data-view="production"],[data-view="capture"]) .cap-card>.cap-h,.ebv3:is([data-view="production"],[data-view="capture"]) .cap-card>.tw{margin-left:-14px;margin-right:-14px;padding-left:14px;padding-right:14px}
+  .ebv3:is([data-view="production"],[data-view="capture"]) .cap-card>.tw{padding:0}
   .ebv3 .pk-row{gap:10px}.ebv3 .pk{padding:12px 14px}.ebv3 .pk .v{font-size:24px;line-height:30px}
   .ebv3 .pc{height:260px;padding-left:36px}.ebv3 .pc-grid b{width:32px;font-size:10px}.ebv3 .pc-days{gap:0}.ebv3 .pc-bars{padding:0 2px}.ebv3 .pc-v{font-size:10px}
-  .ebv3[data-view="production"] .os-act .seg{width:100%}.ebv3[data-view="production"] .os-act .seg button{flex:1;justify-content:center}
+  .ebv3:is([data-view="production"],[data-view="capture"]) .os-act .seg{width:100%}.ebv3:is([data-view="production"],[data-view="capture"]) .os-act .seg button{flex:1;justify-content:center}
 }
-@media print{.ebv3[data-view="production"] .ph,.ebv3[data-view="production"] .cap-card,.ebv3[data-view="production"] .pk{box-shadow:none;border:1px solid var(--border)}.ebv3 .pc-day,.ebv3 .pk-sp i,.ebv3 .pc-leg i,.ebv3 .pc-bars i{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+@media print{.ebv3:is([data-view="production"],[data-view="capture"]) .ph,.ebv3:is([data-view="production"],[data-view="capture"]) .cap-card,.ebv3:is([data-view="production"],[data-view="capture"]) .pk{box-shadow:none;border:1px solid var(--border)}.ebv3 .pc-day,.ebv3 .pk-sp i,.ebv3 .pc-leg i,.ebv3 .pc-bars i{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+/* Capture (05/11/2026): count first, Post always in view */
+.ebv3[data-view="capture"] .cap-steps{border:0;border-radius:12px;box-shadow:0 1px 2px rgba(24,24,24,.06),0 4px 14px rgba(24,24,24,.07)}
+.ebv3[data-view="capture"] .cap-card{padding-bottom:18px}
+.ebv3[data-view="capture"] .cap-rows{border-radius:8px}
+.ebv3[data-view="capture"] .cap-msg{border-radius:8px}
+.ebv3[data-view="capture"] .cap-stock div,.ebv3[data-view="capture"] .cap-card .cap-stock div{border-radius:8px}
+.ebv3[data-view="capture"] .cap-stock .v{font-weight:600}
+.ebv3 input.qty{font-family:var(--sans)}
+.ebv3 input.qty.big{font-size:40px;line-height:48px;font-weight:600;min-height:76px;border-radius:10px;padding:0 16px}
+.ebv3 input.need{border-color:var(--bad);box-shadow:0 0 0 1px var(--bad)}
+.ebv3 .cap-empty{margin:0;padding:28px 12px;text-align:center;color:var(--weak)}
+.ebv3 .pick-w{position:relative}
+.ebv3 .pick-btn{display:grid;gap:0;text-align:left;width:100%;min-height:44px;padding:4px 34px 4px 12px;font:inherit;background:var(--card);color:var(--text);border:1px solid var(--border-input);border-radius:8px;cursor:pointer;position:relative}
+.ebv3 .pick-btn:focus-visible{border-color:var(--brand);box-shadow:0 0 3px var(--brand);outline:0}
+.ebv3 .pick-btn::after{content:"";position:absolute;right:14px;top:50%;margin-top:-6px;width:8px;height:8px;border-right:2px solid var(--weak);border-bottom:2px solid var(--weak);transform:rotate(45deg)}
+.ebv3 .pick-btn b{font-size:15px;line-height:20px;font-weight:600}
+.ebv3 .pick-btn small{font-size:12px;line-height:15px;color:var(--weak)}
+.ebv3 .pick{position:absolute;z-index:6;top:100%;left:0;margin-top:4px;width:min(460px,calc(100vw - 32px));background:var(--card);border-radius:12px;box-shadow:0 6px 24px rgba(24,24,24,.22);padding:10px;display:grid;gap:8px}
+.ebv3 .pick[hidden]{display:none}
+.ebv3 .pick-l{max-height:340px;overflow:auto;display:grid;gap:2px}
+.ebv3 .pick-h{margin:6px 8px 2px;font-size:12px;color:var(--weak)}
+.ebv3 .pick-l button{display:grid;text-align:left;font:inherit;min-height:48px;padding:6px 10px;border:0;border-radius:8px;background:transparent;color:var(--text);cursor:pointer}
+.ebv3 .pick-l button:hover,.ebv3 .pick-l button:focus-visible{background:var(--brand-light);outline:0}
+.ebv3 .pick-l button[aria-current="true"]{background:var(--brand-light)}
+.ebv3 .pick-l b{font-weight:600;font-size:14px;line-height:19px}
+.ebv3 .pick-l small{font-size:12px;line-height:15px;color:var(--weak)}
+.ebv3 .cap-bar{position:sticky;bottom:12px;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px 20px;background:var(--card);border-radius:12px;box-shadow:0 2px 6px rgba(24,24,24,.1),0 8px 24px rgba(24,24,24,.16);padding:10px 12px 10px 20px}
+.ebv3 .cap-bar[hidden]{display:none}
+.ebv3 .cap-bar .t{display:grid;min-width:0}
+.ebv3 .cap-bar .t b{font-size:15px;line-height:20px;font-weight:600;overflow-wrap:anywhere}
+.ebv3 .cap-bar .t small{font-size:12px;line-height:16px;color:var(--weak)}
+.ebv3 .cap-bar .cap-post{width:auto;flex:none;min-height:48px;padding:0 28px;border-radius:999px}
+.ebv3 .cap-bar .cap-post:disabled{background:var(--neutral-bg);border-color:var(--neutral-bg);color:var(--weaker)}
+@media (max-width:600px){
+  .ebv3 .cap-bar{padding:10px 12px;bottom:8px}
+  .ebv3 .cap-bar .t small{display:none}
+  .ebv3 .cap-bar .cap-post{padding:0 18px}
+}
+@media print{.ebv3 .cap-bar{display:none!important}}
+.ebv3 .sf-nav .seg.views button,.ebv3 .sf-nav .seg.views button:first-child,.ebv3 .sf-nav .seg.views button:last-child{border-radius:0!important}
+@media (max-width:600px){
+  .ebv3[data-view="capture"] header.bar{display:none}
+  .ebv3[data-view="capture"] .wrap{padding-top:10px}
+  .ebv3[data-view="capture"] .cap{gap:10px}
+  .ebv3[data-view="capture"] .cap-top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 10px;padding:10px 12px}
+  .ebv3[data-view="capture"] .cap-top .pick-w{grid-column:1/-1}
+  .ebv3[data-view="capture"] .cap-card{padding-bottom:14px}
+  .ebv3[data-view="capture"] .cap-steps{padding:6px}
+  .ebv3[data-view="capture"] .cap-steps button{min-height:40px;padding:3px 6px}
+  .ebv3[data-view="capture"] .cap-steps button .k{display:none}
+}
 </style>
 <div class="ebv3" id="ebv3">
   <nav class="sf-nav" aria-label="Exercise Books"><span class="sf-waffle" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span class="sf-app">Exercise Books</span><div class="mode" id="v3-mode"></div></nav>
   <header class="bar"><div class="wrap"><div class="ph"><span class="ph-ico" aria-hidden="true">EB</span><div class="ph-t"><p class="ph-k">Exercise Book Production v3 (preview)</p><h1 id="v3-title">Capture</h1></div><p class="ph-sub">Covers → Folds → Inserts → Packing → Finished Goods</p></div></div></header>
   <div class="wrap">
     <div id="v3-banner"></div>
-    <div id="v3-chart"></div>
     <div id="v3-app"><div class="loading">Loading stock from ERPNext…</div></div>
   </div>
 </div>
