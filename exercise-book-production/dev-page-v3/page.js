@@ -40,6 +40,7 @@
   var STEPS = [["covers", "Station 1", "Covers"], ["folds", "Station 2", "Folds"], ["inserts", "Station 3", "Inserts"], ["packing", "Station 4", "Packing"], ["fg", "Result", "Finished Goods"]];
   var TYPE = { covers: "Material Receipt", folds: "Material Receipt", inserts: "Repack", packing: "Manufacture" };
   var LS = "vcl.eb-v3.";
+  function PHONE() { return window.matchMedia && window.matchMedia("(max-width:700px)").matches; }
   var PLAIN = { covers: "Adds printed cover sheets to stock", folds: "Adds folds to stock", inserts: "Turns cover sheets and folds into inserts", packing: "Packs books into Finished Goods" };
   var RL = { cov: "Cover sheets", fld: "Folds", ins: "Inserts", carton: "Empty cartons", fg: "Finished books" };
 
@@ -257,7 +258,7 @@
       '<div class="cap-grid"><div class="cap-card" id="v3-form"></div><div class="cap-card" id="v3-preview"></div></div>' +
       '<div class="cap-card" id="v3-today"></div>' +
       '<div class="cap-card" id="v3-logcard" hidden><div class="cap-h"><h3>Posted from this screen</h3><span class="cap-note" id="v3-lognote"></span></div><div class="tw"><table><thead><tr><th>#</th><th>Run · date · shift</th><th>Station</th><th>Entry</th><th>Out</th><th>In</th><th></th></tr></thead><tbody id="v3-log"></tbody></table></div></div>' +
-      '<div class="cap-card"><div class="cap-h"><div><h3>Stock for this item</h3><span class="cap-note" id="v3-stocknote"></span></div><button type="button" class="cap-sec" id="v3-reload">Reload stock</button></div><div class="cap-stock" id="v3-stock"></div></div>' +
+      '<details class="cap-card fold" id="v3-stockcard"' + (PHONE() ? "" : " open") + '><summary class="cap-h"><div><h3>Stock for this item</h3><span class="cap-note" id="v3-stocknote"></span></div><span class="fold-i" aria-hidden="true"></span></summary><div class="fold-b"><div class="cap-stock" id="v3-stock"></div><button type="button" class="cap-sec" id="v3-reload">Reload stock</button></div></details>' +
       '<p class="cap-note">Stock as read ' + D.loadedAt.toLocaleTimeString("en-GB") + ". Each cover sheet, fold or insert makes 2 A4 books or 3 A5 books.</p>" +
       '<div class="cap-bar" id="v3-bar"><div class="t"><b id="v3-barsum"></b><small>Every post is confirmed twice, and can be undone for 10 minutes.</small></div><button type="button" class="cap-post" id="v3-post">Post entry</button></div></div>';
     var stepsEl = $("v3-steps");
@@ -689,14 +690,14 @@
   function tile(label, ctn, books, extra) { return '<div><span class="n">' + label + '</span><span class="v">' + c1(ctn) + ' <small>ctn</small></span><span class="s">' + f(books) + " books" + (extra || "") + "</span></div>"; }
   function barBtns() { return '<div class="btn-grp"><button type="button" class="cap-sec" id="o-xlsx">Download Excel</button><button type="button" class="cap-sec" id="o-pdf">Print / PDF</button><button type="button" class="cap-sec" id="o-reload">Reload</button></div>'; }
   function filterBar(withScope, noActions) {
-    var L = O.lines;
-    return '<div class="cap-top">' +
+    var L = O.lines, on = ["q", "brand", "customer", "size", "pages", "ruling"].filter(function (k) { return OV[k]; }).length;
+    return '<details class="cap-card fold fb"' + (PHONE() ? "" : " open") + '><summary class="cap-h"><div><h3>Filters</h3><span class="cap-note">' + (on ? on + " on" : "none on") + '</span></div><span class="fold-i" aria-hidden="true"></span></summary><div class="cap-top fb-in">' +
       '<label class="cap-grp" style="flex:2 1 240px"><span class="lb">Search order, customer or item</span><input id="o-q" type="search" autocomplete="off" value="' + esc(OV.q) + '"></label>' +
       sel("o-brand", "Brand", OV.brand, uniq(L.map(function (l) { return l.d.brand; })).sort()) +
       sel("o-customer", "Customer", OV.customer, uniq(L.map(function (l) { return l.customer; })).sort()) +
       sel("o-size", "Size", OV.size, uniq(L.map(function (l) { return l.d.size; })).sort()) +
       sel("o-pages", "Pages", OV.pages, uniq(L.map(function (l) { return l.d.pages || ""; })).sort(function (a, b) { return a - b; })) +
-      sel("o-ruling", "Ruling", OV.ruling, uniq(L.map(function (l) { return l.d.ruling; })).sort().map(function (r) { return [r, rulName(r)]; })) + "</div>" + (noActions ? "" :
+      sel("o-ruling", "Ruling", OV.ruling, uniq(L.map(function (l) { return l.d.ruling; })).sort().map(function (r) { return [r, rulName(r)]; })) + "</div></details>" + (noActions ? "" :
       '<div class="cap-top">' +
       (withScope ? '<div class="seg" role="group" aria-label="Which orders"><button type="button" data-scope="open" aria-pressed="' + (OV.scope === "open") + '">Open orders</button><button type="button" data-scope="all" aria-pressed="' + (OV.scope === "all") + '">All non-cancelled</button></div>' : "") +
       '<span class="cap-note">Cartons from each item\'s Carton unit; books below in small print.</span>' +
@@ -1097,7 +1098,7 @@
         "<small>" + prQty(o) + "</small>" + prWho(o.so) + "</div>" + prSeg(o.so, "", o.so) + "</div>" +
         '<button type="button" class="pr-tog" data-tog="' + esc(o.so) + '" aria-expanded="' + open + '">' + (open ? "Hide" : "Show") + " " + o.list.length + (o.list.length === 1 ? " book type" : " book types") + "</button>";
       if (open) h += '<div class="pr-books">' + o.list.map(function (b) {
-        return '<div class="pr-row pr-book"><div class="pr-main"><b>' + esc(b.name || b.code) + "</b><small>" + prQty(b) + (b.due && b.due !== o.due ? " · due " + esc(prDate(b.due)) : "") + "</small>" + prWho(o.so, b.code) + "</div>" + prSeg(o.so, b.code, b.name || b.code) + "</div>";
+        return '<div class="pr-row pr-book"><div class="pr-main"><b class="bdot" data-b="' + esc(wiBrand(b.code)) + '">' + esc(b.name || b.code) + "</b><small>" + prQty(b) + (b.due && b.due !== o.due ? " · due " + esc(prDate(b.due)) : "") + "</small>" + prWho(o.so, b.code) + "</div>" + prSeg(o.so, b.code, b.name || b.code) + "</div>";
       }).join("") + "</div>";
       h += "</div>";
     });
@@ -1111,7 +1112,7 @@
    * Read-only unless "Mark as Urgent" is pressed. Stock is walked in the chosen order, book type by book type:
    * 1 finished books of the EXACT item; 2 insert sets; 3 cover sheets paired with folds; the rest is short.
    * Sets and sheets are shared by brand/size/pages/ruling and make `ups` books each. No dates: those need hours. */
-  var WI = { sel: [], others: false, open: {}, q: "", msg: "", busy: false };
+  var WI = { sel: [], others: false, open: {}, q: "", msg: "", busy: false, by: "order", openB: {} };
   var WISTAGES = [["fg", "Finished"], ["ins", "Inserts"], ["cf", "Covers + folds"], ["short", "Short"]];
   function wiPools() {
     return { fg: {}, g: {}, take: function (o, k, need) { var n = Math.min(need, Math.max(0, o[k] || 0)); o[k] = (o[k] || 0) - n; return n; } };
@@ -1143,6 +1144,7 @@
       var res = { so: o.so, customer: o.customer, due: o.due, books: [], need: 0, fg: 0, ins: 0, cf: 0, short: 0, none: 0, ctn: {}, noFold: false };
       o.list.forEach(function (b) {
         var r = wiBook(p, { code: b.code, name: b.name, books: b.books, per: b.per, d: b.d });
+        r.so = o.so; r.customer = o.customer; r.due = o.due;
         res.books.push(r); res.need += r.need; res.noFold = res.noFold || r.noFold;
         ["fg", "ins", "cf", "short", "none"].forEach(function (k) { res[k] += r[k]; if (r.per) res.ctn[k] = (res.ctn[k] || 0) + r[k] / r.per; });
       });
@@ -1202,18 +1204,21 @@
         };
         if (os.length === 1) return row(os[0], false);
         return '<label class="wi-opt"><input type="checkbox" data-cust="' + esc(c) + '"' + (on === os.length ? " checked" : "") + '><span><b>' + esc(c) + "</b><small>" + os.length + " orders</small></span></label>" + os.map(function (o) { return row(o, true); }).join("");
-      }).join("") + (names.length ? "" : '<p class="wi-empty">No open orders match.</p>') + "</div></section>";
-    h += '<section class="wi-out">';
+      }).join("") + (names.length ? "" : '<p class="wi-empty">No open orders match.</p>') + "</div>" +
+      (WI.sel.length ? '<a class="wi-jump cap-post" href="#wi-res">' + WI.sel.length + (WI.sel.length === 1 ? " order" : " orders") + " selected · View results</a>" : "") + "</section>";
+    h += '<section class="wi-out" id="wi-res">';
     if (!chosen.length) {
       h += '<div class="cap-card wi-start"><h3>Who can we serve?</h3><p>Tick the customers or orders you want to check. Stock goes to the first one, then the next, so you can see who is met and who waits. Nothing changes in ERPNext.</p></div>';
     } else {
       var met = mine.filter(function (r) { return !r.missing; }).length;
       h += '<div class="cap-card wi-sum"><div class="wi-head"><div><h3>' + met + " of " + mine.length + (mine.length === 1 ? " order" : " orders") + " can be met</h3><p>From what is made or part-made today. No dates: those come once hours are recorded.</p></div>" +
-        '<label class="wi-sw"><input type="checkbox" id="wi-others"' + (WI.others ? " checked" : "") + "><span>Show everyone else after these</span></label></div>" +
+        '<div class="wi-ctl"><div class="seg" role="group" aria-label="Show by"><button type="button" data-by="order" aria-pressed="' + (WI.by === "order") + '">By order</button><button type="button" data-by="book" aria-pressed="' + (WI.by === "book") + '">By book type</button></div>' +
+        '<label class="wi-sw"><input type="checkbox" id="wi-others"' + (WI.others ? " checked" : "") + "><span>Show everyone else after these</span></label></div></div>" +
         '<div class="wi-legend">' + WISTAGES.map(function (s) { return '<span><i class="' + s[0] + '"></i>' + s[1] + "</span>"; }).join("") + "</div></div>";
       if (WI.msg) h += '<div class="cap-msg ' + (WI.msg.indexOf("ok:") === 0 ? "ok" : "bad") + '" role="status">' + esc(WI.msg.replace(/^ok:/, "")) + "</div>";
       if (mine.some(function (r) { return r.noFold; })) h += '<div class="cap-msg warn">Cover sheets are in stock but no folds are recorded, so they count as short until the fold count is posted.</div>';
-      h += mine.map(function (r, i) {
+      if (WI.by === "book") h += '<div class="wi-sub"><h3>Book types across the ' + mine.length + ' chosen ' + (mine.length === 1 ? "order" : "orders") + ', biggest shortfall first</h3></div>' + wiByBook(mine);
+      h += (WI.by === "book" ? [] : mine).map(function (r, i) {
         var lost = alone[r.so].missing < r.missing ? r.missing - alone[r.so].missing : 0, open = !!WI.open[r.so];
         return '<article class="cap-card wi-row"><div class="wi-top"><span class="wi-n">' + (i + 1) + '</span><div class="wi-who"><b>' + esc(r.customer) + "</b><small>" + esc(r.so) + " · due " + (r.due ? esc(prDate(r.due)) : "not set") + " · " + f(r.need) + " books</small></div>" + wiState(r) +
           '<div class="wi-move"><button type="button" data-up="' + i + '" aria-label="Serve ' + esc(r.customer) + ' earlier"' + (i ? "" : " disabled") + ">" + WIUP + '</button><button type="button" data-dn="' + i + '" aria-label="Serve ' + esc(r.customer) + ' later"' + (i < mine.length - 1 ? "" : " disabled") + ">" + WIDN + '</button><button type="button" data-rm="' + esc(r.so) + '" aria-label="Remove ' + esc(r.customer) + '">' + WIX + "</button></div></div>" + wiBar(r) +
@@ -1245,8 +1250,38 @@
     [].forEach.call($("v3-app").querySelectorAll("[data-rm]"), function (b) { b.onclick = function () { wiToggle(b.dataset.rm); }; });
     [].forEach.call($("v3-app").querySelectorAll("[data-open]"), function (b) { b.onclick = function () { WI.open[b.dataset.open] = !WI.open[b.dataset.open]; renderWhatIf(); }; });
     var ot = $("wi-others"); if (ot) ot.onchange = function () { WI.others = ot.checked; renderWhatIf(); };
+    [].forEach.call($("v3-app").querySelectorAll("[data-by]"), function (b) { b.onclick = function () { WI.by = b.dataset.by; renderWhatIf(); }; });
+    [].forEach.call($("v3-app").querySelectorAll("[data-openb]"), function (b) { b.onclick = function () { WI.openB[b.dataset.openb] = !WI.openB[b.dataset.openb]; renderWhatIf(); }; });
     var cl = $("wi-clear"); if (cl) cl.onclick = function () { WI.sel = []; WI.msg = ""; renderWhatIf(); };
     var mk = $("wi-mark"); if (mk) mk.onclick = wiMark;
+  }
+  /* By book type: the same allocation, totalled per book across the chosen orders, biggest shortfall first. */
+  function wiBrand(code) { return /^PNC/.test(code) ? "Prince" : /^SWR/.test(code) ? "Swara" : /hi5/i.test(code) ? "Hi5" : /^SCH-/.test(code) ? "School" : ""; }
+  function wiByBook(res) {
+    var by = {};
+    res.forEach(function (o) {
+      o.books.forEach(function (b) {
+        var t = by[b.code] = by[b.code] || { code: b.code, name: b.name, per: b.per, need: 0, fg: 0, ins: 0, cf: 0, short: 0, none: 0, noFold: false, takers: [], ctn: {} };
+        ["need", "fg", "ins", "cf", "short", "none"].forEach(function (k) { t[k] += b[k]; });
+        t.noFold = t.noFold || b.noFold;
+        t.takers.push({ so: b.so, customer: b.customer, due: b.due, need: b.need, got: b.fg + b.ins + b.cf, short: b.short + b.none });
+      });
+    });
+    var rows = Object.keys(by).map(function (k) {
+      var t = by[k]; t.missing = t.short + t.none;
+      if (t.per) ["need", "fg", "ins", "cf", "short", "none"].forEach(function (x) { t.ctn[x] = t[x] / t.per; });
+      return t;
+    }).sort(function (a, b) { return b.missing - a.missing || b.need - a.need || a.name.localeCompare(b.name); });
+    if (!rows.length) return "";
+    return rows.map(function (t) {
+      var open = !!WI.openB[t.code];
+      return '<article class="cap-card wi-row wi-book"><div class="wi-top"><div class="wi-who"><b class="bdot" data-b="' + esc(wiBrand(t.code)) + '">' + esc(t.name || t.code) + "</b><small>" + (t.per ? c1(t.need / t.per) + " ctn · " : "") + f(t.need) + " books needed by " + t.takers.length + (t.takers.length === 1 ? " order" : " orders") + "</small></div>" + wiState(t) + "</div>" + wiBar(t) +
+        '<div class="wi-nums">' + [["fg", "Finished"], ["ins", "Inserts"], ["cf", "Covers + folds"], ["short", "Short"], ["none", "Not tracked"]].filter(function (s) { return t[s[0]] > 0; }).map(function (s) { return "<span>" + s[1] + " <b>" + wiAmt(t, s[0]) + "</b></span>"; }).join("") + "</div>" +
+        '<button type="button" class="pr-tog wi-tog" data-openb="' + esc(t.code) + '" aria-expanded="' + open + '">' + (open ? "Hide" : "Show") + " who takes it</button>" +
+        (open ? '<div class="wi-tw"><table class="wi-t"><thead><tr><th>Order (served in this order)</th><th>Needs</th><th>Gets</th><th>Short</th></tr></thead><tbody>' + t.takers.map(function (x) {
+          return "<tr><td>" + esc(x.customer) + " <small>" + esc(x.so) + (x.due ? " · due " + esc(prDate(x.due)) : "") + "</small></td><td>" + f(x.need) + "</td><td>" + (x.got ? f(x.got) : "-") + "</td><td>" + (x.short ? f(x.short) : "-") + "</td></tr>";
+        }).join("") + "</tbody></table><small>Books</small></div>" : "") + "</article>";
+    }).join("");
   }
   function wiTable(r) {
     return '<div class="wi-tw"><table class="wi-t"><thead><tr><th>Book type</th><th>Need</th><th>Finished</th><th>Inserts</th><th>Covers + folds</th><th>Short</th></tr></thead><tbody>' + r.books.map(function (b) {
