@@ -249,11 +249,11 @@
 
   function renderShell() {
     if (!D.groups[S.group]) S.group = groupKeys()[0];
-    $("v3-app").innerHTML = '<div class="cap" id="v3-cap"><div class="cap-card pick-card"><div class="pick-top">' +
+    $("v3-app").innerHTML = '<div class="cap" id="v3-cap"><div class="cap-steps" id="v3-steps" role="tablist" aria-label="Stations"></div><div class="cap-card pick-card"><div class="pick-top">' +
       '<label class="cap-grp pick-q" for="v3-pickq"><span class="lb">1. Search for the book type</span><input id="v3-pickq" type="search" autocomplete="off" placeholder="e.g. prince 96 square"></label>' +
       '<div class="pick-now"><span class="lb">Working on</span><small id="v3-picks"></small></div></div>' +
       '<p class="pick-or">Or click through: <b>Brand</b> → <b>Pages</b> → <b>Size</b> → <b>Ruling</b></p><div class="pick-l" id="v3-pickl"></div></div>' +
-      '<div class="cap-steps" id="v3-steps" role="tablist" aria-label="Stations"></div><div class="cap-top">' +
+      '<div class="cap-top">' +
       '<label class="cap-grp" for="v3-run" style="flex:0 1 190px"><span class="lb">Run or press (required)</span><input id="v3-run" autocomplete="off" required aria-required="true" placeholder="e.g. Miller" value="' + esc(S.run) + '"></label>' +
       '<label class="cap-grp" for="v3-date" style="flex:0 1 170px"><span class="lb">Production date</span><input id="v3-date" type="date" min="' + minIso() + '" max="' + todayIso() + '" value="' + esc(S.date) + '"></label>' +
       '<label class="cap-grp" for="v3-shift" style="flex:0 1 150px"><span class="lb">Shift</span><select id="v3-shift">' + SHIFTS.map(function (x) { return '<option' + (x === S.shift ? " selected" : "") + ">" + x + "</option>"; }).join("") + "</select></label>" +
