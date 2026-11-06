@@ -249,8 +249,10 @@
 
   function renderShell() {
     if (!D.groups[S.group]) S.group = groupKeys()[0];
-    $("v3-app").innerHTML = '<div class="cap" id="v3-cap"><div class="cap-card pick-card"><div class="pick-top"><div class="pick-now"><span class="lb">Working on</span><small id="v3-picks"></small></div>' +
-      '<input id="v3-pickq" type="search" autocomplete="off" placeholder="Type to search, e.g. prince 96 square" aria-label="Search items"></div><div class="pick-l" id="v3-pickl"></div></div>' +
+    $("v3-app").innerHTML = '<div class="cap" id="v3-cap"><div class="cap-card pick-card"><div class="pick-top">' +
+      '<label class="cap-grp pick-q" for="v3-pickq"><span class="lb">1. Search for the book type</span><input id="v3-pickq" type="search" autocomplete="off" placeholder="e.g. prince 96 square"></label>' +
+      '<div class="pick-now"><span class="lb">Working on</span><small id="v3-picks"></small></div></div>' +
+      '<p class="pick-or">Or click through: <b>Brand</b> → <b>Pages</b> → <b>Size</b> → <b>Ruling</b></p><div class="pick-l" id="v3-pickl"></div></div>' +
       '<div class="cap-steps" id="v3-steps" role="tablist" aria-label="Stations"></div><div class="cap-top">' +
       '<label class="cap-grp" for="v3-run" style="flex:0 1 190px"><span class="lb">Run or press (required)</span><input id="v3-run" autocomplete="off" required aria-required="true" placeholder="e.g. Miller" value="' + esc(S.run) + '"></label>' +
       '<label class="cap-grp" for="v3-date" style="flex:0 1 170px"><span class="lb">Production date</span><input id="v3-date" type="date" min="' + minIso() + '" max="' + todayIso() + '" value="' + esc(S.date) + '"></label>' +
@@ -311,7 +313,7 @@
   function groupKeys() { return Object.keys(D.groups).sort(function (a, b) { var x = D.groups[a], y = D.groups[b]; return (y.dem > 0) - (x.dem > 0) || y.dem - x.dem || a.localeCompare(b); }); }
   function onOrder(gg) { return gg.dem ? "On order " + (gcpc(gg) ? c1(gg.dem / gcpc(gg)) + " ctn" : f(gg.dem) + " books") : "No open orders"; }
   function recents() { try { return JSON.parse(lsGet("recent", "[]")).filter(function (k) { return D.groups[k]; }); } catch (e) { return []; } }
-  function pickLabel() { $("v3-picks").textContent = pickBusy() ? (S.chosen ? "Choosing. Cancel keeps " + gname(g()) : "Choose the brand first, then pages, size and ruling.") : onOrder(g()); }
+  function pickLabel() { $("v3-picks").textContent = pickBusy() ? (S.chosen ? "Choosing. Cancel keeps " + gname(g()) : "Nothing chosen yet") : onOrder(g()); }
   function pickChipText(f) { return f === "pages" ? PK[f] + " pages" : f === "ruling" ? (RUL[PK[f]] || PK[f]) : PK[f]; }
   function renderPick(q) {
     var keys = groupKeys(), toks = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);

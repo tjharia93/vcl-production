@@ -358,10 +358,13 @@
 .ebv3 .mach{min-height:44px;padding:4px 18px;font:inherit;font-weight:600;background:var(--card);color:var(--text);border:1px solid var(--border-input);border-radius:8px;cursor:pointer}
 .ebv3 .mach[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
 .ebv3 .pick-card{padding-top:12px;padding-bottom:12px;gap:8px}
-.ebv3 .pick-top{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
+.ebv3 .pick-top{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:end;justify-content:space-between}
+.ebv3 .pick-q{flex:0 1 380px}
+.ebv3 .pick-or{margin:0;font-size:13px;line-height:20px;color:var(--weak)}
+.ebv3 .pick-or b{color:var(--heading);font-weight:600}
 .ebv3 .pick-now{display:grid}
 .ebv3 .pick-now small{font-size:13px;line-height:17px;color:var(--weak)}
-.ebv3 .pick-top input{flex:1 1 220px;max-width:340px;min-height:44px}
+.ebv3 .pick-top input{min-height:44px}
 .ebv3 .pick-l{display:grid;gap:8px}
 .ebv3 .pick-hits{max-height:280px;overflow:auto;display:grid;gap:2px}
 .ebv3 .cap[data-picking="1"] > :not(.pick-card):not(.cap-steps):not(.cap-top){display:none}
