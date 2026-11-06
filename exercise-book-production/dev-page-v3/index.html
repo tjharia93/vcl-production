@@ -6,7 +6,7 @@
   --bg:#F5F6F8;--card:#fff;--border:#E4E7EC;--border-input:#D0D5DD;--border-strong:#98A2B3;--th:#F9FAFB;--hover:#F4F6F8;
   --text:#344054;--heading:#101828;--weak:#667085;--weaker:#98A2B3;--neutral-bg:#F2F4F7;
   --ok:#0B6B3A;--ok-bg:#E8F5EE;--bad:#7D2B31;--bad-bg:#FBEDEE;--warn:#9A4D00;--warn-bg:#FFF4E5;--info:#2B3990;--info-bg:#EEF1FB;
-  --sans:"InterVariable","Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;--mono:var(--sans);
+  --sans:"InterVariable","Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   --sh:none;--sh-modal:0 16px 40px rgba(16,24,40,.18);--sh-over:0 4px 12px rgba(16,24,40,.08);
   --hdr-bg:#1a2460;--hdr-ink:#fff;--hdr-ink2:rgba(255,255,255,.74);--hdr-line:rgba(255,255,255,.14);
   background:var(--bg);color:var(--text);font:14px/20px var(--sans);font-variant-numeric:tabular-nums;margin:0 calc(50% - 50vw);padding:0 0 48px;min-height:100vh;-webkit-font-smoothing:antialiased}
@@ -56,7 +56,7 @@
 .ebv3 select{appearance:none;-webkit-appearance:none;padding-right:34px;background-image:url("data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2214%22 height=%2214%22 viewBox=%220 0 14 14%22%3E%3Cpath d=%22M2 5l5 5 5-5z%22 fill=%22%23747474%22/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
 .ebv3 select:focus,.ebv3 input:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-light)}
 .ebv3 select:disabled{background-color:var(--bg);color:var(--weaker)}
-.ebv3 input.qty{font-family:var(--mono);font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;min-height:54px}
+.ebv3 input.qty{font-family:var(--sans);font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;min-height:54px}
 /* stations as the Lightning path (slds-path) */
 .ebv3 .cap-steps{display:flex;gap:0;align-items:stretch;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:none;padding:8px}
 .ebv3 .cap-steps .arr{display:none}
@@ -95,12 +95,12 @@
 .ebv3 .cap-rows{display:grid;gap:0;border:1px solid var(--border);border-radius:6px}
 .ebv3 .cap-row{display:grid;grid-template-columns:56px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 12px;border-top:1px solid var(--border)}
 .ebv3 .cap-row:first-child{border-top:0}
-.ebv3 .cap-row .d{font-family:var(--mono);font-weight:600;font-size:12px;text-align:center;padding:2px 0;border-radius:15rem}
+.ebv3 .cap-row .d{font-family:var(--sans);font-weight:600;font-size:12px;text-align:center;padding:2px 0;border-radius:15rem}
 .ebv3 .cap-row.out .d{background:var(--neutral-bg);color:var(--text)}
 .ebv3 .cap-row.in .d{background:var(--ok-bg);color:var(--ok)}
 .ebv3 .cap-row .it{min-width:0;display:grid;gap:1px}.ebv3 .cap-row .it b{font-weight:600;color:var(--heading)}.ebv3 .cap-row .it code{display:block;overflow-wrap:anywhere;font-family:var(--mono);font-size:13px}
 .ebv3 .cap-row .it span{display:block;font-size:12px;color:var(--weak)}
-.ebv3 .cap-row .q{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.ebv3 .cap-row .q{font-family:var(--sans);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 .ebv3 .cap-row .q b{font-size:16px}.ebv3 .cap-row .q small{display:block;color:var(--weak);font-size:12px}
 @media (max-width:600px){
   .ebv3 .cap-row{grid-template-columns:48px minmax(0,1fr);gap:8px 12px;padding:16px 12px;align-items:start}
@@ -121,7 +121,7 @@
 .ebv3 .cap-stock div{border:1px solid var(--border);border-radius:8px;padding:16px;background:var(--card);display:grid;grid-template-rows:auto auto 1fr;gap:8px;align-content:start;min-width:0;box-shadow:none}
 .ebv3 .cap-card .cap-stock div{box-shadow:none;border-color:var(--border)}
 .ebv3 .cap-stock .n{font-size:12px;line-height:16px;font-weight:500;color:var(--weak)}
-.ebv3 .cap-stock .v{font-family:var(--mono);font-size:28px;line-height:36px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--heading)}
+.ebv3 .cap-stock .v{font-family:var(--sans);font-size:28px;line-height:36px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--heading)}
 .ebv3 .cap-stock .v small{font-family:var(--sans);font-size:12px;line-height:16px;font-weight:500;letter-spacing:0;color:var(--weak)}
 .ebv3 .cap-stock .s{font-size:12px;line-height:18px;color:var(--weak)}
 @media (max-width:600px){
@@ -137,7 +137,7 @@
 .ebv3 thead th{font-size:13px;font-weight:600;color:var(--weak);background:var(--th);border-top:0;border-bottom:1px solid var(--border-input);white-space:nowrap}
 .ebv3 tbody tr:hover>*{background:var(--hover)}
 .ebv3 td.num,.ebv3 th.num{text-align:right;font-variant-numeric:tabular-nums}
-.ebv3 td.num{font-family:var(--mono)}
+.ebv3 td.num{font-family:var(--sans)}
 .ebv3 td small.w{white-space:normal}
 .ebv3 table.os td{padding:8px 8px}
 .ebv3 td small{display:block;font-family:var(--sans);font-size:11px;line-height:15px;color:var(--weaker);white-space:nowrap}
@@ -346,6 +346,7 @@
 .ebv3 #v3-form>.cap-h .cap-note{display:block;margin-top:4px}
 .ebv3[data-view="capture"] .cap-stock .v{font-weight:600}
 .ebv3 input.qty{font-family:var(--sans)}
+.ebv3 code{font-family:var(--mono);font-size:12px;background:var(--neutral-bg);padding:1px 5px;border-radius:4px}
 .ebv3 input.qty.big{font-size:48px;line-height:56px;font-weight:600;letter-spacing:-.03em;min-height:88px;border-radius:8px;padding:0 16px;color:var(--heading)}
 @media (max-width:860px){
   .ebv3[data-view="capture"] .cap-grid{grid-template-columns:minmax(0,1fr)}
@@ -435,6 +436,7 @@
 .ebv3 #v3-cap[data-step] .cap-bar .cap-sec{min-height:48px}
 .ebv3 #v3-cap[data-step="1"] .cap-steps button{min-height:64px}
 .ebv3 #v3-cap[data-step="1"] .cap-steps button .k{display:block}
+@media (max-width:1000px){.ebv3 table.mx th:first-child,.ebv3 table.mx td:first-child{position:sticky;left:0;background:var(--card);z-index:1;box-shadow:1px 0 0 var(--border)}.ebv3 table.mx thead th:first-child{background:var(--th)}}
 /* folding reference cards (open on desktop, tap to open on phone) */
 .ebv3 details.fold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px}
 .ebv3 details.fold>summary::-webkit-details-marker{display:none}
@@ -454,8 +456,6 @@
   .ebv3 .pick-top input{max-width:none;flex-basis:100%}
   .ebv3 #v3-today .cap-h h3{font-size:14px}
   .ebv3 .tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .ebv3 table.mx th:first-child,.ebv3 table.mx td:first-child{position:sticky;left:0;background:var(--card);z-index:1;box-shadow:1px 0 0 var(--border)}
-  .ebv3 table.mx thead th:first-child{background:var(--th)}
   .ebv3 .wi-jump{display:flex;align-items:center;justify-content:center;position:sticky;bottom:10px;margin-top:10px;min-height:48px;border-radius:6px;text-decoration:none;font-weight:600;font-size:15px}
   .ebv3 .wi-list{max-height:min(46vh,380px)}
   .ebv3 .pr-head{flex-direction:column}
@@ -607,7 +607,7 @@
 .ebv3 .ph{padding:24px 0 16px;gap:8px 16px}
 .ebv3 header.bar h1{font-size:24px;line-height:32px}
 .ebv3 .ph-sub{font-size:12px;line-height:20px}
-.ebv3 .lb{font-weight:500}
+.ebv3 .lb{font-weight:600;color:var(--text)}
 .ebv3 input,.ebv3 select,.ebv3 .cap-sec,.ebv3 .cap-post,.ebv3 .dlg{border-radius:8px}
 .ebv3 .seg button:first-child{border-radius:8px 0 0 8px}
 .ebv3 .seg button:last-child{border-radius:0 8px 8px 0}
