@@ -41,6 +41,33 @@
   var TYPE = { covers: "Material Receipt", folds: "Material Receipt", inserts: "Repack", packing: "Manufacture" };
   var LS = "vcl.eb-v3.";
   function PHONE() { return window.matchMedia && window.matchMedia("(max-width:700px)").matches; }
+  /* Phone guided flow (Tanuj, 06/11/2026): one step per screen, same posting path. Desktop is untouched. */
+  var W = null;  // { step: 1..4 } while the phone flow is on
+  var WZ = [["Station", function () { var s = STEPS.filter(function (x) { return x[0] === S.station; })[0]; return s ? s[2] : ""; }],
+            ["Date", function () { return (S.run || "").trim() ? dmy(S.date) + " · " + S.shift.replace(" Shift", "") + " · " + (S.run || "").trim() : ""; }],
+            ["Book", function () { return S.chosen && !pickBusy() ? gname(g()) : ""; }],
+            ["Count", function () { return ""; }]];
+  function wzOk(step) {
+    if (step === 1) return !!S.station && S.station !== "fg";
+    if (step === 2) return !!(S.run || "").trim() && !!S.date && SHIFTS.indexOf(S.shift) >= 0;
+    if (step === 3) return !!S.chosen && !pickBusy();
+    return true;
+  }
+  function wzGo(step) { if (!W) return; W.step = Math.max(1, Math.min(4, step)); renderWizard(); window.scrollTo(0, 0); }
+  function renderWizard() {
+    var cap = $("v3-cap"), el = $("v3-wz"); if (!W || !cap || !el) return;
+    cap.dataset.step = W.step;
+    el.innerHTML = WZ.map(function (w, i) {
+      var n = i + 1, done = n < W.step && wzOk(n), cur = n === W.step, can = n <= W.step || (n === W.step + 1 && wzOk(W.step));
+      return '<button type="button" data-wz="' + n + '"' + (can ? "" : " disabled") + ' aria-current="' + (cur ? "step" : "false") + '" class="' + (done ? "done" : cur ? "cur" : "") + '"><b>' + n + ". " + w[0] + "</b><small>" + esc(done ? (w[1]() || "done") : cur ? "now" : "") + "</small></button>";
+    }).join("");
+    [].forEach.call(el.querySelectorAll("[data-wz]"), function (b) { b.onclick = function () { wzGo(+b.dataset.wz); }; });
+    var back = $("v3-back"), next = $("v3-next"), sum = $("v3-barsum"), post = $("v3-post");
+    if (back) back.disabled = W.step === 1;
+    if (next) { next.hidden = W.step === 4; next.disabled = !wzOk(W.step); next.textContent = "Next"; }
+    if (post) post.hidden = W.step !== 4;
+    if (W.step !== 4 && sum) sum.textContent = W.step === 1 ? "Which station is this sheet from?" : W.step === 2 ? (wzOk(2) ? "Date and run are set." : "Enter the run or press.") : (wzOk(3) ? gname(g()) : "Choose the book type.");
+  }
   var PLAIN = { covers: "Adds printed cover sheets to stock", folds: "Adds folds to stock", inserts: "Turns cover sheets and folds into inserts", packing: "Packs books into Finished Goods" };
   var RL = { cov: "Cover sheets", fld: "Folds", ins: "Inserts", carton: "Empty cartons", fg: "Finished books" };
 
@@ -249,7 +276,8 @@
 
   function renderShell() {
     if (!D.groups[S.group]) S.group = groupKeys()[0];
-    $("v3-app").innerHTML = '<div class="cap" id="v3-cap"><div class="cap-steps" id="v3-steps" role="tablist" aria-label="Stations"></div>' +
+    W = PHONE() ? { step: (W && W.step) || 1 } : null;
+    $("v3-app").innerHTML = '<div class="cap" id="v3-cap">' + (W ? '<div class="wz" id="v3-wz" aria-label="Steps"></div>' : "") + '<div class="cap-steps" id="v3-steps" role="tablist" aria-label="Stations"></div>' +
       '<div class="cap-top">' +
       '<label class="cap-grp" for="v3-run" style="flex:0 1 190px"><span class="lb">Run or press (required)</span><input id="v3-run" autocomplete="off" required aria-required="true" placeholder="e.g. Miller" value="' + esc(S.run) + '"></label>' +
       '<label class="cap-grp" for="v3-date" style="flex:0 1 170px"><span class="lb">Production date</span><input id="v3-date" type="date" min="' + minIso() + '" max="' + todayIso() + '" value="' + esc(S.date) + '"></label>' +
@@ -264,13 +292,14 @@
       '<div class="cap-card" id="v3-logcard" hidden><div class="cap-h"><h3>Posted from this screen</h3><span class="cap-note" id="v3-lognote"></span></div><div class="tw"><table><thead><tr><th>#</th><th>Run · date · shift</th><th>Station</th><th>Entry</th><th>Out</th><th>In</th><th></th></tr></thead><tbody id="v3-log"></tbody></table></div></div>' +
       '<details class="cap-card fold" id="v3-stockcard"' + (PHONE() ? "" : " open") + '><summary class="cap-h"><div><h3>Stock for this item</h3><span class="cap-note" id="v3-stocknote"></span></div><span class="fold-i" aria-hidden="true"></span></summary><div class="fold-b"><div class="cap-stock" id="v3-stock"></div><button type="button" class="cap-sec" id="v3-reload">Reload stock</button></div></details>' +
       '<p class="cap-note">Stock as read ' + D.loadedAt.toLocaleTimeString("en-GB") + ". Each cover sheet, fold or insert makes 2 A4 books or 3 A5 books.</p>" +
-      '<div class="cap-bar" id="v3-bar"><div class="t"><b id="v3-barsum"></b><small>Every post is confirmed twice, and can be undone for 10 minutes.</small></div><button type="button" class="cap-post" id="v3-post">Post entry</button></div></div>';
+      '<div class="cap-bar" id="v3-bar">' + (W ? '<button type="button" class="cap-sec" id="v3-back">Back</button>' : "") + '<div class="t"><b id="v3-barsum"></b><small>Every post is confirmed twice, and can be undone for 10 minutes.</small></div>' + (W ? '<button type="button" class="cap-post" id="v3-next">Next</button>' : "") + '<button type="button" class="cap-post" id="v3-post">Post entry</button></div></div>';
+    if (W) { $("v3-back").onclick = function () { wzGo(W.step - 1); }; $("v3-next").onclick = function () { if (wzOk(W.step)) wzGo(W.step + 1); }; }
     var stepsEl = $("v3-steps");
     STEPS.forEach(function (s, i) {
       if (i) { var a = document.createElement("span"); a.className = "arr"; a.textContent = "→"; stepsEl.appendChild(a); }
       var b = document.createElement("button"); b.type = "button"; b.setAttribute("role", "tab"); b.dataset.s = s[0]; if (s[0] === "fg") b.className = "fg";
       b.innerHTML = '<span class="k">' + s[1] + '</span><span class="t">' + s[2] + "</span>";
-      b.onclick = function () { S.station = s[0]; S.v = {}; lsSet("station", S.station); renderStation(); };
+      b.onclick = function () { S.station = s[0]; S.v = {}; lsSet("station", S.station); renderStation(); if (W && s[0] !== "fg") wzGo(2); };
       stepsEl.appendChild(b);
     });
     $("v3-pickq").oninput = function (e) { renderPick(e.target.value); };
@@ -322,7 +351,7 @@
     if (!toks.length) {
       if (PK.brand && PK.pages && PK.size == null) { var sz = pickVals("size"); if (sz.length === 1) PK.size = sz[0]; }        // e.g. 100 pages is A5 only
       if (PK.size && PK.ruling == null) { var ru = pickVals("ruling"); if (ru.length === 1) PK.ruling = ru[0]; }
-      if (!pickBusy()) { var done = pickMatches()[0]; if (done !== S.group) return pickChoose(done); }
+      if (!pickBusy()) { var done = pickMatches()[0]; if (done !== S.group || !S.chosen) return pickChoose(done); }
     }
     var head = '<div class="pick-c">' + PICK_ORDER.filter(function (f) { return PK[f] != null; }).map(function (f) { return '<button type="button" data-back="' + f + '"' + (f === "brand" ? ' data-b="' + esc(PK.brand) + '"' : "") + ' aria-label="Change ' + f + '">' + esc(pickChipText(f)) + "</button>"; }).join("") +
       (pickBusy() && S.chosen ? '<button type="button" class="pick-x" data-cancel="1">Cancel</button>' : "") + "</div>", body = "";
@@ -351,6 +380,7 @@
     lsSet("recent", JSON.stringify([k].concat(recents().filter(function (x) { return x !== k; })).slice(0, 4)));
     $("v3-pickq").value = ""; pickSync(); renderPick("");
     if (changed) renderStation();
+    if (W && W.step === 3) wzGo(4);
   }
 
   function renderBookPicker() {
@@ -438,6 +468,7 @@
     pb.disabled = !!S.posting || !P.ok;
     pb.textContent = S.posting ? "Posting…" : (S.station === "packing" ? "Post and receive" : "Post entry");
     $("v3-barsum").textContent = barText(P, run, has);
+    if (W) renderWizard();
   }
   function barText(P, run, has) {
     var ask = P.msgs.filter(function (m) { return m[0] === "info" && /^Enter/.test(m[1]); })[0];
