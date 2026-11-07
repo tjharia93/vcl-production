@@ -9,8 +9,9 @@
  *   (totals, "Post now" not pre-focused, Enter does nothing) -> eb_capture.post_entry with
  *   confirmed=2. Undo (same user, 10 minutes) is confirmed twice the same way.
  * - If the server methods are not deployed, Post says "Server update needed" and posts nothing.
- * - Reads only through frappe.client.get_list (GET). No REST resource writes for stock.
- *   The one exception is the Priority tab, which writes VCL EB Priority rows only (no stock).
+ * - Reads through frappe.client.get_list. Long stock-recon filters use POST reads to
+ *   fit the site's request-line limit. Priority writes VCL EB Priority; Stock recon
+ *   creates standard reconciliation drafts only. Neither submits stock here.
  *
  * RULES (mirror of production_floor/eb_capture_rules.py; keep the two in step)
  * - Covers, folds, inserts count in SETS with the same up-count (A4 2-up, A5 3-up, from
@@ -1333,7 +1334,10 @@
   function rcList(doctype, fields, filters) {
     var out = [];
     function page(start) {
-      return get("frappe.client.get_list", { doctype: doctype, fields: fields, filters: filters, order_by: "name asc", limit_start: start, limit_page_length: 500 }).then(function (rows) {
+      var args = { doctype: doctype, fields: fields, filters: filters, order_by: "name asc", limit_start: start, limit_page_length: 500 };
+      // Gunicorn rejects request lines over 4094 bytes. A POST to get_list is still read-only.
+      var read = encodeURIComponent(JSON.stringify(args)).length > 2500 ? post : get;
+      return read("frappe.client.get_list", args).then(function (rows) {
         out = out.concat(rows); return rows.length === 500 ? page(start + 500) : out;
       });
     }

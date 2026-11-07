@@ -82,7 +82,10 @@ class StockReconBrowser(unittest.TestCase):
             return
         method = url.path.split("/api/method/")[1]
         args = {k: v[0] for k, v in urllib.parse.parse_qs(url.query).items()}
-        if req.method == "POST":
+        if method == "frappe.client.get_list" and req.method == "POST":
+            args = req.post_data_json
+            args["filters"] = json.dumps(args["filters"])
+        if req.method == "POST" and method != "frappe.client.get_list":
             data = req.post_data_json
             self.posts.append((method, data))
             if method != "frappe.client.insert":
