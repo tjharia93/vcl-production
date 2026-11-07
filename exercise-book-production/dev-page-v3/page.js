@@ -1329,7 +1329,7 @@
   /* ---------- Stock recon: physical counts -> a standard ERPNext DRAFT ----------
    * Absolute quantities, never production receipts. No submit endpoint is called here.
    * Item + warehouse is the identity; cover variants are never pooled. */
-  var RC = { rows: null, counts: {}, stage: "covers", brand: "", size: "", q: "", reason: "", busy: false, created: null, uncertain: false, zero: false, message: "" };
+  var RC = { rows: null, counts: {}, stage: "covers", brand: "", size: "", pages: "", ruling: "", q: "", reason: "", busy: false, created: null, uncertain: false, zero: false, message: "" };
   var RC_STAGES = [["covers", "Cover sheets"], ["folds", "Folds"], ["inserts", "Inserts"], ["fg", "Finished books"], ["carton", "Empty cartons"]];
   function rcList(doctype, fields, filters) {
     var out = [];
@@ -1413,12 +1413,17 @@
       rcLoad().then(function () { if (S.view === "recon") renderRecon(); }).catch(function (err) { if (S.view === "recon") $("v3-app").innerHTML = '<div class="cap-msg bad">Could not load stock: ' + esc(err.message) + '</div><button class="cap-sec" id="rc-retry">Retry</button>'; if ($("rc-retry")) $("rc-retry").onclick = renderRecon; }); return;
     }
     var frozen = rcFrozen(), dis = frozen ? " disabled" : "";
-    var rows = RC.rows.filter(function (r) { return r.stage === RC.stage && (r.stage === "carton" || r.d.brand === RC.brand) && (!RC.size || r.d.size === RC.size) && (!RC.q || (r.code + " " + r.name).toLowerCase().indexOf(RC.q.toLowerCase()) >= 0); });
+    var rows = RC.rows.filter(function (r) { return r.stage === RC.stage && (r.stage === "carton" || r.d.brand === RC.brand) &&
+      (r.stage === "carton" || ((!RC.size || r.d.size === RC.size) && (!RC.pages || String(r.d.pages) === RC.pages) && (!RC.ruling || r.d.ruling === RC.ruling))) &&
+      (!RC.q || (r.code + " " + r.name).toLowerCase().indexOf(RC.q.toLowerCase()) >= 0); });
     var h = '<div class="cap rc"><div class="cap-card"><div class="cap-h"><div><h3>Stock reconciliation / true-up</h3><span class="cap-note">Physical stock now · read ' + esc(RC.loadedAt.toLocaleString("en-GB")) + '</span></div><button class="cap-sec" id="rc-refresh"' + dis + '>Refresh ERP stock</button></div>' +
       '<p class="cap-note">Enter what is physically on hand. Blank means leave unchanged; enter 0 only when you counted none. Cover sheets, folds and inserts are counted in sheets or sets. Finished books use full cartons plus loose books where a Carton unit exists. Each cover variant stays separate.</p>' +
       '<div class="cap-fields">' + sel("rc-brand", "Brand — choose first", RC.brand, uniq(RC.rows.filter(function (r) { return r.stage !== "carton"; }).map(function (r) { return r.d.brand; })).sort()) +
       '<label class="cap-f"><span class="lb">Stock stage</span><select id="rc-stage">' + RC_STAGES.map(function (x) { return '<option value="' + x[0] + '"' + (RC.stage === x[0] ? " selected" : "") + '>' + x[1] + '</option>'; }).join("") + '</select></label>' +
-      sel("rc-size", "Size", RC.size, ["A4", "A5"]) + '<label class="cap-f"><span class="lb">Search item, pages or ruling</span><input id="rc-q" type="search" value="' + esc(RC.q) + '"></label></div>' +
+      sel("rc-size", "Size", RC.size, ["A4", "A5"]) +
+      sel("rc-pages", "Pages", RC.pages, uniq(RC.rows.map(function (r) { return r.d.pages || ""; })).sort(function (a, b) { return a - b; })) +
+      sel("rc-ruling", "Ruling", RC.ruling, uniq(RC.rows.map(function (r) { return r.d.ruling; })).sort().map(function (r) { return [r, rulName(r)]; })) +
+      '<label class="cap-f"><span class="lb">Search item, pages or ruling</span><input id="rc-q" type="search" value="' + esc(RC.q) + '"></label></div>' +
       (RC.stage === "carton" ? '<div class="cap-msg info">Empty cartons are a shared stock pool. Each carton item appears once, across brands.</div>' : "") +
       '<div id="rc-table">' + (!RC.brand && RC.stage !== "carton" ? '<p class="cap-note">Choose a brand to start counting.</p>' : '<div class="tw"><table><thead><tr><th>Item / warehouse</th><th class="num">ERP stock</th><th>Physical count</th><th class="num">Variance</th></tr></thead><tbody>' +
       (rows.length ? rows.map(function (r) {
@@ -1434,7 +1439,7 @@
       '<div id="rc-result">' + RC.message + '</div><div class="btn-grp"><button class="cap-post" id="rc-create">Review & create draft</button><button class="cap-sec" id="rc-export">Download count sheet</button><button class="cap-sec" id="rc-reset"' + (RC.busy || RC.uncertain ? " disabled" : "") + '>Start new count</button></div></div></div>';
     $("v3-app").innerHTML = h;
     $("rc-brand").options[0].textContent = "Choose brand";
-    ["brand", "stage", "size"].forEach(function (k) { $("rc-" + k).onchange = function (e) { RC[k] = e.target.value; renderRecon(); }; });
+    ["brand", "stage", "size", "pages", "ruling"].forEach(function (k) { $("rc-" + k).onchange = function (e) { RC[k] = e.target.value; renderRecon(); }; });
     $("rc-q").oninput = function (e) { var pos = e.target.selectionStart; RC.q = e.target.value; renderRecon(); $("rc-q").focus(); $("rc-q").setSelectionRange(pos, pos); };
     $("rc-reason").oninput = function (e) { RC.reason = e.target.value; rcSummary(); };
     $("rc-zero").onchange = function (e) { RC.zero = e.target.checked; };
