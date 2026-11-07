@@ -1,0 +1,21 @@
+.ebv3 .rc p{margin:0}
+.ebv3 .rc td small{display:block;font-size:12px;line-height:18px;color:var(--weak);overflow-wrap:anywhere}
+.ebv3 .rc td code{white-space:normal;overflow-wrap:anywhere}
+.ebv3 .rc td:first-child{max-width:360px}
+.ebv3 .rc-count{display:flex;gap:8px;min-width:170px}
+.ebv3 .rc-count label{display:grid;gap:4px;flex:1;max-width:180px}
+.ebv3 .rc-count input[aria-invalid="true"]{border-color:var(--bad);background:var(--bad-bg)}
+.ebv3 .rc .btn-grp .cap-post{width:auto;padding:0 20px}
+.ebv3 .rc .cap-check input{width:20px}
+@media(max-width:700px){
+ .ebv3 .rc table,.ebv3 .rc tbody,.ebv3 .rc tr,.ebv3 .rc td{display:block;width:100%;max-width:none}
+ .ebv3 .rc thead{display:none}
+ .ebv3 .rc tr{padding:12px 16px;border-top:1px solid var(--border)}
+ .ebv3 .rc td{padding:4px 0;border:0;text-align:left}
+ .ebv3 .rc td:nth-child(2)::before{content:"ERP stock: ";font-size:12px;color:var(--weak)}
+ .ebv3 .rc td:nth-child(4)::before{content:"Variance: ";font-size:12px;color:var(--weak)}
+ .ebv3 .rc td small{display:block}
+ .ebv3 .rc-count{margin:8px 0}
+ .ebv3 .rc-count label{max-width:none;min-width:0}
+ .ebv3 .rc .btn-grp{display:grid}
+}

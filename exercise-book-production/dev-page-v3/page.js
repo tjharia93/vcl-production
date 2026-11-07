@@ -1325,8 +1325,179 @@
     }).join("") + "</tbody></table><small>Books</small></div>";
   }
 
-  /* ---------- views: Capture | Orders | Order & stock ---------- */
-  var VIEWS = [["capture", "Capture"], ["production", "Production"], ["orders", "Orders"], ["orderstock", "Order & stock"], ["priority", "Priority"], ["whatif", "What-if"]];
+  /* ---------- Stock recon: physical counts -> a standard ERPNext DRAFT ----------
+   * Absolute quantities, never production receipts. No submit endpoint is called here.
+   * Item + warehouse is the identity; cover variants are never pooled. */
+  var RC = { rows: null, counts: {}, stage: "covers", brand: "", size: "", q: "", reason: "", busy: false, created: null, uncertain: false, zero: false, message: "" };
+  var RC_STAGES = [["covers", "Cover sheets"], ["folds", "Folds"], ["inserts", "Inserts"], ["fg", "Finished books"], ["carton", "Empty cartons"]];
+  function rcList(doctype, fields, filters) {
+    var out = [];
+    function page(start) {
+      return get("frappe.client.get_list", { doctype: doctype, fields: fields, filters: filters, order_by: "name asc", limit_start: start, limit_page_length: 500 }).then(function (rows) {
+        out = out.concat(rows); return rows.length === 500 ? page(start + 500) : out;
+      });
+    }
+    return page(0);
+  }
+  function rcBins(rows) {
+    var codes = uniq(rows.map(function (r) { return r.code; })), batches = [];
+    for (var i = 0; i < codes.length; i += 100) batches.push(codes.slice(i, i + 100));
+    return Promise.all(batches.map(function (codes0) {
+      return rcList("Bin", ["name", "item_code", "warehouse", "actual_qty", "modified"], [["item_code", "in", codes0], ["warehouse", "in", [STORES, FG]]]);
+    })).then(function (parts) {
+      var bins = {}; [].concat.apply([], parts).forEach(function (b) { bins[b.item_code + "|" + b.warehouse] = b; }); return bins;
+    });
+  }
+  function rcLoad() {
+    return rcList("Item Group", ["name", "parent_item_group"], []).then(function (groups) {
+      var selected = {}; groups.forEach(function (x) { if (/exercise[\s-]*books?/i.test(x.name)) selected[x.name] = true; });
+      var changed = true;
+      while (changed) { changed = false; groups.forEach(function (x) { if (selected[x.parent_item_group] && !selected[x.name]) { selected[x.name] = true; changed = true; } }); }
+      var allGroups = uniq(Object.keys(selected).concat(["Exercise Book Covers", "Folds", "Exercise Book Inserts"]));
+      var cols = ["name", "item_name", "item_group", "stock_uom", "has_batch_no", "has_serial_no"];
+      return Promise.all([
+        rcList("Item", cols, [["item_group", "in", allGroups], ["disabled", "=", 0], ["is_stock_item", "=", 1]]),
+        rcList("Item", cols, [["name", "in", uniq(Object.keys(CARTONS).map(function (k) { return CARTONS[k]; }))], ["disabled", "=", 0]]),
+        rcList("Item", ["name", "`tabUOM Conversion Detail`.conversion_factor as cf"], [["item_group", "in", allGroups], ["UOM Conversion Detail", "uom", "=", "Carton"]])
+      ]).then(function (parts) {
+        var cpc = {}, seen = {};
+        parts[2].forEach(function (x) { cpc[x.name] = Number(x.cf) || 0; });
+        var rows = parts[0].concat(parts[1]).map(function (x) {
+          var stage = x.item_group === "Exercise Book Covers" ? "covers" : x.item_group === "Folds" ? "folds" : x.item_group === "Exercise Book Inserts" ? "inserts" : parts[1].some(function (ct) { return ct.name === x.name; }) ? "carton" : "fg";
+          // Only the established exercise-book set codes belong to the floor count.
+          if (stage === "folds" && !/^FLD-(PNC|SWR)-/.test(x.name)) return null;
+          var wh = stage === "fg" ? FG : STORES, key = x.name + "|" + wh;
+          if (seen[key]) return null; seen[key] = true;
+          var d = dims(x.name, x.item_name, x.item_group);
+          var unit = stage === "covers" ? "sheets" : stage === "folds" ? "fold sets" : stage === "inserts" ? "insert sets" : stage === "carton" ? "empty cartons" : "books";
+          return { key: key, code: x.name, name: x.item_name, stage: stage, wh: wh, d: d, unit: unit, uom: x.stock_uom, cpc: cpc[x.name] || 0,
+            blocked: x.has_batch_no || x.has_serial_no || x.stock_uom !== "Nos", qty: 0, modified: "" };
+        }).filter(Boolean).sort(function (a, b) { return a.code.localeCompare(b.code); });
+        return rcBins(rows).then(function (bins) { rcApplyBins(rows, bins); RC.rows = rows; RC.loadedAt = new Date(); });
+      });
+    });
+  }
+  function rcApplyBins(rows, bins) {
+    rows.forEach(function (r) { var b = bins[r.key]; r.qty = b ? Number(b.actual_qty) : 0; r.modified = b ? b.modified : ""; });
+  }
+  function rcCount(r) {
+    var c = RC.counts[r.key] || {}, a = String(c.qty || "").trim(), b = String(c.loose || "").trim();
+    if (!a && !b) return null;
+    var n = num(a), loose = num(b);
+    if (!Number.isSafeInteger(n) || !Number.isSafeInteger(loose)) return NaN;
+    var total = r.stage === "fg" && r.cpc ? n * r.cpc + loose : n;
+    return Number.isSafeInteger(total) ? total : NaN;
+  }
+  function rcCounted() { return (RC.rows || []).filter(function (r) { return rcCount(r) !== null; }); }
+  function rcChanged() { return rcCounted().filter(function (r) { return !isNaN(rcCount(r)) && rcCount(r) !== r.qty; }); }
+  function rcFrozen() { return RC.busy || !!RC.created || RC.uncertain; }
+  function rcStatus(text, kind) { RC.message = '<div class="cap-msg ' + (kind || "info") + '">' + text + "</div>"; if ($("rc-result")) $("rc-result").innerHTML = RC.message; }
+  function rcSummary() {
+    var counted = rcCounted(), invalid = counted.some(function (r) { return isNaN(rcCount(r)) || r.blocked; }), diffs = rcChanged();
+    if ($("rc-summary")) $("rc-summary").textContent = counted.length + " counted · " + diffs.length + " with a variance · " + ((RC.rows || []).length - counted.length) + " left blank (unchanged)";
+    if ($("rc-create")) $("rc-create").disabled = rcFrozen() || invalid || !diffs.length || RC.reason.trim().length < 5;
+  }
+  function rcCell(r) { return r.stage === "fg" ? cb(r.qty, r.cpc) : '<b>' + f(r.qty) + '</b><small>' + esc(r.unit) + "</small>"; }
+  function rcVariance(r) {
+    var n = rcCount(r); if (n === null) return "Not counted"; if (isNaN(n)) return "Whole numbers, 0 or more";
+    var delta = n - r.qty;
+    return '<b>' + (delta > 0 ? "+" : "") + f(delta) + " " + esc(r.unit) + '</b><small>Counted: ' + f(n) + " " + esc(r.unit) + "</small>";
+  }
+  function renderRecon() {
+    if (!RC.rows) {
+      $("v3-app").innerHTML = '<div class="loading">Loading exercise-book stock…</div>';
+      rcLoad().then(function () { if (S.view === "recon") renderRecon(); }).catch(function (err) { if (S.view === "recon") $("v3-app").innerHTML = '<div class="cap-msg bad">Could not load stock: ' + esc(err.message) + '</div><button class="cap-sec" id="rc-retry">Retry</button>'; if ($("rc-retry")) $("rc-retry").onclick = renderRecon; }); return;
+    }
+    var frozen = rcFrozen(), dis = frozen ? " disabled" : "";
+    var rows = RC.rows.filter(function (r) { return r.stage === RC.stage && (r.stage === "carton" || r.d.brand === RC.brand) && (!RC.size || r.d.size === RC.size) && (!RC.q || (r.code + " " + r.name).toLowerCase().indexOf(RC.q.toLowerCase()) >= 0); });
+    var h = '<div class="cap rc"><div class="cap-card"><div class="cap-h"><div><h3>Stock reconciliation / true-up</h3><span class="cap-note">Physical stock now · read ' + esc(RC.loadedAt.toLocaleString("en-GB")) + '</span></div><button class="cap-sec" id="rc-refresh"' + dis + '>Refresh ERP stock</button></div>' +
+      '<p class="cap-note">Enter what is physically on hand. Blank means leave unchanged; enter 0 only when you counted none. Cover sheets, folds and inserts are counted in sheets or sets. Finished books use full cartons plus loose books where a Carton unit exists. Each cover variant stays separate.</p>' +
+      '<div class="cap-fields">' + sel("rc-brand", "Brand — choose first", RC.brand, uniq(RC.rows.filter(function (r) { return r.stage !== "carton"; }).map(function (r) { return r.d.brand; })).sort()) +
+      '<label class="cap-f"><span class="lb">Stock stage</span><select id="rc-stage">' + RC_STAGES.map(function (x) { return '<option value="' + x[0] + '"' + (RC.stage === x[0] ? " selected" : "") + '>' + x[1] + '</option>'; }).join("") + '</select></label>' +
+      sel("rc-size", "Size", RC.size, ["A4", "A5"]) + '<label class="cap-f"><span class="lb">Search item, pages or ruling</span><input id="rc-q" type="search" value="' + esc(RC.q) + '"></label></div>' +
+      (RC.stage === "carton" ? '<div class="cap-msg info">Empty cartons are a shared stock pool. Each carton item appears once, across brands.</div>' : "") +
+      '<div id="rc-table">' + (!RC.brand && RC.stage !== "carton" ? '<p class="cap-note">Choose a brand to start counting.</p>' : '<div class="tw"><table><thead><tr><th>Item / warehouse</th><th class="num">ERP stock</th><th>Physical count</th><th class="num">Variance</th></tr></thead><tbody>' +
+      (rows.length ? rows.map(function (r) {
+        var c = RC.counts[r.key] || {}, ix = RC.rows.indexOf(r), blocked = r.blocked ? " disabled" : dis;
+        function input(field, label) { return '<label><span class="lb">' + label + '</span><input data-rc="' + ix + '" data-field="' + field + '" aria-label="' + esc(label + " for " + r.code) + '" inputmode="numeric" autocomplete="off" placeholder="Not counted" value="' + esc(c[field] || "") + '"' + blocked + '></label>'; }
+        return '<tr><td><b>' + esc(r.name) + '</b><small><code>' + esc(r.code) + '</code></small><small>' + esc(r.wh) + '</small></td><td class="num">' + rcCell(r) + '</td><td><div class="rc-count">' +
+          (r.blocked ? '<span class="cap-note">Count this item in ERPNext (batch/serial or different stock unit).</span>' : input("qty", r.stage === "fg" && r.cpc ? "Full cartons (" + r.cpc + " books each)" : r.unit) + (r.stage === "fg" && r.cpc ? input("loose", "Loose books") : "")) +
+          '</div></td><td class="num" id="rc-var-' + ix + '">' + rcVariance(r) + '</td></tr>';
+      }).join("") : '<tr><td colspan="4">No items match these filters.</td></tr>') + '</tbody></table></div>') + '</div></div>' +
+      '<div class="cap-card"><div class="cap-h"><h3>Review the true-up</h3><span id="rc-summary" class="cap-note"></span></div><p class="cap-note">The draft includes every counted item with a variance, including counts hidden by your filters. ERP stock is checked again before creating it. Review the posting time, valuation and difference account in ERPNext, then Submit there to apply the true-up.</p>' +
+      '<label class="cap-f"><span class="lb">Reason / count reference (required)</span><input id="rc-reason" maxlength="500" placeholder="e.g. Physical floor count, Peter and Gloria" value="' + esc(RC.reason) + '"' + dis + '></label>' +
+      '<label class="cap-check"><input type="checkbox" id="rc-zero"' + (RC.zero ? " checked" : "") + dis + '> Allow zero valuation for items with no recorded rate (quantity-only opening count)</label>' +
+      '<div id="rc-result">' + RC.message + '</div><div class="btn-grp"><button class="cap-post" id="rc-create">Review & create draft</button><button class="cap-sec" id="rc-export">Download count sheet</button><button class="cap-sec" id="rc-reset"' + (RC.busy || RC.uncertain ? " disabled" : "") + '>Start new count</button></div></div></div>';
+    $("v3-app").innerHTML = h;
+    $("rc-brand").options[0].textContent = "Choose brand";
+    ["brand", "stage", "size"].forEach(function (k) { $("rc-" + k).onchange = function (e) { RC[k] = e.target.value; renderRecon(); }; });
+    $("rc-q").oninput = function (e) { var pos = e.target.selectionStart; RC.q = e.target.value; renderRecon(); $("rc-q").focus(); $("rc-q").setSelectionRange(pos, pos); };
+    $("rc-reason").oninput = function (e) { RC.reason = e.target.value; rcSummary(); };
+    $("rc-zero").onchange = function (e) { RC.zero = e.target.checked; };
+    [].forEach.call($("v3-app").querySelectorAll("[data-rc]"), function (el) { el.oninput = function () {
+      var r = RC.rows[Number(el.dataset.rc)]; (RC.counts[r.key] = RC.counts[r.key] || {})[el.dataset.field] = el.value;
+      el.setAttribute("aria-invalid", isNaN(rcCount(r)) ? "true" : "false"); $("rc-var-" + el.dataset.rc).innerHTML = rcVariance(r); rcSummary();
+    }; });
+    $("rc-refresh").onclick = function () { RC.busy = true; renderRecon(); rcBins(RC.rows).then(function (bins) { rcApplyBins(RC.rows, bins); RC.loadedAt = new Date(); rcStatus("ERP balances refreshed. Your physical counts have been kept; review the variances."); }).catch(function (e) { rcStatus(esc(e.message), "bad"); }).finally(function () { RC.busy = false; if (S.view === "recon") renderRecon(); }); };
+    $("rc-reset").onclick = function () { dialog("Start a new stock count?", "<p>This clears the counts on this screen. Existing ERPNext drafts stay available in ERPNext.</p>", "Start new count", function () { RC.counts = {}; RC.reason = ""; RC.zero = false; RC.created = null; RC.message = ""; RC.rows = null; renderRecon(); }); };
+    $("rc-export").onclick = function () { download("EB stock count " + today(), ["Item code", "Item", "Warehouse", "Unit", "ERP quantity", "Physical quantity", "Variance", "Stock read at"], rows.map(function (r) { var n = rcCount(r); return [r.code, r.name, r.wh, r.unit, r.qty, n === null || isNaN(n) ? "" : n, n === null || isNaN(n) ? "" : n - r.qty, RC.loadedAt.toISOString()]; })); };
+    $("rc-create").onclick = rcReview;
+    rcSummary();
+  }
+  function rcReview() {
+    if (rcFrozen() || !rcChanged().length || RC.reason.trim().length < 5 || rcCounted().some(function (r) { return isNaN(rcCount(r)) || r.blocked; })) return;
+    RC.busy = true; renderRecon();
+    var counted = rcCounted(), before = {}; counted.forEach(function (r) { before[r.key] = [r.qty, r.modified]; });
+    rcBins(counted).then(function (bins) {
+      rcApplyBins(counted, bins);
+      var moved = counted.some(function (r) { var was = before[r.key]; return was[0] !== r.qty || was[1] !== r.modified; });
+      RC.busy = false; if (S.view === "recon") renderRecon();
+      if (moved) { rcStatus("ERP stock changed since you loaded it. Balances and variances have been updated; check your count and review again.", "warn"); return; }
+      var changed = rcChanged(), zero = RC.zero, reason = RC.reason.trim();
+      var planned = changed.map(function (r) { return { row: r, qty: rcCount(r) }; });
+      // Freeze the exact reviewed plan until the dialog is accepted or cancelled.
+      RC.busy = true; if (S.view === "recon") renderRecon();
+      dialog("Review stock true-up — " + planned.length + " items", '<p>' + esc(reason) + '</p><div class="tw"><table><thead><tr><th>Item / warehouse</th><th>ERP</th><th>Counted</th><th>Variance</th></tr></thead><tbody>' + planned.map(function (p) { var r = p.row, delta = p.qty - r.qty; return '<tr><td>' + esc(r.code) + '<small>' + esc(r.wh) + '</small></td><td>' + f(r.qty) + '</td><td>' + f(p.qty) + ' ' + esc(r.unit) + '</td><td>' + (delta > 0 ? "+" : "") + f(delta) + '</td></tr>'; }).join("") + '</tbody></table></div>' +
+        (zero ? '<p class="cap-msg warn">Items with no recorded valuation may be added at zero value.</p>' : '') + '<p>A draft will be created. Review and Submit in ERPNext to change stock.</p>', "Create draft", function () { rcCreate(planned, reason, zero); }, function () { RC.busy = false; if (S.view === "recon") renderRecon(); });
+    }).catch(function (e) { RC.busy = false; if (S.view === "recon") renderRecon(); rcStatus("Could not check ERP stock. " + esc(e.message), "bad"); });
+  }
+  function rcCreate(planned, reason, zero) {
+    // Draft only. Leaving posting time to ERPNext uses its server clock/timezone.
+    var doc = { doctype: "Stock Reconciliation", naming_series: "MAT-RECO-.YYYY.-", company: "Vimit Converters Limited", purpose: "Stock Reconciliation", set_posting_time: 0,
+      items: planned.map(function (p) {
+        // Null explicitly preserves ERPNext's native rate lookup; zero would revalue existing stock.
+        var r = p.row, line = { item_code: r.code, warehouse: r.wh, qty: p.qty, stock_uom: r.uom, valuation_rate: null };
+        if (zero) line.allow_zero_valuation_rate = 1;
+        return line;
+      }) };
+    rcInsert(doc).then(function (made) {
+      RC.created = made.name; RC.busy = false;
+      var link = '<a href="/app/stock-reconciliation/' + encodeURIComponent(made.name) + '" target="_blank" rel="noopener">' + esc(made.name) + ' — review and submit in ERPNext</a>';
+      rcStatus("Draft created: " + link + ". Stock has not changed.", "ok");
+      if (S.view === "recon") renderRecon();
+      return rcInsert({ doctype: "Comment", comment_type: "Comment", reference_doctype: "Stock Reconciliation", reference_name: made.name,
+        content: "Exercise Book v3 stock true-up. Reason: " + esc(reason) + ". ERP snapshot checked " + esc(new Date().toISOString()) + ". Zero valuation allowed: " + (zero ? "yes" : "no") + "." }).catch(function () {
+          rcStatus("Draft created: " + link + ". Stock has not changed. The count note could not be saved; add this reason before submitting: " + esc(reason), "warn");
+        });
+    }).catch(function (e) {
+      RC.busy = false;
+      RC.uncertain = !!e.uncertain;
+      rcStatus((RC.uncertain ? 'The response was lost. Check <a href="/app/stock-reconciliation" target="_blank" rel="noopener">ERPNext reconciliations</a> before creating another draft. ' : "Draft could not be created. ") + esc(e.message), "bad");
+      if (S.view === "recon") renderRecon();
+    });
+  }
+  function rcInsert(doc) {
+    return fetch("/api/method/frappe.client.insert", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", Accept: "application/json", "X-Frappe-CSRF-Token": csrf() }, body: JSON.stringify({ doc: doc }) })
+      .then(function (r) { return r.json().then(function (j) {
+        if (!r.ok) { var err = new Error(serverMsg(j) || ("HTTP " + r.status)); err.uncertain = r.status >= 500; throw err; }
+        if (!j.message || !j.message.name) throw new Error("ERPNext did not confirm the draft name.");
+        return j.message;
+      }); }).catch(function (err) { if (err.uncertain == null) err.uncertain = true; throw err; });
+  }
+  window.addEventListener("beforeunload", function (e) { if (!RC.created && rcCounted().length) { e.preventDefault(); e.returnValue = ""; } });
+
+  /* ---------- views ---------- */
+  var VIEWS = [["capture", "Capture"], ["production", "Production"], ["orders", "Orders"], ["orderstock", "Order & stock"], ["priority", "Priority"], ["whatif", "What-if"], ["recon", "Stock recon"]];
   function renderViews() {
     $("v3-mode").innerHTML = '<div class="seg views" role="tablist" aria-label="Screens">' + VIEWS.map(function (v) { return '<button type="button" role="tab" data-view="' + v[0] + '" aria-pressed="' + (S.view === v[0]) + '">' + v[1] + "</button>"; }).join("") + "</div>";
     [].forEach.call($("v3-mode").querySelectorAll("[data-view]"), function (b) { b.onclick = function () { showView(b.dataset.view); }; });
@@ -1340,6 +1511,7 @@
     $("v3-banner").hidden = v !== "capture";
     if (v === "capture") { renderShell(); return; }
     if (v === "production") { renderProduction(); return; }
+    if (v === "recon") { renderRecon(); return; }
     var go = function () { if (S.view === v) (v === "orders" ? renderOrders : v === "priority" ? renderPriority : v === "whatif" ? renderWhatIf : renderOrderStock)(); };
     if (O) { go(); return; }
     $("v3-app").innerHTML = '<div class="loading">Loading exercise book orders…</div>';
