@@ -436,3 +436,120 @@ def cps_migration_report_csv(product_type="Computer Paper", customer=None, inclu
 		),
 		"notes": report["notes"],
 	}
+
+
+# ---------------------------------------------------------------------------
+# Stream A §9 - release-gate migration report (A8). READ ONLY. Runs first.
+# ---------------------------------------------------------------------------
+
+CPT_PREFIX = "CPT-SPEC-"
+
+
+@frappe.whitelist()
+def cps_release_migration_report():
+	"""What the §1 grandfather patch and the §5 price reconciliation will meet.
+
+	Lists, without changing anything: submitted specifications with no Approved
+	price row (by product type), rows Approved at a zero rate, rows carrying the
+	retired ``vat_inclusive`` tick, Carton specifications under the CPT prefix,
+	submitted specifications not yet stamped with a revision, job cards with no
+	Sales Order, and legacy cards whose snapshot would not verify against the
+	grandfathered payload (left unbound by the migration). Counts read live.
+	"""
+	_require_read_access()
+	notes = []
+	cps_meta = frappe.get_meta(CPS)
+
+	specs = frappe.get_all(
+		CPS,
+		filters={"docstatus": 1},
+		fields=["name", "product_type", "customer", "status", "specification_name", "linked_item"]
+		+ (["vcl_revision", "vcl_approved_rev", "vcl_approval_state"] if cps_meta.get_field("vcl_revision") else []),
+		limit_page_length=0,
+	)
+	names = [s.name for s in specs]
+	priced = _specs_with_approved_price(names)
+
+	unpriced = [s for s in specs if s.name not in priced]
+	by_type = {}
+	for s in unpriced:
+		by_type.setdefault(s.product_type, []).append(s.name)
+
+	zero_rows = frappe.get_all(
+		"CPS Price",
+		filters={"parenttype": CPS, "approval_status": cps_rules.APPROVAL_APPROVED, "rate": 0},
+		fields=["name", "parent", "valid_from", "uom", "approved_by", "approval_notes"],
+		limit_page_length=0,
+	)
+	vat_rows = []
+	if frappe.db.has_column("CPS Price", "vat_inclusive"):
+		vat_rows = frappe.get_all(
+			"CPS Price",
+			filters={"parenttype": CPS, "vat_inclusive": 1},
+			fields=["name", "parent", "rate", "approval_status"] + (["tax_basis"] if frappe.db.has_column("CPS Price", "tax_basis") else []),
+			limit_page_length=0,
+		)
+	no_source = frappe.db.count("CPS Price", {"parenttype": CPS, "source": ["in", ["", None]]})
+
+	cpt_cartons = frappe.get_all(
+		CPS,
+		filters={"product_type": "Carton", "name": ["like", CPT_PREFIX + "%"]},
+		fields=["name", "docstatus", "status", "customer"],
+		limit_page_length=0,
+	)
+
+	unstamped = [s.name for s in specs if cps_meta.get_field("vcl_revision") and int(s.get("vcl_revision") or 0) < 1]
+
+	cards_without_so = {}
+	unbound_cards = []
+	for doctype in so_spec_control.JOB_CARD_DOCTYPES.values():
+		if not frappe.db.exists("DocType", doctype) or not _has_field(doctype, "sales_order"):
+			continue
+		cards_without_so[doctype] = frappe.db.count(doctype, {"docstatus": ["<", 2], "sales_order": ["in", ["", None]]})
+		if _has_field(doctype, "spec_revision"):
+			unbound_cards += _legacy_cards_not_verifying(doctype)
+
+	if len(specs) >= 2000:
+		notes.append("specification list capped at 2000")
+
+	return {
+		"generated_on": frappe.utils.formatdate(frappe.utils.today(), "dd/mm/yyyy"),
+		"submitted_specs": len(specs),
+		"submitted_without_approved_price": {"count": len(unpriced), "by_product_type": by_type},
+		"approved_at_zero": zero_rows,
+		"vat_inclusive_rows": vat_rows,
+		"price_rows_without_source": no_source,
+		"cpt_prefixed_cartons": cpt_cartons,
+		"specs_not_yet_stamped": {"count": len(unstamped), "names": unstamped},
+		"job_cards_without_sales_order": cards_without_so,
+		"legacy_cards_snapshot_not_verifying": unbound_cards,
+		"notes": notes,
+	}
+
+
+def _legacy_cards_not_verifying(doctype):
+	"""Order-derived cards with no revision binding whose snapshot differs from the spec's current record."""
+	from production_log.job_card_tracking import cps_lifecycle_rules
+
+	out = []
+	cards = frappe.get_all(
+		doctype,
+		filters={"docstatus": ["<", 2], "sales_order_item": ["is", "set"], "spec_revision": ["<", 1]},
+		fields=["name", "customer_product_spec", "spec_snapshot"],
+		limit_page_length=0,
+	)
+	for card in cards:
+		if not card.customer_product_spec or not frappe.db.exists(CPS, card.customer_product_spec):
+			out.append({"doctype": doctype, "card": card.name, "reason": "spec missing"})
+			continue
+		spec = frappe.get_doc(CPS, card.customer_product_spec)
+		payload = cps_lifecycle_rules.build_revision_payload(spec, 1, "", "")
+		snapshot = cps_lifecycle_rules.parse_payload(card.spec_snapshot)
+		if not snapshot:
+			out.append({"doctype": doctype, "card": card.name, "reason": "no snapshot"})
+			continue
+		from production_log.job_card_tracking import release_rules
+		mismatches = release_rules.snapshot_mismatches(snapshot, payload)
+		if mismatches:
+			out.append({"doctype": doctype, "card": card.name, "spec": spec.name, "mismatches": mismatches})
+	return out
