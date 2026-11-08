@@ -139,6 +139,10 @@ doc_events = {
 	"Customer Product Specification": {
 		"on_update_after_submit": "production_log.job_card_tracking.release.on_spec_change",
 	},
+	# §7: an artwork version marked or superseded re-evaluates the cards bound to it.
+	"CPS Artwork Version": {
+		"on_update": "production_log.job_card_tracking.release.on_artwork_change",
+	},
 	"Item": {
 		"validate": [
 			# Config first: an Item that requires a specification without naming

@@ -26,6 +26,10 @@ CPS = "Customer Product Specification"
 # out of the install-stamping trap (vcl-frappe-app runbook, trap 7).
 MIGRATION_AUTHORITY_FIELD = "custom_cps_migration_authority"
 
+# Tanuj (08/11/2026): the authority recorded on every grandfathered spec is
+# Tanuj unless Selling Settings names someone else.
+DEFAULT_MIGRATION_AUTHORITY = "tanuj.haria@vimit.com"
+
 
 @contextlib.contextmanager
 def server_write():
@@ -175,8 +179,10 @@ def grandfather_submitted_specs(authority=None, dry_run=False):
 
 	if not authority and frappe.get_meta("Selling Settings").get_field(MIGRATION_AUTHORITY_FIELD):
 		authority = frappe.db.get_single_value("Selling Settings", MIGRATION_AUTHORITY_FIELD)
+	if not authority and frappe.db.exists("User", DEFAULT_MIGRATION_AUTHORITY):
+		authority = DEFAULT_MIGRATION_AUTHORITY
 	if not authority:
-		return {"skipped": "no migration authority set on Selling Settings"}
+		return {"skipped": "no migration authority: set Selling Settings > CPS Migration Authority"}
 
 	date_text = frappe.utils.formatdate(frappe.utils.today(), "dd/mm/yyyy")
 	now = frappe.utils.now()

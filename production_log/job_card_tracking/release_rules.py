@@ -85,10 +85,11 @@ def _blank(value):
 	return value in (None, "") or (isinstance(value, str) and not value.strip())
 
 
-def _result(number, passed, message=""):
+def _result(number, passed, message="", note=""):
+	"""``message`` explains a failure; ``note`` is kept on a pass (e.g. which fallback was used)."""
 	return CheckResult(
 		number, CHECK_NAMES[number], bool(passed), number not in WARNING_ONLY,
-		number not in NON_OVERRIDABLE, message if not passed else "",
+		number not in NON_OVERRIDABLE, message if not passed else note,
 	)
 
 
@@ -213,19 +214,32 @@ def check_print_defined(ctx):
 
 
 def check_artwork(ctx):
+	"""Printed jobs need the artwork version BOUND to the card Customer-approved or N/A.
+
+	Falls back to the Design and Artwork Tracker / the card's ``artwork_approved``
+	tick ONLY when the specification has no artwork versions at all, and the
+	result says so. A bound version that has been superseded fails: the card
+	re-holds (unissued) or is flagged superseded (issued).
+	"""
 	bound = _bound_fields(ctx)
 	if not _is_printed(bound):
-		return _result(6, True)
+		return _result(6, True, note="Plain - artwork not applicable")
 	artwork = ctx.get("artwork") or {}
-	if _get(artwork, "state") in ARTWORK_OK_STATES:
-		return _result(6, True)
+	if _get(artwork, "versions_exist"):
+		if _get(artwork, "superseded"):
+			return _result(6, False, _get(artwork, "note") or "bound artwork version superseded")
+		if _get(artwork, "state") in ARTWORK_OK_STATES:
+			return _result(6, True, note="artwork version {0} {1}".format(_get(artwork, "version"), _get(artwork, "state")))
+		return _result(6, False, "artwork version {0} is {1}".format(_get(artwork, "version") or "?", _get(artwork, "state") or "Pending"))
+	# No versions on the specification: legacy evidence, and say so.
+	fallback = "no artwork versions on the specification - "
 	card = ctx.get("card") or {}
 	if int(_num(_get(card, "artwork_approved"))):
-		return _result(6, True)
+		return _result(6, True, note=fallback + "card artwork_approved tick used")
 	spec = ctx.get("spec") or {}
 	if _get(spec, "artwork_tracker") and not int(_num(_get(spec, "artwork_not_ready"))):
-		return _result(6, True)
-	return _result(6, False, "no customer-approved artwork for a Printed job")
+		return _result(6, True, note=fallback + "Design and Artwork Tracker {0} used".format(_get(spec, "artwork_tracker")))
+	return _result(6, False, fallback + "no customer-approved artwork for a Printed job")
 
 
 def check_packing(ctx):

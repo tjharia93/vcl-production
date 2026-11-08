@@ -76,11 +76,12 @@ def get_custom_fields():
 				"label": "CPS Migration Authority",
 				"fieldtype": "Link",
 				"options": "User",
+				"default": cps_lifecycle.DEFAULT_MIGRATION_AUTHORITY,
 				"insert_after": cps_price_rules.ALLOWANCE_PCT_FIELD,
 				"description": (
 					"The user recorded as approver on every specification grandfathered by the "
-					"revision migration. Leave blank until the migration report has been reviewed; "
-					"the stamp runs on the next migrate after it is set."
+					"revision migration. Defaults to Tanuj (08/11/2026); change it here to override. "
+					"The stamp runs on the next migrate once the lifecycle fields have landed."
 				),
 			},
 		],

@@ -1,0 +1,242 @@
+{
+ "actions": [],
+ "allow_import": 0,
+ "allow_rename": 0,
+ "autoname": "format:{spec}-ART-{version}",
+ "creation": "2026-11-08 16:30:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "spec",
+  "version",
+  "spec_revision",
+  "col_1",
+  "file",
+  "uploaded_by",
+  "uploaded_on",
+  "sec_approval",
+  "approval_state",
+  "approved_by",
+  "approved_on",
+  "col_2",
+  "customer_approval_evidence",
+  "na_reason",
+  "notes",
+  "sec_supersession",
+  "superseded",
+  "superseded_by",
+  "col_3",
+  "change_request"
+ ],
+ "fields": [
+  {
+   "fieldname": "spec",
+   "label": "Specification",
+   "fieldtype": "Link",
+   "options": "Customer Product Specification",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "version",
+   "label": "Version",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "read_only": 1,
+   "description": "Assigned on insert. A new file is a new version; nothing is replaced in place."
+  },
+  {
+   "fieldname": "spec_revision",
+   "label": "Specification Revision",
+   "fieldtype": "Int",
+   "read_only": 1,
+   "description": "The specification revision current when this version was uploaded."
+  },
+  {
+   "fieldname": "col_1",
+   "label": "",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "file",
+   "label": "Artwork File",
+   "fieldtype": "Attach",
+   "reqd": 1,
+   "description": "Private. Immutable once saved."
+  },
+  {
+   "fieldname": "uploaded_by",
+   "label": "Uploaded By",
+   "fieldtype": "Link",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "uploaded_on",
+   "label": "Uploaded On",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "sec_approval",
+   "label": "Customer Approval",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "approval_state",
+   "label": "Approval State",
+   "fieldtype": "Select",
+   "options": "Pending\nCustomer-approved\nNot applicable",
+   "default": "Pending",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "read_only": 1,
+   "description": "Marked by a manager through the Mark button; never typed."
+  },
+  {
+   "fieldname": "approved_by",
+   "label": "Marked By",
+   "fieldtype": "Link",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approved_on",
+   "label": "Marked On",
+   "fieldtype": "Datetime",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_2",
+   "label": "",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "customer_approval_evidence",
+   "label": "Customer Approval Evidence",
+   "fieldtype": "Attach",
+   "description": "The customer's sign-off (email, signed proof)."
+  },
+  {
+   "fieldname": "na_reason",
+   "label": "Not Applicable - Reason",
+   "fieldtype": "Small Text",
+   "read_only": 1
+  },
+  {
+   "fieldname": "notes",
+   "label": "Notes",
+   "fieldtype": "Small Text"
+  },
+  {
+   "fieldname": "sec_supersession",
+   "label": "Supersession",
+   "fieldtype": "Section Break",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "superseded",
+   "label": "Superseded",
+   "fieldtype": "Check",
+   "default": "0",
+   "read_only": 1
+  },
+  {
+   "fieldname": "superseded_by",
+   "label": "Superseded By",
+   "fieldtype": "Link",
+   "options": "CPS Artwork Version",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_3",
+   "label": "",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "change_request",
+   "label": "Change Request (open cards on the superseded version)",
+   "fieldtype": "Long Text",
+   "read_only": 1,
+   "description": "JSON: one entry per open job card bound to the version this one superseded, with the Production Manager's continue / hold / rework decision."
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-08 16:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Job Card Tracking",
+ "name": "CPS Artwork Version",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  },
+  {
+   "role": "VCL Management Team",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  },
+  {
+   "role": "Sales Master Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  },
+  {
+   "role": "Sales Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  },
+  {
+   "role": "Sales User",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "report": 1
+  },
+  {
+   "role": "Production Manager",
+   "read": 1,
+   "report": 1
+  },
+  {
+   "role": "Manufacturing User",
+   "read": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "spec",
+ "track_changes": 1
+}

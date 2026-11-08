@@ -105,19 +105,15 @@ def _other_cards_qty(card):
 	return sum(float(q or 0) for q in rows)
 
 
-def _artwork_state(spec_name):
-	if not frappe.db.exists("DocType", ARTWORK_VERSION):
-		return {"state": None, "version": None}
-	rows = frappe.get_all(
-		ARTWORK_VERSION,
-		filters={"spec": spec_name, "superseded": 0},
-		fields=["name", "version", "approval_state"],
-		order_by="creation desc",
-		limit_page_length=1,
-	)
-	if not rows:
-		return {"state": None, "version": None}
-	return {"state": rows[0].approval_state, "version": rows[0].name}
+def _artwork_state(spec_name, bound_version=None):
+	"""The artwork version BOUND to the card decides (artwork_rules.artwork_for_card)."""
+	from production_log.job_card_tracking import cps_artwork
+
+	state = cps_artwork.artwork_for_card(spec_name, bound_version)
+	return {
+		"state": state.state, "version": state.version, "versions_exist": state.versions_exist,
+		"superseded": state.superseded, "note": state.note,
+	}
 
 
 def _bound_revision(card, spec):
@@ -185,7 +181,9 @@ def build_context(card, lock=True):
 		"item_control": so_spec_control.resolve_item_control(card.get("item_code") or (line or {}).get("item_code")),
 		"price_row": price_row,
 		"allowance": so_spec_control.rounding_allowance_settings(),
-		"artwork": _artwork_state(spec_name) if spec_name else {"state": None, "version": None},
+		"artwork": _artwork_state(
+			spec_name, card.get("release_artwork_version") if card.meta.get_field("release_artwork_version") else None
+		) if spec_name else {"state": None, "version": None, "versions_exist": False, "superseded": False, "note": ""},
 		"stored_fingerprint": _parse(card.get("release_fingerprint")) if card.meta.get_field("release_fingerprint") else None,
 	}
 	return ctx, versions
@@ -378,6 +376,11 @@ def reevaluate_for_spec(spec_name, trigger="spec"):
 def on_spec_change(doc, method=None):
 	"""``Customer Product Specification.on_update_after_submit``."""
 	reevaluate_for_spec(doc.name, trigger="spec")
+
+
+def on_artwork_change(doc, method=None):
+	"""``CPS Artwork Version.on_update``."""
+	reevaluate_for_spec(doc.spec, trigger="artwork")
 
 
 def on_sales_order_change(doc, method=None):

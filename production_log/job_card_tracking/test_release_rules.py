@@ -150,7 +150,20 @@ class TestChecks5To7(unittest.TestCase):
 		self.assertTrue(by_number(rules.evaluate(ctx(spec=spec(print_type="Plain", number_of_colours=0)))[0])[6].passed)
 		bare = spec(artwork_tracker=None)
 		self.assertFalse(by_number(rules.evaluate(ctx(spec=bare))[0])[6].passed)
-		self.assertTrue(by_number(rules.evaluate(ctx(spec=bare, artwork={"state": "Customer-approved", "version": "v1"}))[0])[6].passed)
+		ok = ctx(spec=bare, artwork={"state": "Customer-approved", "version": "v1", "versions_exist": True, "superseded": False, "note": ""})
+		self.assertTrue(by_number(rules.evaluate(ok)[0])[6].passed)
+		# A bound version that has since been superseded fails, whatever its own state.
+		gone = ctx(artwork={"state": "Customer-approved", "version": "v1", "versions_exist": True, "superseded": True, "note": "bound artwork version 1 superseded by X-2"})
+		r = by_number(rules.evaluate(gone)[0])[6]
+		self.assertFalse(r.passed)
+		self.assertIn("superseded", r.message)
+		# A Pending current version fails even though the tracker is set.
+		pending = ctx(artwork={"state": "Pending", "version": "v2", "versions_exist": True, "superseded": False, "note": ""})
+		self.assertFalse(by_number(rules.evaluate(pending)[0])[6].passed)
+		# No versions at all: the fallback is used and the pass says so.
+		r = by_number(rules.evaluate(ctx())[0])[6]
+		self.assertTrue(r.passed)
+		self.assertIn("no artwork versions", r.message)
 		c = ctx(spec=bare); c["card"]["artwork_approved"] = 1
 		self.assertTrue(by_number(rules.evaluate(c)[0])[6].passed)
 		self.assertFalse(by_number(rules.evaluate(ctx(spec=spec(artwork_not_ready=1)))[0])[6].passed)
