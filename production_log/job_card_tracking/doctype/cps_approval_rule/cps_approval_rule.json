@@ -1,0 +1,254 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 0,
+ "autoname": "field:rule_name",
+ "creation": "2026-11-08 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "rule_name",
+  "enabled",
+  "product_type",
+  "stage",
+  "col_1",
+  "customer",
+  "priority",
+  "valid_from",
+  "valid_to",
+  "sec_test",
+  "test",
+  "benchmark",
+  "threshold_pct",
+  "col_2",
+  "when_met",
+  "when_not_met",
+  "sec_approver",
+  "approver_user",
+  "approver_role",
+  "allow_self_approval",
+  "col_3",
+  "fallback",
+  "management_role"
+ ],
+ "fields": [
+  {
+   "fieldname": "rule_name",
+   "label": "Rule Name",
+   "fieldtype": "Data",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "enabled",
+   "label": "Enabled",
+   "fieldtype": "Check",
+   "default": "1"
+  },
+  {
+   "fieldname": "product_type",
+   "label": "Product Type",
+   "fieldtype": "Select",
+   "options": "\nComputer Paper\nCarton\nLabel\nExercise Books\nETR (Reel to Reel Printing)\nMonobox",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "stage",
+   "label": "Stage",
+   "fieldtype": "Select",
+   "options": "\nTechnical\nPrice",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "col_1",
+   "label": "",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "customer",
+   "label": "Customer",
+   "fieldtype": "Link",
+   "options": "Customer",
+   "description": "Optional. A customer rule beats a generic one whatever its priority."
+  },
+  {
+   "fieldname": "priority",
+   "label": "Priority",
+   "fieldtype": "Int",
+   "default": "10",
+   "description": "Lower first.",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "valid_from",
+   "label": "Valid From",
+   "fieldtype": "Date"
+  },
+  {
+   "fieldname": "valid_to",
+   "label": "Valid To",
+   "fieldtype": "Date"
+  },
+  {
+   "fieldname": "sec_test",
+   "label": "Test",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "test",
+   "label": "Test",
+   "fieldtype": "Select",
+   "options": "Always\nRate ≥ benchmark\nRate ≥ benchmark × (1 + markup %)\nMargin on price ≥ %",
+   "default": "Always",
+   "reqd": 1,
+   "description": "margin = (rate − cost) ÷ rate; markup = (rate − cost) ÷ cost; 30% margin = 42.9% markup."
+  },
+  {
+   "fieldname": "benchmark",
+   "label": "Benchmark",
+   "fieldtype": "Select",
+   "options": "None\nStandard Selling Item Price\nIQ management_price\nIQ cost_price",
+   "default": "None"
+  },
+  {
+   "fieldname": "threshold_pct",
+   "label": "Threshold (%)",
+   "fieldtype": "Percent"
+  },
+  {
+   "fieldname": "col_2",
+   "label": "",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "when_met",
+   "label": "When Met",
+   "fieldtype": "Select",
+   "options": "Auto-approve\nRoute\nContinue",
+   "default": "Auto-approve",
+   "reqd": 1,
+   "description": "Auto-approve: final. Route: pending approval for the approver below. Continue: abstain, next rule."
+  },
+  {
+   "fieldname": "when_not_met",
+   "label": "When Not Met",
+   "fieldtype": "Select",
+   "options": "Route\nContinue\nManagement",
+   "default": "Continue",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sec_approver",
+   "label": "Approver",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "approver_user",
+   "label": "Approver User",
+   "fieldtype": "Link",
+   "options": "User"
+  },
+  {
+   "fieldname": "approver_role",
+   "label": "Approver Role",
+   "fieldtype": "Link",
+   "options": "Role"
+  },
+  {
+   "fieldname": "allow_self_approval",
+   "label": "Allow Self-Approval",
+   "fieldtype": "Check",
+   "default": "0"
+  },
+  {
+   "fieldname": "col_3",
+   "label": "",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "fallback",
+   "label": "Fallback",
+   "fieldtype": "Select",
+   "options": "Management\nAuto-approve",
+   "default": "Management",
+   "reqd": 1,
+   "description": "When no rule decides, or the named approver is absent or rejects."
+  },
+  {
+   "fieldname": "management_role",
+   "label": "Management Role",
+   "fieldtype": "Link",
+   "options": "Role",
+   "default": "VCL Management Team"
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-08 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Job Card Tracking",
+ "name": "CPS Approval Rule",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  },
+  {
+   "role": "VCL Management Team",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  },
+  {
+   "role": "Sales Master Manager",
+   "read": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  },
+  {
+   "role": "Sales Manager",
+   "read": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "report": 1,
+   "share": 1
+  },
+  {
+   "role": "Sales User",
+   "read": 1
+  },
+  {
+   "role": "CPS Approver",
+   "read": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "rule_name",
+ "track_changes": 1
+}

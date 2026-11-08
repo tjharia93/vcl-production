@@ -66,6 +66,7 @@ def before_submit(doc):
 		doc.vcl_revision = 1
 	doc.vcl_approval_state = rules.APPROVAL_AWAITING
 	_stamp_revision(doc)
+	_run_technical_rule(doc)
 
 
 def before_update_after_submit(doc):
@@ -98,7 +99,20 @@ def before_update_after_submit(doc):
 				doc.vcl_revision, ", ".join(changed)
 			),
 		)
+		_run_technical_rule(doc)
 		frappe.flags.cps_revision_bumped = doc.name
+
+
+def _run_technical_rule(doc):
+	"""§6: a Carton auto-approves its own revision; the others wait for their approver."""
+	from production_log.job_card_tracking import cps_approval
+
+	try:
+		cps_approval.evaluate_technical(doc)
+	except Exception:
+		# A rule fault must never stop a specification being saved; the
+		# revision simply stays Awaiting approval.
+		frappe.log_error(frappe.get_traceback(), "cps_approval.evaluate_technical {0}".format(doc.name))
 
 
 def _enforce_tiers(doc, submitted):
