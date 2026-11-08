@@ -15,12 +15,15 @@ import json
 import frappe
 from frappe import _
 
-from production_log.job_card_tracking import cps_pricing, cps_rules
+from production_log.job_card_tracking import cps_price_rules, cps_pricing, cps_rules
 
-OVERRIDE_ROLE = "Sales Master Manager"
 CONTROL_FLAG = "custom_cps_control_enabled"
-TOLERANCE_FIELD = "custom_cps_price_tolerance_pct"
-FLOOR_FIELD = "custom_cps_price_floor_pct"
+
+# §4 / checklist D: the SO-submit block (V1/V5/V7...) stays as the belt behind
+# the job-card gate, behind an Off / Warn / Enforce switch so it can be removed
+# in the deploy that enforces Print. Blank falls back to the original tick.
+SO_MODE_FIELD = "custom_cps_so_mode"
+QUOTE_MODE_FIELD = "custom_cps_quotation_mode"
 
 # Read-only explanation of why Item.custom_requires_cps holds the value it does.
 # Written alongside the flag, because a derived read-only Check with no stated
@@ -66,23 +69,42 @@ SNAPSHOT_FIELDS = (
 # ---------------------------------------------------------------------------
 
 
-def control_enabled():
-	"""Whether CPS control is live. Ships off (design §15 step 10)."""
-	return bool(frappe.db.get_single_value("Selling Settings", CONTROL_FLAG))
+def so_mode():
+	"""Off / Warn / Enforce on submit for Sales Order lines (§4, checklist D).
 
-
-def _threshold(fieldname):
-	"""Read a pricing threshold, treating unset as genuinely unset.
-
-	Both ``tolerance_pct`` and ``floor_pct`` ship with no default (DN-5):
-	matching is exact-match-only and the floor is disabled until management
-	supplies real values. ``None`` means "no threshold", which is different
-	from zero.
+	Blank (the field has not landed, or nobody chose) falls back to the
+	original ``custom_cps_control_enabled`` tick: ticked = Enforce, else Off.
 	"""
-	value = frappe.db.get_single_value("Selling Settings", fieldname)
-	if value in (None, ""):
-		return None
-	return float(value)
+	if _has_field("Selling Settings", SO_MODE_FIELD):
+		value = frappe.db.get_single_value("Selling Settings", SO_MODE_FIELD)
+		if (value or "").strip():
+			return cps_rules.normalise_quote_mode(value)
+	return cps_rules.QUOTE_MODE_ENFORCE if frappe.db.get_single_value("Selling Settings", CONTROL_FLAG) else cps_rules.QUOTE_MODE_OFF
+
+
+def quotation_mode():
+	"""Off / Warn / Enforce on submit for Quotation lines. Ships as Warn."""
+	if not _has_field("Selling Settings", QUOTE_MODE_FIELD):
+		return cps_rules.QUOTE_MODE_OFF
+	return cps_rules.normalise_quote_mode(frappe.db.get_single_value("Selling Settings", QUOTE_MODE_FIELD))
+
+
+def control_enabled():
+	"""Whether CPS control on Sales Orders is live at all (Warn or Enforce)."""
+	return so_mode() != cps_rules.QUOTE_MODE_OFF
+
+
+def rounding_allowance_settings():
+	"""The two §5 allowance numbers, defaults when the fields have not landed."""
+	kes = pct = None
+	if _has_field("Selling Settings", cps_price_rules.ALLOWANCE_FIELD):
+		kes = frappe.db.get_single_value("Selling Settings", cps_price_rules.ALLOWANCE_FIELD)
+	if _has_field("Selling Settings", cps_price_rules.ALLOWANCE_PCT_FIELD):
+		pct = frappe.db.get_single_value("Selling Settings", cps_price_rules.ALLOWANCE_PCT_FIELD)
+	return (
+		cps_price_rules.ALLOWANCE_DEFAULT_KES if kes in (None, "") else float(kes),
+		cps_price_rules.ALLOWANCE_DEFAULT_PCT if pct in (None, "") else float(pct),
+	)
 
 
 # ---------------------------------------------------------------------------
@@ -131,14 +153,15 @@ def derive_item_control_flag(doc, method=None):
 	if not _has_field("Item", "custom_requires_cps"):
 		return
 
-	controlling_group = item_group_requires_cps(doc.get("item_group"))
-	mode = doc.get(cps_rules.CONTROL_MODE_FIELD) if _has_control_mode() else None
-
-	doc.custom_requires_cps = 1 if cps_rules.item_requires_cps(mode, controlling_group) else 0
+	control = resolve_item_control_for(
+		doc.get("item_group"),
+		doc.get(cps_rules.CONTROL_MODE_FIELD) if _has_control_mode() else None,
+		doc.get(cps_rules.PRODUCT_TYPE_FIELD) if _has_item_product_type() else None,
+	)
+	doc.custom_requires_cps = 1 if control.controlled else 0
 
 	if _has_field("Item", CONTROL_SOURCE_FIELD):
-		source = cps_rules.item_control_source(mode, controlling_group)
-		doc.set(CONTROL_SOURCE_FIELD, _(source.template).format(*source.args))
+		doc.set(CONTROL_SOURCE_FIELD, _(control.reason))
 
 
 def validate_item_config(doc, method=None):
@@ -166,19 +189,32 @@ def validate_item_config(doc, method=None):
 		)
 
 
-def expected_product_type_for_item(item_code):
-	"""Which kind of specification this Item's order lines need, or None.
+UNCONTROLLED = cps_rules.ItemControl(False, None, cps_rules.SOURCE_UNCONTROLLED, None, "Item not found.")
 
-	The single resolver behind both the Desk preview and submit validation, so
-	V4 cannot be previewed as clean and then thrown on — or, worse, previewed and
-	enforced against two different expected types.
 
-	Item override first, controlling Item Group second (design §4.2, iteration
-	two). Reads only the fields that have actually landed on this site, so it
-	degrades to the pure Item Group answer before the iteration-two patch runs.
+def resolve_item_control_for(item_group, control_mode, item_product_type):
+	"""The §4 resolver over already-read Item values."""
+	return cps_rules.resolve_item_control(
+		control_mode, item_product_type, item_group_requires_cps(item_group)
+	)
+
+
+def resolve_item_control(item_code):
+	"""THE shared item-control resolver (§4).
+
+	One function behind ``Quotation.validate``, ``Sales Order.validate``,
+	``release.evaluate`` and the Desk preview, so a line cannot be previewed as
+	clean and then refused on — or, worse, checked against two different
+	expected types. Returns a :class:`cps_rules.ItemControl`.
+
+	Item mode wins both ways, then the nearest controlled Item Group, else
+	uncontrolled. Reads only the fields that have landed on this site, so it
+	degrades to the pure Item Group answer before the Item-level fields exist.
+	``Item.custom_requires_cps`` is the indexed cache of ``controlled`` and is
+	written only from :func:`derive_item_control_flag`.
 	"""
 	if not item_code:
-		return None
+		return UNCONTROLLED
 
 	fields = ["item_group"]
 	if _has_control_mode():
@@ -188,13 +224,21 @@ def expected_product_type_for_item(item_code):
 
 	item = frappe.db.get_value("Item", item_code, fields, as_dict=True)
 	if not item:
-		return None
+		return UNCONTROLLED
 
-	return cps_rules.expected_product_type(
+	return resolve_item_control_for(
+		item.get("item_group"),
 		item.get(cps_rules.CONTROL_MODE_FIELD),
 		item.get(cps_rules.PRODUCT_TYPE_FIELD),
-		item_group_requires_cps(item.get("item_group")),
 	)
+
+
+def expected_product_type_for_item(item_code):
+	"""Which kind of specification this Item's order lines need, or None.
+
+	Kept for existing callers; the answer is :func:`resolve_item_control`'s.
+	"""
+	return resolve_item_control(item_code).product_type
 
 
 def validate_item_group_config(doc, method=None):
@@ -266,9 +310,10 @@ def rederive_items_for_group(item_group):
 		controlling = controlling_by_group[group]
 
 		mode = item.get(cps_rules.CONTROL_MODE_FIELD) if has_mode else None
-		values = {"custom_requires_cps": 1 if cps_rules.item_requires_cps(mode, controlling) else 0}
+		control = cps_rules.resolve_item_control(mode, None, controlling)
+		values = {"custom_requires_cps": 1 if control.controlled else 0}
 		if has_source:
-			values[CONTROL_SOURCE_FIELD] = cps_rules.item_control_source_text(mode, controlling)
+			values[CONTROL_SOURCE_FIELD] = control.reason
 
 		frappe.db.set_value("Item", item.name, values, update_modified=False)
 
@@ -287,7 +332,8 @@ def validate(doc, method=None):
 	so a rep can capture an order for a product whose price is still being
 	approved. The gate is submit, which is when ``docstatus`` is already 1.
 	"""
-	if not control_enabled():
+	mode = so_mode()
+	if mode == cps_rules.QUOTE_MODE_OFF:
 		return
 
 	if not (
@@ -299,18 +345,23 @@ def validate(doc, method=None):
 		return
 
 	submitting = doc.docstatus == 1
-	tolerance_pct = _threshold(TOLERANCE_FIELD)
-	floor_pct = _threshold(FLOOR_FIELD)
+	allowance = rounding_allowance_settings()
 
-	for line in doc.get("items") or []:
-		_validate_line(doc, line, submitting, tolerance_pct, floor_pct)
+	# Warn mode: every refusal below becomes a message. The flag is read by
+	# ``_throw`` so the line checks stay written once.
+	frappe.flags.cps_control_warn_only = mode == cps_rules.QUOTE_MODE_WARN
+	try:
+		for line in doc.get("items") or []:
+			_validate_line(doc, line, submitting, allowance)
 
-	if submitting:
-		_validate_qty_against_job_cards(doc)
+		if submitting:
+			_validate_qty_against_job_cards(doc)
+	finally:
+		frappe.flags.cps_control_warn_only = False
 
 
-def _validate_line(doc, line, submitting, tolerance_pct, floor_pct):
-	controlled = bool(frappe.db.get_value("Item", line.item_code, "custom_requires_cps"))
+def _validate_line(doc, line, submitting, allowance):
+	controlled = resolve_item_control(line.item_code).controlled
 
 	if not controlled:
 		# V6 - a specification on an uncontrolled line is a mistake, not a note.
@@ -333,7 +384,7 @@ def _validate_line(doc, line, submitting, tolerance_pct, floor_pct):
 		return
 
 	spec = _load_and_validate_spec(doc, line)
-	price = cps_pricing.get_eligible_price(spec.name, doc.transaction_date)
+	price = cps_pricing.get_eligible_price(spec.name, doc.transaction_date, doc.get("currency"))
 
 	if not price:
 		# V7 - warn on save, throw on submit.
@@ -347,8 +398,8 @@ def _validate_line(doc, line, submitting, tolerance_pct, floor_pct):
 		return
 
 	if submitting:
-		_validate_price(doc, line, spec, price, tolerance_pct, floor_pct)
-		_stamp_snapshot(doc, line, spec, price, tolerance_pct, floor_pct)
+		_validate_price(doc, line, spec, price, allowance)
+		_stamp_snapshot(doc, line, spec, price, allowance)
 	else:
 		_clear_snapshot(line)
 
@@ -373,7 +424,7 @@ def _load_and_validate_spec(doc, line):
 			),
 		)
 
-	expected_type = expected_product_type_for_item(line.item_code)
+	expected_type = resolve_item_control(line.item_code).product_type
 	if expected_type and spec.product_type != expected_type:
 		_throw(
 			line,
@@ -402,9 +453,28 @@ def _load_and_validate_spec(doc, line):
 	return spec
 
 
-def _validate_price(doc, line, spec, price, tolerance_pct, floor_pct):
-	"""V8-V11: rate matches exactly, or is an authorised override."""
-	if price.get("uom") and line.uom and price["uom"] != line.uom:
+def _price_check(doc, line, price, allowance):
+	"""§5: the line rate against the eligible row, inside min(KES 1, 1%)."""
+	return cps_price_rules.check_line_rate(
+		line.rate,
+		line.get("conversion_factor"),
+		doc.get("currency"),
+		price,
+		allowance_kes=allowance[0],
+		allowance_pct=allowance[1],
+	)
+
+
+def _validate_price(doc, line, spec, price, allowance):
+	"""V8-V11 under §5: within the allowance, or an explained override.
+
+	The Sales Master Manager requirement leaves SO submit (approved 08/11/2026):
+	any rep may submit outside the allowance with a reason, and the job card
+	holds on checks 9-10 until the Release screen drafts and approves a new row.
+	"""
+	if not price.get("conversion_factor") and price.get("uom") and line.uom and price["uom"] != line.uom:
+		# A row that froze no factor (written before §5) is priced per its own
+		# UOM and cannot be converted; the line must be in that UOM (V8).
 		_throw(
 			line,
 			_("Line is priced per {0} but the approved price for {1} is per {2}.").format(
@@ -412,39 +482,30 @@ def _validate_price(doc, line, spec, price, tolerance_pct, floor_pct):
 			),
 		)
 
-	decision = cps_rules.evaluate_price(line.rate, price.get("rate"), tolerance_pct, floor_pct)
-	if not decision.requires_override:
+	check = _price_check(doc, line, price, allowance)
+	if check.ok:
 		return
 
-	if decision.below_floor:
-		# V10 - a floor with an escape hatch is not a floor. No role clears it.
+	if check.code in (cps_price_rules.PRICE_UOM_UNCONVERTIBLE, cps_price_rules.PRICE_CURRENCY):
 		_throw(
 			line,
-			_("Rate {0} is below the configured floor of {1}% of the specification rate {2}. This cannot be overridden.").format(
-				line.rate, floor_pct, price.get("rate")
+			_("Rate {0} cannot be compared with the approved price for {1}: {2}.").format(
+				line.rate, spec.name, check.code.replace("-", " ")
 			),
 		)
 
 	if not (line.get("custom_price_override_reason") or "").strip():
 		_throw(
 			line,
-			_("Rate {0} does not match the approved rate {1} for {2}. Enter an Override Reason, or use the approved rate.").format(
-				line.rate, price.get("rate"), spec.name
+			_("Rate {0} is outside the allowance of {1} around the approved rate {2} for {3}. Enter an Override Reason, or use the approved rate.").format(
+				line.rate, check.allowance, check.approved_rate, spec.name
 			),
 		)
 
-	if OVERRIDE_ROLE not in frappe.get_roles():
-		_throw(
-			line,
-			_("Rate {0} deviates from the approved rate {1} for {2}. Only a {3} can submit an overridden price.").format(
-				line.rate, price.get("rate"), spec.name, OVERRIDE_ROLE
-			),
-		)
-
-	_log_override(doc, line, spec, price, decision)
+	_log_override(doc, line, spec, price, check)
 
 
-def _stamp_snapshot(doc, line, spec, price, tolerance_pct, floor_pct):
+def _stamp_snapshot(doc, line, spec, price, allowance):
 	"""Freeze the commercial and technical snapshots onto the line (design §8).
 
 	Written during the submit pass rather than in ``on_submit`` so the snapshot
@@ -455,17 +516,23 @@ def _stamp_snapshot(doc, line, spec, price, tolerance_pct, floor_pct):
 	Every value is taken server-side from the specification and the approved
 	price. Whatever the caller supplied in these fields is discarded (V12).
 	"""
-	decision = cps_rules.evaluate_price(line.rate, price.get("rate"), tolerance_pct, floor_pct)
+	check = _price_check(doc, line, price, allowance)
+	source = cps_rules.SOURCE_CPS_PRICE if check.ok else cps_rules.SOURCE_MANUAL_OVERRIDE
 	taken_at = frappe.utils.now()
 
 	line.custom_cps_rate = cps_rules.round_rate(price.get("rate"))
 	line.custom_cps_uom = price.get("uom")
 	line.custom_cps_valid_from = price.get("valid_from")
+	# The row the gate's checks 9-10 will validate and Release will bind
+	# (Codex r4 point 3): one selection, written here, read by the card.
 	line.custom_cps_price_row = price.get("name")
-	line.custom_price_source = decision.source
-	line.custom_price_variance_pct = decision.variance_pct
+	line.custom_price_source = source
+	line.custom_price_variance_pct = (
+		cps_rules.variance_pct(check.normalised_rate, price.get("rate"))
+		if check.normalised_rate is not None else None
+	)
 	line.custom_price_approved_by = (
-		frappe.session.user if decision.source == cps_rules.SOURCE_MANUAL_OVERRIDE else None
+		frappe.session.user if source == cps_rules.SOURCE_MANUAL_OVERRIDE else None
 	)
 
 	line.custom_spec_name = spec.specification_name
@@ -572,6 +639,10 @@ def _has_item_product_type():
 
 
 def _throw(line, message):
+	if frappe.flags.cps_control_warn_only:
+		# Warn mode (§4, checklist D): say it, refuse nothing.
+		_warn(line, message)
+		return
 	frappe.throw(_("Line {0}: {1}").format(line.idx, message), title=_("Specification Control"))
 
 
@@ -583,8 +654,8 @@ def _warn(line, message):
 	)
 
 
-def _log_override(doc, line, spec, price, decision):
-	"""Audit an authorised price override (design §9.3).
+def _log_override(doc, line, spec, price, check):
+	"""Audit an explained price override (design §9.3).
 
 	The same facts land on the immutable snapshot; this makes them greppable
 	independently of the order.
@@ -597,9 +668,12 @@ def _log_override(doc, line, spec, price, decision):
 				"line": line.idx,
 				"item_code": line.item_code,
 				"cps": spec.name,
+				"price_row": price.get("name"),
 				"cps_rate": price.get("rate"),
 				"line_rate": line.rate,
-				"variance_pct": decision.variance_pct,
+				"normalised_rate": check.normalised_rate,
+				"allowance": check.allowance,
+				"variance": check.variance,
 				"reason": line.get("custom_price_override_reason"),
 				"user": frappe.session.user,
 			},
@@ -607,3 +681,64 @@ def _log_override(doc, line, spec, price, decision):
 			indent=1,
 		),
 	)
+
+
+# ---------------------------------------------------------------------------
+# Quotation validation (§4) - Warn only until Tanuj changes the mode
+# ---------------------------------------------------------------------------
+
+
+def validate_quotation(doc, method=None):
+	"""A quotation line for a controlled Item should name its specification.
+
+	Mode from ``Selling Settings.custom_cps_quotation_mode``: Off is inert,
+	Warn (the shipped value) shows the line and logs it to Error Log
+	``vcl_quote_control`` with the creator and route, Enforce refuses only when
+	the quotation is being submitted. Reads ``Quotation Item.custom_cps`` when
+	that field exists (plan Part II) and otherwise only reports.
+	"""
+	mode = quotation_mode()
+	if mode == cps_rules.QUOTE_MODE_OFF:
+		return
+	if not _has_field("Item", "custom_requires_cps"):
+		return
+
+	has_cps_field = _has_field("Quotation Item", "custom_cps")
+	submitting = doc.docstatus == 1
+	hits = []
+	for line in doc.get("items") or []:
+		control = resolve_item_control(line.item_code)
+		if not control.controlled:
+			continue
+		if has_cps_field and line.get("custom_cps"):
+			continue
+		hits.append({
+			"idx": line.idx,
+			"item_code": line.item_code,
+			"product_type": control.product_type,
+			"reason": control.reason,
+		})
+		message = _("Line {0}: {1} is specification-controlled ({2}) and names no Customer Product Specification.").format(
+			line.idx, line.item_code, control.product_type or _("type unresolved")
+		)
+		if mode == cps_rules.QUOTE_MODE_ENFORCE and submitting:
+			frappe.throw(message, title=_("Specification Control"))
+		frappe.msgprint(message, title=_("Specification Control"), indicator="orange")
+
+	if hits:
+		request = getattr(frappe.local, "request", None)
+		frappe.log_error(
+			title="vcl_quote_control",
+			message=json.dumps(
+				{
+					"quotation": doc.name,
+					"docstatus": doc.docstatus,
+					"mode": mode,
+					"creator": frappe.session.user,
+					"route": request.path if request is not None else "server",
+					"lines": hits,
+				},
+				default=str,
+				indent=1,
+			),
+		)

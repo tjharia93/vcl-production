@@ -28,7 +28,7 @@ APPROVAL_APPROVED = "Approved"
 APPROVAL_REJECTED = "Rejected"
 
 # Writing any of these on an Approved row resets it to Draft (design §5.3).
-PRICE_APPROVAL_RESET_FIELDS = ("rate", "uom", "valid_from")
+PRICE_APPROVAL_RESET_FIELDS = ("rate", "uom", "valid_from", "currency", "conversion_factor")
 
 SOURCE_CPS_PRICE = "CPS Price"
 SOURCE_ITEM_PRICE = "Item Price"
@@ -390,6 +390,51 @@ def item_control_source_text(control_mode, controlling_group):
 	return source.template.format(*source.args)
 
 
+# --- The shared item-control resolver (Stream A §4) --------------------------
+#
+# One answer for Quotation.validate, Sales Order.validate, release.evaluate and
+# the Desk preview. ``item_requires_cps``, ``expected_product_type`` and
+# ``item_control_source`` are the three partial readers it composes; nothing
+# below changes their answers, it only returns them together.
+
+ItemControl = namedtuple(
+	"ItemControl",
+	("controlled", "product_type", "source", "controlling_group", "reason"),
+)
+
+# How the §4 modes read on Selling Settings. "Enforce on submit" throws only
+# when docstatus is already 1; Off is inert; Warn prints and logs.
+QUOTE_MODE_OFF = "Off"
+QUOTE_MODE_WARN = "Warn"
+QUOTE_MODE_ENFORCE = "Enforce on submit"
+QUOTE_MODES = (QUOTE_MODE_OFF, QUOTE_MODE_WARN, QUOTE_MODE_ENFORCE)
+
+
+def normalise_quote_mode(value):
+	"""Blank, None or an unknown option mean Off - a renamed option is never Enforce."""
+	text = (value or "").strip() if isinstance(value, str) else ""
+	return text if text in QUOTE_MODES else QUOTE_MODE_OFF
+
+
+def resolve_item_control(control_mode, item_product_type, controlling_group):
+	"""Compose the three partial readers into one :class:`ItemControl`.
+
+	Precedence: the Item's own mode wins both ways, then the nearest controlled
+	Item Group, else uncontrolled. ``product_type`` is None whenever the Item is
+	not controlled, so a caller cannot check a specification's type against an
+	Item that needs none.
+	"""
+	controlled = item_requires_cps(control_mode, controlling_group)
+	source = item_control_source(control_mode, controlling_group)
+	return ItemControl(
+		controlled,
+		expected_product_type(control_mode, item_product_type, controlling_group) if controlled else None,
+		source.code,
+		_get(controlling_group, "name") if controlling_group else None,
+		source.template.format(*source.args),
+	)
+
+
 CONFIDENCE_HIGH = "high"
 CONFIDENCE_MEDIUM = "medium"
 CONFIDENCE_LOW = "low"
@@ -520,6 +565,15 @@ def price_approval_reset_required(before, after):
 			old, new = to_date(old), to_date(new)
 		elif fieldname == "rate":
 			old, new = round_rate(old), round_rate(new)
+		elif fieldname == "currency":
+			# Rows written before §5 carry no currency and mean KES. The first
+			# save that fills the default in must not revoke the approval.
+			old, new = (old or "").strip() or DEFAULT_CURRENCY, (new or "").strip() or DEFAULT_CURRENCY
+		elif fieldname == "conversion_factor":
+			# Same for the frozen factor: unset is "1 (unrecorded)", and
+			# recording it is not a change of price.
+			old = float(old) if old not in (None, "", 0) else 1.0
+			new = float(new) if new not in (None, "", 0) else 1.0
 		if old != new:
 			return True
 
@@ -1831,3 +1885,55 @@ def build_spec_snapshot(spec, colour_of_parts, spot_colours, taken_at):
 		{f: _get(row, f) for f in SNAPSHOT_SPOT_FIELDS} for row in spot_colours or []
 	]
 	return snapshot
+
+
+# --- Mandatory-by-subtype construction fields (Stream A §7 check 4) ----------
+#
+# Check 4 asks "is the construction complete", not "has every revision-relevant
+# field a value". Optional dies, spot colours, flap and unused plies never
+# block; 0 and "No" are values. Carton depends on ``ply`` (which layers exist),
+# on SFK (no flute) and on the die-cut route (die only then). Computer Paper
+# needs one ``colour_of_parts`` row per part, checked by the caller.
+
+CARTON_PLY_LAYER_FIELDS = {
+	"SFK": ("1_ply_top_layer_gsm", "1_ply_top_layer_material"),
+	"3": (
+		"1_ply_top_layer_gsm", "1_ply_top_layer_material",
+		"2_ply_fluting_gsm", "2_ply_top_layer_material",
+		"3_ply_bottom_gsm", "3_ply_top_layer_material",
+	),
+	"5": (
+		"1_ply_top_layer_gsm", "1_ply_top_layer_material",
+		"2_ply_fluting_gsm", "2_ply_top_layer_material",
+		"3_ply_bottom_gsm", "3_ply_top_layer_material",
+		"4_ply_fluting_gsm", "4_ply_top_layer_material",
+		"5_ply_fluting_gsm", "5_ply_top_layer_material",
+	),
+}
+
+
+def mandatory_fields(product_type, spec=None):
+	"""Fields that must carry a value for the construction to be complete.
+
+	``spec`` supplies the subtype decisions (``ply``, ``carton_applies_diecut``,
+	``number_of_parts``); without it the type-level minimum is returned.
+	"""
+	product_type = normalise_product_type(product_type)
+	if product_type == "Carton":
+		ply = str(_get(spec, "ply") or "").strip()
+		fields = ["product_type_carton", "ply", "ctn_length_mm", "ctn_width_mm", "ctn_height_mm", "joint_type", "idod"]
+		if ply != "SFK":
+			fields.append("flute_type")
+		fields.extend(CARTON_PLY_LAYER_FIELDS.get(ply, ()))
+		if _get(spec, "carton_applies_diecut"):
+			fields.append("carton_cutting_die")
+		return tuple(fields)
+	if product_type == "Computer Paper":
+		return ("job_size", "number_of_parts", "numbering_answer")
+	if product_type == "Label":
+		return ("label_length", "label_width", "material_type", "dies")
+	if product_type == "Monobox":
+		return ("mbx_length", "mbx_width", "mbx_height", "mbx_board_gsm")
+	if product_type == "ETR (Reel to Reel Printing)":
+		return ("etr_substrate", "etr_finished_width", "etr_output_type")
+	return ()
