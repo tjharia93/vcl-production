@@ -20,7 +20,7 @@ class TestMarginMarkup(unittest.TestCase):
 class TestNormaliseBenchmark(unittest.TestCase):
 	def test_same_basis_is_identity(self):
 		self.assertEqual(rules.normalise_benchmark(10, "KES", "KES", 1, 1), 10.0)
-		self.assertEqual(rules.normalise_benchmark(10, None, None, None, None), 10.0)
+		self.assertEqual(rules.normalise_benchmark(10, None, None, None, None, same_uom=True), 10.0)
 
 	def test_uom_conversion(self):
 		# Benchmark per Carton of 1000 (cf 1000) brought to a row priced per Nos (cf 1).
@@ -35,6 +35,13 @@ class TestNormaliseBenchmark(unittest.TestCase):
 		self.assertIsNone(rules.normalise_benchmark(10, "USD", "KES", 1, 1))
 		self.assertIsNone(rules.normalise_benchmark(10, "KES", "KES", None, 1000))
 		self.assertIsNone(rules.normalise_benchmark(None, "KES", "KES", 1, 1))
+
+	def test_unknown_uom_comparability_is_none_unless_same_uom(self):
+		# Codex r6: no factors on either side is not "comparable"; it is unknown.
+		self.assertIsNone(rules.normalise_benchmark(10, "KES", "KES", None, None))
+		self.assertEqual(rules.normalise_benchmark(10, "KES", "KES", None, None, same_uom=True), 10.0)
+		d = rules.resolve(SEED, "Computer Paper", "Price", rate=12, benchmarks={rules.BENCHMARK_STANDARD_SELLING: None})
+		self.assertEqual(d.outcome, rules.OUTCOME_ROUTE)
 
 	def test_an_underpriced_row_is_not_auto_approved_against_a_per_carton_list_price(self):
 		# Item Price 5,000 per Carton (1000 pcs); row 4.9 per Nos.

@@ -76,6 +76,15 @@ class TestArtworkForCard(unittest.TestCase):
 		self.assertTrue(state.superseded)
 		self.assertIn("superseded by X-2", state.note)
 
+	def test_missing_named_binding_is_a_failure_not_a_fallthrough(self):
+		# Codex r6: a binding naming a version that is not there never silently uses the current one.
+		state = rules.artwork_for_card([v()], "GONE-9")
+		self.assertIsNone(state.state)
+		self.assertEqual(state.version, "GONE-9")
+		self.assertIn("not found", state.note)
+		state = rules.artwork_for_card([], "GONE-9")
+		self.assertIn("not found", state.note)
+
 	def test_unbound_card_reads_the_current_version(self):
 		versions = [v(superseded=1, superseded_by="X-2", approval_state="Customer-approved"), v(name="X-2", version=2)]
 		state = rules.artwork_for_card(versions)

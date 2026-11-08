@@ -68,6 +68,7 @@ class JobCardLabel(OrderDerivedJobCard, Document):
 		# The floor fills the Run Log on a submitted card, and ``validate`` does
 		# not run on an update after submit.
 		self.set_run_log()
+		self.protect_release_fields()
 
 	def on_update(self):
 		"""Keep the Sales Order line rollup honest on every draft save.

@@ -160,6 +160,11 @@ class TestChecks5To7(unittest.TestCase):
 		# A Pending current version fails even though the tracker is set.
 		pending = ctx(artwork={"state": "Pending", "version": "v2", "versions_exist": True, "superseded": False, "note": ""})
 		self.assertFalse(by_number(rules.evaluate(pending)[0])[6].passed)
+		# A binding that names a version no longer there fails, even with the tracker set.
+		missing = ctx(artwork={"state": None, "version": "GONE-9", "versions_exist": True, "superseded": False, "note": "bound artwork version GONE-9 not found on the specification"})
+		r = by_number(rules.evaluate(missing)[0])[6]
+		self.assertFalse(r.passed)
+		self.assertIn("not found", r.message)
 		# No versions at all: the fallback is used and the pass says so.
 		r = by_number(rules.evaluate(ctx())[0])[6]
 		self.assertTrue(r.passed)
@@ -249,6 +254,12 @@ class TestCheck11(unittest.TestCase):
 			"artwork_version": ctx(artwork={"state": "Customer-approved", "version": "v9", "versions_exist": True, "superseded": False, "note": ""}),
 			"item_product_type": ctx(item_control=cps_rules.ItemControl(True, "Label", "inherited", "g", "x")),
 			"customer_hold": ctx(card=dict(ctx()["card"], customer_hold=1)),
+			"spec_docstatus": ctx(spec=spec(docstatus=2)),
+			"spec_customer": ctx(spec=spec(customer="Beta")),
+			"spec_linked_item": ctx(spec=spec(linked_item="OTHER")),
+			"spec_artwork_tracker": ctx(spec=spec(artwork_tracker=None)),
+			"spec_artwork_not_ready": ctx(spec=spec(artwork_not_ready=1)),
+			"artwork_superseded": ctx(artwork={"state": "Customer-approved", "version": "v1", "versions_exist": True, "superseded": True, "note": "x"}),
 		}
 		for key, variant in variants.items():
 			_, fp = rules.evaluate(variant)
@@ -292,6 +303,12 @@ class TestOverrideAndIssuance(unittest.TestCase):
 		self.assertEqual(rules.issuance_block_reason(card, True), "inputs changed since release")
 		self.assertIn("Held", rules.issuance_block_reason({"release_state": "Held"}, False))
 		self.assertIn("superseded", rules.issuance_block_reason({"release_state": "Released", "print_superseded": 1}, False))
+
+	def test_print_requires_the_issuance_stamp(self):
+		card = {"release_state": "Released", "job_status": "Open", "customer_hold": 0, "render_issued_on": None}
+		self.assertIsNone(rules.issuance_block_reason(card, False))
+		self.assertIn("no render issued", rules.issuance_block_reason(card, False, require_issued=True))
+		self.assertIsNone(rules.issuance_block_reason(dict(card, render_issued_on="2026-11-08 10:00:00"), False, require_issued=True))
 
 	def test_results_payload_is_json_shaped(self):
 		import json

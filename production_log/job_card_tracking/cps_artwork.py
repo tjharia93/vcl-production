@@ -91,6 +91,8 @@ def reevaluate(spec_name):
 def mark(version, state, reason=None, evidence=None):
 	"""Manager marks a version Customer-approved or Not applicable (with a reason)."""
 	doc = frappe.get_doc(ARTWORK_VERSION, version)
+	if not frappe.has_permission(ARTWORK_VERSION, "write", doc):
+		frappe.throw(_("Not permitted to mark {0}.").format(version), frappe.PermissionError)
 	refusal = rules.mark_refusal(doc, state, frappe.get_roles(), reason)
 	if refusal:
 		frappe.throw(_("Cannot mark artwork: {0}.").format(refusal), frappe.PermissionError if "manager" in refusal else frappe.ValidationError)
@@ -110,11 +112,16 @@ def mark(version, state, reason=None, evidence=None):
 def record_decision(version, card, decision, notes=None):
 	"""Production Manager records continue / hold / rework for an open card on the change request."""
 	doc = frappe.get_doc(ARTWORK_VERSION, version)
+	if not frappe.has_permission(ARTWORK_VERSION, "write", doc):
+		frappe.throw(_("Not permitted to record decisions on {0}.").format(version), frappe.PermissionError)
 	change_request = json.loads(doc.change_request or "[]")
 	entry = next((e for e in change_request if e.get("card") == card), None)
 	refusal = rules.decision_refusal(decision, frappe.get_roles(), entry)
 	if refusal:
 		frappe.throw(_("Cannot record decision: {0}.").format(refusal), frappe.PermissionError)
+	# Codex r6 defect 5: document permission on the target card, not role alone.
+	if entry.get("doctype") and not frappe.has_permission(entry["doctype"], "write", card):
+		frappe.throw(_("Not permitted to change job card {0}.").format(card), frappe.PermissionError)
 	updated = rules.record_decision(change_request, card, decision, frappe.session.user, frappe.utils.now(), notes)
 	frappe.db.set_value(ARTWORK_VERSION, version, "change_request", json.dumps(updated, default=str), update_modified=False)
 	doc.add_comment("Comment", _("{0}: {1} by {2}{3}").format(card, decision, frappe.session.user, " - " + notes if notes else ""))

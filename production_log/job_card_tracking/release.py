@@ -117,24 +117,31 @@ def _version_of(rows):
 def lock_and_version(doctype, name):
 	"""Lock everything the checks read, in a fixed order, and return the version set.
 
-	Order: card, Sales Order header, Sales Order line, sibling cards on the
-	line, specification, its price rows, its artwork versions. Always the same
-	order, so two evaluations cannot deadlock each other.
+	Order (Codex r6 defect 4): shared parents first - Sales Order header, then
+	the line - then EVERY card on that line including this one, by name, then
+	the specification, its price rows, its artwork versions. The same function
+	is the only lock path, so no two evaluations can take the locks in
+	different orders. A card with no line locks only itself.
 	"""
 	versions = {}
-	card = _lock_rows(doctype, "name = %(n)s", {"n": name})
-	versions["card"] = _version_of(card)
-	if not card:
+	head = frappe.db.get_value(doctype, name, ["sales_order", "sales_order_item", "customer_product_spec"], as_dict=True)
+	if not head:
+		versions["card"] = _version_of([])
 		return versions
 
-	head = frappe.db.get_value(doctype, name, ["sales_order", "sales_order_item", "customer_product_spec"], as_dict=True)
 	if head.sales_order:
 		versions["order"] = _version_of(_lock_rows("Sales Order", "name = %(n)s", {"n": head.sales_order}))
 	if head.sales_order_item:
 		versions["line"] = _version_of(_lock_rows("Sales Order Item", "name = %(n)s", {"n": head.sales_order_item}))
-		versions["siblings"] = _version_of(_lock_rows(
-			doctype, "sales_order_item = %(l)s AND docstatus < 2", {"l": head.sales_order_item},
-		))
+		siblings = frappe.db.sql(
+			"SELECT name, modified FROM `tab{0}` WHERE sales_order_item = %(l)s AND docstatus < 2 ORDER BY name FOR UPDATE".format(doctype),
+			{"l": head.sales_order_item}, as_dict=True,
+		)
+		versions["siblings"] = _version_of(siblings)
+		if not any(r.name == name for r in siblings):
+			versions["card"] = _version_of(_lock_rows(doctype, "name = %(n)s", {"n": name}))
+	else:
+		versions["card"] = _version_of(_lock_rows(doctype, "name = %(n)s", {"n": name}))
 	spec_name = head.customer_product_spec
 	if not spec_name and head.sales_order_item and frappe.get_meta("Sales Order Item").get_field("custom_cps"):
 		spec_name = frappe.db.get_value("Sales Order Item", head.sales_order_item, "custom_cps")
@@ -605,17 +612,19 @@ def refresh_binding(doctype, name, spec_revision=None, price_row=None, artwork_v
 	return release_status(name, doctype)
 
 
-def issuance_block(card):
+def issuance_block(card, require_issued=False):
 	"""Why this card may not be rendered right now, or None. Writes nothing.
 
 	Observe mode never blocks; the reason is still computed for the board.
+	``require_issued`` is the print-time rule: a render needs its issuance stamp.
 	"""
 	if not is_gated(card):
 		return None
 	ctx = build_context(card)
 	fingerprint = release_rules.build_fingerprint(ctx)
 	stale = release_rules.is_stale(ctx.get("stored_fingerprint"), fingerprint)
-	block = release_rules.issuance_block_reason(ctx["card"], stale)
+	card_view = dict(ctx["card"], render_issued_on=card.get("render_issued_on"))
+	block = release_rules.issuance_block_reason(card_view, stale, require_issued)
 	if block and block.startswith("release state"):
 		fails = [c for c in _parse_list(card.get("release_checks")) if not c.get("passed") and c.get("required")]
 		if fails:
@@ -638,11 +647,15 @@ def prepare_render(doctype, name):
 	if not is_gated(card):
 		return {"ok": True, "gated": False, "mode": gate_mode()}
 
+	# Evaluate, decide and stamp while the evaluation's locks are still held
+	# (Codex r6: committing first would let another writer slip between the
+	# decision and the stamp). The single commit below makes the evaluation
+	# durable in both branches; the throw after it rolls nothing back.
 	evaluate(doctype, name, trigger="render")
-	frappe.db.commit()  # the held / released result is durable whatever happens next
 	card.reload()
 	block = issuance_block(card)
 	if block and enforcing():
+		frappe.db.commit()
 		frappe.throw(_("Cannot print {0}: {1}.").format(name, block), title=_("Job Card Held"))
 
 	frappe.db.set_value(doctype, name, {
@@ -660,7 +673,7 @@ def before_print_guard(card):
 	"""Step (ii): the controller's ``before_print``. Reads, recomputes the fingerprint, throws (Enforce). Writes nothing."""
 	if not is_gated(card) or not enforcing():
 		return
-	block = issuance_block(card)
+	block = issuance_block(card, require_issued=True)
 	if block:
 		frappe.throw(_("Cannot print {0}: {1}.").format(card.name, block), title=_("Job Card Held"))
 

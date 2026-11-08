@@ -227,6 +227,9 @@ def check_artwork(ctx):
 	if not _is_printed(bound):
 		return _result(6, True, note="Plain - artwork not applicable")
 	artwork = ctx.get("artwork") or {}
+	if _get(artwork, "version") and _get(artwork, "state") is None and _get(artwork, "note"):
+		# A binding that names a version which is not there.
+		return _result(6, False, _get(artwork, "note"))
 	if _get(artwork, "versions_exist"):
 		if _get(artwork, "superseded"):
 			return _result(6, False, _get(artwork, "note") or "bound artwork version superseded")
@@ -351,6 +354,13 @@ def build_fingerprint(ctx):
 		"allowance_pct": _num(allowance[1]),
 		"bound_construction": _hash({k: v for k, v in payload.items() if not k.startswith("_")}),
 		"spec": s(_get(spec, "name")),
+		"spec_docstatus": int(_num(_get(spec, "docstatus"))),
+		"spec_customer": s(_get(spec, "customer")),
+		"spec_linked_item": s(_get(spec, "linked_item")),
+		"spec_artwork_tracker": s(_get(spec, "artwork_tracker")),
+		"spec_artwork_not_ready": int(_num(_get(spec, "artwork_not_ready"))),
+		"artwork_superseded": bool(_get(artwork, "superseded")),
+		"artwork_versions_exist": bool(_get(artwork, "versions_exist")),
 		"spec_revision": int(_num(ctx.get("bound_revision"))),
 		"spec_current_revision": int(_num(_get(spec, "vcl_revision"))),
 		"spec_approved_rev": int(_num(_get(spec, "vcl_approved_rev"))),
@@ -474,8 +484,12 @@ def manual_hold_active(card):
 	return None
 
 
-def issuance_block_reason(card, stale):
-	"""Why a card may not be rendered: not Released, stale, or held by a person."""
+def issuance_block_reason(card, stale, require_issued=False):
+	"""Why a card may not be rendered: not Released, stale, held by a person, or (print) never issued.
+
+	``require_issued`` is the print-time rule (Codex r6): the GET that renders
+	the card must follow a ``prepare_render`` that stamped the issuance.
+	"""
 	manual = manual_hold_active(card)
 	if manual:
 		return manual
@@ -486,6 +500,8 @@ def issuance_block_reason(card, stale):
 		return "inputs changed since release"
 	if int(_num(_get(card, "print_superseded"))):
 		return "print superseded — withdraw and reprint"
+	if require_issued and not _get(card, "render_issued_on"):
+		return "no render issued — prepare the print first"
 	return None
 
 

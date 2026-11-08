@@ -489,7 +489,9 @@ def cps_release_migration_report():
 			fields=["name", "parent", "rate", "approval_status"] + (["tax_basis"] if frappe.db.has_column("CPS Price", "tax_basis") else []),
 			limit_page_length=0,
 		)
-	no_source = frappe.db.count("CPS Price", {"parenttype": CPS, "source": ["in", ["", None]]})
+	no_source = frappe.db.sql(
+		"SELECT COUNT(*) FROM `tabCPS Price` WHERE parenttype = %s AND IFNULL(source, '') = ''", (CPS,)
+	)[0][0]
 
 	cpt_cartons = frappe.get_all(
 		CPS,
@@ -505,7 +507,9 @@ def cps_release_migration_report():
 	for doctype in so_spec_control.JOB_CARD_DOCTYPES.values():
 		if not frappe.db.exists("DocType", doctype) or not _has_field(doctype, "sales_order"):
 			continue
-		cards_without_so[doctype] = frappe.db.count(doctype, {"docstatus": ["<", 2], "sales_order": ["in", ["", None]]})
+		cards_without_so[doctype] = frappe.db.sql(
+			"SELECT COUNT(*) FROM `tab{0}` WHERE docstatus < 2 AND IFNULL(sales_order, '') = ''".format(doctype)
+		)[0][0]
 		if _has_field(doctype, "spec_revision"):
 			unbound_cards += _legacy_cards_not_verifying(doctype)
 
@@ -528,22 +532,33 @@ def cps_release_migration_report():
 
 
 def _legacy_cards_not_verifying(doctype):
-	"""Order-derived cards with no revision binding whose snapshot differs from the spec's current record."""
+	"""Order-derived cards with no revision binding whose snapshot differs from STORED revision 1.
+
+	Compares against the grandfathered payload in the revision log, exactly as
+	``reconcile_card_bindings`` will; a spec not yet stamped is reported as such
+	rather than compared against today's record. NULL ``spec_revision`` rows are
+	included (no SQL "< 1" filter).
+	"""
 	from production_log.job_card_tracking import cps_lifecycle_rules
 
 	out = []
 	cards = frappe.get_all(
 		doctype,
-		filters={"docstatus": ["<", 2], "sales_order_item": ["is", "set"], "spec_revision": ["<", 1]},
-		fields=["name", "customer_product_spec", "spec_snapshot"],
+		filters={"docstatus": ["<", 2], "sales_order_item": ["is", "set"]},
+		fields=["name", "customer_product_spec", "spec_snapshot", "spec_revision"],
 		limit_page_length=0,
 	)
 	for card in cards:
+		if int(card.spec_revision or 0) >= 1:
+			continue
 		if not card.customer_product_spec or not frappe.db.exists(CPS, card.customer_product_spec):
 			out.append({"doctype": doctype, "card": card.name, "reason": "spec missing"})
 			continue
-		spec = frappe.get_doc(CPS, card.customer_product_spec)
-		payload = cps_lifecycle_rules.build_revision_payload(spec, 1, "", "")
+		spec = frappe.db.get_value(CPS, card.customer_product_spec, ["name", "vcl_revision", "vcl_revision_log"], as_dict=True)
+		payload = cps_lifecycle_rules.payload_for_revision(spec.vcl_revision_log, 1) if int(spec.vcl_revision or 0) >= 1 else None
+		if payload is None:
+			out.append({"doctype": doctype, "card": card.name, "spec": spec.name, "reason": "spec not yet stamped with revision 1"})
+			continue
 		snapshot = cps_lifecycle_rules.parse_payload(card.spec_snapshot)
 		if not snapshot:
 			out.append({"doctype": doctype, "card": card.name, "reason": "no snapshot"})

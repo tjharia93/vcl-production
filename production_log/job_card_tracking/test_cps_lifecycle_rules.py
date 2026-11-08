@@ -154,6 +154,25 @@ class TestApproval(unittest.TestCase):
 		log = rules.approve_revision_in_log("", 1, "u", "now")
 		self.assertEqual(rules.approved_revisions(log), [1])
 
+	def test_rejection_revokes_that_revisions_approval(self):
+		# Codex r6 (3): approve rev 2, then reject it - revision_is_approved must say no.
+		log = rules.approve_revision_in_log("", 2, "neema", "t1", "CP technical")
+		self.assertEqual(rules.approved_revisions(log), [2])
+		log = rules.revoke_revision_in_log(log, 2, "neema", "t2", "die changed")
+		self.assertEqual(rules.approved_revisions(log), [])
+		spec = carton(vcl_revision=2, vcl_approved_rev=2, vcl_approval_state="Awaiting approval", vcl_revision_log=json.dumps(log))
+		self.assertFalse(rules.revision_is_approved(spec, 2))
+		# A fresh approval after the rejection stands again; the revocation is kept as history.
+		log = rules.approve_revision_in_log(log, 2, "neema", "t3")
+		self.assertEqual(rules.approved_revisions(log), [2])
+		self.assertEqual(len(log[0]["_revocations"]), 1)
+		self.assertNotIn("_revoked_on", log[0])
+
+	def test_vcl_source_iq_is_server_owned(self):
+		out = rules.unauthorised_changes(carton(), carton(vcl_source_iq="IQ-2026-00001"), ("Sales Master Manager",))
+		self.assertEqual([u.fieldname for u in out], ["vcl_source_iq"])
+		self.assertEqual(rules.unauthorised_changes(carton(), carton(vcl_source_iq="IQ-2026-00001"), (), is_server=True), [])
+
 	def test_bound_earlier_revision_stays_approved(self):
 		# Codex r4 (1): the card is judged against the revision bound to it.
 		spec = carton(vcl_revision=3, vcl_approved_rev=2, vcl_approval_state="Awaiting approval")

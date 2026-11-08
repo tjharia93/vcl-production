@@ -44,11 +44,16 @@ class CPSArtworkVersion(Document):
 		self._validate_private_file()
 
 	def _validate_private_file(self):
+		"""The URL must name an existing private File the caller may read (Codex r6 defect 6)."""
 		if not self.file:
 			return
-		row = frappe.db.get_value("File", {"file_url": self.file}, ["is_private"], as_dict=True)
-		if row is not None and not row.is_private:
+		rows = frappe.get_all("File", filters={"file_url": self.file}, fields=["name", "is_private"], limit_page_length=5)
+		if not rows:
+			frappe.throw(_("Artwork must be an uploaded file; {0} names no File record.").format(self.file), title=_("Artwork Version"))
+		if not all(r.is_private for r in rows):
 			frappe.throw(_("Artwork must be a private file."), title=_("Artwork Version"))
+		if not any(frappe.has_permission("File", "read", r.name) for r in rows):
+			frappe.throw(_("You may not read the file {0}.").format(self.file), frappe.PermissionError)
 
 	def after_insert(self):
 		from production_log.job_card_tracking import cps_artwork

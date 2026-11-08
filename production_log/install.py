@@ -69,6 +69,12 @@ def after_migrate():
 	# migrate until the migration authority is set and every spec is stamped.
 	from production_log.job_card_tracking import cps_lifecycle
 	cps_lifecycle.after_migrate()
+	# Both v11_0 patches return early when their schema is absent at patch time
+	# (post_model_sync on a first deploy is fine, but a stamped-not-run install
+	# is not). Re-running them here is the retry path; both are idempotent.
+	from production_log.patches.v11_0 import migrate_vat_inclusive_rows, seed_cps_approval
+	seed_cps_approval.execute()
+	migrate_vat_inclusive_rows.execute()
 
 
 def backfill_die_names():

@@ -128,11 +128,16 @@ def artwork_for_card(versions, bound_version_name=None):
 	caller falls back to the artwork tracker and the note says so.
 	"""
 	versions = list(versions or [])
-	if not versions:
-		return ArtworkState(None, None, False, False, "no artwork versions on the specification; artwork tracker used")
 	bound = None
 	if bound_version_name:
 		bound = next((v for v in versions if _get(v, "name") == bound_version_name), None)
+		if bound is None:
+			# A named binding that no longer exists is a failure, never a silent
+			# fall-through to whatever is current (Codex r6).
+			return ArtworkState(None, bound_version_name, bool(versions), False,
+			                    "bound artwork version {0} not found on the specification".format(bound_version_name))
+	if not versions:
+		return ArtworkState(None, None, False, False, "no artwork versions on the specification; artwork tracker used")
 	if bound is not None:
 		superseded = bool(int(_get(bound, "superseded") or 0))
 		note = "bound artwork version {0} superseded by {1}".format(

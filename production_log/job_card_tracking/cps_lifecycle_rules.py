@@ -67,6 +67,9 @@ SERVER_OWNED_FIELDS = frozenset({
 	"vcl_revision_at",
 	"vcl_revision_by",
 	"vcl_first_release_on",
+	# Set only by the IQ transfer / create-from-IQ code: it supplies the
+	# benchmarks automatic price approval reads (Codex r6 defect 2).
+	"vcl_source_iq",
 })
 
 # Derived by the controller on every save from the rep's inputs (colour count,
@@ -356,6 +359,12 @@ def approve_revision_in_log(log, revision, user, now, rule=None):
 	for entry in parse_revision_log(log):
 		entry = dict(entry or {})
 		if int(entry.get("_revision") or 0) == int(revision or 0):
+			if entry.get("_revoked_on"):
+				# A fresh approval after a rejection: the revocation moves to history.
+				entry.setdefault("_revocations", []).append({
+					"by": entry.pop("_revoked_by", None), "on": entry.pop("_revoked_on", None),
+					"notes": entry.pop("_revocation_notes", None),
+				})
 			entry.update({"_approved_by": user, "_approved_on": str(now), "_approval_rule": rule})
 			found = True
 		out.append(entry)
@@ -364,9 +373,28 @@ def approve_revision_in_log(log, revision, user, now, rule=None):
 	return out
 
 
+def revoke_revision_in_log(log, revision, user, now, notes=None):
+	"""A rejection after an approval: the revision's stamp is revoked (Codex r6 defect 3).
+
+	History is kept - ``_approved_on`` stays as the record of what was once
+	granted - but ``_revoked_on`` makes ``approved_revisions`` drop it.
+	"""
+	out = []
+	for entry in parse_revision_log(log):
+		entry = dict(entry or {})
+		if int(entry.get("_revision") or 0) == int(revision or 0):
+			entry.update({"_revoked_by": user, "_revoked_on": str(now), "_revocation_notes": notes or ""})
+		out.append(entry)
+	return out
+
+
 def approved_revisions(log):
-	"""Revision numbers carrying an approval stamp in the log."""
-	return sorted({int(e.get("_revision") or 0) for e in parse_revision_log(log) if isinstance(e, dict) and e.get("_approved_on")})
+	"""Revision numbers carrying a live approval stamp (approved, not since revoked)."""
+	return sorted({
+		int(e.get("_revision") or 0)
+		for e in parse_revision_log(log)
+		if isinstance(e, dict) and e.get("_approved_on") and not e.get("_revoked_on")
+	})
 
 
 def payload_for_revision(log, revision):
@@ -435,8 +463,11 @@ def revision_is_approved(spec, revision):
 	if not revision:
 		return False
 	revision = int(revision)
-	if revision in approved_revisions(_get(spec, "vcl_revision_log")):
+	log = parse_revision_log(_get(spec, "vcl_revision_log"))
+	if revision in approved_revisions(log):
 		return True
+	if any(int((e or {}).get("_revision") or 0) == revision and (e or {}).get("_revoked_on") for e in log):
+		return False
 	approved_rev = int(_get(spec, "vcl_approved_rev") or 0)
 	if approved_rev != revision:
 		return False

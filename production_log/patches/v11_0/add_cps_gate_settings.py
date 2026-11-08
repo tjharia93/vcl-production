@@ -64,6 +64,20 @@ def retire_thresholds():
 
 def get_custom_fields():
 	fields = {
+		# The SO line's bound price row (written by so_spec_control._stamp_snapshot,
+		# read by the release gate). Declared by v8_0 and present live on
+		# 08/11/2026; repeated here, idempotently, so a fresh site cannot miss it.
+		"Sales Order Item": [
+			{
+				"fieldname": "custom_cps_price_row",
+				"label": "CPS Price Row",
+				"fieldtype": "Data",
+				"read_only": 1,
+				"no_copy": 1,
+				"insert_after": "custom_cps_valid_from",
+				"description": "The CPS Price row this line was priced against. The job card binds to it.",
+			},
+		],
 		"Selling Settings": [
 			{
 				"fieldname": so_spec_control.SO_MODE_FIELD,

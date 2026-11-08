@@ -74,7 +74,8 @@ def benchmarks_for(spec, row=None):
 				continue
 			list_price = rules.normalise_benchmark(
 				price.price_list_rate, price.currency, row_currency,
-				cps_pricing.item_conversion_factor(item, price.uom) if price.uom else 1.0, row_cf,
+				cps_pricing.item_conversion_factor(item, price.uom) if price.uom else None, row_cf,
+				same_uom=bool(price.uom) and price.uom == row_uom,
 			)
 			break
 		values[rules.BENCHMARK_STANDARD_SELLING] = list_price
@@ -83,16 +84,23 @@ def benchmarks_for(spec, row=None):
 	if iq_name and frappe.db.exists("DocType", "Internal Quotation"):
 		iq = frappe.db.get_value(
 			"Internal Quotation", iq_name,
-			["management_price", "cost_price", "vcl_uom", "vcl_currency", "vcl_tax_basis"], as_dict=True,
+			["name", "status", "customer", "lead", "product_category", "management_price", "cost_price",
+			 "vcl_uom", "vcl_currency", "vcl_tax_basis"], as_dict=True,
 		)
-		if iq:
+		# Codex r6 defect 2: the IQ is evidence only when Approved and related
+		# to this spec; vcl_source_iq itself is server-owned (lifecycle rules).
+		customer_lead = frappe.db.get_value("Customer", spec.get("customer"), "lead_name") if spec.get("customer") else None
+		if iq and iq.status == cps_price_rules.IQ_APPROVED_STATUS and not cps_price_rules.iq_relationship_errors(iq, spec, customer_lead):
 			iq_cf = cps_pricing.item_conversion_factor(item, iq.vcl_uom) if iq.vcl_uom else None
 			gross = (iq.vcl_tax_basis or "") == cps_price_rules.IQ_TAX_BASIS_GROSS
+			same_uom = bool(iq.vcl_uom) and iq.vcl_uom == row_uom
 			values[rules.BENCHMARK_IQ_MANAGEMENT] = rules.normalise_benchmark(
-				iq.management_price, iq.vcl_currency, row_currency, iq_cf, row_cf, gross=gross,
+				iq.management_price, iq.vcl_currency, row_currency, iq_cf, row_cf, gross=gross, same_uom=same_uom,
 			)
 			# Cost is always a net figure.
-			values[rules.BENCHMARK_IQ_COST] = rules.normalise_benchmark(iq.cost_price, iq.vcl_currency, row_currency, iq_cf, row_cf)
+			values[rules.BENCHMARK_IQ_COST] = rules.normalise_benchmark(
+				iq.cost_price, iq.vcl_currency, row_currency, iq_cf, row_cf, same_uom=same_uom,
+			)
 	return values
 
 
@@ -187,6 +195,12 @@ def approve_technical(cps, decision, notes=None):
 		if not (notes or "").strip():
 			frappe.throw(_("A reason is required to reject a revision."))
 		values = cps_lifecycle_rules.technical_rejection_values(notes)
+		# Codex r6 defect 3: a rejection revokes any earlier approval of THIS revision.
+		doc.vcl_revision_log = frappe.as_json(
+			cps_lifecycle_rules.revoke_revision_in_log(doc.get("vcl_revision_log"), doc.vcl_revision, frappe.session.user, frappe.utils.now(), notes)
+		)
+		if int(doc.get("vcl_approved_rev") or 0) == int(doc.vcl_revision or 0):
+			values["vcl_approved_rev"] = max(cps_lifecycle_rules.approved_revisions(doc.vcl_revision_log) or [0])
 
 	for fieldname, value in values.items():
 		doc.set(fieldname, value)

@@ -239,7 +239,11 @@ def stamp_specs(authority, dry_run=False):
 	date_text = frappe.utils.formatdate(frappe.utils.today(), "dd/mm/yyyy")
 	now = frappe.utils.now()
 	stamped = []
-	for row in frappe.get_all(CPS, filters={"docstatus": 1, "vcl_revision": ["<", 1]}, fields=["name"]):
+	# No "< 1" filter: a NULL revision (every row before the column existed) is
+	# not < 1 in SQL. Read all submitted specs and let the rule decide.
+	for row in frappe.get_all(CPS, filters={"docstatus": 1}, fields=["name", "vcl_revision"], limit_page_length=0):
+		if int(row.vcl_revision or 0) >= 1:
+			continue
 		doc = frappe.get_doc(CPS, row.name)
 		if not rules.needs_grandfathering(doc):
 			continue
@@ -274,10 +278,13 @@ def reconcile_card_bindings(dry_run=False):
 			continue
 		cards = frappe.get_all(
 			doctype,
-			filters={"docstatus": ["<", 2], "sales_order_item": ["is", "set"], "spec_revision": ["<", 1]},
-			fields=["name", "customer_product_spec", "spec_snapshot"],
+			filters={"docstatus": ["<", 2], "sales_order_item": ["is", "set"]},
+			fields=["name", "customer_product_spec", "spec_snapshot", "spec_revision"],
+			limit_page_length=0,
 		)
 		for card in cards:
+			if int(card.spec_revision or 0) >= 1:
+				continue
 			spec_name = card.customer_product_spec
 			if not spec_name:
 				left.append("{0}:{1} (no spec)".format(doctype, card.name))

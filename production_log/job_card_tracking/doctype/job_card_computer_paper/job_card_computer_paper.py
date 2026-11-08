@@ -72,6 +72,10 @@ class JobCardComputerPaper(OrderDerivedJobCard, Document):
 		"""
 		self.update_sales_order_rollup()
 
+	def before_update_after_submit(self):
+		# ``validate`` does not run on a submitted save; the release fields stay server-owned.
+		self.protect_release_fields()
+
 	def on_submit(self):
 		self.set_status()
 

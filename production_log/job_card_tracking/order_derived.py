@@ -112,9 +112,16 @@ class OrderDerivedJobCard:
 
 		Whatever a Desk form, REST PUT or Data Import sent in them is discarded
 		in favour of the stored values; only ``release.py`` writes them, with
-		``db.set_value``.
+		``db.set_value``. A NEW card arrives with all of them blank (Codex r6):
+		nothing is pre-released. Runs from ``validate`` and from
+		``before_update_after_submit``, so the submitted-save path is covered.
 		"""
-		if self.is_new() or not self.meta.get_field("release_state"):
+		if not self.meta.get_field("release_state"):
+			return
+		if self.is_new():
+			for fieldname in RELEASE_SERVER_FIELDS:
+				if self.meta.get_field(fieldname):
+					self.set(fieldname, 0 if fieldname == "print_superseded" else None)
 			return
 		before = self.get_doc_before_save()
 		if before is None:
