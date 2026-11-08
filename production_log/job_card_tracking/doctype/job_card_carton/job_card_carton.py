@@ -63,6 +63,10 @@ class JobCardCarton(OrderDerivedJobCard, Document):
 		self.validate_quantity()
 		self.populate_route()
 		self.set_status()
+		self.protect_release_fields()
+
+	def after_insert(self):
+		self.release_after_insert()
 
 	def on_update(self):
 		"""Keep the Sales Order line rollup honest on every draft save.

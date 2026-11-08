@@ -52,9 +52,11 @@ class JobCardComputerPaper(OrderDerivedJobCard, Document):
 		self.validate_production_stage_assets()
 		self.set_sales_rep_info()
 		self.set_status()
+		self.protect_release_fields()
 
 	def after_insert(self):
 		self.reseed_production_stages(save=True)
+		self.release_after_insert()
 
 	def on_update(self):
 		"""Keep the Sales Order line rollup honest on every draft save.

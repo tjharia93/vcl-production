@@ -83,7 +83,31 @@
   "total_setup_waste_m",
   "column_break_run_log_totals",
   "total_setup_mins",
-  "total_run_mins"
+  "total_run_mins",
+  "release_section",
+  "release_state",
+  "released_by",
+  "released_on",
+  "spec_revision",
+  "release_col_1",
+  "release_spec_revision",
+  "release_price_row",
+  "release_artwork_version",
+  "release_override_reason",
+  "release_col_2",
+  "override_requested_by",
+  "override_requested_on",
+  "override_requested_reason",
+  "release_issue_section",
+  "render_issued_on",
+  "render_issued_by",
+  "print_superseded",
+  "release_col_3",
+  "printed_confirmed_on",
+  "printed_confirmed_by",
+  "release_detail_section",
+  "release_checks",
+  "release_fingerprint"
  ],
  "fields": [
   {
@@ -303,28 +327,28 @@
    "default": "0",
    "fieldname": "uses_c",
    "fieldtype": "Check",
-   "label": "C \u2014 Cyan",
+   "label": "C — Cyan",
    "read_only": 1
   },
   {
    "default": "0",
    "fieldname": "uses_m",
    "fieldtype": "Check",
-   "label": "M \u2014 Magenta",
+   "label": "M — Magenta",
    "read_only": 1
   },
   {
    "default": "0",
    "fieldname": "uses_y",
    "fieldtype": "Check",
-   "label": "Y \u2014 Yellow",
+   "label": "Y — Yellow",
    "read_only": 1
   },
   {
    "default": "0",
    "fieldname": "uses_k",
    "fieldtype": "Check",
-   "label": "K \u2014 Black",
+   "label": "K — Black",
    "read_only": 1
   },
   {
@@ -609,11 +633,203 @@
    "no_copy": 1,
    "precision": "1",
    "read_only": 1
+  },
+  {
+   "fieldname": "release_section",
+   "fieldtype": "Section Break",
+   "label": "Release Gate",
+   "collapsible": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "release_state",
+   "label": "Release State",
+   "fieldtype": "Select",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1,
+   "options": "\nHeld\nReleased\nReleased (override)\nRe-held",
+   "in_list_view": 0,
+   "in_standard_filter": 1,
+   "description": "Automatic: Released when checks 1-6 and 8-11 pass. The card cannot be printed until it is Released."
+  },
+  {
+   "fieldname": "released_by",
+   "label": "Released By",
+   "fieldtype": "Link",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1,
+   "options": "User"
+  },
+  {
+   "fieldname": "released_on",
+   "label": "Released On",
+   "fieldtype": "Datetime",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "spec_revision",
+   "label": "Spec Revision (bound)",
+   "fieldtype": "Int",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1,
+   "description": "The specification revision this card was created against. The gate judges the card against this revision, not the current one."
+  },
+  {
+   "fieldname": "release_col_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "release_spec_revision",
+   "label": "Released Against Revision",
+   "fieldtype": "Int",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "release_price_row",
+   "label": "Released Against Price Row",
+   "fieldtype": "Data",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "release_artwork_version",
+   "label": "Released Against Artwork Version",
+   "fieldtype": "Data",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "release_override_reason",
+   "label": "Override Reason",
+   "fieldtype": "Small Text",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "release_col_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "override_requested_by",
+   "label": "Override Requested By",
+   "fieldtype": "Link",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1,
+   "options": "User"
+  },
+  {
+   "fieldname": "override_requested_on",
+   "label": "Override Requested On",
+   "fieldtype": "Datetime",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "override_requested_reason",
+   "label": "Override Requested Reason",
+   "fieldtype": "Small Text",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "release_issue_section",
+   "fieldtype": "Section Break",
+   "label": "Issue and Print",
+   "collapsible": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "render_issued_on",
+   "label": "Render Issued On",
+   "fieldtype": "Datetime",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1,
+   "description": "The system handed out a printable card."
+  },
+  {
+   "fieldname": "render_issued_by",
+   "label": "Render Issued By",
+   "fieldtype": "Link",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1,
+   "options": "User"
+  },
+  {
+   "fieldname": "print_superseded",
+   "label": "Print Superseded",
+   "fieldtype": "Check",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1,
+   "default": "0",
+   "description": "A released card was issued and its inputs changed afterwards: withdraw the paper card and reprint."
+  },
+  {
+   "fieldname": "release_col_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "printed_confirmed_on",
+   "label": "Printed Confirmed On",
+   "fieldtype": "Datetime",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1,
+   "description": "A person confirmed the card reached the floor."
+  },
+  {
+   "fieldname": "printed_confirmed_by",
+   "label": "Printed Confirmed By",
+   "fieldtype": "Link",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1,
+   "options": "User"
+  },
+  {
+   "fieldname": "release_detail_section",
+   "fieldtype": "Section Break",
+   "label": "Release Checks",
+   "collapsible": 1,
+   "allow_on_submit": 1
+  },
+  {
+   "fieldname": "release_checks",
+   "label": "Release Checks",
+   "fieldtype": "Long Text",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1,
+   "description": "JSON, one entry per check."
+  },
+  {
+   "fieldname": "release_fingerprint",
+   "label": "Release Fingerprint",
+   "fieldtype": "Long Text",
+   "read_only": 1,
+   "allow_on_submit": 1,
+   "no_copy": 1,
+   "description": "JSON of every input the checks read (check 11)."
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-15 11:27:02.000000",
+ "modified": "2026-11-08 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Job Card Tracking",
  "name": "Job Card Label",

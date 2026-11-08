@@ -253,6 +253,14 @@ def clear_hold(jc_name):
 	jc = _get_jc(jc_name)
 	if jc.job_status != "On Hold":
 		frappe.throw(_("Job is not On Hold."))
+	from production_log.job_card_tracking import release_rules
+	if (jc.get("hold_reason") or "") in release_rules.RELEASE_HOLD_REASONS:
+		frappe.throw(
+			_("This hold belongs to the release gate ({0}); it clears itself when every check passes, or VCL Management Team overrides it.").format(
+				jc.hold_reason
+			),
+			title=_("Job Card Held"),
+		)
 	# Per spec: actuals before hold → In Production; planned before → Planned; never planned → Open
 	prior = (jc.hold_previous_status or "").strip()
 	has_actuals = frappe.db.exists("PPC Production Actual Item", {

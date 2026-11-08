@@ -156,3 +156,11 @@ production_log.patches.v10_4.add_item_price_cps_field
 # price mirror would publish that customer 16% high.
 production_log.patches.v10_5.flag_bahati_sleeve_vat_inclusive
 production_log.patches.v10_6.allow_cps_colours_packing_on_submit
+# Stream A, CPS order-to-cash gate (TRK-00432, plan v4 steps 1-2). All three
+# reach outside the app (Selling Settings / Internal Quotation Custom Fields,
+# Role) or write columns this migrate adds, so each is also called from
+# install.after_install and is idempotent.
+production_log.patches.v11_0.add_cps_gate_settings
+production_log.patches.v11_0.seed_cps_approval
+production_log.patches.v11_0.migrate_vat_inclusive_rows
+production_log.patches.v11_0.add_release_hold_reasons

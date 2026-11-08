@@ -28,6 +28,14 @@ def after_install():
 	# stamped done without running.
 	production_floor.after_install()
 
+	# Stream A (TRK-00432): Selling Settings / IQ fields, the CPS Approver role
+	# and the eight approval rules. All reach outside the app - same trap.
+	from production_log.patches.v11_0 import add_cps_gate_settings, seed_cps_approval, add_release_hold_reasons
+
+	add_cps_gate_settings.execute()
+	seed_cps_approval.execute()
+	add_release_hold_reasons.execute()
+
 	frappe.msgprint(
 		"Production Log installed. "
 		"Open the VCL Production workspace to start creating Customer "

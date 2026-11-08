@@ -119,6 +119,25 @@ doc_events = {
 		"validate": "production_log.job_card_tracking.so_spec_control.validate",
 		"on_submit": "production_log.job_card_tracking.so_spec_control.on_submit",
 		"on_cancel": "production_log.job_card_tracking.so_spec_control.on_cancel",
+		# §7c/d: an amended or cancelled order re-evaluates the cards whose
+		# release fingerprint names it.
+		"on_update_after_submit": "production_log.job_card_tracking.release.on_sales_order_change",
+	},
+	# §4: Quotation lines for controlled Items, Warn mode until Tanuj changes it.
+	"Quotation": {
+		"validate": "production_log.job_card_tracking.so_spec_control.validate_quotation",
+	},
+	# §5: IQ -> CPS price transfer on the workflow reaching Approved, and the
+	# revocation on Cancelled. Internal Quotation is a site-defined doctype;
+	# these fire only where it exists.
+	"Internal Quotation": {
+		"on_update": "production_log.job_card_tracking.iq_price_transfer.on_iq_update",
+		"on_update_after_submit": "production_log.job_card_tracking.iq_price_transfer.on_iq_update",
+		"on_cancel": "production_log.job_card_tracking.iq_price_transfer.on_iq_cancel",
+	},
+	# §7c: a revised spec, a status or approval change re-evaluates its cards.
+	"Customer Product Specification": {
+		"on_update_after_submit": "production_log.job_card_tracking.release.on_spec_change",
 	},
 	"Item": {
 		"validate": [

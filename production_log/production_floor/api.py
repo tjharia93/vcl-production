@@ -458,6 +458,7 @@ def plan_job(production_date=None, job_card=None, lines=None):
 	if not lines:
 		frappe.throw(_("Tick at least one station."))
 
+	_refuse_held_job_card(job_card, None)
 	for line in lines:
 		machine = (line.get("machine") or "").strip()
 		if not machine:
@@ -535,6 +536,27 @@ def _quantity(value, label):
 		frappe.throw(str(exc), title=_("Check the Quantity"))
 
 
+def _refuse_held_job_card(job_card, doctype=None):
+	"""§7 C: a card the release gate holds cannot be planned onto the floor."""
+	job_card = (job_card or "").strip()
+	if not job_card:
+		return
+	from production_log.job_card_tracking import release
+
+	doctype = doctype or job_card_doctype(job_card)
+	if not doctype or not frappe.db.exists(doctype, job_card):
+		return
+	try:
+		status = release.release_status(job_card, doctype)
+	except frappe.PermissionError:
+		raise
+	except Exception:
+		frappe.log_error(frappe.get_traceback(), "production_floor release check {0}".format(job_card))
+		return
+	if status.get("gated") and status.get("block"):
+		frappe.throw(_("{0} cannot be planned: {1}.").format(job_card, status["block"]), title=_("Job Card Held"))
+
+
 @frappe.whitelist()
 def add_item(
 	production_date=None,
@@ -566,6 +588,7 @@ def add_item(
 		frappe.throw(_("Department and machine are both needed."))
 	if not (customer_name and job_name):
 		frappe.throw(_("Customer and job are both needed."))
+	_refuse_held_job_card(job_card, job_card_doctype)
 
 	doc.append("items", {
 		"department": department,

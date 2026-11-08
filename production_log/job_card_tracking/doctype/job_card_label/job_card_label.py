@@ -59,6 +59,10 @@ class JobCardLabel(OrderDerivedJobCard, Document):
 		self.set_sales_rep_info()
 		self.set_run_log()
 		self.set_status()
+		self.protect_release_fields()
+
+	def after_insert(self):
+		self.release_after_insert()
 
 	def before_update_after_submit(self):
 		# The floor fills the Run Log on a submitted card, and ``validate`` does

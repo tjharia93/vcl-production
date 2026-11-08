@@ -68,6 +68,17 @@ SO_LINE_CONTROL_FIELDS = (
 # Fields on the row that identify it and bind it to its parent. `parent`,
 # `parenttype` and `parentfield` are what make "this line belongs to that
 # order" provable rather than assumed.
+# Written only by release.py (db.set_value); every other write path keeps the
+# stored value. ``spec_revision`` is stamped once at creation and then frozen.
+RELEASE_SERVER_FIELDS = (
+	"release_state", "released_by", "released_on", "spec_revision",
+	"release_spec_revision", "release_price_row", "release_artwork_version",
+	"release_checks", "release_fingerprint", "release_override_reason",
+	"override_requested_by", "override_requested_on", "override_requested_reason",
+	"render_issued_on", "render_issued_by", "print_superseded",
+	"printed_confirmed_on", "printed_confirmed_by",
+)
+
 SO_LINE_BASE_FIELDS = (
 	"name",
 	"parent",
@@ -80,7 +91,37 @@ SO_LINE_BASE_FIELDS = (
 
 
 class OrderDerivedJobCard:
-	"""Provenance, over-card protection and Sales Order rollups."""
+	"""Provenance, over-card protection, Sales Order rollups - and the release gate."""
+
+	# -- release gate (Stream A §7) -------------------------------------------
+
+	def release_after_insert(self):
+		"""Hold the card and evaluate it at once. Call from ``after_insert``."""
+		from production_log.job_card_tracking import release
+
+		release.on_card_insert(self)
+
+	def before_print(self, settings=None):
+		"""Step (ii) of Print: refuse a held or stale card. Writes nothing."""
+		from production_log.job_card_tracking import release
+
+		release.before_print_guard(self)
+
+	def protect_release_fields(self):
+		"""``release_*`` fields are server-owned on every write path (§7c).
+
+		Whatever a Desk form, REST PUT or Data Import sent in them is discarded
+		in favour of the stored values; only ``release.py`` writes them, with
+		``db.set_value``.
+		"""
+		if self.is_new() or not self.meta.get_field("release_state"):
+			return
+		before = self.get_doc_before_save()
+		if before is None:
+			return
+		for fieldname in RELEASE_SERVER_FIELDS:
+			if self.meta.get_field(fieldname):
+				self.set(fieldname, before.get(fieldname))
 
 	JC_PRODUCT_TYPE = None
 	JC_CUSTOMER_FIELD = "customer"
