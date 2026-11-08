@@ -7,6 +7,7 @@ from frappe.utils import cint
 
 from production_log.job_card_tracking import cps_cp_rules
 from production_log.job_card_tracking import cps_cp_weight
+from production_log.job_card_tracking import cps_lifecycle
 from production_log.job_card_tracking import cps_pricing
 from production_log.job_card_tracking import cps_rules
 
@@ -56,6 +57,8 @@ class CustomerProductSpecification(Document):
 		self.validate_etr()
 		self.validate_linked_item()
 		cps_pricing.validate_pricing(self)
+		# §2 edit tiers on a draft (identity rule relaxed).
+		cps_lifecycle.validate(self)
 
 	def apply_numbering_answer(self):
 		"""Write the Numbering Select onto the two stored numbering fields.
@@ -115,6 +118,8 @@ class CustomerProductSpecification(Document):
 		again on a record that made that transition earlier.
 		"""
 		self._before_submit_weight()
+		# Revision 1 and Awaiting approval land in the same write as the submit.
+		cps_lifecycle.before_submit(self)
 		if not self.meta.has_field(cps_cp_rules.ARTWORK_FIELD):
 			return
 		self.validate_artwork_integrity()
@@ -368,6 +373,8 @@ class CustomerProductSpecification(Document):
 		# so Desk/REST cannot make it diverge after submission.
 		self.apply_computer_paper_weights()
 		cps_pricing.validate_pricing(self)
+		# §2 shared authorisation check, then the §1 revision bump.
+		cps_lifecycle.before_update_after_submit(self)
 
 	def validate_product_type(self):
 		if not self.product_type:

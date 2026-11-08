@@ -57,6 +57,10 @@ def after_migrate():
 	backfill_die_setup_status()
 	retire_dies_stopgap_client_script()
 	production_floor.after_migrate()
+	# §1 grandfather stamp: runs here, not in a patch, so it retries on every
+	# migrate until the migration authority is set and every spec is stamped.
+	from production_log.job_card_tracking import cps_lifecycle
+	cps_lifecycle.after_migrate()
 
 
 def backfill_die_names():
