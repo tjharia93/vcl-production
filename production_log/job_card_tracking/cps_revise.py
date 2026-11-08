@@ -370,17 +370,28 @@ def _apply_price(doc, row):
 	error = rules.price_row_error(row)
 	if error:
 		frappe.throw(error)
-	doc.append("pricing", {
+	from production_log.job_card_tracking import cps_price_rules
+
+	values = {
 		"valid_from": row["valid_from"],
 		"rate": float(row["rate"]),
 		"uom": row["uom"],
-		"vat_inclusive": 1 if row.get("vat_inclusive") else 0,
 		"source": "Manual",
 		"notes": (row.get("notes") or "").strip(),
 		"approval_status": "Draft",
-	})
+	}
+	# §5: "VAT inclusive" is recorded as a tax basis with the gross figure
+	# kept; the stored rate is always net. The retired vat_inclusive tick is
+	# never written.
+	meta = frappe.get_meta("CPS Price")
+	if row.get("vat_inclusive") and meta.get_field("tax_basis"):
+		values.update(cps_price_rules.gross_entry_values(float(row["rate"]), cps_price_rules.TAX_BASIS_GROSS_VAT))
+		values["entered_uom"] = row["uom"]
+	elif meta.get_field("tax_basis"):
+		values["tax_basis"] = cps_price_rules.TAX_BASIS_NET
+	doc.append("pricing", values)
 	return ["New price {0} per {1}{2} from {3} (Draft - needs approval)".format(
-		float(row["rate"]), row["uom"], ", VAT inclusive" if row.get("vat_inclusive") else "",
+		values["rate"], row["uom"], " (entered {0} incl. VAT)".format(float(row["rate"])) if row.get("vat_inclusive") else "",
 		row["valid_from"])]
 
 

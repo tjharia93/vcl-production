@@ -12,8 +12,10 @@ gate approved), DN-3 (self-approval permitted, logged).
 import frappe
 from frappe import _
 
-from production_log.job_card_tracking import cps_rules
+from production_log.job_card_tracking import cps_lifecycle, cps_price_rules, cps_rules
 
+# Kept for the Desk toolbar's role check; authority itself is "the rule says so"
+# (§6) - see ``cps_approval.authorise_price_decision``.
 APPROVER_ROLE = "Sales Master Manager"
 
 
@@ -29,8 +31,55 @@ def validate_pricing(doc):
 		return
 
 	validate_no_duplicate_effective_dates(doc, rows)
+	fill_row_defaults(doc, rows)
+	enforce_immutable_entered_fields(doc, rows)
 	revoke_approval_on_edit(doc, rows)
 	set_current_rate(doc, rows)
+
+
+def fill_row_defaults(doc, rows):
+	"""Currency KES and the frozen conversion factor on every row (§5).
+
+	The factor is read from the Item's UOM table ONCE, when the row is first
+	saved, and never again - a price row follows the factor it was approved
+	with, not the current Item master.
+	"""
+	meta = frappe.get_meta("CPS Price")
+	has_currency = bool(meta.get_field("currency"))
+	has_factor = bool(meta.get_field("conversion_factor"))
+	for row in rows:
+		if has_currency and not (row.get("currency") or "").strip():
+			row.currency = cps_price_rules.DEFAULT_CURRENCY
+		if has_factor and not row.get("conversion_factor") and row.get("uom"):
+			row.conversion_factor = item_conversion_factor(doc.get("linked_item"), row.uom)
+
+
+def item_conversion_factor(item_code, uom):
+	"""Row UOM -> stock UOM factor from the Item's UOM table; 1 for the stock UOM; None if unknown."""
+	if not item_code or not uom:
+		return None
+	stock_uom = frappe.db.get_value("Item", item_code, "stock_uom")
+	if stock_uom == uom:
+		return 1.0
+	factor = frappe.db.get_value("UOM Conversion Detail", {"parent": item_code, "parenttype": "Item", "uom": uom}, "conversion_factor")
+	return float(factor) if factor else None
+
+
+def enforce_immutable_entered_fields(doc, rows):
+	"""``entered_*``, ``tax_rate``, ``tax_basis`` and ``rounding_method`` never change once set."""
+	before = doc.get_doc_before_save()
+	if not before or not frappe.get_meta("CPS Price").get_field("entered_gross"):
+		return
+	previous_rows = {row.name: row for row in (before.get("pricing") or [])}
+	for row in rows:
+		changed = cps_price_rules.immutable_fields_changed(previous_rows.get(row.name), row)
+		if changed:
+			frappe.throw(
+				_("Price row effective {0}: {1} cannot change once set. Add a new row instead.").format(
+					frappe.utils.formatdate(row.valid_from), ", ".join(changed)
+				),
+				title=_("Price Row Immutable"),
+			)
 
 
 def validate_no_duplicate_effective_dates(doc, rows):
@@ -53,7 +102,7 @@ def validate_no_duplicate_effective_dates(doc, rows):
 
 
 def revoke_approval_on_edit(doc, rows):
-	"""Editing rate, UOM or effective date returns an Approved row to Draft.
+	"""Editing rate, UOM, currency, conversion factor or effective date returns an Approved row to Draft.
 
 	Without this, approval is a one-time rubber stamp on a mutable number
 	(design §5.3).
@@ -71,6 +120,10 @@ def revoke_approval_on_edit(doc, rows):
 		row.approval_status = cps_rules.APPROVAL_DRAFT
 		row.approved_by = None
 		row.approved_on = None
+		if frappe.get_meta("CPS Price").get_field("approved_via"):
+			row.approved_via = None
+			row.approval_rule = None
+			row.rule_benchmark = None
 		frappe.msgprint(
 			_("Price row effective {0} was changed and needs approval again.").format(
 				frappe.utils.formatdate(row.valid_from)
@@ -92,13 +145,17 @@ def set_current_rate(doc, rows):
 	doc.current_uom = eligible.uom if eligible else None
 
 
-def get_eligible_price(cps, on_date):
-	"""Return the eligible CPS Price row for a specification on a given date.
+def _row_fields():
+	fields = ["name", "valid_from", "rate", "uom", "approval_status", "approved_on", "source", "source_ref"]
+	meta = frappe.get_meta("CPS Price")
+	for extra in ("currency", "conversion_factor"):
+		if meta.get_field(extra):
+			fields.append(extra)
+	return fields
 
-	``on_date`` is the Sales Order ``transaction_date``, never ``today()`` — see
-	:func:`cps_rules.resolve_eligible_price`.
-	"""
-	rows = frappe.get_all(
+
+def approved_rows(cps):
+	return frappe.get_all(
 		"CPS Price",
 		filters={
 			"parent": cps,
@@ -106,33 +163,60 @@ def get_eligible_price(cps, on_date):
 			"parentfield": "pricing",
 			"approval_status": cps_rules.APPROVAL_APPROVED,
 		},
-		fields=["name", "valid_from", "rate", "uom", "approval_status"],
+		fields=_row_fields(),
 		order_by="valid_from asc",
 	)
-	return cps_rules.resolve_eligible_price(rows, on_date)
+
+
+def get_eligible_price(cps, on_date, currency=None):
+	"""Return the eligible CPS Price row for a specification on a given date.
+
+	``on_date`` is the Sales Order ``transaction_date``, never ``today()``.
+	Selection is :func:`cps_price_rules.select_price_row` - Approved, same
+	currency, greatest ``valid_from`` <= date, then latest ``approved_on`` -
+	so every caller (SO submit, Release, the Desk preview) binds the same row.
+	"""
+	return cps_price_rules.select_price_row(approved_rows(cps), currency, on_date)
+
+
+def get_price_row(cps, row_name):
+	"""One row by name, in the shape ``check_line_rate`` reads, or None."""
+	rows = frappe.get_all(
+		"CPS Price",
+		filters={"name": row_name, "parent": cps, "parenttype": "Customer Product Specification"},
+		fields=_row_fields(),
+		limit_page_length=1,
+	)
+	return rows[0] if rows else None
 
 
 @frappe.whitelist()
 def approve_cps_price(cps, row, action="approve", notes=None):
-	"""Approve or reject a CPS Price row (design §5.3, §10.5).
+	"""Approve or reject a CPS Price row (design §5.3, §10.5; §6 authority).
 
-	Only a Sales Master Manager may call this. Self-approval is permitted
-	(DN-3) — blocking it would deadlock a two-person sales office — and is
-	logged rather than refused.
+	Who may call this is "the rule says so": the matching ``CPS Approval
+	Rule``'s approver, or its management role. Self-approval is refused unless
+	the rule ticks ``allow_self_approval`` (§6 replaces DN-3). On a site where
+	the rule doctype has not landed the old Sales Master Manager check applies.
 	"""
+	from production_log.job_card_tracking import cps_approval
+
 	if action not in ("approve", "reject"):
 		frappe.throw(_("Unknown action {0}. Use 'approve' or 'reject'.").format(action))
-
-	if APPROVER_ROLE not in frappe.get_roles():
-		frappe.throw(
-			_("{0} role required to approve a price.").format(APPROVER_ROLE),
-			frappe.PermissionError,
-		)
 
 	doc = frappe.get_doc("Customer Product Specification", cps)
 	target = next((r for r in (doc.get("pricing") or []) if r.name == row), None)
 	if not target:
 		frappe.throw(_("Price row {0} not found on {1}.").format(row, cps))
+
+	decision = None
+	if frappe.db.exists("DocType", cps_approval.RULE):
+		decision = cps_approval.authorise_price_decision(doc, target)
+	elif APPROVER_ROLE not in frappe.get_roles():
+		frappe.throw(
+			_("{0} role required to approve a price.").format(APPROVER_ROLE),
+			frappe.PermissionError,
+		)
 
 	new_status = (
 		cps_rules.APPROVAL_APPROVED if action == "approve" else cps_rules.APPROVAL_REJECTED
@@ -145,11 +229,23 @@ def approve_cps_price(cps, row, action="approve", notes=None):
 	target.approved_on = frappe.utils.now()
 	if notes:
 		target.approval_notes = notes
+	if decision is not None and frappe.get_meta("CPS Price").get_field("approved_via"):
+		target.approved_via = cps_approval.approved_via_for(decision)
+		target.approval_rule = decision.rule
+		if decision.benchmark_value is not None:
+			target.rule_benchmark = cps_rules.round_rate(decision.benchmark_value)
 
 	set_current_rate(doc, doc.get("pricing") or [])
-	doc.save()
+	with cps_lifecycle.server_write():
+		doc.save()
 
 	_log_approval(doc, target, action)
+	if decision is not None:
+		doc.add_comment("Comment", cps_approval.rules.comment_text(decision, routed_to=frappe.session.user))
+
+	# Cards bound to this spec re-evaluate (checks 9-10) - §7c doc_events.
+	from production_log.job_card_tracking import release
+	release.reevaluate_for_spec(doc.name)
 
 	# The price list follows the specification (decision 2026-09-12). Wrapped so
 	# a mirror fault can never fail an approval that has already happened; the
@@ -182,3 +278,79 @@ def _log_approval(doc, row, action):
 			_(" Self-approved by the row's author.") if self_approved else "",
 		),
 	)
+
+
+@frappe.whitelist()
+def add_price_row(cps, valid_from, uom, rate=None, entered_gross=None, tax_basis=None,
+                  currency=None, source="Manual", source_ref=None, notes=None):
+	"""Draft a dated price row and run the §6 price rule on it.
+
+	The one write path behind the three §5 entry points - LPO at a different
+	price (``source`` LPO, ``source_ref`` = po_no), Management reprice, and the
+	Desk/Compass "enter incl. VAT" helper. Either ``rate`` (net) or
+	``entered_gross`` + ``tax_basis`` is given; the gross path stores both and
+	computes ``rate`` = gross / 1.16 at 9 dp. Rows are never edited: a change is
+	a new row. Returns the row name and the rule's decision.
+	"""
+	from production_log.job_card_tracking import cps_approval
+
+	doc = frappe.get_doc("Customer Product Specification", cps)
+	if not frappe.has_permission("Customer Product Specification", "write", doc):
+		frappe.throw(_("Not permitted."), frappe.PermissionError)
+	if not uom:
+		frappe.throw(_("UOM is required - nothing is inferred from the product type."))
+	if source not in ("Quotation", cps_price_rules.SOURCE_INTERNAL_QUOTATION, cps_price_rules.SOURCE_LPO,
+	                  "Manual", cps_price_rules.SOURCE_MANAGEMENT_REPRICE, "Historical"):
+		frappe.throw(_("Unknown source {0}.").format(source))
+
+	meta = frappe.get_meta("CPS Price")
+	values = {
+		"valid_from": valid_from,
+		"uom": uom,
+		"source": source,
+		"source_ref": source_ref,
+		"notes": notes,
+		"approval_status": cps_rules.APPROVAL_DRAFT,
+	}
+	if meta.get_field("currency"):
+		values["currency"] = (currency or "").strip() or cps_price_rules.DEFAULT_CURRENCY
+	if entered_gross not in (None, ""):
+		basis = tax_basis or cps_price_rules.TAX_BASIS_GROSS_VAT
+		if basis not in cps_price_rules.TAX_BASES:
+			frappe.throw(_("Tax basis must be one of {0}.").format(", ".join(cps_price_rules.TAX_BASES)))
+		gross = cps_price_rules.gross_entry_values(float(entered_gross), basis)
+		values.update(gross if meta.get_field("entered_gross") else {"rate": gross["rate"]})
+		if meta.get_field("entered_uom"):
+			values["entered_uom"] = uom
+	elif rate not in (None, ""):
+		values["rate"] = cps_rules.round_rate(rate)
+		if meta.get_field("tax_basis"):
+			values["tax_basis"] = tax_basis or cps_price_rules.TAX_BASIS_NET
+			values["tax_rate"] = 0.0
+	else:
+		frappe.throw(_("Give a net rate or a gross entered amount."))
+
+	if source == cps_price_rules.SOURCE_MANAGEMENT_REPRICE and "VCL Management Team" not in frappe.get_roles():
+		frappe.throw(_("Only VCL Management Team may record a Management reprice."), frappe.PermissionError)
+
+	row = doc.append("pricing", values)
+	decision = None
+	if frappe.db.exists("DocType", cps_approval.RULE):
+		fill_row_defaults(doc, [row])
+		decision = cps_approval.evaluate_price_row(doc, row)
+	with cps_lifecycle.server_write():
+		doc.save()
+
+	if decision is not None:
+		doc.add_comment("Comment", cps_approval.rules.comment_text(decision))
+		from production_log.job_card_tracking import release
+		release.reevaluate_for_spec(doc.name)
+
+	return {
+		"cps": doc.name,
+		"row": row.name,
+		"rate": row.rate,
+		"approval_status": row.approval_status,
+		"decision": decision.outcome if decision else None,
+		"rule": decision.rule if decision else None,
+	}

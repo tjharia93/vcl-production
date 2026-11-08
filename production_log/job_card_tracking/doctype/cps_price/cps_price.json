@@ -7,8 +7,15 @@
  "field_order": [
   "valid_from",
   "rate",
+  "entered_gross",
+  "entered_uom",
+  "tax_basis",
+  "tax_rate",
+  "rounding_method",
   "vat_inclusive",
   "uom",
+  "currency",
+  "conversion_factor",
   "column_break_price",
   "source",
   "source_ref",
@@ -18,6 +25,9 @@
   "approved_by",
   "column_break_approval",
   "approved_on",
+  "approved_via",
+  "approval_rule",
+  "rule_benchmark",
   "approval_notes"
  ],
  "fields": [
@@ -43,11 +53,46 @@
    "reqd": 1
   },
   {
+   "fieldname": "entered_gross",
+   "label": "Gross Entered",
+   "fieldtype": "Currency",
+   "precision": "9",
+   "read_only": 1,
+   "description": "What was typed when the price was entered incl. VAT. Immutable once set."
+  },
+  {
+   "fieldname": "entered_uom",
+   "label": "Entered UOM",
+   "fieldtype": "Link",
+   "options": "UOM",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tax_basis",
+   "label": "Tax Basis",
+   "fieldtype": "Select",
+   "options": "\nNet\nGross entered — VAT 16%\nGross entered — exempt"
+  },
+  {
+   "fieldname": "tax_rate",
+   "label": "Tax Rate (%)",
+   "fieldtype": "Percent",
+   "read_only": 1
+  },
+  {
+   "fieldname": "rounding_method",
+   "label": "Rounding Method",
+   "fieldtype": "Data",
+   "read_only": 1
+  },
+  {
    "default": "0",
    "fieldname": "vat_inclusive",
    "fieldtype": "Check",
    "label": "Rate is VAT-inclusive",
-   "description": "Leave OFF unless the Rate above is a GROSS figure. A rate is normally net, as the Rate label says. Tick it only where a customer's price was agreed inclusive of VAT and the Sales Order is raised with the VAT row set to 'included in print rate', so the invoice lands on the round gross total the customer agreed. The price list is ex-VAT, so the CPS price mirror divides a ticked rate by 1.16 before writing it there."
+   "description": "Retired 08/11/2026 - tax basis is recorded in Tax Basis / Gross Entered. Kept for the three legacy rows; hidden, never written.",
+   "hidden": 1,
+   "read_only": 1
   },
   {
    "allow_on_submit": 1,
@@ -60,6 +105,20 @@
    "reqd": 1
   },
   {
+   "fieldname": "currency",
+   "label": "Currency",
+   "fieldtype": "Link",
+   "options": "Currency",
+   "default": "KES"
+  },
+  {
+   "fieldname": "conversion_factor",
+   "label": "Conversion Factor (row UOM to stock UOM)",
+   "fieldtype": "Float",
+   "read_only": 1,
+   "description": "Frozen at approval from the Item's UOM table. Never read from the current Item master."
+  },
+  {
    "fieldname": "column_break_price",
    "fieldtype": "Column Break"
   },
@@ -68,7 +127,7 @@
    "fieldname": "source",
    "fieldtype": "Select",
    "label": "Source",
-   "options": "\nQuotation\nLPO\nManual\nHistorical"
+   "options": "\nQuotation\nInternal Quotation\nLPO\nManual\nManagement reprice\nHistorical"
   },
   {
    "allow_on_submit": 1,
@@ -121,6 +180,28 @@
    "read_only": 1
   },
   {
+   "fieldname": "approved_via",
+   "label": "Approved Via",
+   "fieldtype": "Select",
+   "options": "\nRule auto\nIQ transfer\nApprover\nManagement",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approval_rule",
+   "label": "Approval Rule",
+   "fieldtype": "Link",
+   "options": "CPS Approval Rule",
+   "read_only": 1
+  },
+  {
+   "fieldname": "rule_benchmark",
+   "label": "Rule Benchmark",
+   "fieldtype": "Currency",
+   "precision": "9",
+   "read_only": 1,
+   "description": "The benchmark the rule compared against, frozen at the decision."
+  },
+  {
    "allow_on_submit": 1,
    "fieldname": "approval_notes",
    "fieldtype": "Small Text",
@@ -129,7 +210,7 @@
  ],
  "istable": 1,
  "links": [],
- "modified": "2026-07-20 00:00:00.000000",
+ "modified": "2026-11-08 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Job Card Tracking",
  "name": "CPS Price",
