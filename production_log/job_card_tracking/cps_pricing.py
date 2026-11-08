@@ -190,7 +190,7 @@ def get_price_row(cps, row_name):
 	return rows[0] if rows else None
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def approve_cps_price(cps, row, action="approve", notes=None):
 	"""Approve or reject a CPS Price row (design §5.3, §10.5; §6 authority).
 
@@ -280,7 +280,7 @@ def _log_approval(doc, row, action):
 	)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def add_price_row(cps, valid_from, uom, rate=None, entered_gross=None, tax_basis=None,
                   currency=None, source="Manual", source_ref=None, notes=None):
 	"""Draft a dated price row and run the §6 price rule on it.

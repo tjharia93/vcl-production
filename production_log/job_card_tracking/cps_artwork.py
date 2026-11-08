@@ -87,7 +87,7 @@ def reevaluate(spec_name):
 		frappe.log_error(frappe.get_traceback(), "cps_artwork.reevaluate {0}".format(spec_name))
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def mark(version, state, reason=None, evidence=None):
 	"""Manager marks a version Customer-approved or Not applicable (with a reason)."""
 	doc = frappe.get_doc(ARTWORK_VERSION, version)
@@ -106,7 +106,7 @@ def mark(version, state, reason=None, evidence=None):
 	return {"version": doc.name, "approval_state": doc.approval_state}
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def record_decision(version, card, decision, notes=None):
 	"""Production Manager records continue / hold / rework for an open card on the change request."""
 	doc = frappe.get_doc(ARTWORK_VERSION, version)

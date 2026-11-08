@@ -150,7 +150,7 @@ def revoke(iq):
 		release.reevaluate_for_spec(spec.name)
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def transfer_from_iq(cps, iq):
 	"""Deal-page / "Create spec from this quote" entry point."""
 	if not frappe.has_permission(CPS, "write", cps):

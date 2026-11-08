@@ -309,7 +309,7 @@ def _parse(text):
 	return value if isinstance(value, dict) else None
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def run_grandfather(dry_run=1):
 	"""System Manager entry point for the §1 migration. Dry run by default."""
 	if "System Manager" not in frappe.get_roles():

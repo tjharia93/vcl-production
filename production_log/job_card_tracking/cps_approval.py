@@ -156,7 +156,7 @@ def evaluate_technical(doc):
 	return decision
 
 
-@frappe.whitelist()
+@frappe.whitelist(methods=["POST"])
 def approve_technical(cps, decision, notes=None):
 	"""Approve or reject the specification's current revision (§1).
 
