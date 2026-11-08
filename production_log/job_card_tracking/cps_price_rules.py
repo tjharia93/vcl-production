@@ -312,3 +312,43 @@ def iq_revocation_values(iq_name):
 		"approval_status": cps_rules.APPROVAL_REJECTED,
 		"approval_notes": "IQ {0} cancelled; price withdrawn".format(iq_name),
 	}
+
+
+# IQ product_category -> CPS product_type (Codex r5 item 2: the IQ must be for
+# the same kind of thing as the specification it prices).
+IQ_CATEGORY_TO_PRODUCT_TYPE = {
+	"Carton": "Carton",
+	"Label": "Label",
+	"Computer Paper": "Computer Paper",
+	"Exercise Book": "Exercise Books",
+	"ETR": "ETR (Reel to Reel Printing)",
+}
+
+
+def iq_relationship_errors(iq, spec, customer_lead=None):
+	"""Why this IQ may not price this specification: customer, kind, or link.
+
+	``customer_lead`` is the Customer's ``lead_name`` so a lead-converted
+	customer still matches the IQ raised against the lead.
+	"""
+	errors = []
+	iq_customer = (_get(iq, "customer") or "").strip()
+	spec_customer = (_get(spec, "customer") or "").strip()
+	iq_lead = (_get(iq, "lead") or "").strip()
+	if iq_customer:
+		if iq_customer != spec_customer:
+			errors.append("IQ customer {0} is not the specification's {1}".format(iq_customer, spec_customer))
+	elif iq_lead:
+		if not customer_lead or customer_lead != iq_lead:
+			errors.append("IQ lead {0} is not the specification customer's lead".format(iq_lead))
+	else:
+		errors.append("IQ names neither a customer nor a lead")
+
+	expected = IQ_CATEGORY_TO_PRODUCT_TYPE.get((_get(iq, "product_category") or "").strip())
+	if expected != cps_rules.normalise_product_type(_get(spec, "product_type")):
+		errors.append("IQ is for {0}, the specification is {1}".format(_get(iq, "product_category") or "nothing", _get(spec, "product_type")))
+
+	linked = (_get(spec, "vcl_source_iq") or "").strip()
+	if linked and linked != _get(iq, "name"):
+		errors.append("specification is linked to {0}, not {1}".format(linked, _get(iq, "name")))
+	return errors

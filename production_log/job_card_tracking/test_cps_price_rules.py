@@ -204,6 +204,36 @@ class TestIQTransfer(unittest.TestCase):
 		self.assertIn("IQ-2026-00012", values["approval_notes"])
 
 
+class TestIQRelationship(unittest.TestCase):
+	def iq(self, **kw):
+		base = {"name": "IQ-1", "customer": "ACME Ltd", "lead": None, "product_category": "Carton"}
+		base.update(kw)
+		return base
+
+	def spec(self, **kw):
+		base = {"name": "CTN-SPEC-00001", "customer": "ACME Ltd", "product_type": "Carton", "vcl_source_iq": None}
+		base.update(kw)
+		return base
+
+	def test_matching_iq_passes(self):
+		self.assertEqual(rules.iq_relationship_errors(self.iq(), self.spec()), [])
+		self.assertEqual(rules.iq_relationship_errors(self.iq(), self.spec(vcl_source_iq="IQ-1")), [])
+
+	def test_other_customer_kind_or_link_refused(self):
+		self.assertTrue(rules.iq_relationship_errors(self.iq(customer="Beta"), self.spec()))
+		self.assertTrue(rules.iq_relationship_errors(self.iq(product_category="Label"), self.spec()))
+		self.assertTrue(rules.iq_relationship_errors(self.iq(), self.spec(vcl_source_iq="IQ-9")))
+
+	def test_lead_converted_customer_matches_through_the_lead(self):
+		iq = self.iq(customer=None, lead="CRM-LEAD-0001")
+		self.assertTrue(rules.iq_relationship_errors(iq, self.spec()))
+		self.assertEqual(rules.iq_relationship_errors(iq, self.spec(), customer_lead="CRM-LEAD-0001"), [])
+
+	def test_etr_and_exercise_book_categories_map(self):
+		self.assertEqual(rules.iq_relationship_errors(self.iq(product_category="ETR"), self.spec(product_type="ETR (Reel to Reel Printing)")), [])
+		self.assertEqual(rules.iq_relationship_errors(self.iq(product_category="Exercise Book"), self.spec(product_type="Exercise Books")), [])
+
+
 class TestApprovalResetExtended(unittest.TestCase):
 	def test_currency_and_factor_changes_reset_approval(self):
 		before = row()

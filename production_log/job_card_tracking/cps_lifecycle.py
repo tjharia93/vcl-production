@@ -56,18 +56,59 @@ def has_lifecycle_fields(doc):
 
 
 def validate(doc):
-	"""Draft saves: the §2 tiers with the identity rule relaxed."""
+	"""Draft saves: the §2 tiers with the identity rule relaxed; a new record arrives unstamped."""
 	if not has_lifecycle_fields(doc):
 		return
+	if doc.is_new():
+		sanitise_initial_values(doc)
+		return
 	_enforce_tiers(doc, submitted=False)
+
+
+def sanitise_initial_values(doc):
+	"""Codex r5 item 1: nothing server-owned may be pre-set by the caller on insert.
+
+	Reset, not refused: a REST client or Data Import that copies a record
+	wholesale should still create the specification, just not pre-approved.
+	Server code (the IQ transfer, the migration) is exempt.
+	"""
+	if is_server_write():
+		return
+	forged = rules.forged_initial_values(doc)
+	if not forged:
+		return
+	resets, rows = rules.initial_value_resets(doc)
+	for fieldname, value in resets.items():
+		if doc.meta.get_field(fieldname):
+			doc.set(fieldname, value)
+	price_meta = frappe.get_meta("CPS Price")
+	for row, values in zip(doc.get("pricing") or [], rows):
+		for fieldname, value in values.items():
+			if price_meta.get_field(fieldname):
+				row.set(fieldname, value)
+	frappe.msgprint(
+		_("Approval and revision values supplied on creation were discarded: {0}.").format(", ".join(forged)),
+		indicator="orange",
+	)
+
+
+def record_revision_approval(doc, revision, user, now, rule=None):
+	"""Keep the per-revision approval history in the revision log (Codex r5 item 5)."""
+	doc.vcl_revision_log = json.dumps(
+		rules.approve_revision_in_log(doc.get("vcl_revision_log"), revision, user, now, rule), default=str
+	)
 
 
 def before_submit(doc):
 	"""Revision 1 exists from the moment the specification is real (§1)."""
 	if not has_lifecycle_fields(doc):
 		return
-	if int(doc.get("vcl_revision") or 0) < 1:
-		doc.vcl_revision = 1
+	# A draft may have been created by anyone; the submit is where revision 1
+	# is born, so every approval stamp present now is discarded (item 1).
+	if not is_server_write():
+		for fieldname in ("vcl_approved_rev", "vcl_approved_by", "vcl_approved_on", "vcl_approval_rule", "vcl_approval_notes", "vcl_revision_log"):
+			doc.set(fieldname, None)
+	doc.vcl_revision = 1
 	doc.vcl_approval_state = rules.APPROVAL_AWAITING
 	_stamp_revision(doc)
 	_run_technical_rule(doc)
@@ -167,12 +208,14 @@ def first_order_placed(cps):
 
 
 def grandfather_submitted_specs(authority=None, dry_run=False):
-	"""Stamp revision 1 / approved revision 1 on every submitted spec that has none.
+	"""§1 migration: stamp unstamped submitted specs, then reconcile legacy card bindings.
 
-	Idempotent: a stamped spec is never touched again. Run from
-	``after_migrate`` and callable by a System Manager. Writes with
-	``db.set_value`` so ``modified`` moves (Version records the migration) but
-	no validation re-runs on legacy records that could not pass it today.
+	Two independent, idempotent passes (Codex r5 item 11): ``stamp_specs`` touches
+	only specs with no revision; ``reconcile_card_bindings`` runs over every
+	unbound legacy card whose spec IS stamped, every time, so a binding that
+	did not verify yesterday is retried today. Writes with ``db.set_value`` so
+	no validation re-runs on legacy records; ``modified`` moves on the spec so
+	the stamp is visible, but no Version row is created by this path.
 	"""
 	if not frappe.get_meta(CPS).get_field("vcl_revision"):
 		return {"skipped": "fields not landed"}
@@ -184,15 +227,19 @@ def grandfather_submitted_specs(authority=None, dry_run=False):
 	if not authority:
 		return {"skipped": "no migration authority: set Selling Settings > CPS Migration Authority"}
 
+	stamped = stamp_specs(authority, dry_run)
+	bound, unbound = reconcile_card_bindings(dry_run)
+	if (stamped or bound) and not dry_run:
+		frappe.db.commit()
+	return {"stamped": stamped, "cards_bound": bound, "cards_left_unbound": unbound, "authority": authority, "dry_run": dry_run}
+
+
+def stamp_specs(authority, dry_run=False):
+	"""Pass 1: revision 1 / approved revision 1 on every submitted spec with no revision."""
 	date_text = frappe.utils.formatdate(frappe.utils.today(), "dd/mm/yyyy")
 	now = frappe.utils.now()
-	stamped, unbound = [], []
-	specs = frappe.get_all(
-		CPS,
-		filters={"docstatus": 1, "vcl_revision": ["<", 1]},
-		fields=["name", "status"],
-	)
-	for row in specs:
+	stamped = []
+	for row in frappe.get_all(CPS, filters={"docstatus": 1, "vcl_revision": ["<", 1]}, fields=["name"]):
 		doc = frappe.get_doc(CPS, row.name)
 		if not rules.needs_grandfathering(doc):
 			continue
@@ -202,43 +249,56 @@ def grandfather_submitted_specs(authority=None, dry_run=False):
 		values["vcl_revision_by"] = authority
 		payload = rules.build_revision_payload(doc, 1, now, authority, artwork_version=doc.get("artwork_tracker"))
 		values["vcl_revision_payload"] = json.dumps(payload, default=str, indent=1)
-		values["vcl_revision_log"] = json.dumps([payload], default=str)
+		values["vcl_revision_log"] = json.dumps(
+			rules.approve_revision_in_log([payload], 1, authority, now, "grandfathered {0}".format(date_text)), default=str
+		)
 		if not dry_run:
 			frappe.db.set_value(CPS, doc.name, values)
 		stamped.append(doc.name)
-		unbound.extend(_bind_legacy_cards(doc, payload, dry_run))
-
-	if stamped and not dry_run:
-		frappe.db.commit()
-	return {"stamped": stamped, "cards_left_unbound": unbound, "authority": authority, "dry_run": dry_run}
+	return stamped
 
 
-def _bind_legacy_cards(spec, payload, dry_run):
-	"""Backfill ``spec_revision`` = 1 on legacy cards whose snapshot verifies.
+def reconcile_card_bindings(dry_run=False):
+	"""Pass 2: ``spec_revision`` = 1 on legacy cards whose snapshot verifies against revision 1.
 
-	A card whose ``spec_snapshot`` disagrees with the grandfathered payload is
-	left unbound and reported, never forced.
+	Repeatable: selects every unbound order-derived card whose spec is stamped.
+	A card whose snapshot disagrees is left unbound and reported, never forced.
 	"""
-	from production_log.job_card_tracking import so_spec_control
+	from production_log.job_card_tracking import release_rules, so_spec_control
 
-	left = []
+	bound, left = [], []
+	payloads = {}
 	for doctype in so_spec_control.JOB_CARD_DOCTYPES.values():
 		meta = frappe.get_meta(doctype) if frappe.db.exists("DocType", doctype) else None
 		if not meta or not meta.get_field("spec_revision") or not meta.get_field("customer_product_spec"):
 			continue
 		cards = frappe.get_all(
 			doctype,
-			filters={"customer_product_spec": spec.name, "docstatus": ["<", 2], "spec_revision": ["<", 1]},
-			fields=["name", "spec_snapshot"],
+			filters={"docstatus": ["<", 2], "sales_order_item": ["is", "set"], "spec_revision": ["<", 1]},
+			fields=["name", "customer_product_spec", "spec_snapshot"],
 		)
 		for card in cards:
+			spec_name = card.customer_product_spec
+			if not spec_name:
+				left.append("{0}:{1} (no spec)".format(doctype, card.name))
+				continue
+			if spec_name not in payloads:
+				spec = frappe.db.get_value(CPS, spec_name, ["vcl_revision", "vcl_revision_log"], as_dict=True)
+				payloads[spec_name] = (
+					rules.payload_for_revision(spec.vcl_revision_log, 1) if spec and int(spec.vcl_revision or 0) >= 1 else None
+				)
+			payload = payloads[spec_name]
+			if payload is None:
+				left.append("{0}:{1} (spec not stamped)".format(doctype, card.name))
+				continue
 			snapshot = _parse(card.spec_snapshot)
-			if snapshot and not rules.payload_mismatches(payload, snapshot, spec.product_type):
+			if snapshot and not release_rules.snapshot_mismatches(snapshot, payload):
 				if not dry_run:
 					frappe.db.set_value(doctype, card.name, "spec_revision", 1, update_modified=False)
+				bound.append("{0}:{1}".format(doctype, card.name))
 			else:
 				left.append("{0}:{1}".format(doctype, card.name))
-	return left
+	return bound, left
 
 
 def _parse(text):
@@ -264,7 +324,7 @@ def after_migrate():
 	except Exception:
 		frappe.log_error(frappe.get_traceback(), "cps_lifecycle.after_migrate")
 		return
-	if result.get("stamped"):
-		print("CPS grandfather: stamped {0} specification(s); {1} legacy card(s) left unbound".format(
-			len(result["stamped"]), len(result.get("cards_left_unbound") or [])
+	if result.get("stamped") or result.get("cards_bound"):
+		print("CPS grandfather: stamped {0} specification(s); bound {1} card(s); {2} legacy card(s) left unbound".format(
+			len(result.get("stamped") or []), len(result.get("cards_bound") or []), len(result.get("cards_left_unbound") or [])
 		))

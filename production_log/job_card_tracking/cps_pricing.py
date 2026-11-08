@@ -299,9 +299,9 @@ def add_price_row(cps, valid_from, uom, rate=None, entered_gross=None, tax_basis
 		frappe.throw(_("Not permitted."), frappe.PermissionError)
 	if not uom:
 		frappe.throw(_("UOM is required - nothing is inferred from the product type."))
-	if source not in ("Quotation", cps_price_rules.SOURCE_INTERNAL_QUOTATION, cps_price_rules.SOURCE_LPO,
-	                  "Manual", cps_price_rules.SOURCE_MANAGEMENT_REPRICE, "Historical"):
-		frappe.throw(_("Unknown source {0}.").format(source))
+	if source not in ("Quotation", cps_price_rules.SOURCE_LPO, "Manual", cps_price_rules.SOURCE_MANAGEMENT_REPRICE, "Historical"):
+		# "Internal Quotation" is written by the transfer alone (Codex r5 item 2).
+		frappe.throw(_("Source must be Quotation, LPO, Manual, Management reprice or Historical."))
 
 	meta = frappe.get_meta("CPS Price")
 	values = {

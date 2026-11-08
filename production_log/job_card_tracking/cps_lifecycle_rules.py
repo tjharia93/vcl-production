@@ -344,6 +344,31 @@ def parse_revision_log(text):
 	return value if isinstance(value, list) else []
 
 
+def approve_revision_in_log(log, revision, user, now, rule=None):
+	"""Stamp the approval onto the revision's log entry: the per-revision approval HISTORY.
+
+	Approving revision 3 must not un-approve revision 2 (Codex r5 item 5), so
+	the ``vcl_approved_rev`` scalar is only the latest, and the log carries one
+	stamp per approved revision. Returns a new list.
+	"""
+	out = []
+	found = False
+	for entry in parse_revision_log(log):
+		entry = dict(entry or {})
+		if int(entry.get("_revision") or 0) == int(revision or 0):
+			entry.update({"_approved_by": user, "_approved_on": str(now), "_approval_rule": rule})
+			found = True
+		out.append(entry)
+	if not found:
+		out.append({"_revision": int(revision or 0), "_approved_by": user, "_approved_on": str(now), "_approval_rule": rule})
+	return out
+
+
+def approved_revisions(log):
+	"""Revision numbers carrying an approval stamp in the log."""
+	return sorted({int(e.get("_revision") or 0) for e in parse_revision_log(log) if isinstance(e, dict) and e.get("_approved_on")})
+
+
 def payload_for_revision(log, revision):
 	"""The stored payload for one revision number, from the log, or None."""
 	for payload in reversed(parse_revision_log(log)):
@@ -401,17 +426,20 @@ def is_technically_approved(spec):
 def revision_is_approved(spec, revision):
 	"""Whether a *specific* revision carries technical approval.
 
-	Codex r4 point 1: the card is evaluated against the revision bound to it,
-	not the spec's current one. Approval is a stamp on one revision number, so
-	a card bound to revision 2 stays approved when revision 3 is awaiting.
+	Codex r4 point 1 / r5 item 5: the card is evaluated against the revision
+	bound to it. The revision log holds one approval stamp per approved
+	revision (``approve_revision_in_log``), so approving revision 3 leaves a
+	card bound to revision 2 approved. The ``vcl_approved_rev`` scalar is the
+	latest approval and answers for sites whose log predates the history.
 	"""
 	if not revision:
 		return False
+	revision = int(revision)
+	if revision in approved_revisions(_get(spec, "vcl_revision_log")):
+		return True
 	approved_rev = int(_get(spec, "vcl_approved_rev") or 0)
-	if approved_rev != int(revision):
+	if approved_rev != revision:
 		return False
-	# The approval stamp only moves forward: an approved earlier revision stays
-	# approved. The state field describes the current revision.
 	if int(_get(spec, "vcl_revision") or 0) == approved_rev:
 		return _get(spec, "vcl_approval_state") == APPROVAL_APPROVED
 	return True
@@ -440,7 +468,62 @@ def needs_grandfathering(spec):
 	return int(_get(spec, "docstatus") or 0) == 1 and int(_get(spec, "vcl_revision") or 0) < 1
 
 
+# --- Initial values on insert (Codex r5 item 1) ------------------------------
+
+
+def forged_initial_values(doc):
+	"""Server-owned values a NEW document arrived with. Nothing may be pre-stamped."""
+	out = []
+	for fieldname in sorted(SERVER_OWNED_FIELDS):
+		if _norm(_get(doc, fieldname)) not in (None, 0):
+			out.append(fieldname)
+	for i, row in enumerate(_get(doc, "pricing") or []):
+		if (_get(row, "approval_status") or cps_rules.APPROVAL_DRAFT) != cps_rules.APPROVAL_DRAFT:
+			out.append("pricing[{0}].approval_status".format(i))
+		for f in ("approved_by", "approved_on", "approved_via", "approval_rule", "rule_benchmark"):
+			if _norm(_get(row, f)) is not None:
+				out.append("pricing[{0}].{1}".format(i, f))
+		if _get(row, "source") == IQ_SOURCE:
+			out.append("pricing[{0}].source".format(i))
+	return out
+
+
+def initial_value_resets(doc):
+	"""What to write on a new document a non-server caller pre-stamped: everything server-owned blank."""
+	resets = {f: None for f in SERVER_OWNED_FIELDS}
+	resets["vcl_revision"] = 0
+	rows = []
+	for row in _get(doc, "pricing") or []:
+		rows.append({
+			"approval_status": cps_rules.APPROVAL_DRAFT, "approved_by": None, "approved_on": None,
+			"approved_via": None, "approval_rule": None, "rule_benchmark": None,
+			"source": None if _get(row, "source") == IQ_SOURCE else _get(row, "source"),
+			"source_ref": None if _get(row, "source") == IQ_SOURCE else _get(row, "source_ref"),
+		})
+	return resets, rows
+
+
 # --- Shared authorisation check (§2) ------------------------------------------
+
+# A price row whose source is the IQ transfer is written by server code only
+# (Codex r5 item 2): its evidence drives automatic approval.
+IQ_SOURCE = "Internal Quotation"
+
+
+def _is_revocation(prev, row):
+	"""Approved -> Draft with the stamps cleared: what revoke_approval_on_edit writes.
+
+	Allowed from any caller, because it is the consequence of a rep editing the
+	row's terms (Codex r5 item 9), not a grant of anything.
+	"""
+	if prev is None:
+		return False
+	return (
+		_get(prev, "approval_status") == cps_rules.APPROVAL_APPROVED
+		and _get(row, "approval_status") == cps_rules.APPROVAL_DRAFT
+		and _norm(_get(row, "approved_by")) is None
+		and _norm(_get(row, "approved_on")) is None
+	)
 
 Unauthorised = namedtuple("Unauthorised", ("fieldname", "tier", "reason"))
 
@@ -505,13 +588,25 @@ def unauthorised_changes(before, after, roles, is_server=False, first_order_plac
 		before_rows = _price_rows_by_name(before)
 		for key, row in _price_rows_by_name(after).items():
 			prev = before_rows.get(key)
+			revoked = _is_revocation(prev, row)
 			for f in PRICE_ROW_SERVER_FIELDS:
 				old = _norm(_get(prev, f)) if prev is not None else None
 				new = _norm(_get(row, f))
 				if prev is None and f == "approval_status" and new in (None, "draft", cps_rules.APPROVAL_DRAFT):
 					continue
+				if revoked and new is None:
+					continue
+				if revoked and f == "approval_status":
+					continue
 				if old != new:
 					out.append(Unauthorised("pricing." + f, TIER_DERIVED, "server-written"))
+			# The IQ transfer's identity is evidence for automatic approval.
+			if _get(row, "source") == IQ_SOURCE and (prev is None or _get(prev, "source") != IQ_SOURCE):
+				out.append(Unauthorised("pricing.source", TIER_DERIVED, "Internal Quotation rows are written by the transfer"))
+			elif prev is not None and _get(prev, "source") == IQ_SOURCE and (
+				_get(row, "source") != IQ_SOURCE or _norm(_get(row, "source_ref")) != _norm(_get(prev, "source_ref"))
+			):
+				out.append(Unauthorised("pricing.source_ref", TIER_DERIVED, "Internal Quotation rows are written by the transfer"))
 	return out
 
 

@@ -17,6 +17,32 @@ class TestMarginMarkup(unittest.TestCase):
 		self.assertIsNone(rules.markup_on_cost_pct(100, 0))
 
 
+class TestNormaliseBenchmark(unittest.TestCase):
+	def test_same_basis_is_identity(self):
+		self.assertEqual(rules.normalise_benchmark(10, "KES", "KES", 1, 1), 10.0)
+		self.assertEqual(rules.normalise_benchmark(10, None, None, None, None), 10.0)
+
+	def test_uom_conversion(self):
+		# Benchmark per Carton of 1000 (cf 1000) brought to a row priced per Nos (cf 1).
+		self.assertEqual(rules.normalise_benchmark(5000, "KES", "KES", 1000, 1), 5.0)
+		# And the other way.
+		self.assertEqual(rules.normalise_benchmark(5, "KES", "KES", 1, 1000), 5000.0)
+
+	def test_gross_is_netted(self):
+		self.assertEqual(rules.normalise_benchmark(11.6, "KES", "KES", 1, 1, gross=True), 10.0)
+
+	def test_incomparable_is_none(self):
+		self.assertIsNone(rules.normalise_benchmark(10, "USD", "KES", 1, 1))
+		self.assertIsNone(rules.normalise_benchmark(10, "KES", "KES", None, 1000))
+		self.assertIsNone(rules.normalise_benchmark(None, "KES", "KES", 1, 1))
+
+	def test_an_underpriced_row_is_not_auto_approved_against_a_per_carton_list_price(self):
+		# Item Price 5,000 per Carton (1000 pcs); row 4.9 per Nos.
+		bench = rules.normalise_benchmark(5000, "KES", "KES", 1000, 1)
+		d = rules.resolve(SEED, "Computer Paper", "Price", rate=4.9, benchmarks={rules.BENCHMARK_STANDARD_SELLING: bench})
+		self.assertEqual(d.outcome, rules.OUTCOME_ROUTE)
+
+
 class TestCandidates(unittest.TestCase):
 	def test_customer_specific_beats_generic_whatever_priority(self):
 		generic = {"rule_name": "g", "product_type": "Carton", "stage": "Price", "priority": 1, "enabled": 1}

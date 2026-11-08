@@ -140,6 +140,20 @@ class TestApproval(unittest.TestCase):
 		self.assertFalse(rules.is_technically_approved(carton(vcl_approval_state="Awaiting approval")))
 		self.assertFalse(rules.is_technically_approved(carton(vcl_revision=0, vcl_approved_rev=0)))
 
+	def test_approval_history_keeps_earlier_revisions_approved(self):
+		# Codex r5 (5): approving rev 3 must not un-approve rev 2.
+		log = json.dumps([{"_revision": 1}, {"_revision": 2}, {"_revision": 3}])
+		log = rules.approve_revision_in_log(log, 2, "neema", "2026-11-01 10:00:00", "CP technical")
+		log = rules.approve_revision_in_log(log, 3, "neema", "2026-11-05 10:00:00", "CP technical")
+		self.assertEqual(rules.approved_revisions(log), [2, 3])
+		spec = carton(vcl_revision=3, vcl_approved_rev=3, vcl_approval_state="Approved", vcl_revision_log=json.dumps(log))
+		self.assertTrue(rules.revision_is_approved(spec, 2))
+		self.assertTrue(rules.revision_is_approved(spec, 3))
+		self.assertFalse(rules.revision_is_approved(spec, 1))
+		# A revision absent from the log is appended, so the history survives a missing payload.
+		log = rules.approve_revision_in_log("", 1, "u", "now")
+		self.assertEqual(rules.approved_revisions(log), [1])
+
 	def test_bound_earlier_revision_stays_approved(self):
 		# Codex r4 (1): the card is judged against the revision bound to it.
 		spec = carton(vcl_revision=3, vcl_approved_rev=2, vcl_approval_state="Awaiting approval")
@@ -210,6 +224,41 @@ class TestUnauthorisedChanges(unittest.TestCase):
 		after = carton(pricing=[{"name": "r1", "rate": 10, "approval_status": "Approved", "approved_by": "x"}])
 		out = rules.unauthorised_changes(before, after, self.MGR)
 		self.assertEqual(sorted(u.fieldname for u in out), ["pricing.approval_status", "pricing.approved_by"])
+
+	def test_revocation_by_edit_is_allowed_for_a_rep(self):
+		# Codex r5 (9): revoke_approval_on_edit writes Approved -> Draft with the
+		# stamps cleared; that must not be refused as a server-owned change.
+		before = carton(pricing=[{"name": "r1", "rate": 10, "approval_status": "Approved", "approved_by": "m", "approved_on": "t"}])
+		after = carton(pricing=[{"name": "r1", "rate": 11, "approval_status": "Draft", "approved_by": None, "approved_on": None}])
+		self.assertEqual(rules.unauthorised_changes(before, after, self.REP), [])
+		# But Draft -> Approved, or keeping the stamps while changing terms, is refused.
+		kept = carton(pricing=[{"name": "r1", "rate": 11, "approval_status": "Approved", "approved_by": "rep", "approved_on": "t"}])
+		self.assertEqual([u.fieldname for u in rules.unauthorised_changes(before, kept, self.REP)], ["pricing.approved_by"])
+
+	def test_iq_rows_are_server_only(self):
+		# Codex r5 (2): a rep cannot label a row as the IQ transfer.
+		row = {"name": None, "rate": 10, "approval_status": "Draft", "source": "Internal Quotation", "source_ref": "IQ-1"}
+		out = rules.unauthorised_changes(carton(), carton(pricing=[row]), self.MGR)
+		self.assertEqual([u.fieldname for u in out], ["pricing.source"])
+		self.assertEqual(rules.unauthorised_changes(carton(), carton(pricing=[row]), self.MGR, is_server=True), [])
+		before = carton(pricing=[{"name": "r1", "rate": 10, "approval_status": "Approved", "source": "Internal Quotation", "source_ref": "IQ-1"}])
+		after = carton(pricing=[{"name": "r1", "rate": 10, "approval_status": "Approved", "source": "Internal Quotation", "source_ref": "IQ-2"}])
+		self.assertEqual([u.fieldname for u in rules.unauthorised_changes(before, after, self.MGR)], ["pricing.source_ref"])
+
+	def test_forged_initial_values_are_named_and_reset(self):
+		# Codex r5 (1): a new CPS may not arrive pre-approved.
+		doc = carton(vcl_approval_state="Approved", vcl_approved_rev=1, vcl_revision=1,
+		             pricing=[{"rate": 10, "approval_status": "Approved", "approved_by": "x", "source": "Internal Quotation", "source_ref": "IQ-1"}])
+		forged = rules.forged_initial_values(doc)
+		for f in ("vcl_approval_state", "vcl_approved_rev", "vcl_revision", "pricing[0].approval_status", "pricing[0].approved_by", "pricing[0].source"):
+			self.assertIn(f, forged)
+		resets, rows = rules.initial_value_resets(doc)
+		self.assertIsNone(resets["vcl_approval_state"])
+		self.assertEqual(resets["vcl_revision"], 0)
+		self.assertEqual(rows[0]["approval_status"], "Draft")
+		self.assertIsNone(rows[0]["source"])
+		clean = carton(vcl_revision=0, vcl_approved_rev=None, vcl_approval_state=None, pricing=[{"rate": 10, "approval_status": "Draft", "source": "LPO"}])
+		self.assertEqual(rules.forged_initial_values(clean), [])
 
 	def test_describe_lists_every_refusal(self):
 		out = rules.unauthorised_changes(carton(), carton(status="Inactive", vcl_revision=5), self.REP)

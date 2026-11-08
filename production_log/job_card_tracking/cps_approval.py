@@ -42,25 +42,57 @@ def load_rules():
 
 
 def benchmarks_for(spec, row=None):
-	"""The benchmark values a price rule may ask for, None when absent."""
+	"""The benchmark values a price rule may ask for, normalised to the ROW's basis.
+
+	Codex r5 items 2 and 10: the IQ is read only from the server-set
+	``vcl_source_iq`` (never from a caller-supplied ``source_ref``), and every
+	figure is brought to the row's currency and UOM, net of VAT, before the
+	rule compares it. A benchmark that cannot be normalised is None (Continue).
+	"""
+	from production_log.job_card_tracking import cps_pricing
+
 	values = {}
+	row = row or {}
+	row_currency = cps_price_rules.row_currency(row)
+	row_uom = row.get("uom")
+	row_cf = row.get("conversion_factor") or cps_pricing.item_conversion_factor(spec.get("linked_item"), row_uom)
+	on_date = row.get("valid_from") or frappe.utils.today()
 	item = spec.get("linked_item")
+
 	if item:
-		price = frappe.db.get_value(
+		prices = frappe.get_all(
 			"Item Price",
-			{"item_code": item, "price_list": STANDARD_SELLING, "selling": 1},
-			"price_list_rate",
+			filters={"item_code": item, "price_list": STANDARD_SELLING, "selling": 1},
+			fields=["price_list_rate", "currency", "uom", "valid_from", "valid_upto"],
 			order_by="valid_from desc",
 		)
-		values[rules.BENCHMARK_STANDARD_SELLING] = float(price) if price not in (None, "") else None
+		list_price = None
+		for price in prices:
+			if price.valid_from and str(price.valid_from) > str(on_date):
+				continue
+			if price.valid_upto and str(price.valid_upto) < str(on_date):
+				continue
+			list_price = rules.normalise_benchmark(
+				price.price_list_rate, price.currency, row_currency,
+				cps_pricing.item_conversion_factor(item, price.uom) if price.uom else 1.0, row_cf,
+			)
+			break
+		values[rules.BENCHMARK_STANDARD_SELLING] = list_price
+
 	iq_name = spec.get("vcl_source_iq")
-	if not iq_name and row is not None and row.get("source") == cps_price_rules.SOURCE_INTERNAL_QUOTATION:
-		iq_name = row.get("source_ref")
 	if iq_name and frappe.db.exists("DocType", "Internal Quotation"):
-		iq = frappe.db.get_value("Internal Quotation", iq_name, ["management_price", "cost_price"], as_dict=True)
+		iq = frappe.db.get_value(
+			"Internal Quotation", iq_name,
+			["management_price", "cost_price", "vcl_uom", "vcl_currency", "vcl_tax_basis"], as_dict=True,
+		)
 		if iq:
-			values[rules.BENCHMARK_IQ_MANAGEMENT] = float(iq.management_price) if iq.management_price not in (None, "") else None
-			values[rules.BENCHMARK_IQ_COST] = float(iq.cost_price) if iq.cost_price not in (None, "") else None
+			iq_cf = cps_pricing.item_conversion_factor(item, iq.vcl_uom) if iq.vcl_uom else None
+			gross = (iq.vcl_tax_basis or "") == cps_price_rules.IQ_TAX_BASIS_GROSS
+			values[rules.BENCHMARK_IQ_MANAGEMENT] = rules.normalise_benchmark(
+				iq.management_price, iq.vcl_currency, row_currency, iq_cf, row_cf, gross=gross,
+			)
+			# Cost is always a net figure.
+			values[rules.BENCHMARK_IQ_COST] = rules.normalise_benchmark(iq.cost_price, iq.vcl_currency, row_currency, iq_cf, row_cf)
 	return values
 
 
@@ -110,12 +142,14 @@ def evaluate_technical(doc):
 		return None
 	decision = resolve_technical(doc)
 	if decision.outcome == rules.OUTCOME_AUTO_APPROVE:
+		now = frappe.utils.now()
 		values = cps_lifecycle_rules.technical_approval_values(
-			doc.vcl_revision, rules.SYSTEM_USER, frappe.utils.now(), rule=decision.rule,
+			doc.vcl_revision, rules.SYSTEM_USER, now, rule=decision.rule,
 			notes=rules.comment_text(decision),
 		)
 		for fieldname, value in values.items():
 			doc.set(fieldname, value)
+		cps_lifecycle.record_revision_approval(doc, doc.vcl_revision, rules.SYSTEM_USER, now, decision.rule)
 	else:
 		doc.vcl_approval_notes = rules.comment_text(decision)
 	frappe.flags.cps_technical_decision = decision
@@ -144,9 +178,11 @@ def approve_technical(cps, decision, notes=None):
 	if decision == "approve":
 		if cps_lifecycle_rules.is_technically_approved(doc):
 			frappe.throw(_("Revision {0} is already approved.").format(doc.vcl_revision))
+		now = frappe.utils.now()
 		values = cps_lifecycle_rules.technical_approval_values(
-			doc.vcl_revision, frappe.session.user, frappe.utils.now(), rule=routed.rule, notes=notes,
+			doc.vcl_revision, frappe.session.user, now, rule=routed.rule, notes=notes,
 		)
+		cps_lifecycle.record_revision_approval(doc, doc.vcl_revision, frappe.session.user, now, routed.rule)
 	else:
 		if not (notes or "").strip():
 			frappe.throw(_("A reason is required to reject a revision."))

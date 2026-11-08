@@ -43,6 +43,7 @@ def on_iq_cancel(doc, method=None):
 
 
 def specs_for_iq(iq_name):
+	"""Specs linked to this IQ: ``vcl_source_iq``, or a submitted SO line whose quotation came from it."""
 	if not frappe.get_meta(CPS).get_field("vcl_source_iq"):
 		return []
 	return frappe.get_all(CPS, filters={"vcl_source_iq": iq_name, "docstatus": ["<", 2]}, pluck="name")
@@ -82,6 +83,19 @@ def transfer(iq, cps):
 
 	if iq.get("status") != cps_price_rules.IQ_APPROVED_STATUS:
 		return {"transferred": False, "reason": "IQ not Approved"}
+
+	# Codex r5 item 2: the caller must be able to read the IQ, and the IQ must
+	# be for this customer (or their lead), this kind of product, and linked.
+	if not frappe.has_permission(IQ, "read", iq.name):
+		frappe.throw(_("Not permitted to read {0}.").format(iq.name), frappe.PermissionError)
+	customer_lead = frappe.db.get_value("Customer", spec.customer, "lead_name") if spec.customer else None
+	relationship = cps_price_rules.iq_relationship_errors(iq, spec, customer_lead)
+	if relationship:
+		spec.add_comment("Comment", _("Price not transferred from {0}: {1}.").format(iq.name, "; ".join(relationship)))
+		return {"transferred": False, "reason": "; ".join(relationship)}
+	if not (spec.get("vcl_source_iq") or "").strip() and spec.meta.get_field("vcl_source_iq"):
+		# First transfer binds the IQ to the spec; server-written.
+		spec.vcl_source_iq = iq.name
 
 	errors = cps_price_rules.iq_transfer_errors(iq)
 	if errors:

@@ -102,6 +102,32 @@ def markup_on_cost_pct(rate, cost):
 	return (rate - cost) / cost * 100.0
 
 
+# --- Benchmark normalisation (Codex r5 item 10) --------------------------------
+
+
+def normalise_benchmark(value, from_currency, to_currency, from_factor, to_factor, gross=False, vat_pct=16.0):
+	"""Bring a benchmark to the row's currency and UOM, net of VAT; None if it cannot be.
+
+	``from_factor`` / ``to_factor`` are "UOM -> stock UOM" factors. No currency
+	conversion is attempted: a different currency is not comparable (None).
+	"""
+	amount = _num(value)
+	if amount is None:
+		return None
+	if ((from_currency or "").strip() or "KES") != ((to_currency or "").strip() or "KES"):
+		return None
+	from_factor, to_factor = _num(from_factor), _num(to_factor)
+	if from_factor is None and to_factor is None:
+		pass
+	elif not from_factor or not to_factor:
+		return None
+	else:
+		amount = amount / from_factor * to_factor
+	if gross:
+		amount = amount / (1.0 + (vat_pct or 0.0) / 100.0)
+	return round(amount, 9)
+
+
 # --- Candidates ---------------------------------------------------------------
 
 
