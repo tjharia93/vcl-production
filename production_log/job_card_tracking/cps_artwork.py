@@ -112,8 +112,12 @@ def mark(version, state, reason=None, evidence=None):
 def record_decision(version, card, decision, notes=None):
 	"""Production Manager records continue / hold / rework for an open card on the change request."""
 	doc = frappe.get_doc(ARTWORK_VERSION, version)
-	if not frappe.has_permission(ARTWORK_VERSION, "write", doc):
-		frappe.throw(_("Not permitted to record decisions on {0}.").format(version), frappe.PermissionError)
+	# The Production Manager holds READ on artwork versions (the record is the
+	# rep's and the manager's); the decision is authorised by the dedicated role
+	# (decision_refusal) plus write permission on the card it changes, and the
+	# write to change_request below is a narrowly scoped server db.set_value.
+	if not frappe.has_permission(ARTWORK_VERSION, "read", doc):
+		frappe.throw(_("Not permitted to read {0}.").format(version), frappe.PermissionError)
 	change_request = json.loads(doc.change_request or "[]")
 	entry = next((e for e in change_request if e.get("card") == card), None)
 	refusal = rules.decision_refusal(decision, frappe.get_roles(), entry)

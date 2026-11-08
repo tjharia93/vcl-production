@@ -26,6 +26,11 @@ class CPSArtworkVersion(Document):
 			frappe.throw(_(str(exc)), title=_("Artwork Version"))
 		for fieldname, value in values.items():
 			self.set(fieldname, value)
+		# Every server-owned field starts blank, whatever the caller sent (Codex r7).
+		for fieldname in rules.SERVER_FIELDS:
+			if fieldname not in values and self.meta.get_field(fieldname):
+				self.set(fieldname, 0 if fieldname == "superseded" else None)
+		self.na_reason = None
 		self._previous_current = rules.current_version(existing)
 
 	def validate(self):

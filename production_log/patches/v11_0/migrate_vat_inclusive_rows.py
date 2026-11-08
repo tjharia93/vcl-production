@@ -19,10 +19,10 @@ from production_log.job_card_tracking import cps_price_rules
 def execute():
 	if not (frappe.db.has_column("CPS Price", "vat_inclusive") and frappe.db.has_column("CPS Price", "tax_basis")):
 		return
-	rows = frappe.get_all(
-		"CPS Price",
-		filters={"vat_inclusive": 1, "tax_basis": ["in", ["", None]]},
-		fields=["name", "parent", "rate", "uom"],
+	rows = frappe.db.sql(
+		"""SELECT name, parent, rate, uom FROM `tabCPS Price`
+		WHERE vat_inclusive = 1 AND (tax_basis IS NULL OR tax_basis = '')""",
+		as_dict=True,
 	)
 	for row in rows:
 		frappe.db.set_value(

@@ -190,12 +190,18 @@ def _artwork_state(spec_name, bound_version=None):
 
 
 def _bound_revision(card, spec):
-	"""The card's own binding, else (first evaluation only) the spec's current revision."""
+	"""The card's own binding and nothing else (Codex r7).
+
+	``spec_revision`` is stamped once, at creation, from the specification's
+	revision at that moment (``stamp_creation_binding``); the migration binds
+	legacy cards whose snapshot verifies. A card with neither stays Held with
+	"binding unverified" until a manager rebinds it explicitly.
+	"""
 	for fieldname in ("spec_revision", "release_spec_revision"):
 		value = card.get(fieldname) if card.meta.get_field(fieldname) else None
 		if value:
 			return int(value)
-	return int(spec.get("vcl_revision") or 0)
+	return 0
 
 
 def _bound_payload(spec, revision):
@@ -327,9 +333,8 @@ def _apply(card, ctx, results, fingerprint, trigger, contention):
 		"release_checks": json.dumps(release_rules.results_payload(results), default=str),
 		"release_fingerprint": json.dumps(fingerprint, default=str),
 	}
-	# First evaluation binds; afterwards only refresh_binding moves these.
-	if card.meta.get_field("spec_revision") and not card.get("spec_revision") and ctx.get("bound_revision"):
-		values["spec_revision"] = ctx["bound_revision"]
+	# The revision binding is never stamped here (creation or migration only);
+	# the first evaluation binds price row and artwork, then only refresh_binding.
 	if not card.get("release_price_row") and (ctx.get("price_row") or {}).get("name"):
 		values["release_price_row"] = ctx["price_row"]["name"]
 	if not card.get("release_artwork_version") and (ctx.get("artwork") or {}).get("version"):
@@ -416,14 +421,38 @@ def _apply(card, ctx, results, fingerprint, trigger, contention):
 # ---------------------------------------------------------------------------
 
 
-def on_card_insert(card):
-	"""Controllers' ``after_insert``: hold (Enforce) and evaluate at once (§7a)."""
+def stamp_creation_binding(card):
+	"""On a NEW gated card: blank hold / release state, then bind the spec's current revision and hold (Enforce).
+
+	Called from the controllers' ``validate`` while ``is_new()``. The hold is
+	written here, in the insert itself, so an Enforce-mode card is On Hold from
+	its first moment; the evaluation that may clear it runs after commit.
+	"""
 	if not is_gated(card):
 		return
-	try:
-		evaluate(card.doctype, card.name, trigger="insert")
-	except Exception:
-		frappe.log_error(frappe.get_traceback(), "release.on_card_insert {0}".format(card.name))
+	spec_name = card.get("customer_product_spec")
+	if spec_name and card.meta.get_field("spec_revision") and frappe.get_meta(CPS).get_field("vcl_revision"):
+		card.spec_revision = int(frappe.db.get_value(CPS, spec_name, "vcl_revision") or 0) or None
+	card.release_state = release_rules.STATE_HELD
+	if enforcing() and card.get("job_status") not in ("On Hold", "Closed", "Cancelled", "Completed") and card.meta.get_field("hold_reason"):
+		card.hold_previous_status = card.get("job_status")
+		card.job_status = "On Hold"
+		card.hold_reason = release_rules.HOLD_REASON_AWAITING
+		card.hold_remarks = "Awaiting release evaluation"
+		card.hold_by = release_rules.SYSTEM_USER
+		card.hold_on = frappe.utils.now()
+
+
+def on_card_insert(card):
+	"""Controllers' ``after_insert``: evaluate after the insert commits (§7a).
+
+	Enqueued, not run inline (Codex r7 item 3): the insert transaction already
+	holds the new card's row and would take the parents afterwards - the
+	opposite of ``lock_and_version``'s order.
+	"""
+	if not is_gated(card):
+		return
+	_reevaluate_async([(card.doctype, card.name)], trigger="insert")
 
 
 def cards_for_spec(spec_name):
@@ -450,18 +479,61 @@ def cards_for_order(so_name):
 	return out
 
 
-def _reevaluate(cards, trigger):
-	if frappe.flags.in_release_evaluate or gate_off():
+DEADLOCK_RETRIES = 3
+
+
+def _is_deadlock(exc):
+	if isinstance(exc, getattr(frappe, "QueryDeadlockError", ())):
+		return True
+	args = getattr(exc, "args", ())
+	return bool(args) and args[0] in (1213, 1205)
+
+
+def reevaluate_cards(cards, trigger="spec"):
+	"""Background job: evaluate each card, retrying transient deadlocks / lock waits."""
+	if gate_off():
 		return
 	for doctype, name in cards:
-		try:
-			evaluate(doctype, name, trigger=trigger)
-		except Exception:
-			frappe.log_error(frappe.get_traceback(), "release.reevaluate {0} {1}".format(doctype, name))
+		for attempt in range(1, DEADLOCK_RETRIES + 1):
+			try:
+				evaluate(doctype, name, trigger=trigger)
+				frappe.db.commit()
+				break
+			except Exception as exc:
+				frappe.db.rollback()
+				if _is_deadlock(exc) and attempt < DEADLOCK_RETRIES:
+					continue
+				frappe.log_error(frappe.get_traceback(), "release.reevaluate {0} {1} (attempt {2})".format(doctype, name, attempt))
+				break
+
+
+def _reevaluate_async(cards, trigger):
+	"""Enqueue after the current transaction commits (Codex r7 item 3).
+
+	A save hook holds the spec (or artwork) row and would then lock the order
+	- the reverse of ``lock_and_version``. Running after commit, in its own
+	job, keeps one lock order on every path. Inert when the gate is Off.
+	"""
+	if not cards or frappe.flags.in_release_evaluate or gate_off():
+		return
+	if frappe.flags.in_test or frappe.flags.in_migrate:
+		reevaluate_cards(cards, trigger)
+		return
+	frappe.enqueue(
+		"production_log.job_card_tracking.release.reevaluate_cards",
+		queue="short",
+		enqueue_after_commit=True,
+		cards=list(cards),
+		trigger=trigger,
+	)
+
+
+def _reevaluate(cards, trigger):
+	_reevaluate_async(cards, trigger)
 
 
 def reevaluate_for_spec(spec_name, trigger="spec"):
-	"""Re-evaluate every live card whose fingerprint names this specification."""
+	"""Re-evaluate (after commit) every live card whose fingerprint names this specification."""
 	_reevaluate(cards_for_spec(spec_name), trigger)
 
 

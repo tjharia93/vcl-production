@@ -122,6 +122,10 @@ class OrderDerivedJobCard:
 			for fieldname in RELEASE_SERVER_FIELDS:
 				if self.meta.get_field(fieldname):
 					self.set(fieldname, 0 if fieldname == "print_superseded" else None)
+			# Then the one creation-time binding and, in Enforce, the hold.
+			from production_log.job_card_tracking import release
+
+			release.stamp_creation_binding(self)
 			return
 		before = self.get_doc_before_save()
 		if before is None:

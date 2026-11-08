@@ -31,7 +31,7 @@ def ctx(**kw):
 		"line": {"name": "SOI-1", "custom_cps": "CTN-SPEC-00001", "qty": 1000, "rate": 42.0, "uom": "Nos", "conversion_factor": 1, "custom_cps_price_row": "row-1"},
 		"other_cards_qty": 0,
 		"card": {"quantity_ordered": 1000, "customer_product_spec": "CTN-SPEC-00001", "item_code": "3 PLY PRINTED CARTON",
-		         "spec_snapshot": {"ctn_length_mm": 400, "ctn_width_mm": 300, "ply": "3"}, "customer_hold": 0, "artwork_approved": 0},
+		         "spec_snapshot": cps_rules.build_spec_snapshot(s, [], [], "t"), "customer_hold": 0, "artwork_approved": 0},
 		"spec": s,
 		"bound_revision": s["vcl_revision"],
 		"bound_payload": payload,
@@ -115,16 +115,39 @@ class TestCheck4(unittest.TestCase):
 		self.assertFalse(by_number(rules.evaluate(ctx(spec=spec(carton_applies_diecut=1)))[0])[4].passed)
 
 	def test_snapshot_must_match_the_bound_revision(self):
-		c = ctx(); c["card"]["spec_snapshot"] = {"ctn_length_mm": 410}
+		c = ctx(); c["card"]["spec_snapshot"]["ctn_length_mm"] = 410
 		r = by_number(rules.evaluate(c)[0])[4]
 		self.assertFalse(r.passed)
 		self.assertIn("ctn_length_mm", r.message)
+
+	def test_missing_snapshot_evidence_fails_not_skips(self):
+		# Codex r7: a key the snapshot should carry but does not is a failure.
+		c = ctx(); del c["card"]["spec_snapshot"]["ctn_height_mm"]
+		r = by_number(rules.evaluate(c)[0])[4]
+		self.assertFalse(r.passed)
+		self.assertIn("ctn_height_mm (missing in snapshot)", r.message)
+		c = ctx(); c["card"]["spec_snapshot"] = None
+		self.assertIn("snapshot", by_number(rules.evaluate(c)[0])[4].message)
+		# Keys the snapshot never carried (print_type is not a snapshot scalar) are not demanded.
+		self.assertTrue(by_number(rules.evaluate(ctx())[0])[4].passed)
+
+	def test_unbound_card_stays_held_with_binding_unverified(self):
+		# Codex r7: no fallback to the live spec; checks 4, 5, 8 and 11 fail.
+		results, fp = rules.evaluate(ctx(bound_revision=0, bound_payload=None))
+		for n in (4, 5, 8, 11):
+			self.assertFalse(by_number(results)[n].passed, n)
+		self.assertIn("binding unverified", by_number(results)[4].message)
+		self.assertIsNone(fp["bound_construction"])
+		results, _ = rules.evaluate(ctx(bound_payload=None))
+		self.assertIn("no stored payload", by_number(results)[4].message)
 
 	def test_card_bound_to_earlier_approved_revision_is_judged_against_it(self):
 		# Codex r4 (1): spec moved to rev 2 (awaiting), card bound to approved rev 1.
 		s = spec(vcl_revision=2, vcl_approved_rev=1, vcl_approval_state="Awaiting approval", ctn_length_mm=450)
 		rev1 = cps_lifecycle_rules.build_revision_payload(spec(), 1, "t", "u")
-		results, fp = rules.evaluate(ctx(spec=s, bound_revision=1, bound_payload=rev1))
+		c = ctx(spec=s, bound_revision=1, bound_payload=rev1)
+		c["card"]["spec_snapshot"] = cps_rules.build_spec_snapshot(spec(), [], [], "t")  # frozen at rev 1
+		results, fp = rules.evaluate(c)
 		self.assertTrue(by_number(results)[4].passed)
 		self.assertTrue(by_number(results)[8].passed)
 		self.assertEqual(fp["spec_revision"], 1)
@@ -134,7 +157,6 @@ class TestCheck4(unittest.TestCase):
 		s = spec(product_type="Computer Paper", job_size="A4", number_of_parts=2, numbering_answer="No",
 		         colour_of_parts=[{"part_number": 1, "paper_type": "Bond", "gsm": 60, "colour": "White", "purpose": ""}])
 		c = ctx(spec=s, item_control=cps_rules.ItemControl(True, "Computer Paper", "inherited", "g", "x"))
-		c["card"]["spec_snapshot"] = {}
 		r = by_number(rules.evaluate(c)[0])[4]
 		self.assertFalse(r.passed)
 		self.assertIn("colour_of_parts", r.message)

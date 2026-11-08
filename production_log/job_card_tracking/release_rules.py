@@ -143,17 +143,35 @@ def check_orderable(ctx):
 
 
 def _bound_fields(ctx):
-	"""The revision the card is bound to: its payload when stored, else the spec."""
-	return ctx.get("bound_payload") or ctx.get("spec") or {}
+	"""The revision the card is bound to: its stored payload, and NOTHING else.
+
+	Codex r7: never the live specification. A card with no bound payload has
+	no construction evidence and checks 4-7 say so.
+	"""
+	return ctx.get("bound_payload") or {}
 
 
-def snapshot_mismatches(snapshot, payload):
-	"""Keys present in BOTH the card's snapshot and the bound payload that disagree."""
-	if not isinstance(snapshot, dict) or not isinstance(payload, dict):
+def snapshot_mismatches(snapshot, payload, product_type=None):
+	"""Keys of the bound payload the card's snapshot must carry and agree with.
+
+	The snapshot freezes ``cps_rules.snapshot_scalar_fields(product_type)`` plus
+	the two colour tables; every one of those that the payload also carries is
+	compared, and one MISSING from the snapshot is a mismatch (Codex r7: absent
+	evidence fails, it does not skip). A snapshot that is not a dict at all is
+	reported as the single mismatch "snapshot".
+	"""
+	if not isinstance(payload, dict):
 		return []
+	if not isinstance(snapshot, dict):
+		return ["snapshot"]
+	product_type = product_type or payload.get("_product_type")
+	compared = set(cps_rules.snapshot_scalar_fields(product_type)) | set(cps_lifecycle_rules.REVISION_TABLES)
 	out = []
 	for key, expected in payload.items():
-		if key.startswith("_") or key not in snapshot:
+		if key.startswith("_") or key not in compared:
+			continue
+		if key not in snapshot:
+			out.append(key + " (missing in snapshot)")
 			continue
 		found = snapshot.get(key)
 		if isinstance(expected, list) or isinstance(found, list):
@@ -174,6 +192,10 @@ def _rows(value):
 
 def check_construction(ctx):
 	spec = ctx.get("spec") or {}
+	if not ctx.get("bound_revision"):
+		return _result(4, False, "binding unverified: no specification revision bound to this card")
+	if not ctx.get("bound_payload"):
+		return _result(4, False, "binding unverified: no stored payload for revision {0}".format(ctx.get("bound_revision")))
 	bound = _bound_fields(ctx)
 	product_type = _get(spec, "product_type")
 	# Subtype decisions (ply, the die-cut route) come from the bound payload
@@ -194,7 +216,7 @@ def check_construction(ctx):
 	if missing:
 		return _result(4, False, "construction incomplete: {0}".format(", ".join(missing)))
 
-	mismatches = snapshot_mismatches(_get(ctx.get("card"), "spec_snapshot"), ctx.get("bound_payload"))
+	mismatches = snapshot_mismatches(_get(ctx.get("card"), "spec_snapshot"), ctx.get("bound_payload"), product_type)
 	if mismatches:
 		return _result(4, False, "card snapshot differs from revision {0}: {1}".format(
 			ctx.get("bound_revision"), ", ".join(mismatches)))
@@ -207,6 +229,8 @@ def _is_printed(fields):
 
 def check_print_defined(ctx):
 	bound = _bound_fields(ctx)
+	if not bound:
+		return _result(5, False, "binding unverified: no stored revision payload")
 	print_type = _get(bound, "print_type") or _get(bound, "printing_or_plain")
 	if _blank(print_type):
 		return _result(5, False, "print type not set")
@@ -352,7 +376,9 @@ def build_fingerprint(ctx):
 		"item_controlled": bool(_get(ctx.get("item_control"), "controlled")) if ctx.get("item_control") is not None else None,
 		"allowance_kes": _num(allowance[0]),
 		"allowance_pct": _num(allowance[1]),
-		"bound_construction": _hash({k: v for k, v in payload.items() if not k.startswith("_")}),
+		# Hash of the BOUND payload only; None when there is none (check 11 then fails).
+		"bound_construction": _hash({k: v for k, v in payload.items() if not k.startswith("_")}) if payload else None,
+		"bound_payload_present": bool(payload),
 		"spec": s(_get(spec, "name")),
 		"spec_docstatus": int(_num(_get(spec, "docstatus"))),
 		"spec_customer": s(_get(spec, "customer")),
@@ -395,6 +421,8 @@ def check_freshness(ctx, current_fingerprint):
 	if int(_num(_get(card, "customer_hold"))):
 		# Non-overridable by §7b: a customer hold is not a check anyone clears.
 		return CheckResult(11, CHECK_NAMES[11], False, True, False, "customer hold is set")
+	if not current_fingerprint.get("bound_payload_present"):
+		return _result(11, False, "binding unverified: no bound revision payload to fingerprint")
 	changes = fingerprint_changes(ctx.get("stored_fingerprint"), current_fingerprint)
 	if changes:
 		return _result(11, False, "inputs changed since the last evaluation: {0}".format(", ".join(changes)))
