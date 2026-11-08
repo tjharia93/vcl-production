@@ -25,6 +25,15 @@ CONTROL_FLAG = "custom_cps_control_enabled"
 SO_MODE_FIELD = "custom_cps_so_mode"
 QUOTE_MODE_FIELD = "custom_cps_quotation_mode"
 
+# §7 / Codex r5: the job-card gate has its own switch. Off: no holds, no
+# evaluation. Observe: evaluate and record, never hold or block print (the two
+# weeks' observation mode in §9). Enforce: hold on insert, refuse print.
+GATE_MODE_FIELD = "custom_cps_gate_mode"
+GATE_OFF = "Off"
+GATE_OBSERVE = "Observe"
+GATE_ENFORCE = "Enforce"
+GATE_MODES = (GATE_OFF, GATE_OBSERVE, GATE_ENFORCE)
+
 # Read-only explanation of why Item.custom_requires_cps holds the value it does.
 # Written alongside the flag, because a derived read-only Check with no stated
 # reason is a value the user can neither change nor understand.
@@ -87,6 +96,14 @@ def quotation_mode():
 	if not _has_field("Selling Settings", QUOTE_MODE_FIELD):
 		return cps_rules.QUOTE_MODE_OFF
 	return cps_rules.normalise_quote_mode(frappe.db.get_single_value("Selling Settings", QUOTE_MODE_FIELD))
+
+
+def gate_mode():
+	"""Off / Observe / Enforce for the job-card release gate. Ships Off."""
+	if not _has_field("Selling Settings", GATE_MODE_FIELD):
+		return GATE_OFF
+	value = (frappe.db.get_single_value("Selling Settings", GATE_MODE_FIELD) or "").strip()
+	return value if value in GATE_MODES else GATE_OFF
 
 
 def control_enabled():

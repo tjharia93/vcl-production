@@ -118,7 +118,11 @@ doc_events = {
 	"Sales Order": {
 		"validate": "production_log.job_card_tracking.so_spec_control.validate",
 		"on_submit": "production_log.job_card_tracking.so_spec_control.on_submit",
-		"on_cancel": "production_log.job_card_tracking.so_spec_control.on_cancel",
+		"on_cancel": [
+			"production_log.job_card_tracking.so_spec_control.on_cancel",
+			# Draft cards on a cancelled order re-evaluate (check 1 fails, non-overridable).
+			"production_log.job_card_tracking.release.on_sales_order_change",
+		],
 		# §7c/d: an amended or cancelled order re-evaluates the cards whose
 		# release fingerprint names it.
 		"on_update_after_submit": "production_log.job_card_tracking.release.on_sales_order_change",
@@ -138,6 +142,7 @@ doc_events = {
 	# §7c: a revised spec, a status or approval change re-evaluates its cards.
 	"Customer Product Specification": {
 		"on_update_after_submit": "production_log.job_card_tracking.release.on_spec_change",
+		"on_cancel": "production_log.job_card_tracking.release.on_spec_change",
 	},
 	# §7: an artwork version marked or superseded re-evaluates the cards bound to it.
 	"CPS Artwork Version": {

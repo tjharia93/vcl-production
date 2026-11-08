@@ -227,6 +227,33 @@ class TestCheck11(unittest.TestCase):
 		_, fp2 = rules.evaluate(ctx(spec=s, bound_revision=1))
 		self.assertIn("spec_current_revision", rules.fingerprint_changes(fp, fp2))
 
+	def test_fingerprint_covers_every_input_the_checks_read(self):
+		# Codex r5 (6): each of these moves a check's answer, so each must move the fingerprint.
+		_, base = rules.evaluate(ctx())
+		variants = {
+			"order_date": ctx(order=dict(ctx()["order"], transaction_date="2026-11-02")),
+			"order_customer": ctx(order=dict(ctx()["order"], customer="Beta")),
+			"order_docstatus": ctx(order=dict(ctx()["order"], docstatus=2)),
+			"line_cps": ctx(line=dict(ctx()["line"], custom_cps="CTN-SPEC-00002")),
+			"line_item": ctx(line=dict(ctx()["line"], item_code="OTHER")),
+			"line_uom": ctx(line=dict(ctx()["line"], uom="Carton")),
+			"card_qty": ctx(card=dict(ctx()["card"], quantity_ordered=999)),
+			"card_snapshot": ctx(card=dict(ctx()["card"], spec_snapshot={"ctn_length_mm": 1})),
+			"card_artwork_approved": ctx(card=dict(ctx()["card"], artwork_approved=1)),
+			"other_cards_qty": ctx(other_cards_qty=5),
+			"allowance_kes": ctx(allowance=(2.0, 1.0)),
+			"allowance_pct": ctx(allowance=(1.0, 0.5)),
+			"bound_construction": ctx(bound_payload=cps_lifecycle_rules.build_revision_payload(spec(ctn_width_mm=301), 1, "t", "u")),
+			"price_rate": ctx(price_row=dict(ctx()["price_row"], rate=43)),
+			"price_approval_status": ctx(price_row=dict(ctx()["price_row"], approval_status="Draft")),
+			"artwork_version": ctx(artwork={"state": "Customer-approved", "version": "v9", "versions_exist": True, "superseded": False, "note": ""}),
+			"item_product_type": ctx(item_control=cps_rules.ItemControl(True, "Label", "inherited", "g", "x")),
+			"customer_hold": ctx(card=dict(ctx()["card"], customer_hold=1)),
+		}
+		for key, variant in variants.items():
+			_, fp = rules.evaluate(variant)
+			self.assertIn(key, rules.fingerprint_changes(base, fp), "fingerprint must notice {0}".format(key))
+
 	def test_customer_hold_is_required_and_non_overridable(self):
 		c = ctx(); c["card"]["customer_hold"] = 1
 		results, _ = rules.evaluate(c)

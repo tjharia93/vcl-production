@@ -20,8 +20,39 @@ RETIRED_SELLING_SETTINGS_FIELDS = ("custom_cps_price_tolerance_pct", "custom_cps
 
 def execute():
 	create_custom_fields(get_custom_fields(), ignore_validate=True)
+	initialise_settings()
 	retire_thresholds()
 	frappe.clear_cache()
+
+
+def initialise_settings():
+	"""Write the intended values into tabSingles explicitly (Codex r5).
+
+	A Custom Field default is metadata; it does not populate an existing
+	Single. Each value is written only when blank, so a configured value -
+	including a deliberate zero - survives a re-run. The SO mode is derived
+	from the live tick so behaviour does not change on deploy.
+	"""
+	current = {
+		f: frappe.db.get_single_value("Selling Settings", f)
+		for f in (
+			so_spec_control.CONTROL_FLAG, so_spec_control.SO_MODE_FIELD, so_spec_control.QUOTE_MODE_FIELD,
+			so_spec_control.GATE_MODE_FIELD, cps_price_rules.ALLOWANCE_FIELD, cps_price_rules.ALLOWANCE_PCT_FIELD,
+			cps_lifecycle.MIGRATION_AUTHORITY_FIELD,
+		)
+	}
+	intended = {
+		so_spec_control.SO_MODE_FIELD: cps_rules.QUOTE_MODE_ENFORCE if current[so_spec_control.CONTROL_FLAG] else cps_rules.QUOTE_MODE_OFF,
+		so_spec_control.QUOTE_MODE_FIELD: cps_rules.QUOTE_MODE_WARN,
+		so_spec_control.GATE_MODE_FIELD: so_spec_control.GATE_OFF,
+		cps_price_rules.ALLOWANCE_FIELD: cps_price_rules.ALLOWANCE_DEFAULT_KES,
+		cps_price_rules.ALLOWANCE_PCT_FIELD: cps_price_rules.ALLOWANCE_DEFAULT_PCT,
+		cps_lifecycle.MIGRATION_AUTHORITY_FIELD: cps_lifecycle.DEFAULT_MIGRATION_AUTHORITY if frappe.db.exists("User", cps_lifecycle.DEFAULT_MIGRATION_AUTHORITY) else None,
+	}
+	for fieldname, value in intended.items():
+		if current.get(fieldname) in (None, "") and value not in (None, ""):
+			frappe.db.set_single_value("Selling Settings", fieldname, value)
+			print("Selling Settings.{0} initialised to {1}".format(fieldname, value))
 
 
 def retire_thresholds():
@@ -48,12 +79,25 @@ def get_custom_fields():
 				),
 			},
 			{
+				"fieldname": so_spec_control.GATE_MODE_FIELD,
+				"label": "Job Card Release Gate",
+				"fieldtype": "Select",
+				"options": "\n".join(("",) + so_spec_control.GATE_MODES),
+				"default": so_spec_control.GATE_OFF,
+				"insert_after": so_spec_control.SO_MODE_FIELD,
+				"description": (
+					"Off: cards are never held by the gate. Observe: every card is evaluated and the "
+					"result recorded, but nothing is held and Print is never refused (observation mode). "
+					"Enforce: a card from a controlled order line is held until every check passes."
+				),
+			},
+			{
 				"fieldname": so_spec_control.QUOTE_MODE_FIELD,
 				"label": "CPS Control on Quotations",
 				"fieldtype": "Select",
 				"options": "\n".join(("",) + cps_rules.QUOTE_MODES),
 				"default": cps_rules.QUOTE_MODE_WARN,
-				"insert_after": so_spec_control.SO_MODE_FIELD,
+				"insert_after": so_spec_control.GATE_MODE_FIELD,
 				"description": "Ships as Warn: a quotation line for a controlled Item with no specification is flagged and logged, never refused.",
 			},
 			{

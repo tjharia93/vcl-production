@@ -27,6 +27,8 @@ Context keys (all plain dicts / values):
   stored_fingerprint   dict or None
 """
 
+import hashlib
+import json
 from collections import namedtuple
 
 from production_log.job_card_tracking import cps_lifecycle_rules, cps_price_rules, cps_rules
@@ -298,21 +300,56 @@ def check_rate(ctx):
 # --- Fingerprint (check 11) ---------------------------------------------------
 
 
+def _hash(value):
+	"""A stable digest of a JSON-able structure (snapshot, bound payload)."""
+	if value in (None, "", [], {}):
+		return None
+	return hashlib.sha1(json.dumps(value, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+
+
 def build_fingerprint(ctx):
-	"""Everything checks 1-10 read, as JSON-safe scalars."""
+	"""EVERY input checks 1-10 read, as JSON-safe scalars (Codex r5 item 6).
+
+	Order identity and state, the line's commercial terms and spec, the card's
+	own quantity, snapshot and artwork tick, competing card quantity, the spec's
+	revision/approval/status, the bound construction contents, the bound price
+	row's terms, the artwork version and state, the allowance settings and the
+	customer hold. Anything that can move a check's answer is here, so a stale
+	fingerprint is the only way a released card can fall out of date.
+	"""
 	line, order, spec, row, card = ctx.get("line") or {}, ctx.get("order") or {}, ctx.get("spec") or {}, ctx.get("price_row") or {}, ctx.get("card") or {}
 	artwork = ctx.get("artwork") or {}
+	allowance = ctx.get("allowance") or (cps_price_rules.ALLOWANCE_DEFAULT_KES, cps_price_rules.ALLOWANCE_DEFAULT_PCT)
+	payload = ctx.get("bound_payload") or {}
 
 	def s(value):
 		return None if value in (None, "") else str(value)
 
 	return {
+		"order": s(_get(order, "name")),
+		"order_docstatus": int(_num(_get(order, "docstatus"))),
+		"order_status": s(_get(order, "status")),
+		"order_date": s(cps_rules.to_date(_get(order, "transaction_date"))),
+		"order_customer": s(_get(order, "customer")),
 		"so_line": s(_get(line, "name")),
+		"line_cps": s(_get(line, "custom_cps")),
+		"line_item": s(_get(line, "item_code")),
+		"line_uom": s(_get(line, "uom")),
 		"qty": _num(_get(line, "qty")),
 		"rate": cps_rules.round_rate(_get(line, "rate")) if _get(line, "rate") not in (None, "") else None,
 		"currency": s(_get(order, "currency")),
 		"conversion_factor": _num(_get(line, "conversion_factor")) or None,
-		"order_status": s(_get(order, "status")),
+		"card_qty": _num(_get(card, "quantity_ordered")),
+		"card_spec": s(_get(card, "customer_product_spec")),
+		"card_item": s(_get(card, "item_code")),
+		"card_snapshot": _hash(_get(card, "spec_snapshot")),
+		"card_artwork_approved": int(_num(_get(card, "artwork_approved"))),
+		"other_cards_qty": _num(ctx.get("other_cards_qty")),
+		"item_product_type": s(_get(ctx.get("item_control"), "product_type")),
+		"item_controlled": bool(_get(ctx.get("item_control"), "controlled")) if ctx.get("item_control") is not None else None,
+		"allowance_kes": _num(allowance[0]),
+		"allowance_pct": _num(allowance[1]),
+		"bound_construction": _hash({k: v for k, v in payload.items() if not k.startswith("_")}),
 		"spec": s(_get(spec, "name")),
 		"spec_revision": int(_num(ctx.get("bound_revision"))),
 		"spec_current_revision": int(_num(_get(spec, "vcl_revision"))),

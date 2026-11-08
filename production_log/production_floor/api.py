@@ -553,7 +553,8 @@ def _refuse_held_job_card(job_card, doctype=None):
 	except Exception:
 		frappe.log_error(frappe.get_traceback(), "production_floor release check {0}".format(job_card))
 		return
-	if status.get("gated") and status.get("block"):
+	# Observe mode records the block but refuses nothing; Enforce refuses.
+	if status.get("gated") and status.get("block") and not status.get("can_print"):
 		frappe.throw(_("{0} cannot be planned: {1}.").format(job_card, status["block"]), title=_("Job Card Held"))
 
 
