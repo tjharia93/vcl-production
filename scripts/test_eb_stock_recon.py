@@ -39,6 +39,8 @@ class StockReconBrowser(unittest.TestCase):
         self.page.on("pageerror", lambda error: self.errors.append(str(error)))
         self.fail_comment = self.fail_insert = self.drop_insert = self.bad_response = False
         self.fail_submit = self.drop_submit = False
+        self.fail_refresh_after_submit = False
+        self.draft_count = 0
         self.draft = None
         groups = ["Exercise Books", "Exercise Book Covers", "Exercise Book Inserts", "Folds", "Swara Exercise Books"]
         self.groups = [{"name": n, "parent_item_group": "Exercise Books" if n != "Exercise Books" else "All Item Groups"} for n in groups]
@@ -114,7 +116,8 @@ class StockReconBrowser(unittest.TestCase):
                     route.fulfill(body="Upstream response unavailable", content_type="text/html"); return
                 if self.fail_insert:
                     route.fulfill(status=403, json={"exception": "Permission denied"}); return
-                result = dict(json.loads(json.dumps(doc)), name="MAT-RECO-TEST-001", docstatus=0,
+                self.draft_count += 1
+                result = dict(json.loads(json.dumps(doc)), name=f"MAT-RECO-TEST-{self.draft_count:03}", docstatus=0,
                               posting_date="2026-11-07", posting_time="11:00:00", expense_account="Stock Adjustment - VCL", cost_center="Main - VCL", difference_amount=0)
                 for row in result["items"]:
                     b = next((b for b in self.bins if b["item_code"] == row["item_code"] and b["warehouse"] == row["warehouse"]), {})
@@ -132,6 +135,8 @@ class StockReconBrowser(unittest.TestCase):
             result = dict(can_post=True, user="test@vimit.com", shifts=["Day Shift", "Night Shift"])
         elif method == "frappe.client.get_list":
             doctype = args["doctype"]
+            if doctype == "Bin" and self.fail_refresh_after_submit and self.draft and self.draft["docstatus"] == 1:
+                route.fulfill(status=503, json={"exception": "Stock read unavailable"}); return
             data = {"Item Group": self.groups, "Item": self.items, "Bin": self.bins}.get(doctype, [])
             filters = json.loads(args.get("filters", "[]"))
             result = [x for x in data if self.matches(x, filters)]
@@ -378,6 +383,58 @@ class StockReconBrowser(unittest.TestCase):
         self.assertEqual(self.page.locator(".rc tbody tr").count(), 1)
         swara.click()
         self.assertEqual(self.row(COVER).locator("input").input_value(), "100")
+
+    def test_next_submission_without_reloading_page(self):
+        self.prepare_draft()
+        self.submit_confirmations()
+        self.page.wait_for_function("document.querySelector('#rc-result').innerText.includes('Ready for the next count')")
+        self.assertEqual(self.row(COVER).locator("input").input_value(), "")
+        self.assertFalse(self.row(COVER).locator("input").is_disabled())
+        self.assertEqual(self.page.locator('[data-rc-brand="Swara"]').get_attribute("aria-pressed"), "true")
+        self.assertEqual(self.page.locator("#rc-reason").input_value(), "Physical floor count by Peter")
+        self.enter(COVER, "90")
+        self.assertIn("-10 sheets", self.row(COVER).inner_text())
+        self.review()
+        self.accept()
+        self.submit_confirmations()
+        self.page.wait_for_function("document.querySelector('#rc-result').innerText.includes('MAT-RECO-TEST-002') && document.querySelector('#rc-result').innerText.includes('Ready for the next count')")
+        submitted = [data["doc"] for method, data in self.posts if method == "frappe.client.submit"]
+        self.assertEqual([d["name"] for d in submitted], ["MAT-RECO-TEST-001", "MAT-RECO-TEST-002"])
+        self.assertEqual([d["items"][0]["qty"] for d in submitted], [100, 90])
+        self.assertEqual(self.bins[0]["actual_qty"], 90)
+
+    def test_next_phone_count_keeps_filters_and_clears_zero_opt_in(self):
+        self.page.set_viewport_size({"width": 390, "height": 844})
+        self.open()
+        for field, value in [("size", "A4"), ("pages", "120"), ("ruling", "SL")]:
+            self.page.locator("#rc-" + field).select_option(value)
+        self.page.locator("#rc-zero").check()
+        self.enter(COVER, "100")
+        self.review()
+        self.accept()
+        self.submit_confirmations()
+        self.page.wait_for_function("document.querySelector('#rc-result').innerText.includes('Ready for the next count')")
+        for field, value in [("size", "A4"), ("pages", "120"), ("ruling", "SL")]:
+            self.assertEqual(self.page.locator("#rc-" + field).input_value(), value)
+        self.assertFalse(self.page.locator("#rc-zero").is_checked())
+        self.page.locator("#rc-stage").select_option("inserts")
+        self.enter(INSERT, "60")
+        self.assertFalse(self.page.locator("#rc-create").is_disabled())
+
+    def test_failed_post_submit_refresh_can_retry_without_reload_or_resubmit(self):
+        self.prepare_draft()
+        self.fail_refresh_after_submit = True
+        self.submit_confirmations()
+        self.page.wait_for_function("document.querySelector('#rc-result').innerText.includes('Balance refresh failed')")
+        self.assertTrue(self.row(COVER).locator("input").is_disabled())
+        self.assertFalse(self.page.locator("#rc-refresh").is_disabled())
+        self.assertEqual(self.page.locator("#rc-submit").count(), 0)
+        self.fail_refresh_after_submit = False
+        self.page.locator("#rc-refresh").click()
+        self.page.wait_for_function("document.querySelector('#rc-result').innerText.includes('Ready for the next count')")
+        self.assertFalse(self.row(COVER).locator("input").is_disabled())
+        self.assertEqual(self.row(COVER).locator("input").input_value(), "")
+        self.assertEqual(sum(m == "frappe.client.submit" for m, _ in self.posts), 1)
 
 
 if __name__ == "__main__":

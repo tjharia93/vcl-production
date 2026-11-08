@@ -139,6 +139,12 @@ user's normal ERPNext submit permission. Submission is the step that changes sto
 Already-submitted drafts are recognised without a second submit call. A lost response
 offers **Check submission status**, which reads the existing document instead of posting
 again. Success stays successful even if refreshing the balances fails.
+
+After confirmed submission and balance refresh, the posted counts and document state
+are cleared automatically so the next count can be entered on the same page. Brand,
+stage, filters and count reference are kept; zero-valuation opt-in resets for each batch.
+If the balance refresh fails, **Refresh ERP stock** retries the reads and unlocks the
+next count when successful, without another submit call or a page reload.
 The page makes no assumption that capture kill-switch/roles grant reconciliation rights.
 No Frappe Cloud backend deploy or migration is needed for this screen.
 
@@ -150,4 +156,5 @@ These intercept every API call and check blank/zero/matching counts, carton conv
 exact cover variants, filters, stale balances, draft/comment failure, duplicate prevention,
 permission refusal, pagination beyond 500 items, phone layout, both submit confirmations,
 changed drafts, movements after draft creation, lost submit responses, inline note retry,
-and coloured brand selection. No live stock is written by the tests.
+coloured brand selection, successive submissions without reloading, phone filter retention,
+and retrying a failed post-submit refresh. No live stock is written by the tests.

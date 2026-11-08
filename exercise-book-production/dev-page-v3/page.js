@@ -1417,7 +1417,7 @@
     var rows = RC.rows.filter(function (r) { return r.stage === RC.stage && (r.stage === "carton" || r.d.brand === RC.brand) &&
       (r.stage === "carton" || ((!RC.size || r.d.size === RC.size) && (!RC.pages || String(r.d.pages) === RC.pages) && (!RC.ruling || r.d.ruling === RC.ruling))) &&
       (!RC.q || (r.code + " " + r.name).toLowerCase().indexOf(RC.q.toLowerCase()) >= 0); });
-    var h = '<div class="cap rc"><div class="cap-card"><div class="cap-h"><div><h3>Stock reconciliation / true-up</h3><span class="cap-note">Physical stock now · read ' + esc(RC.loadedAt.toLocaleString("en-GB")) + '</span></div><button class="cap-sec" id="rc-refresh"' + dis + '>Refresh ERP stock</button></div>' +
+    var h = '<div class="cap rc"><div class="cap-card"><div class="cap-h"><div><h3>Stock reconciliation / true-up</h3><span class="cap-note">Physical stock now · read ' + esc(RC.loadedAt.toLocaleString("en-GB")) + '</span></div><button class="cap-sec" id="rc-refresh"' + (RC.busy || RC.uncertain || (RC.created && !RC.submitted) ? " disabled" : "") + '>Refresh ERP stock</button></div>' +
       '<p class="cap-note">Enter what is physically on hand. Blank means leave unchanged; enter 0 only when you counted none. Cover sheets, folds and inserts are counted in sheets or sets. Finished books use full cartons plus loose books where a Carton unit exists. Each cover variant stays separate.</p>' +
       '<div><span class="lb">Brand — choose first</span><div class="rc-brands" id="rc-brands" role="group" aria-label="Brand">' +
       uniq(RC.rows.filter(function (r) { return r.stage !== "carton"; }).map(function (r) { return r.d.brand; })).sort(function (a, b) { return ["Prince", "Swara", "Hi5", "School", "Other"].indexOf(a) - ["Prince", "Swara", "Hi5", "School", "Other"].indexOf(b); }).map(function (brand) {
@@ -1452,7 +1452,7 @@
       var r = RC.rows[Number(el.dataset.rc)]; (RC.counts[r.key] = RC.counts[r.key] || {})[el.dataset.field] = el.value;
       el.setAttribute("aria-invalid", isNaN(rcCount(r)) ? "true" : "false"); $("rc-var-" + el.dataset.rc).innerHTML = rcVariance(r); rcSummary();
     }; });
-    $("rc-refresh").onclick = function () { RC.busy = true; renderRecon(); rcBins(RC.rows).then(function (bins) { rcApplyBins(RC.rows, bins); RC.loadedAt = new Date(); rcStatus("ERP balances refreshed. Your physical counts have been kept; review the variances."); }).catch(function (e) { rcStatus(esc(e.message), "bad"); }).finally(function () { RC.busy = false; if (S.view === "recon") renderRecon(); }); };
+    $("rc-refresh").onclick = function () { if (RC.submitted) { rcSubmitted(RC.draft); return; } RC.busy = true; renderRecon(); rcBins(RC.rows).then(function (bins) { rcApplyBins(RC.rows, bins); RC.loadedAt = new Date(); rcStatus("ERP balances refreshed. Your physical counts have been kept; review the variances."); }).catch(function (e) { rcStatus(esc(e.message), "bad"); }).finally(function () { RC.busy = false; if (S.view === "recon") renderRecon(); }); };
     $("rc-reset").onclick = function () { dialog("Start a new stock count?", "<p>This clears the counts on this screen. Existing ERPNext documents are kept.</p>", "Start new count", function () { RC.counts = {}; RC.reason = ""; RC.zero = false; RC.created = null; RC.draft = null; RC.noteSaved = false; RC.submitted = false; RC.message = ""; RC.rows = null; renderRecon(); }); };
     $("rc-export").onclick = function () { download("EB stock count " + today(), ["Item code", "Item", "Warehouse", "Unit", "ERP quantity", "Physical quantity", "Variance", "Stock read at"], rows.map(function (r) { var n = rcCount(r); return [r.code, r.name, r.wh, r.unit, r.qty, n === null || isNaN(n) ? "" : n, n === null || isNaN(n) ? "" : n - r.qty, RC.loadedAt.toISOString()]; })); };
     if ($("rc-create")) $("rc-create").onclick = rcReview;
@@ -1553,12 +1553,18 @@
     }).catch(function (e) { RC.busy = false; rcStatus("Could not confirm submission status. " + esc(e.message), "warn"); if (S.view === "recon") renderRecon(); });
   }
   function rcSubmitted(doc) {
-    RC.submitted = true; RC.uncertain = false; RC.draft = doc;
-    rcStatus("Submitted ✓ " + esc(doc.name) + ". Stock true-up applied.", "ok");
+    RC.busy = true; RC.submitted = true; RC.uncertain = false; RC.draft = doc;
+    rcStatus("Submitted ✓ " + esc(doc.name) + ". Stock true-up applied. Refreshing balances…", "ok");
+    if (S.view === "recon") renderRecon();
     // A refresh failure must never turn a successful submission into a retry prompt.
     clearProduction(); O = null;
     return Promise.all([load(), rcBins(RC.rows).then(function (bins) { rcApplyBins(RC.rows, bins); RC.loadedAt = new Date(); })])
-      .catch(function () { rcStatus("Submitted ✓ " + esc(doc.name) + ". Stock true-up applied. Balance refresh failed; reload the page to see the latest stock.", "warn"); })
+      .then(function () {
+        // The posted batch is complete. Keep the brand, filters and count reference for the next one.
+        RC.counts = {}; RC.created = null; RC.draft = null; RC.noteSaved = false; RC.submitted = false; RC.savedNote = ""; RC.zero = false;
+        rcStatus("Submitted ✓ " + esc(doc.name) + ". Stock true-up applied. Ready for the next count.", "ok");
+      })
+      .catch(function () { rcStatus("Submitted ✓ " + esc(doc.name) + ". Stock true-up applied. Balance refresh failed; use Refresh ERP stock to retry here.", "warn"); })
       .finally(function () { RC.busy = false; if (S.view === "recon") renderRecon(); });
   }
   function rcInsert(doc) {
