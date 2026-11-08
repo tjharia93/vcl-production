@@ -11,7 +11,7 @@
  * - If the server methods are not deployed, Post says "Server update needed" and posts nothing.
  * - Reads through frappe.client.get_list. Long stock-recon filters use POST reads to
  *   fit the site's request-line limit. Priority writes VCL EB Priority; Stock recon
- *   creates standard reconciliation drafts only. Neither submits stock here.
+ *   creates and, after two confirmations, submits standard reconciliations.
  *
  * RULES (mirror of production_floor/eb_capture_rules.py; keep the two in step)
  * - Covers, folds, inserts count in SETS with the same up-count (A4 2-up, A5 3-up, from
@@ -1326,10 +1326,10 @@
     }).join("") + "</tbody></table><small>Books</small></div>";
   }
 
-  /* ---------- Stock recon: physical counts -> a standard ERPNext DRAFT ----------
-   * Absolute quantities, never production receipts. No submit endpoint is called here.
+  /* ---------- Stock recon: physical counts -> standard ERPNext reconciliation ----------
+   * Absolute quantities, never production receipts. Submission is confirmed twice.
    * Item + warehouse is the identity; cover variants are never pooled. */
-  var RC = { rows: null, counts: {}, stage: "covers", brand: "", size: "", pages: "", ruling: "", q: "", reason: "", busy: false, created: null, uncertain: false, zero: false, message: "" };
+  var RC = { rows: null, counts: {}, stage: "covers", brand: "", size: "", pages: "", ruling: "", q: "", reason: "", busy: false, created: null, uncertain: false, zero: false, message: "", draft: null, noteSaved: false, submitted: false };
   var RC_STAGES = [["covers", "Cover sheets"], ["folds", "Folds"], ["inserts", "Inserts"], ["fg", "Finished books"], ["carton", "Empty cartons"]];
   function rcList(doctype, fields, filters) {
     var out = [];
@@ -1400,6 +1400,7 @@
     var counted = rcCounted(), invalid = counted.some(function (r) { return isNaN(rcCount(r)) || r.blocked; }), diffs = rcChanged();
     if ($("rc-summary")) $("rc-summary").textContent = counted.length + " counted · " + diffs.length + " with a variance · " + ((RC.rows || []).length - counted.length) + " left blank (unchanged)";
     if ($("rc-create")) $("rc-create").disabled = rcFrozen() || invalid || !diffs.length || RC.reason.trim().length < 5;
+    if ($("rc-submit")) $("rc-submit").disabled = RC.busy || RC.uncertain || !RC.noteSaved;
   }
   function rcCell(r) { return r.stage === "fg" ? cb(r.qty, r.cpc) : '<b>' + f(r.qty) + '</b><small>' + esc(r.unit) + "</small>"; }
   function rcVariance(r) {
@@ -1418,7 +1419,10 @@
       (!RC.q || (r.code + " " + r.name).toLowerCase().indexOf(RC.q.toLowerCase()) >= 0); });
     var h = '<div class="cap rc"><div class="cap-card"><div class="cap-h"><div><h3>Stock reconciliation / true-up</h3><span class="cap-note">Physical stock now · read ' + esc(RC.loadedAt.toLocaleString("en-GB")) + '</span></div><button class="cap-sec" id="rc-refresh"' + dis + '>Refresh ERP stock</button></div>' +
       '<p class="cap-note">Enter what is physically on hand. Blank means leave unchanged; enter 0 only when you counted none. Cover sheets, folds and inserts are counted in sheets or sets. Finished books use full cartons plus loose books where a Carton unit exists. Each cover variant stays separate.</p>' +
-      '<div class="cap-fields">' + sel("rc-brand", "Brand — choose first", RC.brand, uniq(RC.rows.filter(function (r) { return r.stage !== "carton"; }).map(function (r) { return r.d.brand; })).sort()) +
+      '<div><span class="lb">Brand — choose first</span><div class="rc-brands" id="rc-brands" role="group" aria-label="Brand">' +
+      uniq(RC.rows.filter(function (r) { return r.stage !== "carton"; }).map(function (r) { return r.d.brand; })).sort(function (a, b) { return ["Prince", "Swara", "Hi5", "School", "Other"].indexOf(a) - ["Prince", "Swara", "Hi5", "School", "Other"].indexOf(b); }).map(function (brand) {
+        return '<button type="button" data-rc-brand="' + esc(brand) + '" data-b="' + esc(brand) + '" aria-pressed="' + (RC.brand === brand) + '"><b class="bdot">' + esc(brand) + '</b><span aria-hidden="true">' + (RC.brand === brand ? "✓" : "") + '</span></button>';
+      }).join("") + '</div></div><div class="cap-fields">' +
       '<label class="cap-f"><span class="lb">Stock stage</span><select id="rc-stage">' + RC_STAGES.map(function (x) { return '<option value="' + x[0] + '"' + (RC.stage === x[0] ? " selected" : "") + '>' + x[1] + '</option>'; }).join("") + '</select></label>' +
       sel("rc-size", "Size", RC.size, ["A4", "A5"]) +
       sel("rc-pages", "Pages", RC.pages, uniq(RC.rows.map(function (r) { return r.d.pages || ""; })).sort(function (a, b) { return a - b; })) +
@@ -1433,13 +1437,14 @@
           (r.blocked ? '<span class="cap-note">Count this item in ERPNext (batch/serial or different stock unit).</span>' : input("qty", r.stage === "fg" && r.cpc ? "Full cartons (" + r.cpc + " books each)" : r.unit) + (r.stage === "fg" && r.cpc ? input("loose", "Loose books") : "")) +
           '</div></td><td class="num" id="rc-var-' + ix + '">' + rcVariance(r) + '</td></tr>';
       }).join("") : '<tr><td colspan="4">No items match these filters.</td></tr>') + '</tbody></table></div>') + '</div></div>' +
-      '<div class="cap-card"><div class="cap-h"><h3>Review the true-up</h3><span id="rc-summary" class="cap-note"></span></div><p class="cap-note">The draft includes every counted item with a variance, including counts hidden by your filters. ERP stock is checked again before creating it. Review the posting time, valuation and difference account in ERPNext, then Submit there to apply the true-up.</p>' +
+      '<div class="cap-card"><div class="cap-h"><h3>Review the true-up</h3><span id="rc-summary" class="cap-note"></span></div><p class="cap-note">The true-up includes every counted item with a variance, including counts hidden by your filters. Create the draft, then use Submit true-up here to review and apply it. ERPNext checks your submission permissions.</p>' +
       '<label class="cap-f"><span class="lb">Reason / count reference (required)</span><input id="rc-reason" maxlength="500" placeholder="e.g. Physical floor count, Peter and Gloria" value="' + esc(RC.reason) + '"' + dis + '></label>' +
       '<label class="cap-check"><input type="checkbox" id="rc-zero"' + (RC.zero ? " checked" : "") + dis + '> Allow zero valuation for items with no recorded rate (quantity-only opening count)</label>' +
-      '<div id="rc-result">' + RC.message + '</div><div class="btn-grp"><button class="cap-post" id="rc-create">Review & create draft</button><button class="cap-sec" id="rc-export">Download count sheet</button><button class="cap-sec" id="rc-reset"' + (RC.busy || RC.uncertain ? " disabled" : "") + '>Start new count</button></div></div></div>';
+      '<div id="rc-result">' + RC.message + '</div><div class="btn-grp">' + (RC.created ? (RC.submitted ? '' : '<button class="cap-post" id="rc-submit">Submit true-up</button>' + (!RC.noteSaved ? '<button class="cap-sec" id="rc-note">Save count note</button>' : '') + (RC.uncertain ? '<button class="cap-sec" id="rc-check">Check submission status</button>' : '')) : '<button class="cap-post" id="rc-create">Review & create draft</button>') +
+      '<button class="cap-sec" id="rc-export">Download count sheet</button><button class="cap-sec" id="rc-reset"' + (RC.busy || RC.uncertain ? " disabled" : "") + '>Start new count</button></div></div></div>';
     $("v3-app").innerHTML = h;
-    $("rc-brand").options[0].textContent = "Choose brand";
-    ["brand", "stage", "size", "pages", "ruling"].forEach(function (k) { $("rc-" + k).onchange = function (e) { RC[k] = e.target.value; renderRecon(); }; });
+    [].forEach.call($("rc-brands").querySelectorAll("[data-rc-brand]"), function (b) { b.onclick = function () { RC.brand = b.dataset.rcBrand; renderRecon(); }; });
+    ["stage", "size", "pages", "ruling"].forEach(function (k) { $("rc-" + k).onchange = function (e) { RC[k] = e.target.value; renderRecon(); }; });
     $("rc-q").oninput = function (e) { var pos = e.target.selectionStart; RC.q = e.target.value; renderRecon(); $("rc-q").focus(); $("rc-q").setSelectionRange(pos, pos); };
     $("rc-reason").oninput = function (e) { RC.reason = e.target.value; rcSummary(); };
     $("rc-zero").onchange = function (e) { RC.zero = e.target.checked; };
@@ -1448,9 +1453,12 @@
       el.setAttribute("aria-invalid", isNaN(rcCount(r)) ? "true" : "false"); $("rc-var-" + el.dataset.rc).innerHTML = rcVariance(r); rcSummary();
     }; });
     $("rc-refresh").onclick = function () { RC.busy = true; renderRecon(); rcBins(RC.rows).then(function (bins) { rcApplyBins(RC.rows, bins); RC.loadedAt = new Date(); rcStatus("ERP balances refreshed. Your physical counts have been kept; review the variances."); }).catch(function (e) { rcStatus(esc(e.message), "bad"); }).finally(function () { RC.busy = false; if (S.view === "recon") renderRecon(); }); };
-    $("rc-reset").onclick = function () { dialog("Start a new stock count?", "<p>This clears the counts on this screen. Existing ERPNext drafts stay available in ERPNext.</p>", "Start new count", function () { RC.counts = {}; RC.reason = ""; RC.zero = false; RC.created = null; RC.message = ""; RC.rows = null; renderRecon(); }); };
+    $("rc-reset").onclick = function () { dialog("Start a new stock count?", "<p>This clears the counts on this screen. Existing ERPNext documents are kept.</p>", "Start new count", function () { RC.counts = {}; RC.reason = ""; RC.zero = false; RC.created = null; RC.draft = null; RC.noteSaved = false; RC.submitted = false; RC.message = ""; RC.rows = null; renderRecon(); }); };
     $("rc-export").onclick = function () { download("EB stock count " + today(), ["Item code", "Item", "Warehouse", "Unit", "ERP quantity", "Physical quantity", "Variance", "Stock read at"], rows.map(function (r) { var n = rcCount(r); return [r.code, r.name, r.wh, r.unit, r.qty, n === null || isNaN(n) ? "" : n, n === null || isNaN(n) ? "" : n - r.qty, RC.loadedAt.toISOString()]; })); };
-    $("rc-create").onclick = rcReview;
+    if ($("rc-create")) $("rc-create").onclick = rcReview;
+    if ($("rc-submit")) $("rc-submit").onclick = rcSubmitReview;
+    if ($("rc-note")) { $("rc-note").disabled = RC.busy || RC.uncertain; $("rc-note").onclick = rcSaveNote; }
+    if ($("rc-check")) { $("rc-check").disabled = RC.busy; $("rc-check").onclick = rcCheckSubmission; }
     rcSummary();
   }
   function rcReview() {
@@ -1467,11 +1475,11 @@
       // Freeze the exact reviewed plan until the dialog is accepted or cancelled.
       RC.busy = true; if (S.view === "recon") renderRecon();
       dialog("Review stock true-up — " + planned.length + " items", '<p>' + esc(reason) + '</p><div class="tw"><table><thead><tr><th>Item / warehouse</th><th>ERP</th><th>Counted</th><th>Variance</th></tr></thead><tbody>' + planned.map(function (p) { var r = p.row, delta = p.qty - r.qty; return '<tr><td>' + esc(r.code) + '<small>' + esc(r.wh) + '</small></td><td>' + f(r.qty) + '</td><td>' + f(p.qty) + ' ' + esc(r.unit) + '</td><td>' + (delta > 0 ? "+" : "") + f(delta) + '</td></tr>'; }).join("") + '</tbody></table></div>' +
-        (zero ? '<p class="cap-msg warn">Items with no recorded valuation may be added at zero value.</p>' : '') + '<p>A draft will be created. Review and Submit in ERPNext to change stock.</p>', "Create draft", function () { rcCreate(planned, reason, zero); }, function () { RC.busy = false; if (S.view === "recon") renderRecon(); });
+        (zero ? '<p class="cap-msg warn">Items with no recorded valuation may be added at zero value.</p>' : '') + '<p>A draft will be created. Then use Submit true-up on this screen to apply it.</p>', "Create draft", function () { rcCreate(planned, reason, zero); }, function () { RC.busy = false; if (S.view === "recon") renderRecon(); });
     }).catch(function (e) { RC.busy = false; if (S.view === "recon") renderRecon(); rcStatus("Could not check ERP stock. " + esc(e.message), "bad"); });
   }
   function rcCreate(planned, reason, zero) {
-    // Draft only. Leaving posting time to ERPNext uses its server clock/timezone.
+    // Creation does not submit. ERPNext supplies the posting date/time and valuation.
     var doc = { doctype: "Stock Reconciliation", naming_series: "MAT-RECO-.YYYY.-", company: "Vimit Converters Limited", purpose: "Stock Reconciliation", set_posting_time: 0,
       items: planned.map(function (p) {
         // Null explicitly preserves ERPNext's native rate lookup; zero would revalue existing stock.
@@ -1480,14 +1488,11 @@
         return line;
       }) };
     rcInsert(doc).then(function (made) {
-      RC.created = made.name; RC.busy = false;
-      var link = '<a href="/app/stock-reconciliation/' + encodeURIComponent(made.name) + '" target="_blank" rel="noopener">' + esc(made.name) + ' — review and submit in ERPNext</a>';
-      rcStatus("Draft created: " + link + ". Stock has not changed.", "ok");
+      RC.created = made.name; RC.draft = made; RC.noteSaved = false;
+      RC.savedNote = "Exercise Book v3 stock true-up. Reason: " + esc(reason) + ". ERP snapshot checked " + esc(new Date().toISOString()) + ". Zero valuation allowed: " + (zero ? "yes" : "no") + ".";
+      rcStatus("Draft created: " + esc(made.name) + ". Saving the count note… Stock has not changed.", "ok");
       if (S.view === "recon") renderRecon();
-      return rcInsert({ doctype: "Comment", comment_type: "Comment", reference_doctype: "Stock Reconciliation", reference_name: made.name,
-        content: "Exercise Book v3 stock true-up. Reason: " + esc(reason) + ". ERP snapshot checked " + esc(new Date().toISOString()) + ". Zero valuation allowed: " + (zero ? "yes" : "no") + "." }).catch(function () {
-          rcStatus("Draft created: " + link + ". Stock has not changed. The count note could not be saved; add this reason before submitting: " + esc(reason), "warn");
-        });
+      return rcSaveNote();
     }).catch(function (e) {
       RC.busy = false;
       RC.uncertain = !!e.uncertain;
@@ -1495,11 +1500,75 @@
       if (S.view === "recon") renderRecon();
     });
   }
+  function rcSaveNote() {
+    if (!RC.created || RC.noteSaved) return;
+    RC.busy = true; if (S.view === "recon") renderRecon();
+    return rcInsert({ doctype: "Comment", comment_type: "Comment", reference_doctype: "Stock Reconciliation", reference_name: RC.created, content: RC.savedNote })
+      .then(function () { RC.noteSaved = true; rcStatus("Draft created: " + esc(RC.created) + ". Stock has not changed. Use Submit true-up below to apply it.", "ok"); })
+      .catch(function () { rcStatus("Draft created: " + esc(RC.created) + ". The count note could not be saved. Use Save count note, then submit here. Stock has not changed.", "warn"); })
+      .finally(function () { RC.busy = false; if (S.view === "recon") renderRecon(); });
+  }
+  function rcSignature(doc) {
+    return JSON.stringify([doc.company, doc.purpose, (doc.items || []).map(function (r) { return [r.item_code, r.warehouse, Number(r.qty)]; }).sort(function (a, b) { return JSON.stringify(a).localeCompare(JSON.stringify(b)); })]);
+  }
+  function rcDraft() { return get("frappe.client.get", { doctype: "Stock Reconciliation", name: RC.created }); }
+  function rcSubmitReview() {
+    if (!RC.created || RC.busy || RC.uncertain || RC.submitted || !RC.noteSaved) return;
+    RC.busy = true; if (S.view === "recon") renderRecon();
+    rcDraft().then(function (doc) {
+      if (Number(doc.docstatus) === 1) return rcSubmitted(doc);
+      if (Number(doc.docstatus) !== 0 || rcSignature(doc) !== rcSignature(RC.draft)) throw new Error("The reconciliation changed or was cancelled. Start a new count and review it again.");
+      var counted = rcCounted();
+      return rcBins(counted).then(function (bins) {
+        if (counted.some(function (r) { var b = bins[r.key]; return (b ? Number(b.actual_qty) : 0) !== r.qty || (b ? b.modified : "") !== r.modified; })) throw new Error("ERP stock moved after this count. Start a new count and review the current balances before submitting.");
+        var value = Number(doc.difference_amount || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        var details = '<p><b>' + esc(doc.name) + '</b> · ' + esc(dmy(doc.posting_date)) + ' ' + esc(String(doc.posting_time || "").slice(0, 8)) + '</p><p>Difference account: <b>' + esc(doc.expense_account || "ERPNext default") + '</b><br>Cost centre: ' + esc(doc.cost_center || "ERPNext default") + '<br>Value change (company currency): <b>' + esc(value) + '</b></p>';
+        var table = '<div class="tw"><table><thead><tr><th>Item / warehouse</th><th>Before</th><th>Counted</th><th>Variance</th></tr></thead><tbody>' + doc.items.map(function (r) { var delta = Number(r.qty) - Number(r.current_qty || 0); return '<tr><td>' + esc(r.item_code) + '<small>' + esc(r.warehouse) + '</small></td><td>' + f(r.current_qty || 0) + '</td><td>' + f(r.qty) + '</td><td>' + (delta > 0 ? "+" : "") + f(delta) + ' ' + esc(r.stock_uom || "Nos") + '</td></tr>'; }).join("") + '</tbody></table></div>';
+        function back() { RC.busy = false; if (S.view === "recon") renderRecon(); }
+        dialog("Step 1 of 2: review stock true-up", details + table + '<p>' + esc(RC.reason) + '</p>', "Yes, this is correct", function () {
+          dialog("Step 2 of 2: submit true-up now?", '<p class="cap-msg warn">This changes stock in ERPNext.</p>' + details + '<p>' + doc.items.length + ' counted item(s). ERPNext will enforce your submission permissions.</p>', "Submit now", function () { rcSendSubmit(doc); }, back);
+        }, back);
+      });
+    }).catch(function (e) { RC.busy = false; rcStatus("Not submitted. " + esc(e.message), "bad"); if (S.view === "recon") renderRecon(); });
+  }
+  function rcSendSubmit(doc) {
+    rcWrite("frappe.client.submit", doc).then(function (submitted) {
+      if (Number(submitted.docstatus) !== 1) { var err = new Error("ERPNext has not confirmed submission."); err.uncertain = true; throw err; }
+      return rcSubmitted(submitted);
+    }).catch(function (e) {
+      RC.busy = false; RC.uncertain = !!e.uncertain;
+      rcStatus((RC.uncertain ? "Submission response was lost. Use Check submission status before trying again. " : "Not submitted. ") + esc(e.message), RC.uncertain ? "warn" : "bad");
+      if (S.view === "recon") renderRecon();
+    });
+  }
+  function rcCheckSubmission() {
+    if (!RC.created || RC.busy) return;
+    RC.busy = true; if (S.view === "recon") renderRecon();
+    rcDraft().then(function (doc) {
+      if (Number(doc.docstatus) === 1) return rcSubmitted(doc);
+      RC.busy = false; RC.uncertain = false;
+      rcStatus(Number(doc.docstatus) === 0 ? "ERPNext confirms this is still a draft. Stock has not been changed by this reconciliation. You can review submission again." : "The reconciliation was cancelled. Start a new count.", "warn");
+      if (Number(doc.docstatus) !== 0) RC.noteSaved = false;
+      if (S.view === "recon") renderRecon();
+    }).catch(function (e) { RC.busy = false; rcStatus("Could not confirm submission status. " + esc(e.message), "warn"); if (S.view === "recon") renderRecon(); });
+  }
+  function rcSubmitted(doc) {
+    RC.submitted = true; RC.uncertain = false; RC.draft = doc;
+    rcStatus("Submitted ✓ " + esc(doc.name) + ". Stock true-up applied.", "ok");
+    // A refresh failure must never turn a successful submission into a retry prompt.
+    clearProduction(); O = null;
+    return Promise.all([load(), rcBins(RC.rows).then(function (bins) { rcApplyBins(RC.rows, bins); RC.loadedAt = new Date(); })])
+      .catch(function () { rcStatus("Submitted ✓ " + esc(doc.name) + ". Stock true-up applied. Balance refresh failed; reload the page to see the latest stock.", "warn"); })
+      .finally(function () { RC.busy = false; if (S.view === "recon") renderRecon(); });
+  }
   function rcInsert(doc) {
-    return fetch("/api/method/frappe.client.insert", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", Accept: "application/json", "X-Frappe-CSRF-Token": csrf() }, body: JSON.stringify({ doc: doc }) })
+    return rcWrite("frappe.client.insert", doc);
+  }
+  function rcWrite(method, doc) {
+    return fetch("/api/method/" + method, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", Accept: "application/json", "X-Frappe-CSRF-Token": csrf() }, body: JSON.stringify({ doc: doc }) })
       .then(function (r) { return r.json().then(function (j) {
         if (!r.ok) { var err = new Error(serverMsg(j) || ("HTTP " + r.status)); err.uncertain = r.status >= 500; throw err; }
-        if (!j.message || !j.message.name) throw new Error("ERPNext did not confirm the draft name.");
+        if (!j.message || !j.message.name) throw new Error("ERPNext did not confirm the document.");
         return j.message;
       }); }).catch(function (err) { if (err.uncertain == null) err.uncertain = true; throw err; });
   }

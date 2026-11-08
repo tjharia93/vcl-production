@@ -104,9 +104,10 @@ py -3 scripts/deploy_eb_dev_page.py --page v3 --create
 - `production_floor/tests/test_eb_capture_rules.py` (rules) and `tests/test_receiving_books.py` (spot-weigh, from a84ef92).
 - `page.js` mirrors the rules. It was checked by hand against live stock through a local read-only harness on 04/11 (screenshots are outside git, in `C:\Second_Brain\output\eb_capture_v3_screenshots\`).
 
-## Stock recon / true-up (07/11/2026)
+## Stock recon / true-up (updated 08/11/2026)
 
-Open `?view=recon`. Choose a brand, then count cover sheets, fold sets, insert sets,
+Open `?view=recon`. Choose a coloured brand button (Prince green, Swara purple,
+Hi5 blue, School slate), then count cover sheets, fold sets, insert sets,
 finished books or shared empty cartons. Finished books accept full cartons plus loose
 books using the exact item's Carton conversion. Other stages use their native sheet/set
 count. Cover variants and warehouses are kept separate. Batch/serial items and stock
@@ -120,15 +121,24 @@ before review. A movement requires another review. Catalog and balance reads pag
 
 **Create draft** uses standard `frappe.client.insert` for a Stock Reconciliation with
 absolute counted quantities, the company and warehouse, and server-default posting time.
-It never submits or creates a production receipt. ERPNext enforces document permissions
-and stock/accounting validation. Valuation is passed as null so ERPNext resolves its
+Creation does not change stock or create a production receipt. ERPNext enforces document
+permissions and stock/accounting validation. Valuation is passed as null so ERPNext resolves its
 existing rate; the count screen does not fetch rates. Allowing a zero derived rate is an
 explicit opt-in and does not overwrite an existing rate. The required reason is added as
-a Comment on the draft; if that fails, the draft link stays visible with the reason to
-add before submission. A lost/malformed response locks out duplicate creation.
+a Comment on the draft; if that fails, **Save count note** retries it on this screen,
+and submission remains disabled until saved. A lost/malformed draft response locks out
+duplicate creation.
 
-Review posting date/time, rates, difference account and any stock movements since the
-count in **ERPNext**, then Submit there. Submission is the step that changes stock.
+**Submit true-up** submits directly from this screen, as requested by Tanuj on 08/11.
+It re-fetches the draft, checks the company/purpose/item/warehouse/quantity signature
+against the created draft and rechecks the counted Bin balances/modification times.
+Changed or cancelled drafts and subsequent stock movements block submission. Two
+confirmation dialogs show the actual draft quantities, posting time, difference account,
+cost centre and value change before `frappe.client.submit` is called. This uses the signed-in
+user's normal ERPNext submit permission. Submission is the step that changes stock.
+Already-submitted drafts are recognised without a second submit call. A lost response
+offers **Check submission status**, which reads the existing document instead of posting
+again. Success stays successful even if refreshing the balances fails.
 The page makes no assumption that capture kill-switch/roles grant reconciliation rights.
 No Frappe Cloud backend deploy or migration is needed for this screen.
 
@@ -138,4 +148,6 @@ python scripts/test_eb_stock_recon.py
 ```
 These intercept every API call and check blank/zero/matching counts, carton conversion,
 exact cover variants, filters, stale balances, draft/comment failure, duplicate prevention,
-permission refusal, pagination beyond 500 items, and phone layout. No live stock is written.
+permission refusal, pagination beyond 500 items, phone layout, both submit confirmations,
+changed drafts, movements after draft creation, lost submit responses, inline note retry,
+and coloured brand selection. No live stock is written by the tests.

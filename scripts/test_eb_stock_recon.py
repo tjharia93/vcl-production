@@ -38,6 +38,8 @@ class StockReconBrowser(unittest.TestCase):
         self.errors, self.posts = [], []
         self.page.on("pageerror", lambda error: self.errors.append(str(error)))
         self.fail_comment = self.fail_insert = self.drop_insert = self.bad_response = False
+        self.fail_submit = self.drop_submit = False
+        self.draft = None
         groups = ["Exercise Books", "Exercise Book Covers", "Exercise Book Inserts", "Folds", "Swara Exercise Books"]
         self.groups = [{"name": n, "parent_item_group": "Exercise Books" if n != "Exercise Books" else "All Item Groups"} for n in groups]
         def item(code, name, group, **extra):
@@ -88,17 +90,38 @@ class StockReconBrowser(unittest.TestCase):
         if req.method == "POST" and method != "frappe.client.get_list":
             data = req.post_data_json
             self.posts.append((method, data))
-            if method != "frappe.client.insert":
+            if method not in ("frappe.client.insert", "frappe.client.submit"):
                 self.fail(f"Unexpected write method: {method}")
             doc = data["doc"]
-            if doc["doctype"] == "Stock Reconciliation":
+            if method == "frappe.client.submit":
+                self.assertEqual(doc["name"], self.draft["name"])
+                self.assertEqual(doc["docstatus"], 0)
+                if self.fail_submit:
+                    route.fulfill(status=403, json={"exception": "Submit permission denied"}); return
+                self.draft["docstatus"] = 1
+                for row in self.draft["items"]:
+                    for b in self.bins:
+                        if b["item_code"] == row["item_code"] and b["warehouse"] == row["warehouse"]:
+                            b["actual_qty"] = row["qty"]
+                            b["modified"] = "2026-11-07 12:00:00"
+                if self.drop_submit:
+                    route.abort("failed"); return
+                result = self.draft
+            elif doc["doctype"] == "Stock Reconciliation":
                 if self.drop_insert:
                     route.abort("failed"); return
                 if self.bad_response:
                     route.fulfill(body="Upstream response unavailable", content_type="text/html"); return
                 if self.fail_insert:
                     route.fulfill(status=403, json={"exception": "Permission denied"}); return
-                result = dict(doc, name="MAT-RECO-TEST-001", docstatus=0)
+                result = dict(json.loads(json.dumps(doc)), name="MAT-RECO-TEST-001", docstatus=0,
+                              posting_date="2026-11-07", posting_time="11:00:00", expense_account="Stock Adjustment - VCL", cost_center="Main - VCL", difference_amount=0)
+                for row in result["items"]:
+                    b = next((b for b in self.bins if b["item_code"] == row["item_code"] and b["warehouse"] == row["warehouse"]), {})
+                    row["current_qty"] = b.get("actual_qty", 0)
+                    row["valuation_rate"] = b.get("valuation_rate", 0)
+                    result["difference_amount"] += (row["qty"] - row["current_qty"]) * row["valuation_rate"]
+                self.draft = result
             elif doc["doctype"] == "Comment":
                 if self.fail_comment:
                     route.fulfill(status=403, json={"exception": "Comment refused"}); return
@@ -114,16 +137,18 @@ class StockReconBrowser(unittest.TestCase):
             result = [x for x in data if self.matches(x, filters)]
             start, limit = int(args.get("limit_start", 0)), int(args.get("limit_page_length", 0))
             result = result[start:start + limit] if limit else result[start:]
+        elif method == "frappe.client.get" and args["doctype"] == "Stock Reconciliation":
+            result = self.draft
         else:
             self.fail(f"Unexpected read method: {method}")
         route.fulfill(json={"message": result})
 
     def open(self):
         self.page.goto("https://recon.test/?view=recon")
-        self.page.locator("#rc-brand").wait_for()
+        self.page.locator("#rc-brands").wait_for()
         self.assertEqual(self.page.locator("#v3-title").inner_text(), "Stock recon")
         self.assertEqual(self.page.locator("[data-rc]").count(), 0)
-        self.page.locator("#rc-brand").select_option("Swara")
+        self.page.locator('[data-rc-brand="Swara"]').click()
 
     def row(self, code):
         return self.page.locator(".rc tbody tr").filter(has=self.page.locator("code", has_text=code))
@@ -138,6 +163,7 @@ class StockReconBrowser(unittest.TestCase):
     def accept(self):
         self.page.locator('.dlg button[data-a="yes"]').click()
         self.page.wait_for_function("document.querySelector('#rc-result').innerText.includes('Draft created')")
+        self.page.wait_for_function("!document.querySelector('#rc-reset').disabled")
 
     def test_blank_zero_invalid_and_absolute_qty(self):
         self.open()
@@ -155,7 +181,8 @@ class StockReconBrowser(unittest.TestCase):
         self.assertEqual(doc["items"], [{"item_code": COVER, "warehouse": STORES, "qty": 0, "stock_uom": "Nos", "valuation_rate": None}])
         self.assertNotIn("allow_zero_valuation_rate", doc["items"][0])
         self.assertEqual(self.posts[1][1]["doc"]["reference_name"], "MAT-RECO-TEST-001")
-        self.assertTrue(self.page.locator("#rc-create").is_disabled())
+        self.assertEqual(self.page.locator("#rc-create").count(), 0)
+        self.assertFalse(self.page.locator("#rc-submit").is_disabled())
 
     def test_cartons_exact_variant_and_counts_survive_filters(self):
         self.open()
@@ -197,7 +224,8 @@ class StockReconBrowser(unittest.TestCase):
         self.accept()
         self.page.wait_for_function("document.querySelector('#rc-result').innerText.includes('count note could not be saved')")
         self.assertEqual(self.posts[0][1]["doc"]["items"][0]["allow_zero_valuation_rate"], 1)
-        self.assertTrue(self.page.locator("#rc-create").is_disabled())
+        self.assertTrue(self.page.locator("#rc-submit").is_disabled())
+        self.assertTrue(self.page.locator("#rc-note").is_visible())
 
     def test_lost_response_blocks_duplicate_retry(self):
         self.drop_insert = True
@@ -258,6 +286,97 @@ class StockReconBrowser(unittest.TestCase):
         self.page.screenshot(path="/tmp/eb-stock-recon-phone.png", full_page=True)
         self.page.locator('#v3-mode [data-view="capture"]').click()
         self.page.locator('#v3-mode [data-view="recon"]').click()
+        self.assertEqual(self.row(COVER).locator("input").input_value(), "100")
+
+    def prepare_draft(self):
+        self.open()
+        self.enter(COVER, "100")
+        self.review()
+        self.accept()
+
+    def submit_confirmations(self):
+        self.page.locator("#rc-submit").click()
+        self.page.locator('.dlg [data-a="yes"]').click()
+        self.assertIn("Step 2 of 2", self.page.locator(".dlg h3").inner_text())
+        self.page.locator('.dlg [data-a="yes"]').click()
+
+    def test_submits_on_screen_only_after_both_confirmations(self):
+        self.prepare_draft()
+        self.page.locator("#rc-submit").click()
+        self.assertIn("Stock Adjustment - VCL", self.page.locator(".dlg").inner_text())
+        self.assertIn("-40.00", self.page.locator(".dlg").inner_text())
+        self.assertFalse(any(m == "frappe.client.submit" for m, _ in self.posts))
+        self.page.locator('.dlg [data-a="yes"]').click()
+        self.assertFalse(any(m == "frappe.client.submit" for m, _ in self.posts))
+        self.page.locator('.dlg [data-a="yes"]').click()
+        self.page.wait_for_function("document.querySelector('#rc-result').innerText.includes('Stock true-up applied')")
+        self.assertEqual(sum(m == "frappe.client.submit" for m, _ in self.posts), 1)
+        self.assertEqual(self.page.locator("#rc-submit").count(), 0)
+        self.assertEqual(self.bins[0]["actual_qty"], 100)
+
+    def test_second_submission_confirmation_can_be_cancelled(self):
+        self.prepare_draft()
+        self.page.locator("#rc-submit").click()
+        self.page.locator('.dlg [data-a="yes"]').click()
+        self.page.locator('.dlg [data-a="back"]').click()
+        self.assertFalse(any(m == "frappe.client.submit" for m, _ in self.posts))
+        self.assertFalse(self.page.locator("#rc-submit").is_disabled())
+
+    def test_submit_permission_refusal_preserves_draft(self):
+        self.fail_submit = True
+        self.prepare_draft()
+        self.submit_confirmations()
+        self.page.wait_for_function("document.querySelector('#rc-result').innerText.includes('Submit permission denied')")
+        self.assertEqual(self.draft["docstatus"], 0)
+        self.assertFalse(self.page.locator("#rc-submit").is_disabled())
+
+    def test_stock_movement_after_draft_blocks_submission(self):
+        self.prepare_draft()
+        self.bins[0]["actual_qty"] = 119
+        self.page.locator("#rc-submit").click()
+        self.page.wait_for_function("document.querySelector('#rc-result').innerText.includes('ERP stock moved')")
+        self.assertFalse(any(m == "frappe.client.submit" for m, _ in self.posts))
+
+    def test_changed_draft_quantities_block_submission(self):
+        self.prepare_draft()
+        self.draft["items"][0]["qty"] = 999
+        self.page.locator("#rc-submit").click()
+        self.page.wait_for_function("document.querySelector('#rc-result').innerText.includes('reconciliation changed')")
+        self.assertFalse(any(m == "frappe.client.submit" for m, _ in self.posts))
+
+    def test_lost_submit_response_is_checked_without_resubmitting(self):
+        self.drop_submit = True
+        self.prepare_draft()
+        self.submit_confirmations()
+        self.page.wait_for_function("document.querySelector('#rc-result').innerText.includes('Submission response was lost')")
+        self.assertTrue(self.page.locator("#rc-submit").is_disabled())
+        self.page.locator("#rc-check").click()
+        self.page.wait_for_function("document.querySelector('#rc-result').innerText.includes('Stock true-up applied')")
+        self.assertEqual(sum(m == "frappe.client.submit" for m, _ in self.posts), 1)
+
+    def test_failed_count_note_can_be_saved_without_desk(self):
+        self.fail_comment = True
+        self.prepare_draft()
+        self.assertTrue(self.page.locator("#rc-submit").is_disabled())
+        self.fail_comment = False
+        self.page.locator("#rc-note").click()
+        self.page.wait_for_function("document.querySelector('#rc-submit') && !document.querySelector('#rc-submit').disabled")
+        self.submit_confirmations()
+        self.page.wait_for_function("document.querySelector('#rc-result').innerText.includes('Stock true-up applied')")
+
+    def test_brand_buttons_use_existing_colours_and_keep_counts(self):
+        self.items.append(dict(self.items[0], name="COV-PNC-A4-120PG-SL", item_name="Prince A4 120PG - 2 up"))
+        self.open()
+        swara = self.page.locator('[data-rc-brand="Swara"]')
+        prince = self.page.locator('[data-rc-brand="Prince"]')
+        self.assertEqual(swara.get_attribute("aria-pressed"), "true")
+        self.assertEqual(swara.evaluate("b=>getComputedStyle(b).backgroundColor"), "rgb(227, 218, 246)")
+        self.assertEqual(prince.evaluate("b=>getComputedStyle(b).backgroundColor"), "rgb(211, 235, 220)")
+        self.enter(COVER, "100")
+        prince.click()
+        self.assertEqual(prince.get_attribute("aria-pressed"), "true")
+        self.assertEqual(self.page.locator(".rc tbody tr").count(), 1)
+        swara.click()
         self.assertEqual(self.row(COVER).locator("input").input_value(), "100")
 
 
