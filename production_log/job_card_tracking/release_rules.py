@@ -155,7 +155,25 @@ def _bound_fields(ctx):
 	return ctx.get("bound_payload") or {}
 
 
-def snapshot_mismatches(snapshot, payload, product_type=None):
+def is_legacy_snapshot(snapshot, log):
+	"""A snapshot frozen before the gate's migration stamped the specification.
+
+	The grandfather pass stamps revision 1 with ``_approval_rule`` starting
+	"grandfathered" and ``_at`` = the migration time; a snapshot whose
+	``_taken_at`` precedes that was written under the old format and may lack
+	keys later added to it. A spec with no migration stamp has no legacy cards.
+	"""
+	if not isinstance(snapshot, dict):
+		return False
+	rev1 = cps_lifecycle_rules.payload_for_revision(log, 1)
+	if not rev1 or not str(rev1.get("_approval_rule") or "").startswith("grandfathered"):
+		return False
+	taken = str(snapshot.get("_taken_at") or "")
+	stamped = str(rev1.get("_at") or "")
+	return bool(taken) and bool(stamped) and taken < stamped
+
+
+def snapshot_mismatches(snapshot, payload, product_type=None, legacy=False):
 	"""Keys of the bound payload the card's snapshot must carry and agree with.
 
 	The snapshot freezes ``cps_rules.snapshot_scalar_fields(product_type)`` plus
@@ -175,9 +193,12 @@ def snapshot_mismatches(snapshot, payload, product_type=None):
 		if key.startswith("_") or key not in compared:
 			continue
 		if key not in snapshot:
-			if key in SNAPSHOT_WIDENING_KEYS:
+			if legacy and key in SNAPSHOT_WIDENING_KEYS:
 				# D4 (TRK-00350) widened the Computer Paper snapshot without a
-				# version bump: a v2 snapshot without these keys is complete.
+				# version bump. Only a snapshot frozen BEFORE the gate's
+				# migration may lack these keys; a new one always writes them
+				# (build_spec_snapshot iterates snapshot_scalar_fields) and
+				# fails here if it does not (Codex r8).
 				continue
 			out.append(key + " (missing in snapshot)")
 			continue
@@ -224,7 +245,10 @@ def check_construction(ctx):
 	if missing:
 		return _result(4, False, "construction incomplete: {0}".format(", ".join(missing)))
 
-	mismatches = snapshot_mismatches(_get(ctx.get("card"), "spec_snapshot"), ctx.get("bound_payload"), product_type)
+	mismatches = snapshot_mismatches(
+		_get(ctx.get("card"), "spec_snapshot"), ctx.get("bound_payload"), product_type,
+		legacy=bool(_get(ctx.get("card"), "legacy_snapshot")),
+	)
 	if mismatches:
 		return _result(4, False, "card snapshot differs from revision {0}: {1}".format(
 			ctx.get("bound_revision"), ", ".join(mismatches)))

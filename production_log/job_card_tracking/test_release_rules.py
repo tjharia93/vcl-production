@@ -128,8 +128,33 @@ class TestCheck4(unittest.TestCase):
 		self.assertIn("ctn_height_mm (missing in snapshot)", r.message)
 		c = ctx(); c["card"]["spec_snapshot"] = None
 		self.assertIn("snapshot", by_number(rules.evaluate(c)[0])[4].message)
-		# Keys the snapshot never carried (print_type is not a snapshot scalar) are not demanded.
+		# Keys the snapshot never carried (print_type is not a Carton snapshot scalar) are not demanded.
 		self.assertTrue(by_number(rules.evaluate(ctx())[0])[4].passed)
+
+	def test_widened_cp_keys_are_demanded_on_new_snapshots_only(self):
+		# Codex r8: a NEW Computer Paper snapshot must carry print_type/print_side/printed_weight;
+		# only a snapshot frozen before the gate's migration may lack them.
+		s = spec(product_type="Computer Paper", job_size="A4", number_of_parts=1, numbering_answer="No", print_type="Printed",
+		         print_side="Front Only", printed_weight=0.3,
+		         colour_of_parts=[{"part_number": 1, "paper_type": "Bond", "gsm": 60, "colour": "White", "purpose": ""}])
+		c = ctx(spec=s, item_control=cps_rules.ItemControl(True, "Computer Paper", "inherited", "g", "x"))
+		snap = cps_rules.build_spec_snapshot(s, s["colour_of_parts"], [], "2026-11-09 09:00:00")
+		for key in ("print_type", "print_side", "printed_weight"):
+			self.assertIn(key, snap)  # the builder always writes them
+		c["card"]["spec_snapshot"] = snap
+		self.assertTrue(by_number(rules.evaluate(c)[0])[4].passed, by_number(rules.evaluate(c)[0])[4].message)
+		del c["card"]["spec_snapshot"]["print_side"]
+		self.assertIn("print_side (missing in snapshot)", by_number(rules.evaluate(c)[0])[4].message)
+		c["card"]["legacy_snapshot"] = True
+		self.assertTrue(by_number(rules.evaluate(c)[0])[4].passed)
+
+	def test_is_legacy_snapshot(self):
+		import json
+		log = json.dumps([{"_revision": 1, "_at": "2026-11-10 08:00:00", "_approval_rule": "grandfathered 10/11/2026"}])
+		self.assertTrue(rules.is_legacy_snapshot({"_taken_at": "2026-09-01 10:00:00"}, log))
+		self.assertFalse(rules.is_legacy_snapshot({"_taken_at": "2026-11-12 10:00:00"}, log))
+		self.assertFalse(rules.is_legacy_snapshot({"_taken_at": "2026-09-01 10:00:00"}, json.dumps([{"_revision": 1, "_at": "2026-11-10", "_approval_rule": "Carton technical"}])))
+		self.assertFalse(rules.is_legacy_snapshot(None, log))
 
 	def test_unbound_card_stays_held_with_binding_unverified(self):
 		# Codex r7: no fallback to the live spec; checks 4, 5, 8 and 11 fail.

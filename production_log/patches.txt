@@ -183,10 +183,14 @@ production_log.patches.v10_9.allow_cps_size_parts_details_on_submit
 # runs after the sync). Links Solna and Miller to their assets and lists them on the
 # Covers station of the exercise-book Capture page. Idempotent.
 production_log.patches.v10_10.link_cover_machines
-# Stream A, CPS order-to-cash gate (TRK-00432, plan v4 steps 1-2). All three
-# reach outside the app (Selling Settings / Internal Quotation Custom Fields,
-# Role) or write columns this migrate adds, so each is also called from
-# install.after_install and is idempotent.
+# Stream A, CPS order-to-cash gate (TRK-00432, plan v4 steps 1-2). Four
+# idempotent patches. add_cps_gate_settings, seed_cps_approval and
+# add_release_hold_reasons reach outside the app (Selling Settings / Internal
+# Quotation Custom Fields, Role, Custom Field options) and are ALSO called from
+# install.after_install; seed_cps_approval and migrate_vat_inclusive_rows are
+# ALSO re-run from install.after_migrate as the retry path when their schema
+# was absent at patch time. migrate_vat_inclusive_rows runs here and from
+# after_migrate only - it writes columns this migrate adds.
 production_log.patches.v11_0.add_cps_gate_settings
 production_log.patches.v11_0.seed_cps_approval
 production_log.patches.v11_0.migrate_vat_inclusive_rows

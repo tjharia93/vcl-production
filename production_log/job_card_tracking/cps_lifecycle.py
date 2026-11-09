@@ -335,3 +335,68 @@ def after_migrate():
 		print("CPS grandfather: stamped {0} specification(s); bound {1} card(s); {2} legacy card(s) left unbound".format(
 			len(result.get("stamped") or []), len(result.get("cards_bound") or []), len(result.get("cards_left_unbound") or [])
 		))
+
+
+# ---------------------------------------------------------------------------
+# "What changed" summary for the review panel (§3) - permlevel-0 read, no restricted values
+# ---------------------------------------------------------------------------
+
+
+@frappe.whitelist()
+def revision_changes_summary(cps, since_revision=None):
+	"""Field label, old -> new, who and when, per revision - without level-1 values.
+
+	The payload and log sit at permlevel 1 (they carry CR21 packing figures), so
+	a rep cannot read them; this read method needs only level-0 read on the
+	specification and withholds the VALUE of any field whose permlevel the
+	caller cannot read (the label and "changed" are still shown). Stream B's
+	screen and the Desk panel read this, never the raw log.
+	"""
+	if not frappe.has_permission(CPS, "read", cps):
+		frappe.throw(_("Not permitted."), frappe.PermissionError)
+	meta = frappe.get_meta(CPS)
+	spec = frappe.db.get_value(CPS, cps, ["vcl_revision", "vcl_approved_rev", "vcl_revision_log", "product_type"], as_dict=True)
+	if not spec:
+		frappe.throw(_("Specification {0} not found.").format(cps))
+
+	readable_levels = set(frappe.permissions.get_permitted_permlevels(CPS)) if hasattr(frappe.permissions, "get_permitted_permlevels") else {0}
+	log = rules.parse_revision_log(spec.vcl_revision_log)
+	entries = sorted((e for e in log if isinstance(e, dict)), key=lambda e: int(e.get("_revision") or 0))
+	since = int(since_revision or 0)
+	out = []
+	previous = None
+	for entry in entries:
+		revision = int(entry.get("_revision") or 0)
+		changes = []
+		if previous is not None:
+			for fieldname in rules.revision_fields(spec.product_type):
+				old, new = previous.get(fieldname), entry.get(fieldname)
+				if rules._norm(old) == rules._norm(new):
+					continue
+				df = meta.get_field(fieldname)
+				visible = df is None or int(df.permlevel or 0) in readable_levels
+				changes.append({
+					"fieldname": fieldname,
+					"label": df.label if df else fieldname,
+					"old": old if visible else None,
+					"new": new if visible else None,
+					"value_hidden": not visible,
+				})
+			for table in rules.REVISION_TABLES:
+				if rules._rows(previous, table, rules.REVISION_TABLES[table]) != rules._rows(entry, table, rules.REVISION_TABLES[table]):
+					df = meta.get_field(table)
+					changes.append({"fieldname": table, "label": df.label if df else table, "old": None, "new": None, "value_hidden": False, "rows_changed": True})
+		if revision >= since:
+			out.append({
+				"revision": revision,
+				"at": entry.get("_at"),
+				"by": entry.get("_by"),
+				"approved_by": entry.get("_approved_by"),
+				"approved_on": entry.get("_approved_on"),
+				"revoked_on": entry.get("_revoked_on"),
+				"approval_rule": entry.get("_approval_rule"),
+				"is_current": revision == int(spec.vcl_revision or 0),
+				"changes": changes,
+			})
+		previous = entry
+	return {"cps": cps, "current_revision": spec.vcl_revision, "approved_revision": spec.vcl_approved_rev, "revisions": out}

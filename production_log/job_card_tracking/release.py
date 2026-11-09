@@ -250,6 +250,7 @@ def build_context(card):
 			"customer_product_spec": card.get("customer_product_spec"),
 			"item_code": card.get("item_code") or (line or {}).get("item_code"),
 			"spec_snapshot": _parse(card.get("spec_snapshot")),
+			"legacy_snapshot": release_rules.is_legacy_snapshot(_parse(card.get("spec_snapshot")), (spec or {}).get("vcl_revision_log")),
 			"customer_hold": card.get("customer_hold") or 0,
 			"artwork_approved": card.get("artwork_approved") or 0,
 			"job_status": card.get("job_status"),

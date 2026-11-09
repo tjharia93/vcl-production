@@ -48,6 +48,10 @@ class TestRevisionFields(unittest.TestCase):
 		for f in ("ctn_length_mm", "ply", "1_ply_top_layer_gsm", "carton_cutting_die", "joint_type"):
 			self.assertIn(f, fields)
 
+	def test_tare_is_tracked(self):
+		# Codex r8: confidentiality is the payload's permlevel, not a missing comparison.
+		self.assertIn("packing_carton_tare_kg", rules.revision_fields("Computer Paper"))
+
 	def test_notes_name_customer_and_price_are_not(self):
 		fields = rules.revision_fields("Carton")
 		for f in ("internal_notes", "specification_name", "customer", "pricing", "current_rate", "status"):

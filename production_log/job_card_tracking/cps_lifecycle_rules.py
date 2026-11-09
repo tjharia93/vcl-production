@@ -186,10 +186,10 @@ SHARED_REVISION_FIELDS = (
 	"packing_pieces",
 	"packing_up",
 	"sets_per_carton",
-	# packing_carton_tare_kg is deliberately NOT a revision field: the tare is a
-	# CR21 packing fact kept out of anything sales roles can read (the payload
-	# itself sits at permlevel 1, but the job-card snapshot compare must not
-	# demand it either).
+	# The carton tare is a CR21 packing fact: tracked and compared server-side
+	# like every other revision field; confidentiality is the payload's
+	# permlevel 1, not the absence of the comparison (Codex r8).
+	"packing_carton_tare_kg",
 	"artwork_tracker",
 	"artwork",
 )
