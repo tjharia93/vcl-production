@@ -1,0 +1,62 @@
+.ebv3 .rc p{margin:0}
+.ebv3 .rc td small{display:block;font-size:12px;line-height:18px;color:var(--weak);overflow-wrap:anywhere}
+.ebv3 .rc td code{white-space:normal;overflow-wrap:anywhere}
+.ebv3 .rc td:first-child{max-width:360px}
+.ebv3 .rc-count{display:flex;gap:8px;min-width:170px}
+.ebv3 .rc-count label{display:grid;gap:4px;flex:1;max-width:180px}
+.ebv3 .rc-count input[aria-invalid="true"]{border-color:var(--bad);background:var(--bad-bg)}
+.ebv3 .rc .btn-grp .cap-post{width:auto;padding:0 20px}
+.ebv3 .rc .cap-check input{width:20px}
+.ebv3 .rc-brands{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+.ebv3 .rc-brands button{display:flex;align-items:center;justify-content:space-between;gap:18px;min-width:140px;min-height:52px;padding:12px 16px;font:inherit;color:var(--heading);background:var(--bc-lt,var(--neutral-bg));border:2px solid transparent;border-radius:8px;cursor:pointer}
+.ebv3 .rc-brands button[aria-pressed="true"]{border-color:var(--bc,var(--brand));box-shadow:0 0 0 2px var(--bc-lt,var(--brand-light))}
+.ebv3 .rc-brands button:focus-visible{outline:3px solid var(--bc,var(--brand));outline-offset:3px}
+/* Capture metadata: keep native date controls inside their cell on tablets. */
+.ebv3 #v3-cap:not([data-step])>.cap-top{display:grid}
+.ebv3 #v3-cap>.cap-top{grid-template-columns:minmax(0,1.2fr) minmax(0,1.1fr) minmax(0,1fr) minmax(0,1.4fr);gap:20px;align-items:start}
+.ebv3 #v3-cap>.cap-top>.cap-grp{grid-template-columns:minmax(0,1fr);align-content:start;gap:8px;margin:0;min-width:0}
+.ebv3 #v3-cap>.cap-top input,.ebv3 #v3-cap>.cap-top select{box-sizing:border-box;min-width:0;max-width:100%;width:100%}
+.ebv3 #v3-date{-webkit-appearance:none;appearance:none}
+.ebv3 #v3-date::-webkit-date-and-time-value{text-align:left}
+.ebv3 #v3-context{display:none}
+.ebv3 #v3-cap[data-step="4"]>#v3-context,.ebv3 #v3-cap:not([data-step]):not([data-picking="1"])>#v3-context{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:16px;border-left:4px solid var(--bc,var(--brand));font-weight:600;line-height:24px;overflow-wrap:anywhere}
+.ebv3 #v3-context-summary{flex:1 1 240px;min-width:0}
+.ebv3 #v3-new-entry{flex:none}
+.ebv3 #v3-cap>.entry-tools,.ebv3 #v3-cap[data-step]>.entry-tools{display:flex;justify-content:flex-end}
+.ebv3 #v3-cap[data-step="fg"]>.entry-tools{display:none}
+.ebv3 .suggestions{margin-bottom:16px}
+.ebv3 .suggestions button{border-color:var(--brand-lt);background:var(--brand-light)}
+.ebv3 .reference-control,.ebv3 .folder-add{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.ebv3 .folder-add[hidden]{display:none}
+.ebv3 .folder-add{padding-top:8px;border-top:1px solid var(--border)}
+.ebv3 .reference-control .cap-note{font-weight:400;line-height:18px}
+.ebv3 #v3-cap[data-step="4"]>.cap-grid{grid-template-columns:minmax(0,1fr)}
+.ebv3 #v3-cap[data-step="1"]>.cap-steps{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.ebv3 #v3-cap[data-step="1"]>.cap-steps button{margin:0;clip-path:none;border-radius:8px;padding:16px}
+.ebv3 #v3-cap[data-step] .cap-bar .t small{display:none}
+.ebv3 #v3-cap[data-step] .wz button{min-height:64px}
+.ebv3 #v3-cap[data-step] .wz button small{max-width:100%;overflow-wrap:anywhere;white-space:normal}
+.ebv3 #v3-cap[data-step]>.cap-bar[hidden],.ebv3 #v3-cap[data-step="fg"]>.wz{display:none}
+.ebv3 #v3-cap[data-step="fg"]>.cap-steps{display:flex}
+.ebv3 #v3-cap[data-step="fg"]>.pick-card,.ebv3 #v3-cap[data-step="fg"]>.cap-grid{display:grid}
+@media(max-width:1180px){
+ .ebv3 #v3-cap>.cap-top{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .ebv3 #v3-cap>.cap-top>.mach-w{grid-column:auto}
+}
+@media(max-width:480px){
+ .ebv3 #v3-cap>.cap-top{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:700px){
+ .ebv3 .rc table,.ebv3 .rc tbody,.ebv3 .rc tr,.ebv3 .rc td{display:block;width:100%;max-width:none}
+ .ebv3 .rc thead{display:none}
+ .ebv3 .rc tr{padding:12px 16px;border-top:1px solid var(--border)}
+ .ebv3 .rc td{padding:4px 0;border:0;text-align:left}
+ .ebv3 .rc td:nth-child(2)::before{content:"ERP stock: ";font-size:12px;color:var(--weak)}
+ .ebv3 .rc td:nth-child(4)::before{content:"Variance: ";font-size:12px;color:var(--weak)}
+ .ebv3 .rc td small{display:block}
+ .ebv3 .rc-count{margin:8px 0}
+ .ebv3 .rc-count label{max-width:none;min-width:0}
+ .ebv3 .rc .btn-grp{display:grid}
+ .ebv3 .rc-brands{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .ebv3 .rc-brands button{min-width:0}
+}

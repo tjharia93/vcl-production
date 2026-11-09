@@ -20,7 +20,22 @@ class TestCodes(unittest.TestCase):
 
 	def test_bad_group(self):
 		with self.assertRaises(r.CaptureError):
-			r.parse_group("Hi5|A4|96|SL")
+			r.parse_group("Unknown|A4|96|SL")
+
+	def test_hi5_codes_and_no_empty_carton(self):
+		c = r.codes("Hi5|A4|120|SL")
+		self.assertEqual(c["cov"], "COV-HI5-A4-120PG-SL")
+		self.assertEqual(c["fld"], "FLD-HI5-A4-120PG-SL")
+		self.assertEqual(c["ins"], "INS-HI5-A4-120PG-SL")
+		self.assertEqual(c["book"], "Hi5-A4-120PGS-CB-BP-SL")
+		self.assertIsNone(c["carton"])
+
+	def test_hi5_packing_deducts_only_inserts(self):
+		p = r.plan("packing", 2, {"ins": 1000, "fg": 0, "carton": 0}, {"cartons": 2},
+			books_per_carton=102, carton_enabled=False, item=r.codes("Hi5|A4|120|SL"))
+		self.assertTrue(p["ok"])
+		self.assertEqual([(row["key"], row["qty"]) for row in p["rows"]], [("ins", -102), ("fg", 204)])
+		self.assertTrue(any("Hi5 packing does not deduct" in message for level, message in p["msgs"]))
 
 	def test_ups(self):
 		self.assertEqual(r.ups_from_name("Prince Cover - A5 - 120 Pages - Single Line - 3 up"), 3)

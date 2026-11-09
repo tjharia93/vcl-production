@@ -101,5 +101,50 @@ py -3 scripts/deploy_eb_dev_page.py --page v3 --create
 - The server methods arrive only with a vcl-production deploy and migrate on Frappe Cloud.
 
 ## Tests
+
+### Hi5 capture (09/11/2026)
+
+- Supports the existing active `Hi5-A4/A5-…PGS-…-BP-…` finished books, with COV-HI5,
+  FLD-HI5 and INS-HI5 stage items. A4 uses two books per set and A5 three, matching
+  the existing capture flow. Disabled finished-book variants are not provisioned.
+- `scripts/provision_eb_hi5.py --check` shows the missing stage masters; `--apply`
+  adds them without any opening stock or stock transactions. The same add-only setup
+  also runs after install/migrate.
+- Hi5 packing deliberately does **not** deduct empty cartons (Tanuj, 09/11/2026).
+  Books-per-carton still comes from the finished item's Carton UOM. Variants without
+  a Carton conversion remain blocked at packing until that conversion is supplied.
+- The page only enables Hi5 when `get_mode.brands` advertises server support. Deploy
+  and migrate the Hi5 server code on Frappe Cloud, then refresh the page. An older
+  server keeps Hi5 unavailable rather than offering a posting it cannot accept.
+
+### iPad folding entry (09/11/2026)
+
+- Up to 1180px, Capture uses the guided Station → When & who → Book → Count flow.
+- Folds labels the reference **Folded by** in the form, preview and both confirmations.
+  It uses the existing `run` payload field, so the server and older entries stay compatible.
+- The folder's name is remembered separately from press/run references. Date and shift stay
+  set for successive entries; a remembered date resets to today on a new work day and must
+  remain inside the server's seven-day back-date window.
+- Stock details start collapsed, below the quantity form. The Count step repeats the chosen
+  book, date, shift and folder. Quantities still require both confirmations before posting.
+- Swara's shared brand tokens use oxblood `#800020` with a pale `#F4E3E7` tint.
+- **Folded by** is a dropdown populated from submitted Capture v3 folding receipts, plus
+  the central **VCL EB Folder** master. **Add name** saves directly to this shared master
+  without posting stock. The dropdown refreshes when focused and every five seconds while
+  the name step is visible. Failed saves show an error and never claim a name was shared.
+  Historical trailing Day/Night shift labels are stripped from the dropdown name; source
+  receipts and their original references are unchanged.
+- **New entry** returns to station selection with blank quantities, preserving station, date,
+  shift, folder and the session's posting log. It never posts an entry.
+  The button is visible at the top of every capture step.
+- Book selection is **Brand → Size → Pages → Lines**. One-tap suggestions combine this
+  station's recent browser choices with the latest 100 submitted Capture v3 entries,
+  filtered by the brand/size/pages/lines already selected. Suggestions never reuse counts.
+- `scripts/provision_eb_folders.py --check` reads the shared-master status; `--apply`
+  provisions the same custom DocType schema owned by after_install/after_migrate and seeds
+  names from folding history. It does not change production entries.
+- Run `node testing/test_eb_capture_preferences.cjs` for preference, date, wizard-validation
+  and posting-payload regression checks.
+
 - `production_floor/tests/test_eb_capture_rules.py` (rules) and `tests/test_receiving_books.py` (spot-weigh, from a84ef92).
 - `page.js` mirrors the rules. It was checked by hand against live stock through a local read-only harness on 04/11 (screenshots are outside git, in `C:\Second_Brain\output\eb_capture_v3_screenshots\`).

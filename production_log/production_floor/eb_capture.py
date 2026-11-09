@@ -88,7 +88,7 @@ def get_mode():
 		"run_field": bool(frappe.get_meta("Stock Entry").has_field(RUN_FIELD)),
 		"shift_field": bool(frappe.get_meta("Stock Entry").has_field(SHIFT_FIELD)),
 		"shifts": list(rules.SHIFTS), "backdate_days": rules.BACKDATE_DAYS, "today": nowdate(), "user": frappe.session.user,
-		"machines": _machines(), "can_backfill": _can_backfill(), "backfill_until": str(rules.BACKFILL_UNTIL)}
+		"machines": _machines(), "brands": list(rules.BRAND_CODE), "can_backfill": _can_backfill(), "backfill_until": str(rules.BACKFILL_UNTIL)}
 
 
 @frappe.whitelist(methods=["POST"])
