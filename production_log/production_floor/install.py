@@ -43,6 +43,7 @@ def after_install():
 	align_machines()
 	# Stores receiving standards: add-only, same contract as the machines.
 	seed_carton_standards()
+	ensure_capture_masters()
 	frappe.db.commit()
 
 
@@ -62,7 +63,21 @@ def after_migrate():
 	# Stores receiving standards: add-only, same contract as the machines.
 	seed_carton_standards()
 	ensure_capture_machine_field()
+	ensure_capture_masters()
 	frappe.db.commit()
+
+
+def ensure_capture_masters():
+	for label, module_name, function_name in (
+		("Shared folding names", "folder_registry", "ensure_folder_registry"),
+		("Hi5 capture items", "hi5_items", "ensure_hi5_items"),
+	):
+		try:
+			from importlib import import_module
+			module = import_module("production_log.production_floor.setup." + module_name)
+			getattr(module, function_name)()
+		except Exception:
+			frappe.log_error(title=label + " setup incomplete", message=frappe.get_traceback())
 
 
 def ensure_capture_machine_field():

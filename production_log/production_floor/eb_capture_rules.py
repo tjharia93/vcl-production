@@ -43,8 +43,8 @@ ENTRY_TYPE = {
 	"packing": "Manufacture",
 }
 
-BRAND_CODE = {"Prince": "PNC", "Swara": "SWR"}
-BOOK_PREFIX = {"Prince": ("PNCEB", "BP"), "Swara": ("SWREB", "NP")}
+BRAND_CODE = {"Prince": "PNC", "Swara": "SWR", "Hi5": "HI5"}
+BOOK_PREFIX = {"Prince": ("PNCEB", "BP"), "Swara": ("SWREB", "NP"), "Hi5": ("Hi5", "BP")}
 
 # P12 is open (Tanuj): one common carton per size + brand, the PC proposal of 04/11/2026.
 # Change it here (and in page.js CARTONS) when Tanuj decides.
@@ -66,7 +66,7 @@ BACKFILL_UNTIL = datetime.date(2026, 11, 26)  # three weeks from 05/11/2026, the
 SAMPLE_EVERY = 20  # spot-weigh 1 carton in 20
 SAMPLE_SPREAD_PCT = 5.0
 
-_GROUP = re.compile(r"^(Prince|Swara)\|(A4|A5)\|(\d+)\|([A-Z0-9]+)$")
+_GROUP = re.compile(r"^(Prince|Swara|Hi5)\|(A4|A5)\|(\d+)\|([A-Z0-9]+)$")
 _UPS = re.compile(r"(\d+)\s*up\s*$", re.I)
 
 
@@ -212,7 +212,10 @@ def plan(station, ups, stock, inputs, books_per_carton=None, carton_enabled=True
 			ok = False
 			msgs.append(("bad", f"Not enough empty cartons for this book: {stock.get('carton', 0):,} on hand."))
 		if cartons and not carton_enabled:
-			msgs.append(("warn", "The carton item for this size is disabled in ERPNext, so empty cartons are NOT taken out on this entry. Enable it to count cartons used."))
+			if str(item.get("book", "")).startswith("Hi5-"):
+				msgs.append(("info", "Hi5 packing does not deduct empty cartons."))
+			else:
+				msgs.append(("warn", "The carton item for this size is disabled in ERPNext, so empty cartons are NOT taken out on this entry. Enable it to count cartons used."))
 		msgs.append(("info", f"{cartons:,} cartons x {cpc} + {loose:,} loose = {books:,} books."))
 		if over > 0:
 			msgs.append(("info", f"The last insert set has {over} book{'s' if over != 1 else ''} over: recorded as rejects, so rejects = {rejects + over}."))

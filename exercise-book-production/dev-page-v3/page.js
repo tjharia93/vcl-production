@@ -9,8 +9,9 @@
  *   (totals, "Post now" not pre-focused, Enter does nothing) -> eb_capture.post_entry with
  *   confirmed=2. Undo (same user, 10 minutes) is confirmed twice the same way.
  * - If the server methods are not deployed, Post says "Server update needed" and posts nothing.
- * - Reads only through frappe.client.get_list (GET). No REST resource writes for stock.
- *   The one exception is the Priority tab, which writes VCL EB Priority rows only (no stock).
+ * - Reads through frappe.client.get_list. Long stock-recon filters use POST reads to
+ *   fit the site's request-line limit. Priority writes VCL EB Priority; Stock recon
+ *   creates and, after two confirmations, submits standard reconciliations.
  *
  * RULES (mirror of production_floor/eb_capture_rules.py; keep the two in step)
  * - Covers, folds, inserts count in SETS with the same up-count (A4 2-up, A5 3-up, from
@@ -41,22 +42,24 @@
   var TYPE = { covers: "Material Receipt", folds: "Material Receipt", inserts: "Repack", packing: "Manufacture" };
   var LS = "vcl.eb-v3.";
   function PHONE() { return window.matchMedia && window.matchMedia("(max-width:700px)").matches; }
-  /* Phone guided flow (Tanuj, 06/11/2026): one step per screen, same posting path. Desktop is untouched. */
-  var W = null;  // { step: 1..4 } while the phone flow is on
+  function GUIDED() { return window.matchMedia && window.matchMedia("(max-width:1180px)").matches; }
+  /* One step per screen on phones and iPads, using the same posting path. */
+  var W = null;  // { step: 1..4 } while the guided flow is on
   var WZ = [["Station", function () { var s = STEPS.filter(function (x) { return x[0] === S.station; })[0]; return s ? s[2] : ""; }],
-            ["Date", function () { return (S.run || "").trim() ? dmy(S.date) + " · " + S.shift.replace(" Shift", "") + " · " + (S.run || "").trim() : ""; }],
+            ["When & who", function () { return (S.run || "").trim() ? dmy(S.date) + " · " + S.shift.replace(" Shift", "") + " · " + (S.run || "").trim() : ""; }],
             ["Book", function () { return S.chosen && !pickBusy() ? gname(g()) : ""; }],
             ["Count", function () { return ""; }]];
   function wzOk(step) {
     if (step === 1) return !!S.station && S.station !== "fg";
-    if (step === 2) return !!(S.run || "").trim() && !!S.date && SHIFTS.indexOf(S.shift) >= 0;
+    if (step === 2) return !S.folderSaving && !!(S.run || "").trim() && !checkWhen() && (!stationMachines().length || !!machine());
     if (step === 3) return !!S.chosen && !pickBusy();
     return true;
   }
   function wzGo(step) { if (!W) return; W.step = Math.max(1, Math.min(4, step)); renderWizard(); window.scrollTo(0, 0); }
   function renderWizard() {
     var cap = $("v3-cap"), el = $("v3-wz"); if (!W || !cap || !el) return;
-    cap.dataset.step = W.step;
+    cap.dataset.step = S.station === "fg" ? "fg" : W.step;
+    if (S.station === "fg") return;
     el.innerHTML = WZ.map(function (w, i) {
       var n = i + 1, done = n < W.step && wzOk(n), cur = n === W.step, can = n <= W.step || (n === W.step + 1 && wzOk(W.step));
       return '<button type="button" data-wz="' + n + '"' + (can ? "" : " disabled") + ' aria-current="' + (cur ? "step" : "false") + '" class="' + (done ? "done" : cur ? "cur" : "") + '"><b>' + n + ". " + w[0] + "</b><small>" + esc(done ? (w[1]() || "done") : cur ? "now" : "") + "</small></button>";
@@ -66,7 +69,11 @@
     if (back) back.disabled = W.step === 1;
     if (next) { next.hidden = W.step === 4; next.disabled = !wzOk(W.step); next.textContent = "Next"; }
     if (post) post.hidden = W.step !== 4;
-    if (W.step !== 4 && sum) sum.textContent = W.step === 1 ? "Which station is this sheet from?" : W.step === 2 ? (wzOk(2) ? "Date and run are set." : "Enter the run or press.") : (wzOk(3) ? gname(g()) : "Choose the book type.");
+    if (W.step !== 4 && sum) sum.textContent = W.step === 1 ? "Which station is this sheet from?" : W.step === 2 ? (checkWhen() || (!(S.run || "").trim() ? referenceAsk() : stationMachines().length && !machine() ? "Choose the machine." : "Date, shift and " + (S.station === "folds" ? "folder" : "run") + " are set.")) : (wzOk(3) ? gname(g()) : "Choose the book type.");
+    if (W.step === 4 && sum) {
+      var plan = planEntry();
+      sum.textContent = barText(plan, (S.run || "").trim(), plan.rows.some(function (r) { return r.qty; }));
+    }
   }
   var PLAIN = { covers: "Adds printed cover sheets to stock", folds: "Adds folds to stock", inserts: "Turns cover sheets and folds into inserts", packing: "Packs books into Finished Goods" };
   var RL = { cov: "Cover sheets", fld: "Folds", ins: "Inserts", carton: "Empty cartons", fg: "Finished books" };
@@ -109,6 +116,152 @@
   function pg3(p) { return ("00" + p).slice(-3); }
   function lsGet(k, d) { try { var v = localStorage.getItem(LS + k); return v == null ? d : v; } catch (e) { return d; } }
   function lsSet(k, v) { try { localStorage.setItem(LS + k, v); } catch (e) { /* private window */ } }
+  function referenceLabel() { return S.station === "folds" ? "Folded by" : "Run or press"; }
+  function referenceAsk() { return S.station === "folds" ? "Enter who did the folding." : "Enter the run or press."; }
+  function referenceText(run) { return (S.station === "folds" ? "Folded by " : "Run ") + ((run || "").trim() || "-"); }
+  var FOLDER_DOCTYPE = "VCL EB Folder";
+  var FOLD_NAMES = { names: [], shared: [], sharedOk: false, sharedAt: 0, sharedPending: null, loading: false, loaded: false, error: false };
+  function cleanFoldName(value) {
+    var name = String(value || "").trim().replace(/\s+/g, " ");
+    return name && name.length <= 80 && !/[\x00-\x1f\x7f·<>]/.test(name) && name !== "-" ? name : "";
+  }
+  function mergeFoldNames(names) {
+    var seen = Object.create(null), out = [];
+    names.forEach(function (value) { var name = cleanFoldName(value), key = name.toLocaleLowerCase(); if (name && !seen[key]) { seen[key] = true; out.push(name); } });
+    return out.sort(function (a, b) { return a.localeCompare(b); });
+  }
+  function savedFoldNames() {
+    try { var names = JSON.parse(lsGet("fold.names", "[]")); return Array.isArray(names) ? names : []; } catch (e) { return []; }
+  }
+  function foldNames() { return mergeFoldNames(FOLD_NAMES.names.concat(savedFoldNames(), [lsGet("foldedBy", ""), S.station === "folds" ? S.run : ""])); }
+  function saveFoldName(value) {
+    var name = cleanFoldName(value); if (!name) return "";
+    FOLD_NAMES.names = mergeFoldNames(foldNames().concat([name]));
+    lsSet("fold.names", JSON.stringify(FOLD_NAMES.names));
+    return FOLD_NAMES.names.filter(function (n) { return n.toLocaleLowerCase() === name.toLocaleLowerCase(); })[0];
+  }
+  function foldNameFromEntry(row) {
+    var remarks = row.remarks || "", match = /^Capture v3 · run (.+?) · confirmed twice by /.exec(remarks);
+    if ((row.docstatus != null && +row.docstatus !== 1) || !/(?:^| · )Station folds(?: · |$)/.test(remarks) || !match) return "";
+    // Older folding references included a shift suffix; shift now has its own field.
+    var name = cleanFoldName(match[1].replace(/\s+(?:-\s*)?(?:day|night)(?:\s+shift)?$/i, ""));
+    return name ? name.charAt(0).toUpperCase() + name.slice(1) : "";
+  }
+  function loadSharedFoldNames(force) {
+    if (FOLD_NAMES.sharedPending) return FOLD_NAMES.sharedPending;
+    if (!force && FOLD_NAMES.sharedOk && Date.now() - FOLD_NAMES.sharedAt < 5000) return Promise.resolve();
+    FOLD_NAMES.sharedPending = list(FOLDER_DOCTYPE, ["folder_name"], []).then(function (rows) {
+      FOLD_NAMES.shared = mergeFoldNames(rows.map(function (row) { return row.folder_name; }));
+      FOLD_NAMES.names = mergeFoldNames(FOLD_NAMES.names.concat(FOLD_NAMES.shared));
+      FOLD_NAMES.sharedOk = true; FOLD_NAMES.sharedAt = Date.now();
+      lsSet("fold.names", JSON.stringify(foldNames()));
+    }).catch(function () { FOLD_NAMES.sharedOk = false; }).then(function () {
+      FOLD_NAMES.sharedPending = null; renderFoldOptions();
+    });
+    return FOLD_NAMES.sharedPending;
+  }
+  function saveSharedFoldName(value) {
+    var name = cleanFoldName(value);
+    if (!name) return Promise.reject(new Error("Enter a name of up to 80 characters, without ·, < or >."));
+    function existing() { return FOLD_NAMES.shared.filter(function (n) { return n.toLocaleLowerCase() === name.toLocaleLowerCase(); })[0]; }
+    return loadSharedFoldNames(true).then(function () {
+      if (!FOLD_NAMES.sharedOk) throw new Error("The shared list is unavailable. Please retry; this name has not been saved.");
+      if (existing()) return existing();
+      return post("frappe.client.insert", { doc: { doctype: FOLDER_DOCTYPE, folder_name: name } }).then(function (row) {
+        var saved = cleanFoldName(row.folder_name); if (!saved) throw new Error("The server did not confirm the saved name. Please retry.");
+        FOLD_NAMES.shared = mergeFoldNames(FOLD_NAMES.shared.concat([saved]));
+        return saved;
+      }).catch(function (error) {
+        // Two iPads can add the same name together: accept the existing record after rereading.
+        return loadSharedFoldNames(true).then(function () { if (existing()) return existing(); throw error; });
+      });
+    }).then(function (saved) { return saveFoldName(saved); });
+  }
+  function renderFoldOptions() {
+    var select = $("v3-run"), status = $("v3-folder-status");
+    if (S.station !== "folds" || !select || select.tagName !== "SELECT") return;
+    var names = foldNames();
+    var options = '<option value="">Choose a name</option>' + names.map(function (name) { return '<option value="' + esc(name) + '">' + esc(name) + '</option>'; }).join("");
+    if (select.innerHTML !== options) select.innerHTML = options;
+    select.value = names.filter(function (name) { return name.toLocaleLowerCase() === S.run.trim().toLocaleLowerCase(); })[0] || "";
+    if (status) status.textContent = FOLD_NAMES.sharedPending ? "Refreshing shared names…" : !FOLD_NAMES.sharedOk ? "Shared names are unavailable. Saved names are shown; retry before adding a name." : "Names are shared across all iPads. Add a name once and choose it on any iPad.";
+  }
+  function loadFoldNames() {
+    if (FOLD_NAMES.loading || FOLD_NAMES.loaded) return;
+    FOLD_NAMES.loading = true; FOLD_NAMES.error = false;
+    function page(start) {
+      return get("frappe.client.get_list", { doctype: "Stock Entry", fields: ["name", "remarks", "docstatus"],
+        filters: [["docstatus", "=", 1], ["stock_entry_type", "=", "Material Receipt"], ["remarks", "like", "%Station folds%"]],
+        order_by: "name asc", limit_start: start, limit_page_length: 500 }).then(function (rows) {
+          FOLD_NAMES.names = mergeFoldNames(FOLD_NAMES.names.concat(rows.map(foldNameFromEntry).filter(Boolean)));
+          return rows.length === 500 ? page(start + rows.length) : null;
+        });
+    }
+    return page(0).then(function () {
+      FOLD_NAMES.loaded = true; lsSet("fold.names", JSON.stringify(foldNames()));
+    }).catch(function () { FOLD_NAMES.error = true; FOLD_NAMES.loaded = true; }).then(function () {
+      FOLD_NAMES.loading = false; renderFoldOptions();
+    });
+  }
+  function renderReference() {
+    $("v3-run-label").textContent = referenceLabel() + " (required)";
+    var control = $("v3-reference-control");
+    control.innerHTML = S.station === "folds" ?
+      '<select id="v3-run" required aria-required="true" aria-describedby="v3-folder-status"></select>' +
+      '<button type="button" class="cap-sec" id="v3-add-folder">Add name</button>' +
+      '<span class="cap-note" id="v3-folder-status" role="status"></span>' +
+      '<div class="folder-add" id="v3-folder-add" hidden><label class="lb" for="v3-folder-new">New folding name</label>' +
+      '<input id="v3-folder-new" autocomplete="off" maxlength="80" placeholder="e.g. Regina"><div class="btn-grp">' +
+      '<button type="button" class="cap-sec" id="v3-folder-save">Save name</button><button type="button" class="cap-sec" id="v3-folder-cancel">Cancel</button></div>' +
+      '<span class="cap-note" id="v3-folder-error" role="alert"></span></div>' :
+      '<input id="v3-run" autocomplete="off" required aria-required="true" placeholder="e.g. Miller">';
+    $("v3-run").value = S.run;
+    function changed(e) { S.run = e.target.value; lsSet(S.station === "folds" ? "foldedBy" : "run", S.run); renderPreview(); }
+    if (S.station !== "folds") { $("v3-run").oninput = changed; return; }
+    $("v3-run").onchange = changed;
+    $("v3-run").onfocus = function () { loadSharedFoldNames(); };
+    $("v3-add-folder").onclick = function () { $("v3-folder-add").hidden = false; $("v3-folder-new").focus(); };
+    $("v3-folder-cancel").onclick = function () { $("v3-folder-add").hidden = true; $("v3-folder-new").value = ""; $("v3-folder-error").textContent = ""; $("v3-add-folder").focus(); };
+    $("v3-folder-save").onclick = function () {
+      var name = $("v3-folder-new").value, owner = $("v3-reference-control"), save = $("v3-folder-save");
+      S.folderSaving = true; save.disabled = true; $("v3-folder-cancel").disabled = true;
+      $("v3-folder-error").textContent = "Saving for all iPads…"; renderPreview();
+      saveSharedFoldName(name).then(function (saved) {
+        lsSet("foldedBy", saved);
+        if (S.station === "folds" && $("v3-reference-control") === owner) {
+          S.run = saved; renderFoldOptions(); $("v3-folder-add").hidden = true;
+          $("v3-folder-new").value = ""; $("v3-folder-error").textContent = ""; $("v3-run").focus();
+        }
+      }).catch(function (error) {
+        if ($("v3-reference-control") === owner) $("v3-folder-error").textContent = error.message || "Name could not be saved. Please retry.";
+      }).then(function () {
+        S.folderSaving = false;
+        if (S.view === "capture" && $("v3-reference-control") === owner) {
+          save.disabled = false; $("v3-folder-cancel").disabled = false; renderPreview();
+        }
+      });
+    };
+    loadSharedFoldNames(); loadFoldNames(); renderFoldOptions();
+  }
+  function renderEntryContext() {
+    var context = $("v3-context"); if (!context) return;
+    context.dataset.b = g().brand;
+    $("v3-context-summary").textContent = gname(g()) + " · " + dmy(S.date) + " · " + S.shift + " · " + referenceText(S.run);
+    $("v3-new-entry").disabled = !!S.posting || !!S.folderSaving;
+  }
+  function resetEntry() { S.v = {}; S.book = null; S.chosen = false; }
+  function newEntry() {
+    if (S.posting || S.folderSaving) return;
+    resetEntry(); PK = {}; renderShell();
+    if (W) wzGo(1); else { $("v3-steps").querySelector("button").focus(); window.scrollTo(0, 0); }
+  }
+  function rememberDate() {
+    if (!checkWhen()) { lsSet("date", S.date); lsSet("date.savedOn", todayIso()); }
+  }
+  function rememberedDate() {
+    var date = lsGet("date", "");
+    return lsGet("date.savedOn", "") === todayIso() && /^\d{4}-\d{2}-\d{2}$/.test(date) && date >= minIso() && date <= todayIso() ? date : todayIso();
+  }
   function csrf() { return (window.frappe && frappe.csrf_token) || ""; }
   function get(method, args) {
     var q = Object.keys(args || {}).map(function (k) { var v = args[k]; return encodeURIComponent(k) + "=" + encodeURIComponent(typeof v === "string" ? v : JSON.stringify(v)); }).join("&");
@@ -144,35 +297,38 @@
       list("Bin", ["item_code", "actual_qty"], [["warehouse", "=", STORES], ["item_code", "in", cartonCodes]]),
       list("Bin", ["item_code", "actual_qty"], [["warehouse", "=", FG]]),
       list("Sales Order", soFields, openSO.concat([["Sales Order Item", "item_code", "like", "PNCEB-%"]])),
-      list("Sales Order", soFields, openSO.concat([["Sales Order Item", "item_code", "like", "SWREB-%"]]))
+      list("Sales Order", soFields, openSO.concat([["Sales Order Item", "item_code", "like", "SWREB-%"]])),
+      list("Item", ["name", "item_name", "disabled"], [["name", "like", "Hi5-A%"]]),
+      list("Item", ["name", "`tabUOM Conversion Detail`.conversion_factor as cf"], [["UOM Conversion Detail", "uom", "=", "Carton"], ["name", "like", "Hi5-A%"]]),
+      list("Sales Order", soFields, openSO.concat([["Sales Order Item", "item_code", "like", "Hi5-A%"]]))
     ]).then(function (r) {
       var items = {}; r[0].forEach(function (i) { items[i.name] = i; });
-      var books = r[1].concat(r[2]).filter(function (b) { return !b.disabled; });
-      var cpc = {}; r[3].concat(r[4]).forEach(function (x) { cpc[x.name] = Number(x.cf) || 0; });
+      var books = r[1].concat(r[2], r[13]).filter(function (b) { return !b.disabled; });
+      var cpc = {}; r[3].concat(r[4], r[14]).forEach(function (x) { cpc[x.name] = Number(x.cf) || 0; });
       var cartons = {}; r[5].forEach(function (c) { cartons[c.name] = { disabled: !!c.disabled, qty: 0 }; });
       var bin = {};
       r[6].concat(r[7], r[8]).forEach(function (b) { bin[b.item_code + "|" + STORES] = Number(b.actual_qty) || 0; });   // COV-/FLD-/INS- in Stores
       r[10].forEach(function (b) { bin[b.item_code + "|" + FG] = Number(b.actual_qty) || 0; });                       // books in Finished Goods only
       r[9].forEach(function (b) { if (cartons[b.item_code]) cartons[b.item_code].qty = Number(b.actual_qty) || 0; });
-      var orders = r[11].concat(r[12]).map(function (o) { return { so: o.name, customer: o.customer, delivery: o.delivery_date, item: o.item_code, pending: Math.max(0, ((Number(o.qty) || 0) - (Number(o.delivered_qty) || 0)) * (Number(o.cf) || 1)) }; }).filter(function (o) { return o.pending > 0; });
+      var orders = r[11].concat(r[12], r[15]).map(function (o) { return { so: o.name, customer: o.customer, delivery: o.delivery_date, item: o.item_code, pending: Math.max(0, ((Number(o.qty) || 0) - (Number(o.delivered_qty) || 0)) * (Number(o.cf) || 1)) }; }).filter(function (o) { return o.pending > 0; });
       // groups from the COV items
       var groups = {};
       Object.keys(items).forEach(function (code) {
-        var m = /^COV-(PNC|SWR)-(A4|A5)-(\d{3})PG-([A-Z0-9]+)$/.exec(code);
+        var m = /^COV-(PNC|SWR|HI5)-(A4|A5)-(\d{3})PG-([A-Z0-9]+)$/.exec(code);
         if (!m) return;
-        var brand = m[1] === "PNC" ? "Prince" : "Swara", size = m[2], pages = +m[3], ruling = m[4];
+        var brand = m[1] === "PNC" ? "Prince" : m[1] === "HI5" ? "Hi5" : "Swara", size = m[2], pages = +m[3], ruling = m[4];
         var tail = m[1] + "-" + size + "-" + m[3] + "PG-" + ruling, k = brand + "|" + size + "|" + pages + "|" + ruling;
         var ins = items["INS-" + tail], fld = items["FLD-" + tail];
         if (!ins || !fld) return;
         var upm = /(\d+)\s*up\s*$/i.exec(ins.item_name || "");
-        var prefix = brand === "Prince" ? "PNCEB" : "SWREB", paper = brand === "Prince" ? "BP" : "NP";
+        var prefix = brand === "Prince" ? "PNCEB" : brand === "Hi5" ? "Hi5" : "SWREB", paper = brand === "Swara" ? "NP" : "BP";
         var re = new RegExp("^" + prefix + "-" + size + "-" + pages + "PGS-([A-Z]+)-" + paper + "-" + ruling + "$");
         var bks = books.filter(function (b) { return re.test(b.name); }).map(function (b) { return { code: b.name, name: b.item_name, cover: re.exec(b.name)[1], cpc: cpc[b.name] || 0 }; })
           .sort(function (a, b) { return (a.cover === "CB" ? 0 : 1) - (b.cover === "CB" ? 0 : 1) || a.code.localeCompare(b.code); });
         var codes = bks.map(function (b) { return b.code; });
         var dem = orders.filter(function (o) { return codes.indexOf(o.item) >= 0; }).reduce(function (s, o) { return s + o.pending; }, 0);
         groups[k] = { k: k, brand: brand, size: size, pages: pages, ruling: ruling, ups: upm ? +upm[1] : (size === "A4" ? 2 : 3),
-          cov: "COV-" + tail, fld: "FLD-" + tail, ins: "INS-" + tail, books: bks, carton: CARTONS[size + "|" + brand], dem: dem };
+          cov: "COV-" + tail, fld: "FLD-" + tail, ins: "INS-" + tail, books: bks, carton: CARTONS[size + "|" + brand] || null, dem: dem };
       });
       D = { items: items, groups: groups, bin: bin, cartons: cartons, orders: orders, loadedAt: new Date() };
     });
@@ -180,7 +336,7 @@
 
   function loadMode() {
     return get(M + "get_mode", {}).then(function (m) {
-      MODE = { checked: true, server: true, disabled: !!m.disabled, can_post: !!m.can_post, can_backfill: !!m.can_backfill, backfill_until: m.backfill_until || "", run_field: !!m.run_field, dated: Array.isArray(m.shifts), machines: m.machines || {}, user: m.user || "" };
+      MODE = { checked: true, server: true, disabled: !!m.disabled, can_post: !!m.can_post, can_backfill: !!m.can_backfill, backfill_until: m.backfill_until || "", run_field: !!m.run_field, dated: Array.isArray(m.shifts), machines: m.machines || {}, brands: m.brands || ["Prince", "Swara"], user: m.user || "" };
     }).catch(function () { MODE = { checked: true, server: false, can_post: false, user: "" }; });
   }
 
@@ -200,6 +356,7 @@
     var gg = g(), s = stock(), bk = book(), u = gg.ups, st = S.station, V = S.v, P = { ok: true, rows: [], msgs: [], type: TYPE[st], extra: {} };
     function row(dir, key, item, wh, qty, before, unit) { P.rows.push({ dir: dir, key: key, item: item, wh: wh, qty: qty, before: before, after: before + qty, unit: unit }); }
     function bad(t) { P.ok = false; P.msgs.push(["bad", t]); }
+    if (gg.brand === "Hi5" && (MODE.brands || []).indexOf("Hi5") < 0) bad("Hi5 posting needs the server update. Nothing will post until it is deployed.");
     var wErr = checkWhen(), oldServer = MODE.server && !MODE.dated; /* an older server ignores date and shift, so never promise them */
     if (stationMachines().length && !machine()) bad("Pick the machine.");
     if (wErr) bad(wErr);
@@ -218,7 +375,7 @@
       var fg = num(V.good), rj = num(V.rejects);
       if (fg <= 0) { P.ok = false; P.msgs.push(["info", "Enter the good folds counted."]); }
       row("in", "fld", gg.fld, STORES, fg, s.fld, "folds");
-      if (rj) P.msgs.push(["info", f(rj) + " rejected folds recorded for the run, not added."]);
+      if (rj) P.msgs.push(["info", f(rj) + " rejected folds recorded for this entry, not added."]);
       if (V.opening) P.msgs.push(["info", "Opening count: this is the fold stock found on the floor, not new production."]);
       P.msgs.push(["info", f(fg) + " folds = " + f(fg * u) + " books' inners."]);
       P.extra = { good: fg, rejects: rj, opening: !!V.opening };
@@ -244,7 +401,7 @@
       row("in", "fg", bk.code, FG, books, s.fg, "books");
       if (sets > s.ins) bad("Not enough inserts: " + f(s.ins) + " on hand, " + f(sets) + " needed for " + f(books + rj2) + " books.");
       if (ct && s.cartonEnabled && ct > s.carton) bad("Not enough empty cartons for this book: " + f(s.carton) + " on hand.");
-      if (ct && !s.cartonEnabled) P.msgs.push(["warn", "The carton item for this size (" + gg.carton + ") is disabled in ERPNext, so empty cartons are NOT taken out on this entry. Enable it to count cartons used."]);
+      if (ct && !s.cartonEnabled) P.msgs.push(gg.brand === "Hi5" ? ["info", "Hi5 packing does not deduct empty cartons."] : ["warn", "The carton item for this size (" + gg.carton + ") is disabled in ERPNext, so empty cartons are NOT taken out on this entry. Enable it to count cartons used."]);
       P.msgs.push(["info", f(ct) + " cartons × " + cpc + " + " + f(lo) + " loose = " + f(books) + " books."]);
       if (over > 0) P.msgs.push(["info", "The last insert has " + over + " book" + (over > 1 ? "s" : "") + " over: recorded as rejects, so rejects = " + (rj2 + over) + "."]);
       var due = ct > 0 ? Math.max(1, Math.ceil(ct / 20)) : 0;
@@ -276,19 +433,20 @@
 
   function renderShell() {
     if (!D.groups[S.group]) S.group = groupKeys()[0];
-    W = PHONE() ? { step: (W && W.step) || 1 } : null;
-    $("v3-app").innerHTML = '<div class="cap" id="v3-cap">' + (W ? '<div class="wz" id="v3-wz" aria-label="Steps"></div>' : "") + '<div class="cap-steps" id="v3-steps" role="tablist" aria-label="Stations"></div>' +
+    W = GUIDED() ? { step: (W && W.step) || 1 } : null;
+    $("v3-app").innerHTML = '<div class="cap" id="v3-cap"><div class="entry-tools"><button type="button" class="cap-sec" id="v3-new-entry">New entry</button></div>' + (W ? '<div class="wz" id="v3-wz" aria-label="Steps"></div>' : "") + '<div class="cap-steps" id="v3-steps" role="tablist" aria-label="Stations"></div>' +
       '<div class="cap-top">' +
-      '<label class="cap-grp" for="v3-run" style="flex:0 1 190px"><span class="lb">Run or press (required)</span><input id="v3-run" autocomplete="off" required aria-required="true" placeholder="e.g. Miller" value="' + esc(S.run) + '"></label>' +
+      '<div class="cap-grp" style="flex:0 1 190px"><label class="lb" id="v3-run-label" for="v3-run">' + referenceLabel() + ' (required)</label><div class="reference-control" id="v3-reference-control"></div></div>' +
       '<label class="cap-grp" for="v3-date" style="flex:0 1 170px"><span class="lb">Production date</span><input id="v3-date" type="date" min="' + minIso() + '" max="' + todayIso() + '" value="' + esc(S.date) + '"></label>' +
       '<label class="cap-grp" for="v3-shift" style="flex:0 1 150px"><span class="lb">Shift</span><select id="v3-shift">' + SHIFTS.map(function (x) { return '<option' + (x === S.shift ? " selected" : "") + ">" + x + "</option>"; }).join("") + "</select></label>" +
       '<div class="cap-grp mach-w" id="v3-mach" hidden></div></div>' +
       '<div class="cap-card pick-card"><div class="pick-top">' +
       '<label class="cap-grp pick-q" for="v3-pickq"><span class="lb">1. Search for the book type</span><input id="v3-pickq" type="search" autocomplete="off" placeholder="e.g. prince 96 square"></label>' +
       '<div class="pick-now"><span class="lb">Working on</span><small id="v3-picks"></small></div></div>' +
-      '<p class="pick-or">Or click through: <b>Brand</b> → <b>Pages</b> → <b>Size</b> → <b>Ruling</b></p><div class="pick-l" id="v3-pickl"></div></div>' +
-      '<details class="cap-card fold" id="v3-stockcard"' + (PHONE() ? "" : " open") + '><summary class="cap-h"><div><h3>Stock for this item</h3><span class="cap-note" id="v3-stocknote"></span></div><span class="fold-i" aria-hidden="true"></span></summary><div class="fold-b"><div class="cap-stock" id="v3-stock"></div><button type="button" class="cap-sec" id="v3-reload">Reload stock</button></div></details>' +
+      '<p class="pick-or">Or click through: <b>Brand</b> → <b>Size</b> → <b>Pages</b> → <b>Lines</b></p><div class="pick-l" id="v3-pickl"></div></div>' +
+      '<div class="cap-card entry-context" id="v3-context"><span id="v3-context-summary"></span></div>' +
       '<div class="cap-grid"><div class="cap-card" id="v3-form"></div><div class="cap-card" id="v3-preview"></div></div>' +
+      '<details class="cap-card fold" id="v3-stockcard"><summary class="cap-h"><div><h3>Stock for this item</h3><span class="cap-note" id="v3-stocknote"></span></div><span class="fold-i" aria-hidden="true"></span></summary><div class="fold-b"><div class="cap-stock" id="v3-stock"></div><button type="button" class="cap-sec" id="v3-reload">Reload stock</button></div></details>' +
       '<div class="cap-card" id="v3-today"></div>' +
       '<div class="cap-card" id="v3-logcard" hidden><div class="cap-h"><h3>Posted from this screen</h3><span class="cap-note" id="v3-lognote"></span></div><div class="tw"><table><thead><tr><th>#</th><th>Run · date · shift</th><th>Station</th><th>Entry</th><th>Out</th><th>In</th><th></th></tr></thead><tbody id="v3-log"></tbody></table></div></div>' +
       '<p class="cap-note">Stock as read ' + D.loadedAt.toLocaleTimeString("en-GB") + ". Each cover sheet, fold or insert makes 2 A4 books or 3 A5 books.</p>" +
@@ -299,7 +457,11 @@
       if (i) { var a = document.createElement("span"); a.className = "arr"; a.textContent = "→"; stepsEl.appendChild(a); }
       var b = document.createElement("button"); b.type = "button"; b.setAttribute("role", "tab"); b.dataset.s = s[0]; if (s[0] === "fg") b.className = "fg";
       b.innerHTML = '<span class="k">' + s[1] + '</span><span class="t">' + s[2] + "</span>";
-      b.onclick = function () { S.station = s[0]; S.v = {}; lsSet("station", S.station); renderStation(); if (W && s[0] !== "fg") wzGo(2); };
+      b.onclick = function () {
+        lsSet(S.station === "folds" ? "foldedBy" : "run", S.run);
+        S.station = s[0]; S.run = lsGet(S.station === "folds" ? "foldedBy" : "run", "");
+        S.v = {}; lsSet("station", S.station); renderStation(); if (W && s[0] !== "fg") wzGo(2);
+      };
       stepsEl.appendChild(b);
     });
     $("v3-pickq").oninput = function (e) { renderPick(e.target.value); };
@@ -315,18 +477,38 @@
       renderPick(""); pickFocus();
     };
     $("v3-mach").onclick = function (e) { var b = e.target.closest("[data-m]"); if (!b) return; lsSet("machine." + S.station, b.dataset.m); renderMachines(); renderPreview(); };
-    $("v3-run").oninput = function (e) { S.run = e.target.value; lsSet("run", S.run); renderPreview(); };
-    $("v3-date").onchange = $("v3-date").oninput = function (e) { S.date = e.target.value; renderPreview(); renderToday(); };
+    $("v3-new-entry").onclick = newEntry;
+    $("v3-date").onchange = $("v3-date").oninput = function (e) { S.date = e.target.value; rememberDate(); renderPreview(); renderToday(); };
     $("v3-shift").onchange = function (e) { S.shift = e.target.value; lsSet("shift", S.shift); renderPreview(); };
     $("v3-reload").onclick = function () { $("v3-reload").textContent = "Reloading…"; clearProduction(); load().then(function () { renderShell(); }); };
     $("v3-post").onclick = doPost;
-    pickSync(); if (!S.chosen) PK = {}; renderPick(""); renderStation();
+    pickSync(); if (!S.chosen) PK = {}; renderPick(""); renderStation(); loadBookSuggestions();
   }
 
   /* Item choice: part of the Capture screen, at the top. Brand, pages, size, ruling as chips; tap a chip to change from there, or type to search.
      S.group only changes once all four are set. Until then #v3-cap has data-picking and the count, preview and Post are hidden, so nothing can post against a half-picked item. */
   var PK = {};
-  var PICK_BRANDS = ["Prince", "Swara", "Hi5", "School"], PICK_ORDER = ["brand", "pages", "size", "ruling"];
+  var PICK_BRANDS = ["Prince", "Swara", "Hi5", "School"], PICK_ORDER = ["brand", "size", "pages", "ruling"];
+  var BOOK_HISTORY = { byStation: {}, loading: false, loaded: false };
+  function loadBookSuggestions() {
+    if (BOOK_HISTORY.loading || BOOK_HISTORY.loaded) return;
+    BOOK_HISTORY.loading = true;
+    return get("frappe.client.get_list", { doctype: "Stock Entry", fields: ["remarks"],
+      filters: [["docstatus", "=", 1], ["remarks", "like", "Capture v3 · run %"]],
+      order_by: "creation desc", limit_page_length: 100 }).then(function (rows) {
+        rows.forEach(function (row) {
+          var station = /(?:^| · )Station (covers|folds|inserts|packing)(?: · |$)/.exec(row.remarks || "");
+          var group = /(?:^| · )Group ([^·]+)(?: · |$)/.exec(row.remarks || "");
+          if (!station || !group || !D.groups[group[1].trim()]) return;
+          var keys = BOOK_HISTORY.byStation[station[1]] || (BOOK_HISTORY.byStation[station[1]] = []), key = group[1].trim();
+          if (keys.indexOf(key) < 0) keys.push(key);
+        });
+        BOOK_HISTORY.loaded = true;
+      }).catch(function () { /* This iPad's recent choices remain available. */ }).then(function () {
+        BOOK_HISTORY.loading = false;
+        if (S.view === "capture" && $("v3-pickq") && !S.chosen) renderPick($("v3-pickq").value);
+      });
+  }
   function pickSync() { var gg = g(); PK = { brand: gg.brand, pages: gg.pages, size: gg.size, ruling: gg.ruling }; }
   function pickBusy() { return PICK_ORDER.some(function (f) { return PK[f] == null; }); }
   function pickCancel() { if (!S.chosen) return; $("v3-pickq").value = ""; pickSync(); renderPick(""); }
@@ -340,17 +522,25 @@
     var note = f === "ruling" ? onOrder(D.groups[ks[0]]) : open ? "On order" : "No open orders";
     return '<button type="button" data-f="' + f + '" data-v="' + esc(v) + '"' + (f === "brand" ? ' data-b="' + esc(v) + '"' : "") + "><b>" + esc(label) + "</b><small>" + esc(note) + "</small></button>";
   }
-  function groupKeys() { return Object.keys(D.groups).sort(function (a, b) { var x = D.groups[a], y = D.groups[b]; return (y.dem > 0) - (x.dem > 0) || y.dem - x.dem || a.localeCompare(b); }); }
+  function groupKeys() { return Object.keys(D.groups).filter(function (k) { return D.groups[k].brand !== "Hi5" || (MODE.brands || []).indexOf("Hi5") >= 0; }).sort(function (a, b) { var x = D.groups[a], y = D.groups[b]; return (y.dem > 0) - (x.dem > 0) || y.dem - x.dem || a.localeCompare(b); }); }
   function onOrder(gg) { return gg.dem ? "On order " + (gcpc(gg) ? c1(gg.dem / gcpc(gg)) + " ctn" : f(gg.dem) + " books") : "No open orders"; }
-  function recents() { try { return JSON.parse(lsGet("recent", "[]")).filter(function (k) { return D.groups[k]; }); } catch (e) { return []; } }
+  function recents() { try { var keys = JSON.parse(lsGet("recent." + S.station, lsGet("recent", "[]"))); return Array.isArray(keys) ? keys.filter(function (k) { return D.groups[k]; }) : []; } catch (e) { return []; } }
+  function suggestedBooks() {
+    return uniq(recents().concat(BOOK_HISTORY.byStation[S.station] || [])).filter(function (key) {
+      var gg = D.groups[key]; return gg && PICK_ORDER.every(function (field) { return PK[field] == null || PK[field] === gg[field]; });
+    }).slice(0, 4);
+  }
   function pickLabel() { $("v3-picks").textContent = pickBusy() ? (S.chosen ? "Choosing. Cancel keeps " + gname(g()) : "Nothing chosen yet") : onOrder(g()); }
   function pickChipText(f) { return f === "pages" ? PK[f] + " pages" : f === "ruling" ? (RUL[PK[f]] || PK[f]) : PK[f]; }
   function renderPick(q) {
     var keys = groupKeys(), toks = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
     function row(k) { var gg = D.groups[k]; return '<button type="button" data-k="' + esc(k) + '"' + (k === S.group ? ' aria-current="true"' : "") + "><b>" + esc(gname(gg)) + "</b><small>" + esc(onOrder(gg)) + "</small></button>"; }
     if (!toks.length) {
-      if (PK.brand && PK.pages && PK.size == null) { var sz = pickVals("size"); if (sz.length === 1) PK.size = sz[0]; }        // e.g. 100 pages is A5 only
-      if (PK.size && PK.ruling == null) { var ru = pickVals("ruling"); if (ru.length === 1) PK.ruling = ru[0]; }
+      PICK_ORDER.slice(1).forEach(function (field, i) {
+        if (PK[field] == null && PICK_ORDER.slice(0, i + 1).every(function (previous) { return PK[previous] != null; })) {
+          var values = pickVals(field); if (values.length === 1) PK[field] = values[0];
+        }
+      });
       if (!pickBusy()) { var done = pickMatches()[0]; if (done !== S.group || !S.chosen) return pickChoose(done); }
     }
     var head = '<div class="pick-c">' + PICK_ORDER.filter(function (f) { return PK[f] != null; }).map(function (f) { return '<button type="button" data-back="' + f + '"' + (f === "brand" ? ' data-b="' + esc(PK.brand) + '"' : "") + ' aria-label="Change ' + f + '">' + esc(pickChipText(f)) + "</button>"; }).join("") +
@@ -361,14 +551,13 @@
       body = hit.length ? '<div class="pick-hits">' + hit.map(row).join("") + "</div>" : '<p class="pick-h">No items match.</p>';
     } else if (!PK.brand) {
       body = tiles("Brand or school", PICK_BRANDS.map(function (b) {
-        return keys.some(function (k) { return D.groups[k].brand === b; }) ? pickTile("brand", b, b) : '<button type="button" data-b="' + b + '" disabled><b>' + b + "</b><small>No cover, fold or insert items yet</small></button>";
+        return keys.some(function (k) { return D.groups[k].brand === b; }) ? pickTile("brand", b, b) : '<button type="button" data-b="' + b + '" disabled><b>' + b + "</b><small>" + (b === "Hi5" && (MODE.brands || []).indexOf("Hi5") < 0 ? "Hi5 server update needed" : "No cover, fold or insert items yet") + "</small></button>";
       }).join(""));
-    } else if (!PK.pages) {
-      var rec = recents().filter(function (k) { return D.groups[k].brand === PK.brand; });
-      body = tiles("Pages", pickVals("pages").map(function (p) { return pickTile("pages", p, p + " pages"); }).join("")) + (rec.length ? '<p class="pick-h">Recent ' + esc(PK.brand) + '</p><div class="pick-hits">' + rec.map(row).join("") + "</div>" : "");
-    }
-    else if (!PK.size) body = tiles("Size", pickVals("size").map(function (s) { return pickTile("size", s, s); }).join(""));
-    else if (!PK.ruling) body = tiles("Ruling", pickVals("ruling").map(function (r) { return pickTile("ruling", r, RUL[r] || r); }).join(""));
+    } else if (!PK.size) body = tiles("Size", pickVals("size").map(function (s) { return pickTile("size", s, s); }).join(""));
+    else if (!PK.pages) body = tiles("Pages", pickVals("pages").map(function (p) { return pickTile("pages", p, p + " pages"); }).join(""));
+    else if (!PK.ruling) body = tiles("Lines", pickVals("ruling").map(function (r) { return pickTile("ruling", r, RUL[r] || r); }).join(""));
+    var suggestions = !toks.length && pickBusy() ? suggestedBooks() : [];
+    if (suggestions.length) body = '<p class="pick-h">Suggested from previous entries · tap to use</p><div class="pick-hits suggestions">' + suggestions.map(row).join("") + '</div>' + body;
     $("v3-pickl").innerHTML = head + body;
     $("v3-cap").dataset.picking = pickBusy() ? "1" : "";
     pickLabel();
@@ -378,6 +567,7 @@
     S.chosen = true;
     if (changed) { S.group = k; S.book = null; S.v = {}; lsSet("group", k); }
     lsSet("recent", JSON.stringify([k].concat(recents().filter(function (x) { return x !== k; })).slice(0, 4)));
+    lsSet("recent." + S.station, JSON.stringify([k].concat(recents().filter(function (x) { return x !== k; })).slice(0, 8)));
     $("v3-pickq").value = ""; pickSync(); renderPick("");
     if (changed) renderStation();
     if (W && W.step === 3) wzGo(4);
@@ -394,6 +584,7 @@
   }
 
   function renderStation() {
+    renderReference();
     [].forEach.call($("v3-steps").querySelectorAll("button"), function (b) { b.setAttribute("aria-selected", b.dataset.s === S.station ? "true" : "false"); });
     pickLabel(); renderMachines(); renderBookPicker(); renderForm(); renderBookPicker(); renderPreview(); renderToday(); renderStock(); renderLog();
   }
@@ -412,7 +603,7 @@
     if (S.station === "packing") h = '<div class="cap-h"><div><h3>Packing</h3><span class="cap-note">' + (bk && bk.cpc ? bk.cpc + " books per carton" : "Books per carton not set") + '</span></div></div><label class="cap-f" for="v3-book"><span class="lb">Book</span><select id="v3-book"></select></label>' +
       field("cartons", "Full cartons", "", 1) + '<div class="cap-fields">' + field("loose", "Loose books") + field("rejects", "Rejected books") + "</div>" +
       '<div class="cap-f"><label class="lb" for="v3-weights">Spot weights, kg (1 carton in 20)</label><input id="v3-weights" data-k="weights" autocomplete="off" placeholder="e.g. 9.8; 9.9; 10.1" value="' + esc(S.v.weights || "") + '"></div>' +
-      '<p class="cap-note">Empty carton: <code>' + esc(gg.carton) + "</code> · " + f(s.carton) + " in stock" + (s.cartonEnabled ? "" : " · <b>item disabled in ERPNext</b>") + "</p>";
+      (gg.brand === "Hi5" ? '<p class="cap-note">Hi5 packing does not deduct empty cartons.</p>' : '<p class="cap-note">Empty carton: <code>' + esc(gg.carton) + "</code> · " + f(s.carton) + " in stock" + (s.cartonEnabled ? "" : " · <b>item disabled in ERPNext</b>") + "</p>");
     if (S.station === "fg") { renderFG(el); return; }
     el.innerHTML = h;
     [].forEach.call(el.querySelectorAll("input[data-k]"), function (x) { x.oninput = function () { S.v[x.dataset.k] = x.value; renderPreview(); }; });
@@ -449,16 +640,18 @@
   }
   function renderPreview() {
     var el = $("v3-preview");
+    renderEntryContext();
     $("v3-bar").hidden = S.station === "fg";
     if (S.station === "fg") {
       var gg = g(), s = stock(), u = gg.ups;
       el.innerHTML = '<div class="cap-h"><h3>The chain for this group</h3></div><div class="cap-rows">' + [["Covers", s.cov, "sheets", s.cov * u], ["Folds", s.fld, "folds", s.fld * u], ["Inserts", s.ins, "inserts", s.ins * u], ["Finished Goods", s.fg, "books", s.fg]].map(function (r) { return '<div class="cap-row in"><span class="d">' + r[0].slice(0, 3).toUpperCase() + '</span><span class="it">' + r[0] + "<span>" + f(r[1]) + " " + r[2] + (r[2] === "books" ? "" : " × " + u) + " = " + f(r[3]) + ' books</span></span><span class="q"><b>' + (gcpc(gg) ? c1(r[3] / gcpc(gg)) + " ctn" : f(r[3]) + " books") + "</b><small>" + f(r[3]) + " books</small></span></div>"; }).join("") + "</div>";
+      if (W) renderWizard();
       return;
     }
     var P = planEntry(), run = (S.run || "").trim(), has = P.rows.some(function (r) { return r.qty; });
     if (!run) P.ok = false;
     var msgs = P.msgs.filter(function (m) { return has || m[0] !== "info"; });
-    el.innerHTML = '<div class="cap-h"><h3>What this entry will do</h3><span class="cap-note">' + esc(PLAIN[S.station] || P.type) + " · run " + esc(run || "-") + " · " + esc(whenText()) + "</span></div>" +
+    el.innerHTML = '<div class="cap-h"><h3>What this entry will do</h3><span class="cap-note">' + esc(PLAIN[S.station] || P.type) + " · " + esc(referenceText(run)) + " · " + esc(whenText()) + "</span></div>" +
       (has ? '<div class="cap-rows">' + P.rows.map(function (r) { return '<div class="cap-row ' + r.dir + '"><span class="d">' + (r.dir === "out" ? "OUT −" : "IN +") + '</span><span class="it"><b title="' + esc(r.item) + '">' + esc(RL[r.key] || r.item) + "</b><span>" + (r.dir === "out" ? "from " : "into ") + esc(r.wh) + (r.unit !== "books" && r.unit !== "cartons" ? " · " + ctnBooks(Math.abs(r.qty) * g().ups) : "") + '</span></span><span class="q"><b>' + (r.qty > 0 ? "+" : "") + f(r.qty) + "</b><small>" + f(r.before) + " → " + f(r.after) + " " + r.unit + "</small></span></div>"; }).join("") + "</div>"
         : '<p class="cap-empty">Enter a count to see exactly what will post.</p>') +
       msgs.map(function (m) { return '<div class="cap-msg ' + m[0] + '">' + esc(m[1]) + "</div>"; }).join("") + (backfillNeed(P) ? backfillBox(backfillNeed(P)) : "") + '<div id="v3-result"></div>';
@@ -474,7 +667,7 @@
     var ask = P.msgs.filter(function (m) { return m[0] === "info" && /^Enter/.test(m[1]); })[0];
     if (P.msgs.some(function (m) { return m[0] === "bad"; })) return "Can't post yet. See the notes above.";
     if (ask) return ask[1];
-    if (!run) return "Enter the run or press.";
+    if (!run) return referenceAsk();
     var r = P.rows.filter(function (x) { return x.qty > 0; })[0];
     if (!r || !has) return "";
     var cp = gcpc(g()), books = r.unit === "books" ? r.qty : r.qty * g().ups;
@@ -509,7 +702,7 @@
     all.forEach(function (r) { entries[r.se] = 1; });
     el.innerHTML = head + '<span class="cap-note">' + esc(name) + " · all items: " + (all.length ? f(sum(all).q) + " " + unit + " in " + Object.keys(entries).length + (Object.keys(entries).length === 1 ? " entry" : " entries") : "nothing yet") + "</span></div></div>" +
       (PCerr[w] ? '<div class="cap-msg warn">Could not read ERPNext, so this list and the duplicate check may be incomplete.</div>' : "") +
-      (mine.length ? '<div class="tw"><table><thead><tr><th>Time</th><th>Run</th><th class="num">This item</th><th>By</th><th>Entry</th></tr></thead><tbody>' +
+      (mine.length ? '<div class="tw"><table><thead><tr><th>Time</th><th>' + (S.station === "folds" ? "Folded by / run" : "Run") + '</th><th class="num">This item</th><th>By</th><th>Entry</th></tr></thead><tbody>' +
         mine.slice().sort(function (a, b) { return String(b.at).localeCompare(String(a.at)); }).map(function (r) { return '<tr><td class="dt">' + esc(String(r.at).slice(11, 16)) + "</td><td>" + esc(r.run || "-") + '</td><td class="num">' + pcell([r], unit) + "</td><td>" + esc(String(r.by || "").split("@")[0]) + '</td><td><a href="/app/stock-entry/' + encodeURIComponent(r.se) + '" target="_blank" rel="noopener">' + esc(r.se) + "</a></td></tr>"; }).join("") + "</tbody></table></div>"
         : '<p class="cap-note">Nothing posted for this item ' + when + ".</p>");
   }
@@ -522,7 +715,7 @@
     function t(n, v, sub) { return '<div><span class="n">' + n + '</span><span class="v">' + v + '</span><span class="s">' + sub + "</span></div>"; }
     $("v3-stock").innerHTML = t("Cover sheets", f(s.cov) + " <small>sheets</small>", eq(s.cov * u)) + t("Folds", f(s.fld) + " <small>folds</small>", eq(s.fld * u)) +
       t("Inserts", f(s.ins) + " <small>inserts</small>", eq(s.ins * u)) + t("Finished Goods", asCtn(s.fg), f(s.fg) + " books") +
-      t("Empty cartons", f(s.carton) + " <small>ctn</small>", s.cartonEnabled ? "empty, in Stores - VCL" : "item disabled in ERPNext");
+      (gg.brand === "Hi5" ? "" : t("Empty cartons", f(s.carton) + " <small>ctn</small>", s.cartonEnabled ? "empty, in Stores - VCL" : "item disabled in ERPNext"));
     $("v3-stocknote").textContent = gname(gg) + " · " + u + "-up · " + (cp ? cp + " books/carton · on open orders " + c1(gg.dem / cp) + " ctn (" + f(gg.dem) + " books)" : "no Carton unit · on open orders " + f(gg.dem) + " books");
   }
 
@@ -578,11 +771,11 @@
       if (!checked) P.msgs.push(["warn", "Could not check ERPNext for duplicates. Look at the list before posting."]);
       var warns = P.msgs.filter(function (m) { return m[0] === "warn" || m[0] === "bad"; });
       dialog("Step 1 of 2: is this correct?",
-        "<p><b>" + esc(PLAIN[S.station] || P.type) + "</b> · run <code>" + esc(run) + "</code> · " + esc(gname(g())) + "</p><p><b>Production date " + esc(whenText()) + "</b></p>" + rowsHtml(P) +
+        "<p><b>" + esc(PLAIN[S.station] || P.type) + "</b> · " + esc(referenceText(run)) + " · " + esc(gname(g())) + "</p><p><b>Production date " + esc(whenText()) + "</b></p>" + rowsHtml(P) +
         warns.map(function (m) { return '<div class="cap-msg ' + m[0] + '">' + esc(m[1]) + "</div>"; }).join(""),
         "Yes, this is correct", function () {
           dialog("Step 2 of 2: post to ERPNext now?",
-            '<p class="cap-msg warn">This changes stock in ERPNext.</p><p>' + esc(totals(P)) + '</p><p class="cap-note">' + esc(PLAIN[S.station] || P.type) + " · run " + esc(run) + " · " + esc(whenText()) + "</p>",
+            '<p class="cap-msg warn">This changes stock in ERPNext.</p><p>' + esc(totals(P)) + '</p><p class="cap-note">' + esc(PLAIN[S.station] || P.type) + " · " + esc(referenceText(run)) + " · " + esc(whenText()) + "</p>",
             "Post now", function () { send(P, run); });
         });
     });
@@ -673,7 +866,7 @@
 
   function dims(code, name, group) {
     var c = String(code || ""), n = String(name || ""), t = c + " " + n;
-    var m = /^(PNCEB|SWREB|SCH-(?:BP|NP|WBP)-EB)-(A\d)-(\d+)PGS-([A-Z]+)-[A-Z]+-([A-Z0-9]+)$/.exec(c);
+    var m = /^(PNCEB|SWREB|Hi5|SCH-(?:BP|NP|WBP)-EB)-(A\d)-(\d+)PGS-([A-Z]+)-[A-Z]+-([A-Z0-9]+)$/.exec(c);
     var brand = /^PNC/.test(c) || /prince/i.test(t + " " + group) ? "Prince" : /^SWR/.test(c) || /swara/i.test(t + " " + group) ? "Swara" : /hi5/i.test(t + " " + group) ? "Hi5" : /^SCH-|school/i.test(c + " " + group) ? "School" : "Other";
     if (m) return { brand: brand, size: m[2], pages: +m[3], board: m[4], ruling: m[5] };
     var size = (/\b(A[3-6])\b/i.exec(t) || [])[1], pages = (/(\d+)\s*-?\s*(?:pages?|pgs?)\b/i.exec(t) || / - (\d{2,3})\b/.exec(t) || [])[1];
@@ -840,7 +1033,7 @@
       var h = filterBar(false, true) +
         '<section class="os-hero"><div class="os-big"><span class="n">Short after stock and pipeline</span><span class="v">' + c1(ts.c) + ' <small>ctn</small></span><span class="s">' + f(ts.b) + " books · from " + c1(tp.c) + " ctn on open orders, " + c1(tn.c) + " ctn still to make</span></div>" +
         covBar([["fg", tuf.c, "Finished Goods"], ["pipe", tup.c, "Inserts and covers"], ["short", ts.c, "Short"], ["none", tun.c, "Not tracked"]], c1(tuf.c) + " cartons from Finished Goods, " + c1(tup.c) + " from inserts and covers, " + c1(ts.c) + " short, " + c1(tun.c) + " not tracked") +
-        '<div class="os-legs">' + leg("fg", "From Finished Goods", tuf, " · " + c1(tf.c) + " ctn in stock") + leg("pipe", "From inserts and covers", tup) + leg("short", "Short", ts) + leg("none", "Not tracked yet", tun, " · School and Hi5") + "</div></section>" +
+        '<div class="os-legs">' + leg("fg", "From Finished Goods", tuf, " · " + c1(tf.c) + " ctn in stock") + leg("pipe", "From inserts and covers", tup) + leg("short", "Short", ts) + leg("none", "Not tracked yet", tun, " · unconfigured book types") + "</div></section>" +
         (tp.miss ? '<div class="cap-msg warn">' + tp.miss + " book types have no Carton unit, so they are in the book figures but not the cartons.</div>" : "") +
         '<div class="cap-card os-card"><div class="cap-h"><div><h3>By book type</h3><span class="cap-note">' + rows.length + ' book types · biggest shortfall first · tap a row for stock and orders</span></div><div class="os-act">' + barBtns() + '</div></div><div class="tw"><table class="osl"><thead><tr><th>Book type</th><th class="num">Pending</th><th>Covered</th><th class="num">Short</th><th class="num">Sheets to print</th><th><span class="vh">Details</span></th></tr></thead><tbody>' +
         rows.map(function (r, i) {
@@ -891,14 +1084,14 @@
   function classify(r) {
     if (/opening/i.test(r.remarks || "")) return null;
     var code = r.item_code || "", proc = null, brand, size, pages, ruling, m;
-    if ((m = /^(COV|FLD|INS)-(PNC|SWR)-(A4|A5)-(\d{3})PG-([A-Z0-9]+)$/.exec(code))) {
+    if ((m = /^(COV|FLD|INS)-(PNC|SWR|HI5)-(A4|A5)-(\d{3})PG-([A-Z0-9]+)$/.exec(code))) {
       if (r.t_warehouse !== STORES || r.stock_entry_type !== (m[1] === "INS" ? "Repack" : "Material Receipt")) return null;
       proc = m[1].toLowerCase(); brand = m[2]; size = m[3]; pages = +m[4]; ruling = m[5];
-    } else if ((m = /^(PNC|SWR)EB-(A4|A5)-(\d+)PGS-[A-Z]+-[A-Z]+-([A-Z0-9]+)$/.exec(code))) {
+    } else if ((m = /^(PNCEB|SWREB|Hi5)-(A4|A5)-(\d+)PGS-[A-Z]+-[A-Z]+-([A-Z0-9]+)$/.exec(code))) {
       if (r.t_warehouse !== FG || r.stock_entry_type !== "Manufacture") return null;
       proc = "pack"; brand = m[1]; size = m[2]; pages = +m[3]; ruling = m[4];
     } else return null;
-    brand = brand === "PNC" ? "Prince" : "Swara";
+    brand = /^PNC/.test(brand) ? "Prince" : /^(HI5|Hi5)$/.test(brand) ? "Hi5" : "Swara";
     var k = brand + "|" + size + "|" + pages + "|" + ruling, gg = D.groups[k], ups = gg ? gg.ups : (size === "A4" ? 2 : 3), per = gg ? gcpc(gg) : 0, q = Number(r.qty) || 0;
     return { date: String(r.posting_date).slice(0, 10), proc: proc, k: k, brand: brand, size: size, pages: pages, ruling: ruling, code: code, se: r.name, at: r.creation, by: r.owner, run: (/Capture v3 · run ([^·]+?) ·/.exec(r.remarks || "") || [])[1] || "", qty: q, books: proc === "pack" ? q : q * ups, per: per };
   }
@@ -1325,8 +1518,262 @@
     }).join("") + "</tbody></table><small>Books</small></div>";
   }
 
-  /* ---------- views: Capture | Orders | Order & stock ---------- */
-  var VIEWS = [["capture", "Capture"], ["production", "Production"], ["orders", "Orders"], ["orderstock", "Order & stock"], ["priority", "Priority"], ["whatif", "What-if"]];
+  /* ---------- Stock recon: physical counts -> standard ERPNext reconciliation ----------
+   * Absolute quantities, never production receipts. Submission is confirmed twice.
+   * Item + warehouse is the identity; cover variants are never pooled. */
+  var RC = { rows: null, counts: {}, stage: "covers", brand: "", size: "", pages: "", ruling: "", q: "", reason: "", busy: false, created: null, uncertain: false, zero: false, message: "", draft: null, noteSaved: false, submitted: false };
+  var RC_STAGES = [["covers", "Cover sheets"], ["folds", "Folds"], ["inserts", "Inserts"], ["fg", "Finished books"], ["carton", "Empty cartons"]];
+  function rcList(doctype, fields, filters) {
+    var out = [];
+    function page(start) {
+      var args = { doctype: doctype, fields: fields, filters: filters, order_by: "name asc", limit_start: start, limit_page_length: 500 };
+      // Gunicorn rejects request lines over 4094 bytes. A POST to get_list is still read-only.
+      var read = encodeURIComponent(JSON.stringify(args)).length > 2500 ? post : get;
+      return read("frappe.client.get_list", args).then(function (rows) {
+        out = out.concat(rows); return rows.length === 500 ? page(start + 500) : out;
+      });
+    }
+    return page(0);
+  }
+  function rcBins(rows) {
+    var codes = uniq(rows.map(function (r) { return r.code; })), batches = [];
+    for (var i = 0; i < codes.length; i += 100) batches.push(codes.slice(i, i + 100));
+    return Promise.all(batches.map(function (codes0) {
+      return rcList("Bin", ["name", "item_code", "warehouse", "actual_qty", "modified"], [["item_code", "in", codes0], ["warehouse", "in", [STORES, FG]]]);
+    })).then(function (parts) {
+      var bins = {}; [].concat.apply([], parts).forEach(function (b) { bins[b.item_code + "|" + b.warehouse] = b; }); return bins;
+    });
+  }
+  function rcLoad() {
+    return rcList("Item Group", ["name", "parent_item_group"], []).then(function (groups) {
+      var selected = {}; groups.forEach(function (x) { if (/exercise[\s-]*books?/i.test(x.name)) selected[x.name] = true; });
+      var changed = true;
+      while (changed) { changed = false; groups.forEach(function (x) { if (selected[x.parent_item_group] && !selected[x.name]) { selected[x.name] = true; changed = true; } }); }
+      var allGroups = uniq(Object.keys(selected).concat(["Exercise Book Covers", "Folds", "Exercise Book Inserts"]));
+      var cols = ["name", "item_name", "item_group", "stock_uom", "has_batch_no", "has_serial_no"];
+      return Promise.all([
+        rcList("Item", cols, [["item_group", "in", allGroups], ["disabled", "=", 0], ["is_stock_item", "=", 1]]),
+        rcList("Item", cols, [["name", "in", uniq(Object.keys(CARTONS).map(function (k) { return CARTONS[k]; }))], ["disabled", "=", 0]]),
+        rcList("Item", ["name", "`tabUOM Conversion Detail`.conversion_factor as cf"], [["item_group", "in", allGroups], ["UOM Conversion Detail", "uom", "=", "Carton"]])
+      ]).then(function (parts) {
+        var cpc = {}, seen = {};
+        parts[2].forEach(function (x) { cpc[x.name] = Number(x.cf) || 0; });
+        var rows = parts[0].concat(parts[1]).map(function (x) {
+          var stage = x.item_group === "Exercise Book Covers" ? "covers" : x.item_group === "Folds" ? "folds" : x.item_group === "Exercise Book Inserts" ? "inserts" : parts[1].some(function (ct) { return ct.name === x.name; }) ? "carton" : "fg";
+          // Only the established exercise-book set codes belong to the floor count.
+          if (stage === "folds" && !/^FLD-(PNC|SWR|HI5)-/.test(x.name)) return null;
+          var wh = stage === "fg" ? FG : STORES, key = x.name + "|" + wh;
+          if (seen[key]) return null; seen[key] = true;
+          var d = dims(x.name, x.item_name, x.item_group);
+          var unit = stage === "covers" ? "sheets" : stage === "folds" ? "fold sets" : stage === "inserts" ? "insert sets" : stage === "carton" ? "empty cartons" : "books";
+          return { key: key, code: x.name, name: x.item_name, stage: stage, wh: wh, d: d, unit: unit, uom: x.stock_uom, cpc: cpc[x.name] || 0,
+            blocked: x.has_batch_no || x.has_serial_no || x.stock_uom !== "Nos", qty: 0, modified: "" };
+        }).filter(Boolean).sort(function (a, b) { return a.code.localeCompare(b.code); });
+        return rcBins(rows).then(function (bins) { rcApplyBins(rows, bins); RC.rows = rows; RC.loadedAt = new Date(); });
+      });
+    });
+  }
+  function rcApplyBins(rows, bins) {
+    rows.forEach(function (r) { var b = bins[r.key]; r.qty = b ? Number(b.actual_qty) : 0; r.modified = b ? b.modified : ""; });
+  }
+  function rcCount(r) {
+    var c = RC.counts[r.key] || {}, a = String(c.qty || "").trim(), b = String(c.loose || "").trim();
+    if (!a && !b) return null;
+    var n = num(a), loose = num(b);
+    if (!Number.isSafeInteger(n) || !Number.isSafeInteger(loose)) return NaN;
+    var total = r.stage === "fg" && r.cpc ? n * r.cpc + loose : n;
+    return Number.isSafeInteger(total) ? total : NaN;
+  }
+  function rcCounted() { return (RC.rows || []).filter(function (r) { return rcCount(r) !== null; }); }
+  function rcChanged() { return rcCounted().filter(function (r) { return !isNaN(rcCount(r)) && rcCount(r) !== r.qty; }); }
+  function rcFrozen() { return RC.busy || !!RC.created || RC.uncertain; }
+  function rcStatus(text, kind) { RC.message = '<div class="cap-msg ' + (kind || "info") + '">' + text + "</div>"; if ($("rc-result")) $("rc-result").innerHTML = RC.message; }
+  function rcSummary() {
+    var counted = rcCounted(), invalid = counted.some(function (r) { return isNaN(rcCount(r)) || r.blocked; }), diffs = rcChanged();
+    if ($("rc-summary")) $("rc-summary").textContent = counted.length + " counted · " + diffs.length + " with a variance · " + ((RC.rows || []).length - counted.length) + " left blank (unchanged)";
+    if ($("rc-create")) $("rc-create").disabled = rcFrozen() || invalid || !diffs.length || RC.reason.trim().length < 5;
+    if ($("rc-submit")) $("rc-submit").disabled = RC.busy || RC.uncertain || !RC.noteSaved;
+  }
+  function rcCell(r) { return r.stage === "fg" ? cb(r.qty, r.cpc) : '<b>' + f(r.qty) + '</b><small>' + esc(r.unit) + "</small>"; }
+  function rcVariance(r) {
+    var n = rcCount(r); if (n === null) return "Not counted"; if (isNaN(n)) return "Whole numbers, 0 or more";
+    var delta = n - r.qty;
+    return '<b>' + (delta > 0 ? "+" : "") + f(delta) + " " + esc(r.unit) + '</b><small>Counted: ' + f(n) + " " + esc(r.unit) + "</small>";
+  }
+  function renderRecon() {
+    if (!RC.rows) {
+      $("v3-app").innerHTML = '<div class="loading">Loading exercise-book stock…</div>';
+      rcLoad().then(function () { if (S.view === "recon") renderRecon(); }).catch(function (err) { if (S.view === "recon") $("v3-app").innerHTML = '<div class="cap-msg bad">Could not load stock: ' + esc(err.message) + '</div><button class="cap-sec" id="rc-retry">Retry</button>'; if ($("rc-retry")) $("rc-retry").onclick = renderRecon; }); return;
+    }
+    var frozen = rcFrozen(), dis = frozen ? " disabled" : "";
+    var rows = RC.rows.filter(function (r) { return r.stage === RC.stage && (r.stage === "carton" || r.d.brand === RC.brand) &&
+      (r.stage === "carton" || ((!RC.size || r.d.size === RC.size) && (!RC.pages || String(r.d.pages) === RC.pages) && (!RC.ruling || r.d.ruling === RC.ruling))) &&
+      (!RC.q || (r.code + " " + r.name).toLowerCase().indexOf(RC.q.toLowerCase()) >= 0); });
+    var h = '<div class="cap rc"><div class="cap-card"><div class="cap-h"><div><h3>Stock reconciliation / true-up</h3><span class="cap-note">Physical stock now · read ' + esc(RC.loadedAt.toLocaleString("en-GB")) + '</span></div><button class="cap-sec" id="rc-refresh"' + (RC.busy || RC.uncertain || (RC.created && !RC.submitted) ? " disabled" : "") + '>Refresh ERP stock</button></div>' +
+      '<p class="cap-note">Enter what is physically on hand. Blank means leave unchanged; enter 0 only when you counted none. Cover sheets, folds and inserts are counted in sheets or sets. Finished books use full cartons plus loose books where a Carton unit exists. Each cover variant stays separate.</p>' +
+      '<div><span class="lb">Brand — choose first</span><div class="rc-brands" id="rc-brands" role="group" aria-label="Brand">' +
+      uniq(RC.rows.filter(function (r) { return r.stage !== "carton"; }).map(function (r) { return r.d.brand; })).sort(function (a, b) { return ["Prince", "Swara", "Hi5", "School", "Other"].indexOf(a) - ["Prince", "Swara", "Hi5", "School", "Other"].indexOf(b); }).map(function (brand) {
+        return '<button type="button" data-rc-brand="' + esc(brand) + '" data-b="' + esc(brand) + '" aria-pressed="' + (RC.brand === brand) + '"><b class="bdot">' + esc(brand) + '</b><span aria-hidden="true">' + (RC.brand === brand ? "✓" : "") + '</span></button>';
+      }).join("") + '</div></div><div class="cap-fields">' +
+      '<label class="cap-f"><span class="lb">Stock stage</span><select id="rc-stage">' + RC_STAGES.map(function (x) { return '<option value="' + x[0] + '"' + (RC.stage === x[0] ? " selected" : "") + '>' + x[1] + '</option>'; }).join("") + '</select></label>' +
+      sel("rc-size", "Size", RC.size, ["A4", "A5"]) +
+      sel("rc-pages", "Pages", RC.pages, uniq(RC.rows.map(function (r) { return r.d.pages || ""; })).sort(function (a, b) { return a - b; })) +
+      sel("rc-ruling", "Ruling", RC.ruling, uniq(RC.rows.map(function (r) { return r.d.ruling; })).sort().map(function (r) { return [r, rulName(r)]; })) +
+      '<label class="cap-f"><span class="lb">Search item, pages or ruling</span><input id="rc-q" type="search" value="' + esc(RC.q) + '"></label></div>' +
+      (RC.stage === "carton" ? '<div class="cap-msg info">Empty cartons are a shared stock pool. Each carton item appears once, across brands.</div>' : "") +
+      '<div id="rc-table">' + (!RC.brand && RC.stage !== "carton" ? '<p class="cap-note">Choose a brand to start counting.</p>' : '<div class="tw"><table><thead><tr><th>Item / warehouse</th><th class="num">ERP stock</th><th>Physical count</th><th class="num">Variance</th></tr></thead><tbody>' +
+      (rows.length ? rows.map(function (r) {
+        var c = RC.counts[r.key] || {}, ix = RC.rows.indexOf(r), blocked = r.blocked ? " disabled" : dis;
+        function input(field, label) { return '<label><span class="lb">' + label + '</span><input data-rc="' + ix + '" data-field="' + field + '" aria-label="' + esc(label + " for " + r.code) + '" inputmode="numeric" autocomplete="off" placeholder="Not counted" value="' + esc(c[field] || "") + '"' + blocked + '></label>'; }
+        return '<tr><td><b>' + esc(r.name) + '</b><small><code>' + esc(r.code) + '</code></small><small>' + esc(r.wh) + '</small></td><td class="num">' + rcCell(r) + '</td><td><div class="rc-count">' +
+          (r.blocked ? '<span class="cap-note">Count this item in ERPNext (batch/serial or different stock unit).</span>' : input("qty", r.stage === "fg" && r.cpc ? "Full cartons (" + r.cpc + " books each)" : r.unit) + (r.stage === "fg" && r.cpc ? input("loose", "Loose books") : "")) +
+          '</div></td><td class="num" id="rc-var-' + ix + '">' + rcVariance(r) + '</td></tr>';
+      }).join("") : '<tr><td colspan="4">No items match these filters.</td></tr>') + '</tbody></table></div>') + '</div></div>' +
+      '<div class="cap-card"><div class="cap-h"><h3>Review the true-up</h3><span id="rc-summary" class="cap-note"></span></div><p class="cap-note">The true-up includes every counted item with a variance, including counts hidden by your filters. Create the draft, then use Submit true-up here to review and apply it. ERPNext checks your submission permissions.</p>' +
+      '<label class="cap-f"><span class="lb">Reason / count reference (required)</span><input id="rc-reason" maxlength="500" placeholder="e.g. Physical floor count, Peter and Gloria" value="' + esc(RC.reason) + '"' + dis + '></label>' +
+      '<label class="cap-check"><input type="checkbox" id="rc-zero"' + (RC.zero ? " checked" : "") + dis + '> Allow zero valuation for items with no recorded rate (quantity-only opening count)</label>' +
+      '<div id="rc-result">' + RC.message + '</div><div class="btn-grp">' + (RC.created ? (RC.submitted ? '' : '<button class="cap-post" id="rc-submit">Submit true-up</button>' + (!RC.noteSaved ? '<button class="cap-sec" id="rc-note">Save count note</button>' : '') + (RC.uncertain ? '<button class="cap-sec" id="rc-check">Check submission status</button>' : '')) : '<button class="cap-post" id="rc-create">Review & create draft</button>') +
+      '<button class="cap-sec" id="rc-export">Download count sheet</button><button class="cap-sec" id="rc-reset"' + (RC.busy || RC.uncertain ? " disabled" : "") + '>Start new count</button></div></div></div>';
+    $("v3-app").innerHTML = h;
+    [].forEach.call($("rc-brands").querySelectorAll("[data-rc-brand]"), function (b) { b.onclick = function () { RC.brand = b.dataset.rcBrand; renderRecon(); }; });
+    ["stage", "size", "pages", "ruling"].forEach(function (k) { $("rc-" + k).onchange = function (e) { RC[k] = e.target.value; renderRecon(); }; });
+    $("rc-q").oninput = function (e) { var pos = e.target.selectionStart; RC.q = e.target.value; renderRecon(); $("rc-q").focus(); $("rc-q").setSelectionRange(pos, pos); };
+    $("rc-reason").oninput = function (e) { RC.reason = e.target.value; rcSummary(); };
+    $("rc-zero").onchange = function (e) { RC.zero = e.target.checked; };
+    [].forEach.call($("v3-app").querySelectorAll("[data-rc]"), function (el) { el.oninput = function () {
+      var r = RC.rows[Number(el.dataset.rc)]; (RC.counts[r.key] = RC.counts[r.key] || {})[el.dataset.field] = el.value;
+      el.setAttribute("aria-invalid", isNaN(rcCount(r)) ? "true" : "false"); $("rc-var-" + el.dataset.rc).innerHTML = rcVariance(r); rcSummary();
+    }; });
+    $("rc-refresh").onclick = function () { if (RC.submitted) { rcSubmitted(RC.draft); return; } RC.busy = true; renderRecon(); rcBins(RC.rows).then(function (bins) { rcApplyBins(RC.rows, bins); RC.loadedAt = new Date(); rcStatus("ERP balances refreshed. Your physical counts have been kept; review the variances."); }).catch(function (e) { rcStatus(esc(e.message), "bad"); }).finally(function () { RC.busy = false; if (S.view === "recon") renderRecon(); }); };
+    $("rc-reset").onclick = function () { dialog("Start a new stock count?", "<p>This clears the counts on this screen. Existing ERPNext documents are kept.</p>", "Start new count", function () { RC.counts = {}; RC.reason = ""; RC.zero = false; RC.created = null; RC.draft = null; RC.noteSaved = false; RC.submitted = false; RC.message = ""; RC.rows = null; renderRecon(); }); };
+    $("rc-export").onclick = function () { download("EB stock count " + today(), ["Item code", "Item", "Warehouse", "Unit", "ERP quantity", "Physical quantity", "Variance", "Stock read at"], rows.map(function (r) { var n = rcCount(r); return [r.code, r.name, r.wh, r.unit, r.qty, n === null || isNaN(n) ? "" : n, n === null || isNaN(n) ? "" : n - r.qty, RC.loadedAt.toISOString()]; })); };
+    if ($("rc-create")) $("rc-create").onclick = rcReview;
+    if ($("rc-submit")) $("rc-submit").onclick = rcSubmitReview;
+    if ($("rc-note")) { $("rc-note").disabled = RC.busy || RC.uncertain; $("rc-note").onclick = rcSaveNote; }
+    if ($("rc-check")) { $("rc-check").disabled = RC.busy; $("rc-check").onclick = rcCheckSubmission; }
+    rcSummary();
+  }
+  function rcReview() {
+    if (rcFrozen() || !rcChanged().length || RC.reason.trim().length < 5 || rcCounted().some(function (r) { return isNaN(rcCount(r)) || r.blocked; })) return;
+    RC.busy = true; renderRecon();
+    var counted = rcCounted(), before = {}; counted.forEach(function (r) { before[r.key] = [r.qty, r.modified]; });
+    rcBins(counted).then(function (bins) {
+      rcApplyBins(counted, bins);
+      var moved = counted.some(function (r) { var was = before[r.key]; return was[0] !== r.qty || was[1] !== r.modified; });
+      RC.busy = false; if (S.view === "recon") renderRecon();
+      if (moved) { rcStatus("ERP stock changed since you loaded it. Balances and variances have been updated; check your count and review again.", "warn"); return; }
+      var changed = rcChanged(), zero = RC.zero, reason = RC.reason.trim();
+      var planned = changed.map(function (r) { return { row: r, qty: rcCount(r) }; });
+      // Freeze the exact reviewed plan until the dialog is accepted or cancelled.
+      RC.busy = true; if (S.view === "recon") renderRecon();
+      dialog("Review stock true-up — " + planned.length + " items", '<p>' + esc(reason) + '</p><div class="tw"><table><thead><tr><th>Item / warehouse</th><th>ERP</th><th>Counted</th><th>Variance</th></tr></thead><tbody>' + planned.map(function (p) { var r = p.row, delta = p.qty - r.qty; return '<tr><td>' + esc(r.code) + '<small>' + esc(r.wh) + '</small></td><td>' + f(r.qty) + '</td><td>' + f(p.qty) + ' ' + esc(r.unit) + '</td><td>' + (delta > 0 ? "+" : "") + f(delta) + '</td></tr>'; }).join("") + '</tbody></table></div>' +
+        (zero ? '<p class="cap-msg warn">Items with no recorded valuation may be added at zero value.</p>' : '') + '<p>A draft will be created. Then use Submit true-up on this screen to apply it.</p>', "Create draft", function () { rcCreate(planned, reason, zero); }, function () { RC.busy = false; if (S.view === "recon") renderRecon(); });
+    }).catch(function (e) { RC.busy = false; if (S.view === "recon") renderRecon(); rcStatus("Could not check ERP stock. " + esc(e.message), "bad"); });
+  }
+  function rcCreate(planned, reason, zero) {
+    // Creation does not submit. ERPNext supplies the posting date/time and valuation.
+    var doc = { doctype: "Stock Reconciliation", naming_series: "MAT-RECO-.YYYY.-", company: "Vimit Converters Limited", purpose: "Stock Reconciliation", set_posting_time: 0,
+      items: planned.map(function (p) {
+        // Null explicitly preserves ERPNext's native rate lookup; zero would revalue existing stock.
+        var r = p.row, line = { item_code: r.code, warehouse: r.wh, qty: p.qty, stock_uom: r.uom, valuation_rate: null };
+        if (zero) line.allow_zero_valuation_rate = 1;
+        return line;
+      }) };
+    rcInsert(doc).then(function (made) {
+      RC.created = made.name; RC.draft = made; RC.noteSaved = false;
+      RC.savedNote = "Exercise Book v3 stock true-up. Reason: " + esc(reason) + ". ERP snapshot checked " + esc(new Date().toISOString()) + ". Zero valuation allowed: " + (zero ? "yes" : "no") + ".";
+      rcStatus("Draft created: " + esc(made.name) + ". Saving the count note… Stock has not changed.", "ok");
+      if (S.view === "recon") renderRecon();
+      return rcSaveNote();
+    }).catch(function (e) {
+      RC.busy = false;
+      RC.uncertain = !!e.uncertain;
+      rcStatus((RC.uncertain ? 'The response was lost. Check <a href="/app/stock-reconciliation" target="_blank" rel="noopener">ERPNext reconciliations</a> before creating another draft. ' : "Draft could not be created. ") + esc(e.message), "bad");
+      if (S.view === "recon") renderRecon();
+    });
+  }
+  function rcSaveNote() {
+    if (!RC.created || RC.noteSaved) return;
+    RC.busy = true; if (S.view === "recon") renderRecon();
+    return rcInsert({ doctype: "Comment", comment_type: "Comment", reference_doctype: "Stock Reconciliation", reference_name: RC.created, content: RC.savedNote })
+      .then(function () { RC.noteSaved = true; rcStatus("Draft created: " + esc(RC.created) + ". Stock has not changed. Use Submit true-up below to apply it.", "ok"); })
+      .catch(function () { rcStatus("Draft created: " + esc(RC.created) + ". The count note could not be saved. Use Save count note, then submit here. Stock has not changed.", "warn"); })
+      .finally(function () { RC.busy = false; if (S.view === "recon") renderRecon(); });
+  }
+  function rcSignature(doc) {
+    return JSON.stringify([doc.company, doc.purpose, (doc.items || []).map(function (r) { return [r.item_code, r.warehouse, Number(r.qty)]; }).sort(function (a, b) { return JSON.stringify(a).localeCompare(JSON.stringify(b)); })]);
+  }
+  function rcDraft() { return get("frappe.client.get", { doctype: "Stock Reconciliation", name: RC.created }); }
+  function rcSubmitReview() {
+    if (!RC.created || RC.busy || RC.uncertain || RC.submitted || !RC.noteSaved) return;
+    RC.busy = true; if (S.view === "recon") renderRecon();
+    rcDraft().then(function (doc) {
+      if (Number(doc.docstatus) === 1) return rcSubmitted(doc);
+      if (Number(doc.docstatus) !== 0 || rcSignature(doc) !== rcSignature(RC.draft)) throw new Error("The reconciliation changed or was cancelled. Start a new count and review it again.");
+      var counted = rcCounted();
+      return rcBins(counted).then(function (bins) {
+        if (counted.some(function (r) { var b = bins[r.key]; return (b ? Number(b.actual_qty) : 0) !== r.qty || (b ? b.modified : "") !== r.modified; })) throw new Error("ERP stock moved after this count. Start a new count and review the current balances before submitting.");
+        var value = Number(doc.difference_amount || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        var details = '<p><b>' + esc(doc.name) + '</b> · ' + esc(dmy(doc.posting_date)) + ' ' + esc(String(doc.posting_time || "").slice(0, 8)) + '</p><p>Difference account: <b>' + esc(doc.expense_account || "ERPNext default") + '</b><br>Cost centre: ' + esc(doc.cost_center || "ERPNext default") + '<br>Value change (company currency): <b>' + esc(value) + '</b></p>';
+        var table = '<div class="tw"><table><thead><tr><th>Item / warehouse</th><th>Before</th><th>Counted</th><th>Variance</th></tr></thead><tbody>' + doc.items.map(function (r) { var delta = Number(r.qty) - Number(r.current_qty || 0); return '<tr><td>' + esc(r.item_code) + '<small>' + esc(r.warehouse) + '</small></td><td>' + f(r.current_qty || 0) + '</td><td>' + f(r.qty) + '</td><td>' + (delta > 0 ? "+" : "") + f(delta) + ' ' + esc(r.stock_uom || "Nos") + '</td></tr>'; }).join("") + '</tbody></table></div>';
+        function back() { RC.busy = false; if (S.view === "recon") renderRecon(); }
+        dialog("Step 1 of 2: review stock true-up", details + table + '<p>' + esc(RC.reason) + '</p>', "Yes, this is correct", function () {
+          dialog("Step 2 of 2: submit true-up now?", '<p class="cap-msg warn">This changes stock in ERPNext.</p>' + details + '<p>' + doc.items.length + ' counted item(s). ERPNext will enforce your submission permissions.</p>', "Submit now", function () { rcSendSubmit(doc); }, back);
+        }, back);
+      });
+    }).catch(function (e) { RC.busy = false; rcStatus("Not submitted. " + esc(e.message), "bad"); if (S.view === "recon") renderRecon(); });
+  }
+  function rcSendSubmit(doc) {
+    rcWrite("frappe.client.submit", doc).then(function (submitted) {
+      if (Number(submitted.docstatus) !== 1) { var err = new Error("ERPNext has not confirmed submission."); err.uncertain = true; throw err; }
+      return rcSubmitted(submitted);
+    }).catch(function (e) {
+      RC.busy = false; RC.uncertain = !!e.uncertain;
+      rcStatus((RC.uncertain ? "Submission response was lost. Use Check submission status before trying again. " : "Not submitted. ") + esc(e.message), RC.uncertain ? "warn" : "bad");
+      if (S.view === "recon") renderRecon();
+    });
+  }
+  function rcCheckSubmission() {
+    if (!RC.created || RC.busy) return;
+    RC.busy = true; if (S.view === "recon") renderRecon();
+    rcDraft().then(function (doc) {
+      if (Number(doc.docstatus) === 1) return rcSubmitted(doc);
+      RC.busy = false; RC.uncertain = false;
+      rcStatus(Number(doc.docstatus) === 0 ? "ERPNext confirms this is still a draft. Stock has not been changed by this reconciliation. You can review submission again." : "The reconciliation was cancelled. Start a new count.", "warn");
+      if (Number(doc.docstatus) !== 0) RC.noteSaved = false;
+      if (S.view === "recon") renderRecon();
+    }).catch(function (e) { RC.busy = false; rcStatus("Could not confirm submission status. " + esc(e.message), "warn"); if (S.view === "recon") renderRecon(); });
+  }
+  function rcSubmitted(doc) {
+    RC.busy = true; RC.submitted = true; RC.uncertain = false; RC.draft = doc;
+    rcStatus("Submitted ✓ " + esc(doc.name) + ". Stock true-up applied. Refreshing balances…", "ok");
+    if (S.view === "recon") renderRecon();
+    // A refresh failure must never turn a successful submission into a retry prompt.
+    clearProduction(); O = null;
+    return Promise.all([load(), rcBins(RC.rows).then(function (bins) { rcApplyBins(RC.rows, bins); RC.loadedAt = new Date(); })])
+      .then(function () {
+        // The posted batch is complete. Keep the brand, filters and count reference for the next one.
+        RC.counts = {}; RC.created = null; RC.draft = null; RC.noteSaved = false; RC.submitted = false; RC.savedNote = ""; RC.zero = false;
+        rcStatus("Submitted ✓ " + esc(doc.name) + ". Stock true-up applied. Ready for the next count.", "ok");
+      })
+      .catch(function () { rcStatus("Submitted ✓ " + esc(doc.name) + ". Stock true-up applied. Balance refresh failed; use Refresh ERP stock to retry here.", "warn"); })
+      .finally(function () { RC.busy = false; if (S.view === "recon") renderRecon(); });
+  }
+  function rcInsert(doc) {
+    return rcWrite("frappe.client.insert", doc);
+  }
+  function rcWrite(method, doc) {
+    return fetch("/api/method/" + method, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", Accept: "application/json", "X-Frappe-CSRF-Token": csrf() }, body: JSON.stringify({ doc: doc }) })
+      .then(function (r) { return r.json().then(function (j) {
+        if (!r.ok) { var err = new Error(serverMsg(j) || ("HTTP " + r.status)); err.uncertain = r.status >= 500; throw err; }
+        if (!j.message || !j.message.name) throw new Error("ERPNext did not confirm the document.");
+        return j.message;
+      }); }).catch(function (err) { if (err.uncertain == null) err.uncertain = true; throw err; });
+  }
+  window.addEventListener("beforeunload", function (e) { if (!RC.created && rcCounted().length) { e.preventDefault(); e.returnValue = ""; } });
+
+  /* ---------- views ---------- */
+  var VIEWS = [["capture", "Capture"], ["production", "Production"], ["orders", "Orders"], ["orderstock", "Order & stock"], ["priority", "Priority"], ["whatif", "What-if"], ["recon", "Stock recon"]];
   function renderViews() {
     $("v3-mode").innerHTML = '<div class="seg views" role="tablist" aria-label="Screens">' + VIEWS.map(function (v) { return '<button type="button" role="tab" data-view="' + v[0] + '" aria-pressed="' + (S.view === v[0]) + '">' + v[1] + "</button>"; }).join("") + "</div>";
     [].forEach.call($("v3-mode").querySelectorAll("[data-view]"), function (b) { b.onclick = function () { showView(b.dataset.view); }; });
@@ -1340,6 +1787,7 @@
     $("v3-banner").hidden = v !== "capture";
     if (v === "capture") { renderShell(); return; }
     if (v === "production") { renderProduction(); return; }
+    if (v === "recon") { renderRecon(); return; }
     var go = function () { if (S.view === v) (v === "orders" ? renderOrders : v === "priority" ? renderPriority : v === "whatif" ? renderWhatIf : renderOrderStock)(); };
     if (O) { go(); return; }
     $("v3-app").innerHTML = '<div class="loading">Loading exercise book orders…</div>';
@@ -1348,13 +1796,18 @@
 
   /* ---------- start ---------- */
   function start() {
-    S.group = lsGet("group", null); S.chosen = false; S.station = lsGet("station", "covers"); S.run = lsGet("run", ""); S.date = todayIso(); S.shift = lsGet("shift", "Day Shift"); if (SHIFTS.indexOf(S.shift) < 0) S.shift = "Day Shift";
+    S.group = lsGet("group", null); S.chosen = false; S.station = lsGet("station", "covers");
+    S.run = lsGet(S.station === "folds" ? "foldedBy" : "run", lsGet("run", "")); S.date = rememberedDate(); S.shift = lsGet("shift", "Day Shift"); if (SHIFTS.indexOf(S.shift) < 0) S.shift = "Day Shift";
     if (STEPS.map(function (s) { return s[0]; }).indexOf(S.station) < 0) S.station = "covers";
     renderMode();
     var qv = null; try { qv = new URL(location.href).searchParams.get("view"); } catch (e) {}
     S.view = qv || lsGet("view", "capture"); if (!VIEWS.some(function (v) { return v[0] === S.view; })) S.view = "capture";
     Promise.all([loadMode(), load()]).then(function () { renderMode(); showView(S.view); })
       .catch(function (err) { $("v3-app").innerHTML = '<div class="cap-msg bad">Could not read stock from ERPNext: ' + esc(err.message) + ". Are you signed in?</div>"; });
+    window.setInterval(function () {
+      if (document.visibilityState === "visible" && S.view === "capture" && S.station === "folds" && (!W || W.step === 2)) loadSharedFoldNames();
+    }, 5000);
+    window.addEventListener("focus", function () { if (S.view === "capture" && S.station === "folds") loadSharedFoldNames(true); });
   }
   if (window.frappe && frappe.session && frappe.session.user === "Guest") { location.href = "/login?redirect-to=" + encodeURIComponent(location.pathname + location.search); return; }
   if (window.frappe && typeof frappe.ready === "function") frappe.ready(start); else if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
