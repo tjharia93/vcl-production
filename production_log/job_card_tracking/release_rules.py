@@ -49,6 +49,10 @@ OVERRIDE_ROLE = "VCL Management Team"
 SYSTEM_USER = "Administrator"
 
 CLOSED_ORDER_STATUSES = ("Closed", "Cancelled")
+
+# Keys added to a snapshot format after cards were already frozen under it;
+# their absence is not missing evidence (see cps_rules.COMPUTER_PAPER_SNAPSHOT_SCALARS).
+SNAPSHOT_WIDENING_KEYS = frozenset({"print_type", "print_side", "printed_weight"})
 ARTWORK_OK_STATES = ("Customer-approved", "Not applicable")
 
 CHECK_NAMES = {
@@ -171,6 +175,10 @@ def snapshot_mismatches(snapshot, payload, product_type=None):
 		if key.startswith("_") or key not in compared:
 			continue
 		if key not in snapshot:
+			if key in SNAPSHOT_WIDENING_KEYS:
+				# D4 (TRK-00350) widened the Computer Paper snapshot without a
+				# version bump: a v2 snapshot without these keys is complete.
+				continue
 			out.append(key + " (missing in snapshot)")
 			continue
 		found = snapshot.get(key)

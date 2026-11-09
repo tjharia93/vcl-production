@@ -1,0 +1,849 @@
+<title>Exercise Book Click-through</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: brand header bar, sticky tab strip, one panel per tab; panels are plain documents on kraft. */
+:root{
+  --success:#3f6b4e;--info:#1b6a7c;--warning:#6e3b2a;
+  --surface:#f1ebdd;--raised:#ece6dc;--sunken:#e3dccb;--ink:#4a4542;--muted:#4d5b66;
+  --border:#d8bf95;--border-strong:#857252;--brand:#2b3990;--brand-text:#2b3990;--on-brand:#fff;
+  --brand-tint:#e3e3e4;--warn-text:#6e3b2a;--warn-tint:#ece0d7;--ok-text:#3f6b4e;--ok-tint:#e0eae2;
+  --info-text:#1b6a7c;--info-tint:#dce9ec;--focus:#2b3990;
+  --sans:Calibri,Carlito,"Segoe UI",Arial,system-ui,sans-serif;
+  --mono:"Courier New",Courier,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --surface:#1c1813;--raised:#27221b;--sunken:#140f0a;--ink:#f3ece0;--muted:#b5a88f;--border:#3b3328;
+  --border-strong:#7a6c56;--brand-text:#9eadf0;--brand-tint:#2a2a3e;--warn-text:#e0a070;--warn-tint:#3a2710;
+  --ok-text:#8fd3a5;--ok-tint:#1b2e20;--info-text:#6fc3d4;--info-tint:#13333a;--focus:#9eadf0;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --surface:#1c1813;--raised:#27221b;--sunken:#140f0a;--ink:#f3ece0;--muted:#b5a88f;--border:#3b3328;
+  --border-strong:#7a6c56;--brand-text:#9eadf0;--brand-tint:#2a2a3e;--warn-text:#e0a070;--warn-tint:#3a2710;
+  --ok-text:#8fd3a5;--ok-tint:#1b2e20;--info-text:#6fc3d4;--info-tint:#13333a;--focus:#9eadf0;color-scheme:dark}
+body{background:var(--surface);color:var(--ink);font:15px/22px var(--sans)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--brand)}
+.wrap{max-width:1100px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.bar{background:var(--brand);color:var(--on-brand)}
+header.bar .wrap{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;padding-block:14px}
+header.bar h1{margin:0;font-size:22px;line-height:28px;font-weight:700}
+header.bar p{margin:0;font-size:13px;opacity:.85}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--raised);border-bottom:1px solid var(--border)}
+nav.tabs .wrap{display:flex;gap:2px;overflow-x:auto;scrollbar-width:thin}
+nav.tabs a{flex:none;padding:12px 14px 10px;color:var(--muted);text-decoration:none;font-weight:700;font-size:14px;border-bottom:3px solid transparent;white-space:nowrap}
+nav.tabs a[aria-current="page"]{color:var(--brand-text);border-bottom-color:var(--brand)}
+nav.tabs a:hover{color:var(--ink)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+main .wrap{padding-block:24px 48px}
+section.panel{display:grid;gap:24px}
+h2{font-size:20px;line-height:26px;margin:0;text-wrap:balance}
+h3{font-size:16px;line-height:22px;margin:0}
+p{margin:0;max-width:72ch}
+.lede{color:var(--muted);max-width:72ch}
+code,.mono{font-family:var(--mono);font-size:13px}
+p code,li code,dd code{overflow-wrap:anywhere}
+.label{font-size:12px;line-height:16px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.chip{display:inline-block;font-size:12px;line-height:16px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;padding:2px 6px;border-radius:2px;white-space:nowrap}
+.chip.ok{background:var(--ok-tint);color:var(--ok-text)}
+.chip.part{background:var(--info-tint);color:var(--info-text)}
+.chip.no{background:var(--warn-tint);color:var(--warn-text)}
+.chip.wait{background:var(--brand-tint);color:var(--brand-text)}
+.card{background:var(--raised);border:1px solid var(--border);border-radius:4px;padding:16px;display:grid;gap:12px;min-width:0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.callout{background:var(--info-tint);border-radius:4px;padding:12px 16px}
+.callout.warn{background:var(--warn-tint)}
+ul.tight{margin:0;padding-left:20px;display:grid;gap:4px}
+/* process strip */
+.flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;counter-reset:s}
+.flow a{display:grid;gap:4px;padding:12px;background:var(--raised);border:1px solid var(--border);border-top:4px solid var(--brand);border-radius:4px;color:var(--ink);text-decoration:none}
+.flow a:hover{background:var(--sunken)}
+.flow .n{font-family:var(--mono);color:var(--brand-text);font-weight:700}
+.flow .t{font-weight:700}
+@media (max-width:720px){.flow{grid-template-columns:1fr}}
+/* process flowchart */
+.fwrap{margin:0;display:grid;gap:10px;background:var(--raised);border:1px solid var(--border);border-radius:4px;padding:16px}
+.fchart{width:100%;height:auto;display:block;font-family:var(--sans)}
+.fh-narrow{display:none;max-width:400px;margin:0 auto}
+@media (max-width:640px){.fh-wide{display:none}.fh-narrow{display:block}}
+.fa{fill:none;stroke:var(--muted);stroke-width:1.5}
+.fah{fill:var(--muted)}
+.fn rect{stroke-width:2}
+.fn.ok rect{fill:var(--ok-tint);stroke:var(--ok-text)}
+.fn.no rect{fill:var(--surface);stroke:var(--warn-text);stroke-dasharray:5 4}
+.fn.end rect{fill:var(--brand);stroke:var(--brand)}
+.fn.end text{fill:var(--on-brand)}
+.fn text{fill:var(--ink)}
+.fh{font-size:15px;font-weight:700}
+.fnum{font-family:var(--mono);fill:var(--brand-text)}
+.fs{font-size:12px;fill:var(--muted)!important}
+.fn.end .fs{fill:var(--on-brand)!important;opacity:.85}
+.fst{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.fn.ok .fst{fill:var(--ok-text)}
+.fn.no .fst{fill:var(--warn-text)}
+a.fn:hover rect{filter:brightness(.95)}
+a.fn:focus-visible rect{stroke:var(--focus);stroke-width:3}
+/* entry-screen themes (click-through mock) */
+.themes{display:flex;flex-wrap:wrap;gap:6px}
+.themes button{font:inherit;font-size:13px;font-weight:700;padding:6px 10px;border-radius:4px;border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);cursor:pointer}
+.themes button[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.tnote{font-size:13px;color:var(--muted);max-width:none}
+.mock.mx{--p:#2B3990;--p-on:#fff;--ok:#2F5D50;--ok-bg:#E6EFEA;--warn:#B35A00;
+  font-family:var(--m-font);color:var(--m-ink);background:var(--m-page);border:1px solid var(--m-border);border-radius:var(--m-r);overflow:hidden;font-size:14px;line-height:20px}
+.mx *{box-sizing:border-box}
+.mx .mh{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--m-head);color:var(--m-head-ink);border-bottom:1px solid var(--m-border);box-shadow:var(--m-head-shadow)}
+.mx .ic{flex:none;width:36px;height:36px;border-radius:var(--m-ic-r);background:var(--m-ic-bg);color:var(--m-ic-ink);display:grid;place-items:center;font-weight:700;font-size:13px;letter-spacing:.3px}
+.mx .ht{display:grid;gap:0;min-width:0}
+.mx .ob{font-size:12px;line-height:16px;color:var(--m-head-muted)}
+.mx .tt{font-size:var(--m-title);line-height:1.2;font-weight:var(--m-title-w);overflow-wrap:anywhere}
+.mx .crumb{margin-left:auto;font-size:12px;color:var(--m-head-muted);white-space:nowrap}
+.mx .crumb b{font-family:var(--m-mono);color:var(--m-head-ink)}
+.mx .mb{padding:14px;display:grid;gap:12px}
+.mx .cardx{background:var(--m-card);border:var(--m-card-b);border-radius:var(--m-card-r);box-shadow:var(--m-shadow);padding:14px;display:grid;gap:12px}
+.mx .sec{font-size:var(--m-sec);font-weight:700;color:var(--m-ink);text-transform:var(--m-sec-t);letter-spacing:var(--m-sec-ls)}
+.mx .fx{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.mx .f{display:grid;gap:4px;min-width:0}
+.mx .f .l{font-size:var(--m-lbl);font-weight:var(--m-lbl-w);color:var(--m-muted)}
+.mx .f .i{display:flex;align-items:center;justify-content:space-between;gap:6px;min-height:var(--m-h);padding:0 10px;background:var(--m-in-bg);border:var(--m-in-b);border-bottom:var(--m-in-bb);border-radius:var(--m-in-r);color:var(--m-ink);overflow-wrap:anywhere}
+.mx .f .i.pick::after{content:"\25BE";color:var(--m-muted);font-size:12px}
+.mx .f .ro{min-height:var(--m-h);display:flex;align-items:center;color:var(--m-ink);font-weight:700;overflow-wrap:anywhere}
+.mx .f .ro::before{content:"\1F512\FE0E";font-size:11px;margin-right:6px;opacity:.45}
+.mx .f.qn .i,.mx .f.qn .ro{font-family:var(--m-mono);font-variant-numeric:tabular-nums;font-weight:700}
+.mx .sum{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;padding:10px 12px;border-radius:var(--m-in-r);background:var(--ok-bg);color:var(--ok)}
+.mx .sum b{font-family:var(--m-mono);font-size:18px;font-variant-numeric:tabular-nums}
+.mx .act{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.mx .bp{font:inherit;font-weight:700;border:0;cursor:pointer;background:var(--p);color:var(--p-on);border-radius:var(--m-btn-r);padding:0 18px;min-height:36px}
+.mx .bs{font:inherit;font-weight:700;cursor:pointer;background:var(--m-card);color:var(--p);border:1px solid var(--m-border-strong);border-radius:var(--m-btn-r);padding:0 14px;min-height:36px}
+.mx .toast{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 12px;border-radius:var(--m-in-r);background:var(--ok);color:#fff;font-weight:700}
+.mx .toast button{font:inherit;font-weight:700;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.7);border-radius:var(--m-btn-r);padding:4px 10px;cursor:pointer}
+.mx .hint{font-size:12px;color:var(--m-muted)}
+/* floor mode: touch, arm's length */
+.mx.floor{--m-h:52px}
+.mx.floor .f .i,.mx.floor .f .ro{font-size:18px}
+.mx.floor .f .l{font-size:14px}
+.mx.floor .f.qn .i,.mx.floor .f.qn .ro{font-size:28px;min-height:60px}
+.mx.floor .fx{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.mx.floor .act .bp{flex:1 1 100%;min-height:56px;font-size:18px}
+.mx.desk{--m-h:34px}
+/* desk dashboard bits */
+.mx .kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.mx .kp div{background:var(--m-card);border:var(--m-card-b);border-radius:var(--m-card-r);box-shadow:var(--m-shadow);padding:10px;display:grid;gap:2px}
+.mx .kp .k{font-size:12px;color:var(--m-muted)}
+.mx .kp .v{font-family:var(--m-mono);font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.mx .kp .v.bad{color:var(--warn)}
+.mx table{width:100%;border-collapse:collapse;font-size:13px;background:var(--m-card)}
+.mx th{background:var(--m-th);color:var(--m-muted);text-transform:none;letter-spacing:0;font-size:12px;font-weight:700;padding:8px 10px;text-align:left;border-bottom:1px solid var(--m-border)}
+.mx td{padding:8px 10px;border-bottom:1px solid var(--m-border);color:var(--m-ink)}
+.mx td.num{text-align:right;font-family:var(--m-mono)}
+.mx .tbw{border:var(--m-card-b);border-radius:var(--m-card-r);overflow-x:auto;box-shadow:var(--m-shadow)}
+.mx .pill{display:inline-block;font-size:12px;font-weight:700;padding:1px 8px;border-radius:999px;background:#FBEBDD;color:var(--warn)}
+/* 1. VCL Lightning (Salesforce SLDS structure, VCL colours) */
+.mx.t-lightning{--m-font:Calibri,Carlito,"Segoe UI",Arial,sans-serif;--m-mono:"Courier New",Courier,monospace;--m-page:#F3F3F3;--m-card:#fff;--m-ink:#181818;--m-muted:#706E6B;--m-border:#DDDBDA;--m-border-strong:#C9C9C9;--m-r:4px;
+  --m-head:#fff;--m-head-ink:#181818;--m-head-muted:#706E6B;--m-head-shadow:0 2px 2px rgba(0,0,0,.08);--m-ic-bg:#2B3990;--m-ic-ink:#fff;--m-ic-r:4px;--m-title:18px;--m-title-w:700;
+  --m-card-b:1px solid #DDDBDA;--m-card-r:4px;--m-shadow:0 2px 2px rgba(0,0,0,.1);--m-sec:14px;--m-sec-t:none;--m-sec-ls:0;--m-lbl:12px;--m-lbl-w:400;
+  --m-in-bg:#fff;--m-in-b:1px solid #C9C9C9;--m-in-bb:1px solid #C9C9C9;--m-in-r:4px;--m-btn-r:4px;--m-th:#FAFAF9}
+/* 2. SAP Fiori Horizon */
+.mx.t-fiori{--m-font:"72","72full",Arial,Helvetica,sans-serif;--m-mono:"72Mono",Menlo,Consolas,monospace;--m-page:#F5F6F7;--m-card:#fff;--m-ink:#1D2D3E;--m-muted:#556B82;--m-border:#E5E5E5;--m-border-strong:#BCC3CA;--m-r:12px;
+  --m-head:#fff;--m-head-ink:#1D2D3E;--m-head-muted:#556B82;--m-head-shadow:0 0 2px rgba(34,53,72,.2),0 2px 4px rgba(34,53,72,.12);--m-ic-bg:#EBF8FF;--m-ic-ink:#2B3990;--m-ic-r:50%;--m-title:20px;--m-title-w:700;
+  --m-card-b:0;--m-card-r:12px;--m-shadow:0 0 2px rgba(34,53,72,.16),0 2px 4px rgba(34,53,72,.16);--m-sec:16px;--m-sec-t:none;--m-sec-ls:0;--m-lbl:14px;--m-lbl-w:400;
+  --m-in-bg:#fff;--m-in-b:1px solid #BCC3CA;--m-in-bb:1px solid #556B81;--m-in-r:8px;--m-btn-r:8px;--m-th:#fff}
+/* 3. Microsoft Fluent 2 (Dynamics 365 / Business Central) */
+.mx.t-fluent{--m-font:"Segoe UI Variable","Segoe UI",-apple-system,Roboto,sans-serif;--m-mono:Consolas,"Cascadia Mono",monospace;--m-page:#FAFAFA;--m-card:#fff;--m-ink:#242424;--m-muted:#616161;--m-border:#E0E0E0;--m-border-strong:#D1D1D1;--m-r:8px;
+  --m-head:#2B3990;--m-head-ink:#fff;--m-head-muted:rgba(255,255,255,.8);--m-head-shadow:none;--m-ic-bg:rgba(255,255,255,.16);--m-ic-ink:#fff;--m-ic-r:4px;--m-title:18px;--m-title-w:600;
+  --m-card-b:0;--m-card-r:8px;--m-shadow:0 0 2px rgba(0,0,0,.12),0 2px 4px rgba(0,0,0,.14);--m-sec:14px;--m-sec-t:none;--m-sec-ls:0;--m-lbl:14px;--m-lbl-w:600;
+  --m-in-bg:#fff;--m-in-b:1px solid #D1D1D1;--m-in-bb:1px solid #616161;--m-in-r:4px;--m-btn-r:4px;--m-th:#F5F5F5}
+/* 4. Frappe Espresso (ERPNext v15 desk) */
+.mx.t-espresso{--m-font:InterVariable,Inter,-apple-system,"Segoe UI",sans-serif;--m-mono:"SF Mono",Menlo,Consolas,monospace;--m-page:#fff;--m-card:#fff;--m-ink:#171717;--m-muted:#7C7C7C;--m-border:#EDEDED;--m-border-strong:#E2E2E2;--m-r:12px;
+  --m-head:#fff;--m-head-ink:#171717;--m-head-muted:#7C7C7C;--m-head-shadow:none;--m-ic-bg:#F3F3F3;--m-ic-ink:#171717;--m-ic-r:8px;--m-title:20px;--m-title-w:600;
+  --m-card-b:1px solid #EDEDED;--m-card-r:12px;--m-shadow:none;--m-sec:13px;--m-sec-t:uppercase;--m-sec-ls:.4px;--m-lbl:13px;--m-lbl-w:400;
+  --m-in-bg:#F3F3F3;--m-in-b:0;--m-in-bb:0;--m-in-r:8px;--m-btn-r:8px;--m-th:#F8F8F8}
+/* 5. IBM Carbon */
+.mx.t-carbon{--m-font:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;--m-mono:"IBM Plex Mono",Menlo,monospace;--m-page:#F4F4F4;--m-card:#fff;--m-ink:#161616;--m-muted:#525252;--m-border:#E0E0E0;--m-border-strong:#8D8D8D;--m-r:0;
+  --m-head:#161616;--m-head-ink:#F4F4F4;--m-head-muted:#C6C6C6;--m-head-shadow:none;--m-ic-bg:#2B3990;--m-ic-ink:#fff;--m-ic-r:0;--m-title:18px;--m-title-w:600;
+  --m-card-b:0;--m-card-r:0;--m-shadow:none;--m-sec:16px;--m-sec-t:none;--m-sec-ls:0;--m-lbl:12px;--m-lbl-w:400;
+  --m-in-bg:#F4F4F4;--m-in-b:0;--m-in-bb:1px solid #8D8D8D;--m-in-r:0;--m-btn-r:0;--m-th:#E0E0E0}
+.mx.t-carbon .bp{text-align:left}
+/* 6. Google Material 3 */
+.mx.t-material{--m-font:Roboto,"Google Sans","Segoe UI",Arial,sans-serif;--m-mono:"Roboto Mono",Menlo,monospace;--m-page:#F8F8FF;--m-card:#EFF0FA;--m-ink:#1B1B21;--m-muted:#46464F;--m-border:#E2E1EC;--m-border-strong:#767680;--m-r:16px;
+  --m-head:#F8F8FF;--m-head-ink:#1B1B21;--m-head-muted:#46464F;--m-head-shadow:none;--m-ic-bg:#DFE0FF;--m-ic-ink:#2B3990;--m-ic-r:50%;--m-title:22px;--m-title-w:400;
+  --m-card-b:0;--m-card-r:12px;--m-shadow:none;--m-sec:14px;--m-sec-t:none;--m-sec-ls:.1px;--m-lbl:12px;--m-lbl-w:500;
+  --m-in-bg:transparent;--m-in-b:1px solid #767680;--m-in-bb:1px solid #767680;--m-in-r:4px;--m-btn-r:20px;--m-th:#E8E9F4}
+/* 7. Shopify Polaris */
+.mx.t-polaris{--m-font:Inter,-apple-system,"Segoe UI",Roboto,sans-serif;--m-mono:"SF Mono",Menlo,Consolas,monospace;--m-page:#F1F1F1;--m-card:#fff;--m-ink:#303030;--m-muted:#616161;--m-border:#E3E3E3;--m-border-strong:#8A8A8A;--m-r:12px;
+  --m-head:#F1F1F1;--m-head-ink:#303030;--m-head-muted:#616161;--m-head-shadow:none;--m-ic-bg:#fff;--m-ic-ink:#2B3990;--m-ic-r:8px;--m-title:20px;--m-title-w:700;
+  --m-card-b:0;--m-card-r:12px;--m-shadow:0 1px 0 rgba(26,26,26,.07),inset 0 -1px 0 rgba(0,0,0,.13),inset 0 0 0 1px rgba(0,0,0,.08);--m-sec:14px;--m-sec-t:none;--m-sec-ls:0;--m-lbl:13px;--m-lbl-w:450;
+  --m-in-bg:#FDFDFD;--m-in-b:1px solid #8A8A8A;--m-in-bb:1px solid #8A8A8A;--m-in-r:8px;--m-btn-r:8px;--m-th:#F7F7F7}
+.mx.t-polaris .bp{box-shadow:inset 0 -2px 0 rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.25)}
+.mx.t-polaris .mh{border-bottom:0}
+/* 8. Industrial HMI (ISA-101 high-performance) */
+.mx.t-hmi{--m-font:"Segoe UI",Calibri,Arial,sans-serif;--m-mono:Consolas,"Courier New",monospace;--m-page:#C9CBCD;--m-card:#DCDDDE;--m-ink:#111;--m-muted:#3A3D40;--m-border:#9EA1A4;--m-border-strong:#6B6E71;--m-r:2px;
+  --m-head:#AEB1B4;--m-head-ink:#111;--m-head-muted:#2E3134;--m-head-shadow:none;--m-ic-bg:#6B6E71;--m-ic-ink:#fff;--m-ic-r:2px;--m-title:20px;--m-title-w:700;
+  --m-card-b:1px solid #9EA1A4;--m-card-r:2px;--m-shadow:none;--m-sec:14px;--m-sec-t:uppercase;--m-sec-ls:.6px;--m-lbl:13px;--m-lbl-w:700;
+  --m-in-bg:#fff;--m-in-b:2px solid #3A3D40;--m-in-bb:2px solid #3A3D40;--m-in-r:2px;--m-btn-r:2px;--m-th:#C9CBCD;--ok:#1F4D2C;--ok-bg:#E8E9EA}
+.mx.t-hmi .bp{border:2px solid #111}
+/* step detail */
+.step{scroll-margin-top:64px}
+.step header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px}
+.step header .n{font-family:var(--mono);font-weight:700;color:var(--brand-text)}
+dl.facts{display:grid;grid-template-columns:minmax(120px,180px) 1fr;gap:8px 16px;margin:0}
+dl.facts dt{font-size:12px;line-height:20px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+dl.facts dd{margin:0;min-width:0}
+@media (max-width:560px){dl.facts{grid-template-columns:1fr}dl.facts dd{margin-bottom:6px}}
+/* tables */
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:13px;line-height:18px}
+th{background:var(--raised);text-align:left;font-size:12px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* model flow */
+.chain{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.chain span.box{padding:8px 10px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);font-family:var(--mono);font-size:13px}
+.chain span.box.new{border-style:dashed;color:var(--brand-text)}
+.chain span.arr{color:var(--muted)}
+.q{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:start}
+.q .n{font-family:var(--mono);font-weight:700;color:var(--brand-text)}
+footer{color:var(--muted);font-size:13px}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+
+/* data flow */
+.meet{display:grid;grid-template-columns:repeat(6,minmax(0,1fr)) minmax(0,1.3fr) repeat(2,minmax(0,1fr));gap:6px;align-items:stretch}
+.st{display:grid;gap:2px;align-content:start;padding:10px;border:1px solid var(--border);border-radius:4px;background:var(--raised);min-width:0}
+.st .nm{font-weight:700;font-size:13px}
+.st .v{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:15px;font-weight:700}
+.st .u{font-size:12px;color:var(--muted);line-height:16px}
+.st.prod{border-top:4px solid var(--brand)}
+.st.sale{border-top:4px solid var(--info)}
+.st.gap{background:var(--surface);border-style:dashed}
+.st.gap .v{color:var(--warn-text)}
+.st.mid{background:var(--ok-tint);border:2px solid var(--ok-text)}
+.dir{display:flex;justify-content:space-between;gap:8px;font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.dir .l{color:var(--brand-text)} .dir .r{color:var(--info-text)}
+@media (max-width:900px){.meet{grid-template-columns:repeat(3,minmax(0,1fr))}.st.mid{grid-column:1/-1}}
+@media (max-width:480px){.meet{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cascade{display:grid;gap:8px}
+.cas{display:grid;grid-template-columns:minmax(150px,220px) 1fr minmax(90px,auto);gap:12px;align-items:center}
+.cas .bar{height:22px;background:var(--sunken);border-radius:2px;position:relative;overflow:hidden}
+.cas .bar i{position:absolute;inset:0 auto 0 0;display:block}
+.cas .n{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+@media (max-width:560px){.cas{grid-template-columns:1fr auto}.cas .bar{grid-column:1/-1;order:3}}
+.c-dem{background:var(--muted)} .c-fg{background:var(--success)} .c-ins{background:var(--info)} .c-cov{background:var(--brand)} .c-short{background:var(--warning)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:2px;display:inline-block}
+.sk{display:flex;height:14px;min-width:140px;border-radius:2px;overflow:hidden;background:var(--sunken)}
+.sk i{display:block;height:100%}
+.toggle{display:inline-flex;gap:8px;align-items:center;font-size:14px}
+.filters{display:flex;flex-wrap:wrap;gap:8px 16px}.filters label{display:grid;gap:2px;font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}.filters select{font:14px var(--sans);padding:6px 8px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);color:var(--ink);max-width:100%}
+tfoot td{font-weight:700;background:var(--raised)}
+tr.flag td{background:var(--warn-tint)}
+
+/* click-through */
+.stations{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch}
+.stations button{flex:1 1 120px;display:grid;gap:2px;text-align:left;padding:10px;border:1px solid var(--border);border-top:4px solid var(--border-strong);border-radius:4px;background:var(--raised);color:var(--ink);font:inherit;cursor:pointer;min-width:0}
+.stations button .k{font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.stations button .t{font-weight:700}
+.stations button.side-p{border-top-color:var(--brand)} .stations button.side-s{border-top-color:var(--info)} .stations button.side-d{border-top-color:var(--success)}
+.stations button[aria-pressed="true"]{background:var(--brand-tint);outline:2px solid var(--focus);outline-offset:-2px}
+.wgrid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px}
+@media (max-width:860px){.wgrid{grid-template-columns:1fr}}
+.mock{border:1px solid var(--border-strong);border-radius:8px;background:var(--surface);overflow:hidden}
+.mock .bar{background:var(--brand);color:var(--on-brand);padding:8px 12px;font-weight:700;font-size:14px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.mock .bar span{font-weight:400;opacity:.85;font-size:12px}
+.mock .body{padding:12px;display:grid;gap:10px}
+.fld{display:grid;gap:3px}
+.fld .lb{font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.fld .in{border:1px solid var(--border-strong);border-radius:4px;padding:7px 10px;background:var(--raised);font-size:14px;min-height:34px}
+.fld .in.auto{background:var(--sunken);color:var(--muted)}
+.frow{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.btnmock{justify-self:start;background:var(--brand);color:var(--on-brand);border-radius:4px;padding:8px 14px;font-weight:700;font-size:14px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.tile{border:1px solid var(--border);border-radius:4px;padding:10px;background:var(--raised);display:grid;gap:2px}
+.tile .v{font-family:var(--mono);font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+.posts{display:grid;gap:6px}
+.post{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:13px;padding:6px 8px;border-radius:4px;background:var(--raised);border:1px solid var(--border)}
+.post .dir{font-family:var(--mono);font-weight:700}
+.post .out{color:var(--warn-text)} .post .in{color:var(--ok-text)}
+.navrow{display:flex;justify-content:space-between;gap:8px}
+.navrow button{font:inherit;font-weight:700;padding:8px 14px;border-radius:4px;border:1px solid var(--border-strong);background:var(--surface);color:var(--brand-text);cursor:pointer}
+
+/* screens gallery */
+.sgrid{display:grid;grid-template-columns:240px minmax(0,1fr);gap:16px;align-items:start}
+.snav{display:grid;gap:4px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 56px)}
+.snav .label{margin-top:8px}
+.snav button{display:flex;justify-content:space-between;align-items:center;gap:6px;text-align:left;font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--border);border-radius:4px;background:var(--raised);color:var(--ink);cursor:pointer}
+.snav button .chip{font-size:10px;padding:1px 4px}
+.snav button[aria-pressed="true"]{background:var(--brand-tint);outline:2px solid var(--focus);outline-offset:-2px}
+#sc-sel{display:none;font:15px var(--sans);padding:8px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);color:var(--ink);width:100%}
+#sc-view{display:grid;gap:16px;min-width:0}
+@media (max-width:860px){.sgrid{grid-template-columns:1fr}.snav{display:none}#sc-sel{display:block}}
+.fpill{border:1px solid var(--border-strong);border-radius:4px;padding:4px 10px;font-size:13px;background:var(--raised)}
+.rflow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.rflow .st{flex:1 1 110px}.rflow .arr{color:var(--muted)}
+.tile.st-ok{background:var(--ok-tint)}.tile.st-no{background:var(--warn-tint)}.tile.st-wait{background:var(--brand-tint)}
+.mmodal{background:var(--sunken);border-radius:4px;padding:16px;display:grid;justify-items:center}.mmodal .mock{max-width:440px;width:100%;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.mock .cas .bar{background:var(--sunken);padding:0;display:block;font-weight:400}
+.btnmock.alt{background:var(--surface);color:var(--brand-text);border:1px solid var(--border-strong)}
+
+.related{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.related a{display:grid;gap:4px;padding:12px 14px;border:1px solid var(--border);border-left:0;border-top:4px solid var(--brand);border-radius:4px;background:var(--raised);color:var(--ink);text-decoration:none}
+.related a:hover{background:var(--sunken)}
+.related a b{color:var(--brand-text)}
+.related a span{font-size:13px;color:var(--muted)}
+.related a.here{border-top-color:var(--border-strong);pointer-events:none}
+.fn.grey rect{fill:var(--sunken);stroke:var(--border);stroke-width:2}.fn.grey text{fill:var(--muted)}.fn.grey .fst{fill:var(--muted)}
+/* capture v3 (floor mode, Lightning-style cards) */
+.cap{display:grid;gap:14px;background:var(--sunken);border:1px solid var(--border);border-radius:8px;padding:14px}
+.cap-top{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+.cap-grp{display:grid;gap:4px;min-width:0;flex:1 1 220px}
+.cap-grp .lb,.cap .lb{font-size:13px;font-weight:700;color:var(--muted)}
+.cap select,.cap input{font:18px var(--sans);min-height:48px;padding:0 12px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);color:var(--ink);width:100%;box-sizing:border-box}
+.cap input.qty{font-family:var(--mono);font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;min-height:58px}
+.cap-actions{display:flex;gap:8px;flex-wrap:wrap}
+.cap-sec{font:inherit;font-weight:700;min-height:44px;padding:0 14px;border-radius:4px;border:1px solid var(--border-strong);background:var(--surface);color:var(--brand-text);cursor:pointer}
+.cap-steps{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.cap-steps button{flex:1 1 120px;display:grid;gap:2px;text-align:left;font:inherit;padding:10px 12px;border:1px solid var(--border);border-top:4px solid var(--brand);border-radius:4px;background:var(--raised);color:var(--ink);cursor:pointer;min-width:0}
+.cap-steps button .k{font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.cap-steps button .t{font-weight:700;font-size:16px}
+.cap-steps button.fg{border-top-color:var(--success)}
+.cap-steps button[aria-selected="true"]{background:var(--brand);color:var(--on-brand);border-color:var(--brand)}
+.cap-steps button[aria-selected="true"] .k{color:var(--on-brand);opacity:.85}
+.cap-steps .arr{color:var(--muted);flex:none}
+.cap-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media (max-width:860px){.cap-grid{grid-template-columns:1fr}.cap-steps .arr{display:none}}
+.cap-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;display:grid;gap:12px;min-width:0;align-content:start}
+.cap-h{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline;justify-content:space-between}
+.cap-note{font-size:13px;color:var(--muted)}
+.cap-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.cap-f{display:grid;gap:4px;min-width:0}
+.cap-ro{min-height:48px;display:flex;align-items:center;font-weight:700;font-size:16px;overflow-wrap:anywhere}
+.cap-ro.mono{font-family:var(--mono)}
+.cap-check{display:flex;gap:10px;align-items:center;font-size:15px}
+.cap-check input{width:24px;min-height:24px;height:24px}
+.cap-post{font:inherit;font-weight:700;font-size:18px;min-height:56px;border:0;border-radius:4px;background:var(--brand);color:var(--on-brand);cursor:pointer;width:100%}
+.cap-post:disabled{background:var(--border-strong);cursor:not-allowed;opacity:.7}
+.cap-rows{display:grid;gap:6px}
+.cap-row{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border-radius:4px;border:1px solid var(--border);background:var(--raised)}
+.cap-row .d{font-family:var(--mono);font-weight:700;font-size:13px;text-align:center;padding:2px 0;border-radius:2px}
+.cap-row.out .d{background:var(--warn-tint);color:var(--warn-text)}
+.cap-row.in .d{background:var(--ok-tint);color:var(--ok-text)}
+.cap-row .it{min-width:0}
+.cap-row .it code{display:block;overflow-wrap:anywhere}
+.cap-row .it span{font-size:12px;color:var(--muted)}
+.cap-row .q{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.cap-row .q b{font-size:16px}
+.cap-row .q small{display:block;color:var(--muted);font-size:12px}
+.cap-msg{padding:10px 12px;border-radius:4px;font-size:14px}
+.cap-msg.bad{background:var(--warn-tint);color:var(--warn-text);font-weight:700}
+.cap-msg.ok{background:var(--ok-tint);color:var(--ok-text);font-weight:700}
+.cap-msg.info{background:var(--info-tint);color:var(--info-text)}
+.cap-stock{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.cap-stock div{border:1px solid var(--border);border-radius:4px;padding:10px;background:var(--raised);display:grid;gap:2px}
+.cap-stock .n{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.cap-stock .v{font-family:var(--mono);font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.cap-stock .s{font-size:12px;color:var(--muted)}
+.cap-stock .chg{font-family:var(--mono);font-size:13px;font-weight:700}
+.cap-stock .chg.up{color:var(--ok-text)}.cap-stock .chg.down{color:var(--warn-text)}
+@media (prefers-reduced-motion:no-preference){.cap-stock div.flash{animation:capf 1.2s ease-out}@keyframes capf{from{background:var(--brand-tint)}to{background:var(--raised)}}}
+</style>
+
+<header class="bar"><div class="wrap">
+  <h1>Exercise book click-through · v3</h1>
+  <p>Prototype of every station, screen and dashboard · as at 04 Nov 2026 · IT Development, Vimit Converters Limited</p>
+</div></header>
+
+<nav class="tabs" aria-label="Sections"><div class="wrap" id="tabs">
+  <a href="#v3">Capture v3</a>
+  <a href="#walk">Stations</a>
+  <a href="#screens">Screens and dashboards</a>
+  <a href="#port">Porting</a>
+  <a href="#about">About</a>
+</div></nav>
+
+<main><div class="wrap">
+
+<!-- ============ CAPTURE V3 ============ -->
+<section class="panel" id="p-v3" data-tab="v3">
+  <h2>Capture v3: try the floor screens</h2>
+  <p class="lede">A working model of the capture screens, Covers to Packing. It starts from today's real stock (ERPNext, 04 Nov). Pick a group, enter what the floor counted, and the preview shows exactly what each entry takes out of stock and puts in before you post. Posting updates the stock and adds the entry to the ledger below. It's a simulation: nothing is sent to ERPNext. Your entries are kept in this browser until you press Reset.</p>
+
+  <div class="cap">
+    <div class="cap-top">
+      <label class="cap-grp" for="v3-group"><span class="lb">Working on</span>
+        <select id="v3-group"></select></label>
+      <label class="cap-grp" for="v3-run"><span class="lb">Run number</span>
+        <input id="v3-run" value="EBR-0001" autocomplete="off"></label>
+      <div class="cap-actions"><button type="button" class="cap-sec" id="v3-undo">Undo last entry</button><button type="button" class="cap-sec" id="v3-reset">Reset to today's stock</button></div>
+    </div>
+
+    <div class="cap-steps" id="v3-steps" role="tablist" aria-label="Stations"></div>
+
+    <div class="cap-grid">
+      <div class="cap-card" id="v3-form"></div>
+      <div class="cap-card" id="v3-preview"></div>
+    </div>
+
+    <div class="cap-card">
+      <div class="cap-h"><h3>Stock for this group</h3><span class="cap-note" id="v3-stocknote"></span></div>
+      <div class="cap-stock" id="v3-stock"></div>
+    </div>
+
+    <div class="cap-card">
+      <div class="cap-h"><h3>Entries posted (this session)</h3><span class="cap-note">Newest first. In ERPNext each is a submitted Stock Entry carrying the run number.</span></div>
+      <div class="tw"><table><thead><tr><th>#</th><th>Run</th><th>Station</th><th>Entry type</th><th>Out</th><th>In</th></tr></thead><tbody id="v3-ledger"></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="card"><h3>The rules this model follows</h3><ul class="tight">
+    <li><strong>Covers, folds and inserts count in sets.</strong> A4 = 2 books per set, A5 = 3. One cover sheet + one fold set = one insert set. Only packing counts single books.</li>
+    <li><strong>Covers</strong>: Material Receipt, cover sheets into <code>Stores - VCL</code>. Spoiled sheets are recorded but not added.</li>
+    <li><strong>Folds</strong>: Material Receipt, fold sets into <code>Stores - VCL</code> (paper is taken out in Phase 2/3).</li>
+    <li><strong>Inserts</strong>: Repack (no BOM). Out: covers × sets and folds × sets. In: inserts × sets. Blocked if either is short, because the site doesn't allow negative stock. There's no fold stock yet, so the first inserts need a fold count first, or the fold check held off.</li>
+    <li><strong>Packing</strong>: Manufacture against the book's packing BOM. Books = full cartons × books per carton + loose books. Out: inserts (books + rejects ÷ up-count, rounded up to whole sets) and empty cartons. In: books into <code>Finished Goods - VCL</code>. Blocked if inserts or cartons are short.</li>
+    <li><strong>Cartons</strong> (PC proposal, for your decision): one common carton per size and brand. A4 Prince <code>PNC-EMPTY-CARTON-A4-EXBK-COMMON-425 x 305 x 260</code> (4,425), A4 Swara <code>SWR- COMMON CARTON 280 MM</code> (2,078), A5 <code>PNCSWR-EMPTY-CARTON-A5-PLAINF-DPL</code> (1,875, item disabled today). Book balances from 2024–25; the team counts on 05 Nov.</li>
+  </ul></div>
+</section>
+
+<!-- ============ CLICK-THROUGH ============ -->
+<section class="panel" id="p-walk" data-tab="walk" hidden>
+  <h2>Station by station</h2>
+  <p class="lede">Each station on the floor, the screen someone enters it on, what that entry posts to ERPNext, and how the item maps on to the next station. Click a station, or use Next. One worked example runs all the way through: a run of Prince A5 120-page single-line books.</p>
+  <div class="callout"><p><strong>Example run <code>EBR-0001</code>:</strong> 1,000 cover sheets (A5, 3-up) + 1,000 fold sets → 1,000 insert sets = 3,000 books → 16 cartons of 186 + 24 loose books → into <code>Finished Goods - VCL</code> → allotted to ESGA's order. The run number is carried on every entry, so yield and waste can be read per run (see the Build spec, decision P6).</p></div>
+
+  <figure class="fwrap" aria-label="Exercise Book Production page header">
+    <p class="label">Top of the Exercise Book Production page after this push (approved 04 Nov)</p>
+    <svg class="fchart fh-wide" viewBox="0 0 840 196" role="img" aria-labelledby="cfct1"><title id="cfct1">Production flow: ruling to folds, and covers, both feed inserts, then packing into finished stock</title><defs><marker id="cfa1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fah"/></marker></defs><path d="M132 48H172" class="fa" marker-end="url(#cfa1)"/><path d="M304 48H336V86H366" class="fa" marker-end="url(#cfa1)"/><path d="M218 152H336V114H366" class="fa" marker-end="url(#cfa1)"/><path d="M498 100H542" class="fa" marker-end="url(#cfa1)"/><path d="M674 100H714" class="fa" marker-end="url(#cfa1)"/><a href="#walk" class="fn grey"><rect x="4" y="10" width="128" height="76" rx="4"/><text x="16" y="34" class="fh"><tspan class="fnum">1</tspan>  Ruling</text><text x="16" y="54" class="fs">Inner papers</text><text x="16" y="73" class="fst">Phase 2/3</text></a><a href="#walk" class="fn ok"><rect x="176" y="10" width="128" height="76" rx="4"/><text x="188" y="34" class="fh"><tspan class="fnum">3</tspan>  Folds</text><text x="188" y="54" class="fs">Folded inner</text><text x="188" y="73" class="fst">Ready</text></a><a href="#walk" class="fn ok"><rect x="90" y="114" width="128" height="76" rx="4"/><text x="102" y="138" class="fh"><tspan class="fnum">2</tspan>  Covers</text><text x="102" y="158" class="fs">Printed sheets</text><text x="102" y="177" class="fst">Ready</text></a><a href="#walk" class="fn ok"><rect x="370" y="62" width="128" height="76" rx="4"/><text x="382" y="86" class="fh"><tspan class="fnum">4</tspan>  Inserts</text><text x="382" y="106" class="fs">Covers + folds</text><text x="382" y="125" class="fst">Ready</text></a><a href="#walk" class="fn ok"><rect x="546" y="62" width="128" height="76" rx="4"/><text x="558" y="86" class="fh"><tspan class="fnum">5</tspan>  Packing</text><text x="558" y="106" class="fs">Cartons</text><text x="558" y="125" class="fst">Ready</text></a><g class="fn end"><rect x="718" y="72" width="118" height="56" rx="28"/><text x="777.0" y="96" text-anchor="middle" class="fh">Finished stock</text><text x="777.0" y="114" text-anchor="middle" class="fs">Finished Goods - VCL</text></g></svg>
+    <svg class="fchart fh-narrow" viewBox="0 0 340 500" role="img" aria-labelledby="cfct2"><title id="cfct2">Production flow: ruling to folds, and covers, both feed inserts, then packing into finished stock</title><defs><marker id="cfa2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="fah"/></marker></defs><path d="M85 86V110" class="fa" marker-end="url(#cfa2)"/><path d="M85 190V208H140V226" class="fa" marker-end="url(#cfa2)"/><path d="M255 190V208H200V226" class="fa" marker-end="url(#cfa2)"/><path d="M170 306V330" class="fa" marker-end="url(#cfa2)"/><path d="M170 410V434" class="fa" marker-end="url(#cfa2)"/><a href="#walk" class="fn grey"><rect x="10" y="10" width="150" height="76" rx="4"/><text x="22" y="34" class="fh"><tspan class="fnum">1</tspan>  Ruling</text><text x="22" y="54" class="fs">Inner papers</text><text x="22" y="73" class="fst">Phase 2/3</text></a><a href="#walk" class="fn ok"><rect x="10" y="114" width="150" height="76" rx="4"/><text x="22" y="138" class="fh"><tspan class="fnum">3</tspan>  Folds</text><text x="22" y="158" class="fs">Folded inner</text><text x="22" y="177" class="fst">Ready</text></a><a href="#walk" class="fn ok"><rect x="180" y="114" width="150" height="76" rx="4"/><text x="192" y="138" class="fh"><tspan class="fnum">2</tspan>  Covers</text><text x="192" y="158" class="fs">Printed sheets</text><text x="192" y="177" class="fst">Ready</text></a><a href="#walk" class="fn ok"><rect x="95" y="230" width="150" height="76" rx="4"/><text x="107" y="254" class="fh"><tspan class="fnum">4</tspan>  Inserts</text><text x="107" y="274" class="fs">Covers + folds</text><text x="107" y="293" class="fst">Ready</text></a><a href="#walk" class="fn ok"><rect x="95" y="334" width="150" height="76" rx="4"/><text x="107" y="358" class="fh"><tspan class="fnum">5</tspan>  Packing</text><text x="107" y="378" class="fs">Cartons</text><text x="107" y="397" class="fst">Ready</text></a><g class="fn end"><rect x="95" y="438" width="150" height="56" rx="28"/><text x="170.0" y="462" text-anchor="middle" class="fh">Finished stock</text><text x="170.0" y="480" text-anchor="middle" class="fs">Finished Goods - VCL</text></g></svg>
+    <div class="legend"><span><i style="background:var(--ok-tint);border:2px solid var(--ok-text)"></i>Live</span><span><i style="background:var(--sunken);border:2px solid var(--border)"></i>Not ready yet (greyed out)</span></div>
+  </figure>
+  <div class="stations" id="stations" role="group" aria-label="Stations"></div>
+
+  <div class="wgrid">
+    <div class="card" style="align-content:start">
+      <header style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><h3 id="w-title"></h3><span id="w-chip"></span></header>
+      <p id="w-what"></p>
+      <dl class="facts" id="w-facts"></dl>
+      <div><p class="label" style="margin-bottom:6px">On save, ERPNext posts</p><div class="posts" id="w-posts"></div></div>
+      <div class="navrow"><button type="button" id="w-prev">← Previous</button><button type="button" id="w-next">Next →</button></div>
+    </div>
+    <div style="display:grid;gap:8px;align-content:start;min-width:0">
+      <p class="label">Entry screen (mock-up) · style</p>
+      <div class="themes" id="w-themes" role="group" aria-label="Screen style"></div>
+      <p class="tnote" id="w-tnote"></p>
+      <div class="mock" id="w-mock"></div>
+      <p class="label" id="w-where"></p>
+    </div>
+  </div>
+
+  <p class="lede">The build order, what each station records and the decisions are in the <a href="https://claude.ai/artifact/DtTjNC15VeSb9cneqqK16o" style="color:var(--brand-text)">Build spec ↗</a>.</p>
+</section>
+
+<!-- ============ SCREENS ============ -->
+<section class="panel" id="p-screens" data-tab="screens" hidden>
+  <h2>Every proposed screen</h2>
+  <p class="lede">Mock-ups of every screen in the build: planning, floor entry, sales, dashboards and the item set. Each one says who uses it, where it's built, and what it reads and writes. The figures are today's real totals where they exist. Run EBR-0001 and its entries are an example. For the look of the floor entry screens, see the style picker on the Stations tab.</p>
+  <div class="legend"><span><span class="chip no">New</span> to build</span><span><span class="chip part">Existing, changed</span> on a screen people already use</span><span><span class="chip ok">Built</span> exists today</span></div>
+  <div class="sgrid">
+    <nav class="snav" id="sc-nav" aria-label="Screens"></nav>
+    <div style="display:grid;gap:12px;min-width:0"><select id="sc-sel" aria-label="Screen"></select><div id="sc-view"></div></div>
+  </div>
+</section>
+
+<!-- ============ PORTING ============ -->
+<section class="panel" id="p-port" data-tab="port" hidden>
+  <h2>Porting onto the dev page</h2>
+  <p class="lede">What the Exercise Book Production dev page has today, measured against this click-through. From the PC's read of the live page (04 Nov, 20:24), which changed nothing. The snapshot and the full inventory with line references are on branch <code>dev-pages/eb-snapshot-2026-11-04</code> (not pushed yet).</p>
+
+  <div class="callout warn"><p><strong>Two things are wrong on the live pages today.</strong> (1) <code>/production-dev?mod=exercise</code> is still live and still writes: its cover entry has "Remove, used in binding" (a Material Issue) and offers 9-up and 4-up, which explains the double-counted covers. (2) The Order &amp; stock tab treats a cover sheet as one book, so it <strong>understates cover capacity 2× (A4) and 3× (A5)</strong>, and it can't see any of the inserts made by Repack. Retiring the first and fixing the second are steps 1 and 2 below.</p></div>
+
+  <h3>Gap map</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Station / screen</th><th>Today</th><th>What to do</th><th>Reuse</th></tr></thead>
+    <tbody>
+      <tr><td>Covers</td><td><span class="chip part">Change</span></td><td>Run number, spoilage, remove dead code and the unused 9-up/4-up options</td><td>Cover quick entry</td></tr>
+      <tr><td>Folds</td><td><span class="chip part">Items done, screen missing</span></td><td>New tab: Material Receipt of FLD- (the 80 FLD- items were created 04 Nov)</td><td>Copy of the cover quick entry</td></tr>
+      <tr><td>Inserts</td><td><span class="chip part">Change</span></td><td>Folds row (1 fold set per insert set), stock checked on the server, run number</td><td>The Repack posting</td></tr>
+      <tr><td>Packing</td><td><span class="chip part">Change, mostly missing</span></td><td>Server-side Manufacture into Finished Goods, cartons out, loose books, spot-weigh 1 in 20 at ±5%</td><td>Its checks, carton factor, the weigh keypad; backend a84ef92</td></tr>
+      <tr><td>Finished Goods</td><td><span class="chip part">Change</span></td><td>Read Finished Goods - VCL only (today: every warehouse)</td><td>Finished Stock tab</td></tr>
+      <tr><td>Exercise Book Orders</td><td><span class="chip part">Duplicate</span></td><td>Compass version (not deployed) vs the dev page's Orders Pending: keep one</td><td>Either</td></tr>
+      <tr><td>Delivery</td><td><span class="chip no">Missing</span></td><td>Delivery Note default warehouse = Finished Goods</td><td>-</td></tr>
+      <tr><td>Empty cartons count</td><td><span class="chip part">Change</span></td><td>Count screen → draft Stock Reconciliation; show the disabled A5 carton</td><td>Empty Cartons list</td></tr>
+      <tr><td>Stock and shortfall</td><td><span class="chip part">Change</span></td><td>Fix cover units and the inserts reading, then make it the dashboard</td><td>Order &amp; stock</td></tr>
+      <tr><td>Order entry checks</td><td><span class="chip ok">Built on a branch</span></td><td>Deploy <code>feat/school-item-guard</code></td><td>-</td></tr>
+      <tr><td>Run plan, Run tracker, Floor today, Data health, Item set</td><td><span class="chip no">Missing</span></td><td>New</td><td>The shell, exports</td></tr>
+      <tr><td>Management summary</td><td><span class="chip no">Missing</span></td><td>New, in Compass</td><td>-</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>How the page is built today</h3>
+  <div class="card"><ul class="tight">
+    <li>One script: five blocks for exercise books in front of the whole production-dev shell. Tabs switch with <code>?ebtab=</code> (orders, comparison, finished, covers, cartons, inserts, packing); there is no hash routing.</li>
+    <li>Every call goes through <code>/api/method/frappe.client.*</code>; the generic resource API is never used. There are three copies of the API helpers and five of the escape function, and they don't all agree.</li>
+    <li>No confirmations: every write posts on one click. Messages show inline. No floor or touch mode.</li>
+    <li>Exports: ExcelJS for the orders workbook; jsPDF, autoTable and SheetJS for the comparison and aging.</li>
+    <li>Writes today: the inserts Repack and the cover Material Receipt. Packing is browser-only. Insert and submit aren't atomic, and stock is checked against a copy in the browser, so two users can race.</li>
+    <li>Orders Pending counts On Hold and Completed orders in its matrix, loads each Sales Order separately, and its patterns miss MNL/MGC, FNB and SQ13.</li>
+  </ul></div>
+
+  <h3>Porting order</h3>
+  <div class="tw"><table>
+    <thead><tr><th>Step</th><th>What</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>Put the page in git with a safe deploy script, and retire the exercise-book module on <code>/production-dev</code> (stops the Material Issue and 9-up/4-up writes)</td></tr>
+      <tr><td class="num">2</td><td>Bug fixes only: cover units, inserts read from Repack, stale comments and dead code</td></tr>
+      <tr><td class="num">3</td><td>Once the FLD- items and the run field exist: run numbers, the Folds tab and the folds row in Inserts. Posting moves to server methods in <code>production_floor</code> (atomic, stock checked on the server)</td></tr>
+      <tr><td class="num">4</td><td>Packing records the Manufacture: push a84ef92; the carton count and the A5 carton item come first</td></tr>
+      <tr><td class="num">5</td><td>Empty-cartons count as a draft Stock Reconciliation</td></tr>
+      <tr><td class="num">6</td><td>Run plan, run tracker and floor today on the page; stock and shortfall, summary and data health in Compass</td></tr>
+      <tr><td class="num">7</td><td>Merge the duplicate helpers and drop the modules nothing can reach</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Safe deploy: <code>scripts/deploy_eb_dev_page.py</code></h3>
+  <div class="card"><ul class="tight">
+    <li>Modelled on <code>deploy_cp_traveller_v2.py</code>. The source is the page files in git plus a deploy stamp (live modified time, hashes, git commit, who and when).</li>
+    <li><code>--check</code> compares the live page with the repo: 0 = same, 1 = repo ahead, 2 = the live page has drifted.</li>
+    <li>Deploy refuses a dirty git tree, and refuses if the live page changed since the stamp. It saves with the page's <code>modified</code>, so a race is rejected, then re-reads and re-stamps.</li>
+    <li><code>--pull</code> adopts a reviewed live edit. <code>--force --reason</code> is the only override, and it is logged.</li>
+    <li>The rule for every session: no direct REST edits of these Web Pages outside the script.</li>
+  </ul></div>
+</section>
+
+<!-- ============ ABOUT ============ -->
+<section class="panel" id="p-about" data-tab="about" hidden>
+  <h2>About this prototype</h2>
+  <p class="lede"><strong>This is what will be built.</strong> The screens here get ported onto the existing Exercise Book Production dev page. The PC session is taking stock of what that page has today, so each screen can be marked as reused, changed or new. A clickable prototype of the exercise-book floor app and its dashboards. Nothing here writes to ERPNext. Batch EBR-0001 and its entries are an example; other figures are today's real totals.</p>
+  <div class="related"><a href="https://claude.ai/artifact/DtTjNC15VeSb9cneqqK16o"><b>Build spec ↗</b><span>Why and what: today's data, the item model, what each station records, order checks, clean-up, roadmap, decisions</span></a><a href="https://claude.ai/artifact/Y9A9EELmbJBt7tQoaKU4An" class="here"><b>Click-through (this page)</b><span>What it will look like in ERPNext: each station and every screen and dashboard</span></a></div>
+</section>
+
+</div></main>
+
+<script>
+(function(){
+  var links=[].slice.call(document.querySelectorAll('#tabs a'));
+  var panels=[].slice.call(document.querySelectorAll('section.panel'));
+  var names=panels.map(function(p){return p.dataset.tab});
+  function show(){
+    var h=(location.hash||'').slice(1); if(names.indexOf(h)<0) h='v3';
+    panels.forEach(function(p){p.hidden=p.dataset.tab!==h});
+    links.forEach(function(a){ if(a.getAttribute('href')==='#'+h) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
+  }
+  window.addEventListener('hashchange',function(){show();window.scrollTo(0,0)});
+  show();
+})();
+</script>
+<script>
+(function(){
+var S=[
+{k:'Station 1',t:'Covers',side:'p',chip:['ok','Existing screen'],
+ what:'Cover sheets come off the press and are counted in printed sheets. A5 sheets carry 3 covers and A4 sheets carry 2.',
+ facts:[['Today on the dev page','Change: Cover quick entry exists (Material Receipt of COV- into Stores). Add the run number and spoilage; remove dead code.'],['Who','Printing supervisor (to confirm)'],['Item in','COV-PNC-A5-120PG-SL, in sheets'],['Maps to next by','brand | size | pages | ruling: PNC | A5 | 120 | SL'],['Change','Add the run number. Later, take out board and ink so covers get a cost.']],
+ posts:[['IN','COV-PNC-A5-120PG-SL','+1,000 sheets','Stores - VCL'],['DOC','Stock Entry: Material Receipt','run EBR-0001','']],
+ where:'Exercise Book Production dev page › Cover Stock › Quick entry (exists today)',
+ mock:{title:'Cover Stock · Quick entry',sub:'existing',f:[['Date','04 Nov 2026'],['Run number','EBR-0001',1],['Brand','Prince'],['Size','A5 (3-up)'],['Pages','120'],['Ruling','Single line'],['Printed sheets','1,000'],['= covers','3,000',1]],btn:'Add to stock'}},
+{k:'Station 2',t:'Folds',side:'p',chip:['no','New screen'],
+ what:'Ruled inner paper is folded into the book\'s inner section, counted in sets like covers (one A5 fold set = 3 books\' inners). Folds are an input to inserts, the same way covers are.',
+ facts:[['Today on the dev page','Missing screen: the 80 FLD- items exist (04 Nov, no stock yet), but there is no screen. Copy the cover quick entry as a Material Receipt of FLD-.'],['Who','Folding supervisor (to confirm)'],['Item in','FLD-PNC-A5-120PG-SL (new), in folds = books'],['Maps to next by','The same key as covers: PNC | A5 | 120 | SL'],['Phase 1','Folds are received as counted. Paper and ruling going out of stock comes in Phase 2/3.']],
+ posts:[['IN','FLD-PNC-A5-120PG-SL','+3,000 folds','Stores - VCL'],['DOC','Stock Entry: Material Receipt','run EBR-0001','']],
+ where:'Exercise Book Production dev page › new Folds tab',
+ mock:{title:'Folds · Entry',sub:'new',f:[['Date','04 Nov 2026'],['Run number','EBR-0001',1],['Brand','Prince'],['Size','A5'],['Pages','120'],['Ruling','Single line'],['Fold sets counted','1,000'],['= books','3,000',1],['Rejects','4 sets']],btn:'Save folds'}},
+{k:'Station 3',t:'Inserts',side:'p',chip:['part','Existing screen, changed'],
+ what:'Covers and folds are inserted together. One cover sheet becomes one insert set, which is 3 A5 books, so it uses 3 folds.',
+ facts:[['Today on the dev page','Change: The Repack exists (COV- out, INS- in, 1:1). Add the FLD- row (1 fold set per insert set), a server-side stock check and the run number. The 80 FLD- items exist (04 Nov) but hold no stock yet.'],['Who','Binding supervisor (to confirm)'],['Today','Takes out the cover only (COV out, INS in, 1:1)'],['Change','Also take out folds: 1 fold set per insert set'],['Unit','Per set, as today (Tanuj, 04 Nov): 1 cover sheet = 1 set = 2 (A4) or 3 (A5) books']],
+ posts:[['OUT','COV-PNC-A5-120PG-SL','−1,000 sheets','Stores - VCL'],['OUT','FLD-PNC-A5-120PG-SL','−1,000 sets','Stores - VCL'],['IN','INS-PNC-A5-120PG-SL','+1,000 sets (3,000 books)','Stores - VCL'],['DOC','Stock Entry: Repack','run EBR-0001','']],
+ where:'Exercise Book Production dev page › Inserts tab (exists, needs the folds row added)',
+ mock:{title:'Inserts · Make sets',sub:'changed',f:[['Run number','EBR-0001',1],['Group','Prince · A5 · 120 · SL'],['Sets made','1,000'],['Covers used','1,000 sheets',1],['Folds used','1,000 sets',1],['= books','3,000',1]],btn:'Post repack'}},
+{k:'Station 4',t:'Packing',side:'p',chip:['part','Existing screen, changed'],
+ what:'Books are counted into cartons and received as finished stock. This is where production meets sales.',
+ facts:[['Today on the dev page','Change, mostly missing: The tab saves to the browser only. Needs a server-side Manufacture: INS- and cartons out, books into Finished Goods, loose books, spot-weigh. Reuse its checks, the carton factor, the weigh keypad, and the receiving backend a84ef92.'],['Who','Packing and stores (Nadeem / Peter, to confirm)'],['Today','Saved in the browser only. Nothing reaches ERPNext.'],['Change','Post the receipt into Finished Goods, take out inserts and empty cartons, and spot-weigh about 5% of cartons (backend a84ef92).'],['Maps to next by','The book item PNCEB-A5-120PGS-CB-BP-SL (cover and paper are added here)']],
+ posts:[['OUT','INS-PNC-A5-120PG-SL','−1,000 sets','Stores - VCL'],['OUT','Empty carton, A5 common','−17 cartons','Stores - VCL'],['IN','PNCEB-A5-120PGS-CB-BP-SL','+3,000 books (16 ctn + 24 loose)','Finished Goods - VCL'],['DOC','Stock Entry: Manufacture (or Repack)','run EBR-0001','']],
+ where:'Exercise Book Production dev page › Packing tab (exists, browser-only today)',
+ mock:{title:'Packing · Receive finished books',sub:'changed',f:[['Run number','EBR-0001',1],['Book','PNCEB-A5-120PGS-CB-BP-SL'],['Full cartons','16'],['Books per carton','186',1],['Loose books','24'],['Rejects','6'],['Spot-weigh (1 of 16)','4.92 kg ✓ within 5%'],['= books in','3,000',1]],btn:'Receive into Finished Goods'}},
+{k:'Meet',t:'Finished Goods',side:'d',chip:['ok','Existing'],
+ what:'Production fills finished stock by group. Sales draws it down by order. Compass allots stock to open orders by earliest delivery first.',
+ facts:[['Today on the dev page','Change: The dev page\'s Finished Stock reads every warehouse; filter it to Finished Goods - VCL. Compass Exercise Book Orders is built, not deployed, and duplicates Orders Pending, so choose one.'],['Today','516,918 books (count of 04 Nov). Nothing moves in or out.'],['After step 4','Every packing entry adds to it, and every delivery takes from it'],['Shortfall','Open orders − finished − inserts − covers, per group (the Data flow chart)']],
+ posts:[['READ','Bin: Finished Goods - VCL','per book item',''],['READ','Open Sales Orders','per line','']],
+ where:'Compass › Exercise Book Orders (built, not deployed)',
+ mock:{title:'Exercise Book Orders',sub:'existing, not deployed',f:[['Order','SAL-ORD-2026-00195-2 · ESGA'],['Line','A5 120 SL · 80 ctn'],['Allotted from stock','34 ctn',1],['Still to make','46 ctn',1],['Stage','In production']],btn:'Set stage'}},
+{k:'Sales',t:'Delivery',side:'s',chip:['part','Existing, changed'],
+ what:'The Delivery Note ships from Finished Goods against the Sales Order.',
+ facts:[['Today on the dev page','Missing: Set the Delivery Note\'s default warehouse to Finished Goods and stop the same-day receipts.'],['Today','Shipped from Stores, after a same-day receipt of the same quantity (a workaround while production isn\'t recorded)'],['Change','Default warehouse = Finished Goods - VCL. Stop the same-day receipts once packing posts.']],
+ posts:[['OUT','PNCEB-A5-120PGS-CB-BP-SL','−2,976 books (16 ctn)','Finished Goods - VCL'],['DOC','Delivery Note','against SAL-ORD-2026-00195-2','']],
+ where:'ERPNext Delivery Note, or Compass',
+ mock:{title:'Delivery Note',sub:'existing',f:[['Customer','ESGA Enterprises'],['Sales Order','SAL-ORD-2026-00195-2'],['Item','PNCEB-A5-120PGS-CB-BP-SL'],['Qty','16 Carton'],['From warehouse','Finished Goods - VCL',1]],btn:'Submit'}},
+{k:'Watch',t:'Dashboard',side:'d',chip:['no','New, in Compass'],
+ what:'One screen for the day: what is on order, what is in stock at each stage, what is short, and what each station posted today.',
+ facts:[['Today on the dev page','Missing: Nothing exists yet. Order & stock is the starting point, once its cover units and inserts reading are fixed.'],['Filters','Brand, customer, size'],['Built from','The same order lines and stage stock as the Data flow tab, read live'],['Alerts','Groups short with no covers. Stations with no entry today. Cartons running low.']],
+ posts:[['READ','Sales Order lines, Bins, Stock Entries by run','live','']],
+ where:'Compass › Exercise Books › Dashboard (new tab beside Orders)',
+ dash:true}
+];
+
+var TH=[['lightning','VCL Lightning (recommended)','Salesforce Lightning structure in VCL colours and Calibri, the same family as the CRM. White cards on grey, square icon tile, plain labels. Floor stations switch to large touch mode.'],
+ ['fiori','SAP Fiori Horizon','SAP\'s current style, built for manufacturing and warehouse apps. Rounder corners, softer shadows, roomy spacing, big object header. Very readable on tablets; reads as "SAP", not as the CRM.'],
+ ['fluent','Microsoft Fluent 2','The Dynamics 365 / Business Central look. Solid brand header band, Segoe UI, semibold labels with an underlined input edge. Familiar to anyone who uses Office; slightly denser.'],
+ ['espresso','Frappe Espresso','ERPNext\'s own desk style (Inter, filled grey inputs, almost no borders). Matches what users see in ERPNext itself, but flat and low-contrast for the floor. Espresso normally uses near-black buttons; VCL Blue is kept here.'],
+ ['carbon','IBM Carbon','IBM\'s enterprise system. Square corners, dark shell bar, filled fields with an underline, IBM Plex type. Very crisp and dense; feels technical rather than friendly.'],
+ ['material','Google Material 3','Android\'s own style, so it matches the floor tablets and the VCL Android app. Tinted surfaces, pill buttons, outlined fields, round icon. Friendly, but it reads as Google rather than VCL.'],
+ ['polaris','Shopify Polaris','Shopify admin style. Soft grey page, raised white cards, tactile buttons, Inter type. Clean and modern for desk work; a little soft for the floor.'],
+ ['hmi','Industrial HMI (ISA-101)','The machine-panel standard for factory screens: grey everywhere, heavy black field borders, bold labels, and colour kept only for actions and alarms. Most legible on the floor and closest to what operators see on machines; plain at a desk.']];
+var theme='lightning';try{var sv=localStorage.getItem('eb-theme');if(sv&&TH.some(function(t){return t[0]===sv}))theme=sv}catch(e){}
+var tb=document.getElementById('w-themes');
+TH.forEach(function(t){var b=document.createElement('button');b.type='button';b.textContent=t[1];b.dataset.t=t[0];b.addEventListener('click',function(){theme=t[0];try{localStorage.setItem('eb-theme',theme)}catch(e){}renderMock(S[cur])});tb.appendChild(b)});
+var IC={'Covers':'CV','Folds':'FD','Inserts':'IN','Packing':'PK','Finished Goods':'FG','Delivery':'DN','Dashboard':'DB'};
+var QRE=/sheets|counted|sets made|cartons|loose|rejects|^qty|books in|covers|folds used|books$/i;
+function renderMock(st){
+ var m=document.getElementById('w-mock');var floor=st.side==='p';
+ [].forEach.call(tb.children,function(b){b.setAttribute('aria-pressed',b.dataset.t===theme?'true':'false')});
+ var tn=TH.filter(function(t){return t[0]===theme})[0];
+ document.getElementById('w-tnote').textContent=tn[2]+(floor?' Shown in floor mode (touch, arm\'s length).':' Shown in desk mode.');
+ m.className='mock mx t-'+theme+(floor?' floor':' desk');
+ var title=st.dash?'Exercise Books · Dashboard':st.mock.title, parts=title.split(' · ');
+ var head='<div class="mh"><span class="ic" aria-hidden="true">'+(IC[st.t]||'EB')+'</span><span class="ht"><span class="ob">'+esc(parts.length>1?parts[0]:'Exercise Books')+'</span><span class="tt">'+esc(parts.length>1?parts.slice(1).join(' · '):parts[0])+'</span></span>'+(st.side==='p'?'<span class="crumb">Run <b>EBR-0001</b></span>':'')+'</div>';
+ if(st.dash){
+  m.innerHTML=head+'<div class="mb"><div class="kp">'+[['Open orders','1,546,590'],['Finished','516,918'],['Inserts','62,378'],['Covers','1,260,230'],['Still to make','1,085,336',1]].map(function(t){return '<div><span class="k">'+t[0]+' (books)</span><span class="v'+(t[2]?' bad':'')+'">'+t[1]+'</span></div>'}).join('')+'</div>'+
+  '<div class="tbw"><table><thead><tr><th>Group</th><th>Orders</th><th>Finished</th><th>Short</th></tr></thead><tbody><tr><td>Swara A4 120 SL</td><td class="num">893,010</td><td class="num">8,772</td><td class="num">815,138</td></tr><tr><td>Swara A4 120 SQ</td><td class="num">105,060</td><td class="num">5,406</td><td class="num">85,206</td></tr><tr><td>Swara A4 96 SL</td><td class="num">66,000</td><td class="num">600</td><td class="num">39,400</td></tr></tbody></table></div>'+
+  '<div class="tbw"><table><thead><tr><th>Today by station</th><th>Entries</th><th>Qty</th></tr></thead><tbody><tr><td>Covers</td><td class="num">2</td><td class="num">1,000 sheets</td></tr><tr><td>Folds</td><td class="num">1</td><td class="num">3,000</td></tr><tr><td>Inserts</td><td class="num">1</td><td class="num">1,000 sets</td></tr><tr><td>Packing</td><td class="num">0</td><td><span class="pill">No entry yet</span></td></tr></tbody></table></div></div>';
+  return;}
+ var mk=st.mock, sums=[], fields=[];
+ mk.f.forEach(function(f){ if(f[2]&&/^=/.test(f[0])) sums.push(f); else fields.push(f); });
+ var fx=fields.map(function(f){var q=QRE.test(f[0])&&/\d/.test(f[1]);var auto=!!f[2];var pick=!auto&&!q&&!/date/i.test(f[0]);
+  return '<div class="f'+(q?' qn':'')+'"><span class="l">'+esc(f[0])+(auto?' · auto':'')+'</span>'+(auto?'<span class="ro">'+esc(f[1])+'</span>':'<span class="i'+(pick?' pick':'')+'">'+esc(f[1])+'</span>')+'</div>'}).join('');
+ var sum=sums.length?'<div class="sum">'+sums.map(function(f){return '<span>'+esc(f[0])+' <b>'+esc(f[1])+'</b></span>'}).join('')+(st.t==='Covers'?'<span class="hint" style="color:inherit">A5 is 3-up: 1,000 sheets make 3,000 books</span>':'')+'</div>':'';
+ m.innerHTML=head+'<div class="mb"><div class="cardx"><span class="sec">'+(floor?'Enter this run':'Details')+'</span><div class="fx">'+fx+'</div>'+sum+'</div><div class="act" id="w-act"><button type="button" class="bp" id="w-save">'+esc(mk.btn)+'</button>'+(floor?'':'<button type="button" class="bs">Cancel</button>')+'</div><p class="hint">'+(floor?'Pick lists for run, item and machine; numeric keypad for quantities. Locked fields are filled in by the screen. Tap the button to see the confirmation.':'Locked fields are filled in by the screen.')+'</p></div>';
+ document.getElementById('w-save').addEventListener('click',function(){var a=document.getElementById('w-act');
+  a.innerHTML='<div class="toast" style="flex:1 1 100%"><span>Posted ✓ '+(st.posts[st.posts.length-1]?esc(st.posts[st.posts.length-1][1]):'')+' · run EBR-0001 (demo)</span><button type="button" id="w-undo">Undo (10 s)</button></div>';
+  document.getElementById('w-undo').addEventListener('click',function(){renderMock(st)});});
+}
+var cur=0, box=document.getElementById('stations');
+S.forEach(function(st,i){var b=document.createElement('button');b.type='button';b.className='side-'+st.side;b.innerHTML='<span class="k">'+st.k+'</span><span class="t">'+st.t+'</span>';b.addEventListener('click',function(){show(i)});box.appendChild(b)});
+function esc(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+function show(i){cur=i;var st=S[i];
+ [].forEach.call(box.children,function(b,j){b.setAttribute('aria-pressed',j===i?'true':'false')});
+ document.getElementById('w-title').textContent=st.t;
+ document.getElementById('w-chip').innerHTML='<span class="chip '+st.chip[0]+'">'+st.chip[1]+'</span>';
+ document.getElementById('w-what').textContent=st.what;
+ document.getElementById('w-facts').innerHTML=st.facts.map(function(f){return '<dt>'+esc(f[0])+'</dt><dd>'+esc(f[1])+'</dd>'}).join('');
+ document.getElementById('w-posts').innerHTML=st.posts.map(function(p){var c=p[0]==='OUT'?'out':p[0]==='IN'?'in':'';return '<div class="post"><span class="dir '+c+'">'+p[0]+'</span><span><code>'+esc(p[1])+'</code>'+(p[3]?' · '+esc(p[3]):'')+'</span><span class="mono">'+esc(p[2])+'</span></div>'}).join('');
+ document.getElementById('w-where').textContent='Where: '+st.where;
+ var m=document.getElementById('w-mock');renderMock(st);
+ document.getElementById('w-prev').disabled=i===0;document.getElementById('w-next').disabled=i===S.length-1;}
+document.getElementById('w-prev').addEventListener('click',function(){if(cur>0)show(cur-1)});
+document.getElementById('w-next').addEventListener('click',function(){if(cur<S.length-1)show(cur+1)});
+show(0);
+})();
+</script>
+<script>
+(function(){
+var G=[
+['Plan',[
+{id:'plan',n:'Run plan: what to make',st:['no','New'],where:'Exercise Book Production dev page › Plan (later: vcl-production app)',who:'Production planner',reads:'Open order lines, Finished Goods, inserts, covers (the Data flow netting)',writes:'Creates a run number EBR-#### per group, with a target in sheets',why:'<b>Today on the dev page: Missing.</b> Turns the shortfall into runs by group. Production is planned by group, never per order.',
+ path:'Production › Exercise Books › Plan',b:[
+ {t:'filters',items:['Brand: All','Size: All','Due before: 13 Nov']},
+ {t:'table',head:['Group','On order','Finished','In pipeline','Short','Covers on hand','Plan run'],num:[1,2,3,4,5],rows:[
+  ['Swara A4 120 SL','893,010','8,772','69,100','815,138','25,070 sh','<b>Create run</b> 410,000 sh'],
+  ['Swara A4 120 SQ','105,060','5,406','14,448','85,206','6,000 sh','<b>Create run</b> 43,000 sh'],
+  ['Swara A4 96 SL','66,000','600','26,000','39,400','13,000 sh','<b>Create run</b> 20,000 sh'],
+  ['Prince A5 48 SL','30,720','0','0','30,720','0 sh','<b>Print covers first</b>'],
+  ['Swara A4 48 SL','40,800','0','12,000','28,800','6,000 sh','<b>Create run</b> 14,400 sh']]},
+ {t:'alert',k:'info',x:'Pipeline = inserts + printed covers, in books. A run target is in cover sheets: A4 = 2 books per sheet, A5 = 3.'}]},
+{id:'runs',n:'Run tracker',st:['no','New'],where:'Exercise Book Production dev page › Runs',who:'Production manager',reads:'Stock Entries carrying the run number',writes:'Nothing. Closing a run only stamps it closed.',why:'<b>Today on the dev page: Missing.</b> Follows one run across every station, so yield and waste can be read per run.',
+ path:'Production › Exercise Books › Runs › EBR-0001',b:[
+ {t:'chips',items:[['ok','Prince · A5 · 120 · SL'],['part','In progress'],['wait','Target 1,000 sheets']]},
+ {t:'flow',items:[['Covers','1,000 sheets','= 3,000 books'],['Folds','996 sets','4 sets rejected'],['Inserts','996 sets','= 2,988 books'],['Packing','16 ctn + 12','= 2,988 books'],['Finished Goods','2,988','received']]},
+ {t:'tiles',items:[['Yield, covers → books','99.6%','','ok'],['Waste','12 folds','0.4%',''],['Days open','2','',''],['Cartons used','17','A5 common','']]},
+ {t:'table',head:['Date','Station','Entry','Qty','By'],num:[3],rows:[['04 Nov','Covers','MAT-STE-…','1,000 sheets','Printing'],['04 Nov','Folds','MAT-STE-…','996 sets','Folding'],['05 Nov','Inserts','Repack','996 sets','Binding'],['05 Nov','Packing','Manufacture','2,988 books','Stores']]}]}
+]],
+['Floor entry',[
+{id:'covers',n:'Covers: quick entry',st:['part','Existing, changed'],where:'Exercise Book Production dev page › Cover Stock',who:'Printing supervisor',reads:'COV- items',writes:'Material Receipt of COV- sheets into Stores - VCL (later: a Manufacture that uses board and ink)',why:'<b>Today on the dev page: Change: add run number and spoilage.</b> Records printed cover sheets per run. Change: add the run number.',
+ path:'Exercise Book Production › Cover Stock › Quick entry',b:[
+ {t:'form',f:[['Date','04 Nov 2026'],['Run number','EBR-0001 ▾'],['Brand','Prince'],['Size','A5 (3-up)'],['Pages','120'],['Ruling','Single line'],['Printed sheets','1,000'],['= books','3,000',1],['Spoiled sheets','8']],btn:'Add to stock'},
+ {t:'alert',k:'ok',x:'Saved: MAT-STE-2026-00061 · +1,000 COV-PNC-A5-120PG-SL · run EBR-0001'}]},
+{id:'folds',n:'Folds: entry',st:['no','New'],where:'Exercise Book Production dev page › new Folds tab',who:'Folding supervisor',reads:'FLD- items (80 created 04 Nov, Item Group Folds)',writes:'Material Receipt of FLD- fold sets into Stores - VCL. Paper goes out of stock in Phase 2/3.',why:'<b>Today on the dev page: Missing.</b> Folds are an input to inserts, the same way covers are.',
+ path:'Exercise Book Production › Folds',b:[
+ {t:'form',f:[['Date','04 Nov 2026'],['Run number','EBR-0001 ▾'],['Brand','Prince'],['Size','A5'],['Pages','120'],['Ruling','Single line'],['Fold sets counted','996'],['Rejected','4 sets'],['Item','FLD-PNC-A5-120PG-SL',1]],btn:'Save folds'}]},
+{id:'inserts',n:'Inserts: make sets',st:['part','Existing, changed'],where:'Exercise Book Production dev page › Inserts',who:'Binding supervisor',reads:'COV- and FLD- on hand',writes:'Repack: COV- out, FLD- out (1 set each), INS- in',why:'<b>Today on the dev page: Change: add the folds row and server stock check.</b> Covers + folds = inserts. Today only the cover is taken out.',
+ path:'Exercise Book Production › Inserts',b:[
+ {t:'form',f:[['Run number','EBR-0001 ▾'],['Group','Prince · A5 · 120 · SL',1],['Sets made','996'],['Covers used','996 sheets',1],['Folds used','996 sets',1],['= books','2,988',1]],btn:'Post repack'},
+ {t:'table',head:['On hand after','Covers','Folds','Inserts'],num:[1,2,3],rows:[['Prince A5 120 SL','4 sheets','0','996 sets']]},
+ {t:'alert',k:'warn',x:'If fold sets on hand are fewer than the sets being made, the screen stops: "Only 800 fold sets on hand." Until the first fold count, this check is held off.'}]},
+{id:'packing',n:'Packing: receive finished books',st:['part','Existing, changed'],where:'Exercise Book Production dev page › Packing + receiving backend (a84ef92)',who:'Packing and stores',reads:'INS- on hand, the book item\'s Carton conversion, empty cartons',writes:'Manufacture: INS- out, empty cartons out, book item in to Finished Goods - VCL',why:'<b>Today on the dev page: Change: today browser-only.</b> Today packing is saved in the browser only. This is where production meets sales.',
+ path:'Exercise Book Production › Packing',b:[
+ {t:'form',f:[['Run number','EBR-0001 ▾'],['Book','PNCEB-A5-120PGS-CB-BP-SL',1],['Full cartons','16'],['Books per carton','186',1],['Loose books','12'],['Rejects','0'],['Carton used','A5 common ▾'],['= books in','2,988',1]],btn:'Receive into Finished Goods'},
+ {t:'h',x:'Spot-weigh (about 1 in 20 cartons)'},
+ {t:'table',head:['Carton','Weight','Expected','Result'],num:[1,2],rows:[['1 of 16','4.92 kg','4.95 kg','<span class="chip ok">Within 5%</span>']]}]},
+{id:'cartons',n:'Empty cartons: count',st:['part','Existing, changed'],where:'Exercise Book Production dev page › Empty Cartons',who:'Stores',reads:'Empty Cartons item group',writes:'Stock Reconciliation draft from the count (Tanuj submits)',why:'<b>Today on the dev page: Change: today a name list, no count; the disabled A5 carton is hidden.</b> Book balances date from 2024–25 purchases and have never been issued. The team counts on 05 Nov.',
+ path:'Exercise Book Production › Empty Cartons › Count',b:[
+ {t:'table',head:['Carton','Size','On books','Counted','Difference'],num:[2,3,4],rows:[['Prince common 425×305×275','A4','7,086','',''],['Prince common 425×305×260','A4','4,425','',''],['Prince common 425×305×250','A4','2,647','',''],['Prince/Swara common A4','A4','961','',''],['Swara common 280 mm','A4','2,078','',''],['Prince/Swara A5 (disabled item)','A5','1,875','','']]},
+ {t:'alert',k:'warn',x:'Count due 05 Nov. The A5 carton item is disabled, so enable it or replace it before packing A5.'}]}
+]],
+['Sales',[
+{id:'order',n:'Order entry with checks',st:['part','Existing, changed'],where:'Desk Quotation / Sales Order / Opportunity, and Compass Orders and Quotations',who:'Sales reps',reads:'Item, brand twin, price list, rate band',writes:'The document, plus "School order confirmed"',why:'<b>Today on the dev page: Built on a branch (order checks), not deployed.</b> Stops the two common mistakes: a school book picked by mistake, and a carton price typed against one book.',
+ path:'Compass › Sales › New order',b:[
+ {t:'table',head:['Item','Qty','Unit','Rate','Check'],num:[1,3],rows:[['PNCEB-A4-96PGS-CB-BP-SL','50','Carton','11,700','<span class="chip ok">OK</span>'],['SCH-BP-EB-A4-96PGS-CB-BP-SL','20','Carton','9,800','<span class="chip wait">Confirm school?</span>'],['PNCEB-A5-48PGS-CB-BP-SL','1','Nos','3,000','<span class="chip no">Did you mean 1 Carton?</span>']]},
+ {t:'modal',title:'School exercise book',x:'This is a SCHOOL exercise book (no brand). Is this a school order? If you meant the Prince book, switch to it.',btns:['Yes, school order','Switch to PNCEB-A4-96PGS-CB-BP-SL']}]},
+{id:'ebo',n:'Exercise Book Orders',st:['ok','Built, not deployed'],where:'Compass › Exercise Books › Orders (vcl_compass 5709b0a)',who:'Sales and production',reads:'Open order lines, Finished Goods',writes:'Order stage (vcl_eb_stage) + a comment',why:'<b>Today on the dev page: Exists in Compass, not deployed; duplicates Orders Pending.</b> Shows each order line, what finished stock covers it (earliest delivery first) and what is still to make.',
+ path:'Compass › Exercise Books › Orders',b:[
+ {t:'filters',items:['Brand: All','Customer: All','Stage: All']},
+ {t:'table',head:['Order','Customer','Due','Line','Ordered','From stock','To make','Stage'],num:[4,5,6],rows:[['00195-2','ESGA','04 Nov','A5 120 SL','80 ctn','18 ctn','62 ctn','In production'],['00194','Discount Office','06 Nov','A4 96 SL','100 ctn','100 ctn','0','Ready'],['00199','Mahavir','03 Nov','A4 120 SL Swara','8,000 ctn','86 ctn','7,914 ctn','Planned'],['00173','Vaghela','06 Nov','A4 200 SL Swara','200 ctn','23 ctn','177 ctn','Planned']]}]},
+{id:'dn',n:'Delivery from Finished Goods',st:['part','Existing, changed'],where:'Desk Delivery Note, or Compass',who:'Dispatch',reads:'Sales Order, Finished Goods - VCL',writes:'Delivery Note from Finished Goods - VCL',why:'<b>Today on the dev page: Missing: default warehouse.</b> Stops the same-day "book in to deliver" receipts once packing records stock.',
+ path:'Delivery Note › New',b:[
+ {t:'form',f:[['Customer','ESGA Enterprises',1],['Sales Order','SAL-ORD-2026-00195-2',1],['Item','PNCEB-A5-120PGS-CB-BP-SL',1],['Qty','16 Carton'],['From warehouse','Finished Goods - VCL',1],['Available','16 ctn + 12',1]],btn:'Submit'}]}
+]],
+['Dashboards',[
+{id:'d-floor',n:'Floor today',st:['no','New'],where:'Exercise Book Production dev page › Today (on a floor screen)',who:'Supervisors, production manager',reads:'Today\'s Stock Entries by station and run',writes:'Nothing',why:'<b>Today on the dev page: Missing.</b> Shows at a glance whether every station has entered today, and what each produced.',
+ path:'Exercise Book Production › Today · 04 Nov',b:[
+ {t:'tiles',items:[['Covers printed','2,400 sh','= 6,000 books','ok'],['Folds','5,820','','ok'],['Inserts','1,940 sets','= 5,820 books','ok'],['Packed','0','No entry yet','no']]},
+ {t:'table',head:['Run','Group','Covers','Folds','Inserts','Packed','Yield'],num:[2,3,4,5],rows:[['EBR-0001','Prince A5 120 SL','1,000','996','996','2,988','99.6%'],['EBR-0002','Swara A4 120 SL','1,400','2,832','944','0','-']]},
+ {t:'alert',k:'warn',x:'Packing has no entry today. Cartons on hand for A5: 1,875 (disabled item).'}]},
+{id:'d-plan',n:'Stock and shortfall',st:['no','New'],where:'Compass › Exercise Books › Dashboard',who:'Planner, sales manager',reads:'The Data flow netting, live',writes:'Nothing',why:'<b>Today on the dev page: Change: Order & stock after fixes.</b> Where production and sales meet: stock at each stage against open orders, by group, with brand and customer filters.',
+ path:'Compass › Exercise Books › Dashboard',b:[
+ {t:'filters',items:['Brand: All','Customer: All','Size: All']},
+ {t:'tiles',items:[['Open orders','1,546,590','books',''],['Finished','516,918','books','ok'],['Inserts','62,378','books',''],['Covers','1,260,230','books',''],['Still to make','1,085,336','books','no']]},
+ {t:'bars',items:[['Open orders',1546590,'c-dem'],['After finished stock',1365736,'c-short'],['After inserts',1334808,'c-short'],['After covers',1085336,'c-short']]},
+ {t:'table',head:['Group','Orders','Finished','Short'],num:[1,2,3],rows:[['Swara A4 120 SL','893,010','8,772','815,138'],['Swara A4 120 SQ','105,060','5,406','85,206'],['Swara A4 96 SL','66,000','600','39,400']]}]},
+{id:'d-mgmt',n:'Management summary',st:['no','New'],where:'Compass › Exercise Books › Summary',who:'Tanuj',reads:'Orders, stock, runs, deliveries',writes:'Nothing',why:'<b>Today on the dev page: Missing (Compass).</b> A weekly view: orders on hand, output, deliveries, waste and overdue orders.',
+ path:'Compass › Exercise Books › Summary · week 45',b:[
+ {t:'tiles',items:[['Orders on hand','13,205 ctn','10 orders',''],['Overdue lines','38','due before today','no'],['Packed this week','0 ctn','production not yet recorded','wait'],['Delivered this week','591 ctn','4 delivery notes',''],['Waste','-','needs runs','wait']]},
+ {t:'table',head:['Customer','Open ctn','Due','Covered by stock'],num:[1,3],rows:[['Mahavir','10,550','03 Nov','2%'],['ESGA','780','04 Nov','46%'],['Jain Trading','550','12 Nov','0%'],['Vaghela','550','06 Nov','14%']]}]},
+{id:'d-health',n:'Data health and controls',st:['no','New'],where:'Compass › Exercise Books › Data health',who:'IT Development, Tanuj',reads:'Items, price list, invoice lines, guard logs',writes:'Nothing (links to the records to fix)',why:'<b>Today on the dev page: Missing.</b> Shows the clean-up still needed and what the order checks are catching.',
+ path:'Compass › Exercise Books › Data health',b:[
+ {t:'tiles',items:[['Items without a Carton conversion','847','807 enabled','no'],['Items with no current price','809','','no'],['Carton invoice lines with conversion 1','937 of 989','','no'],['Carton prices on Nos','13','','no']]},
+ {t:'table',head:['Check','Stopped this week','Switched / corrected'],num:[1,2],rows:[['School or brand?','-','-'],['"Did you mean 1 Carton?"','-','-'],['"Did you mean Nos?"','-','-']]},
+ {t:'alert',k:'info',x:'The check counts start when the pack goes live. Since 06 Aug the price rule would have caught 72 enquiry, 74 quotation and 1 order lines.'}]}
+]],
+['Masters',[
+{id:'itemset',n:'Item set per book',st:['no','New'],where:'Desk Item (a "Production set" section) or Compass',who:'IT Development, production',reads:'COV-, FLD-, INS-, book items, cartons',writes:'Links only (creates missing twins in after_migrate)',why:'<b>Today on the dev page: Missing.</b> Shows one book\'s full chain of items, so the mapping between stations is visible and gaps stand out.',
+ path:'Item › PNCEB-A5-120PGS-CB-BP-SL › Production set',b:[
+ {t:'table',head:['Stage','Item','Unit','Status'],rows:[['Covers','COV-PNC-A5-120PG-SL','Sheet (3-up)','<span class="chip ok">Exists</span>'],['Folds','FLD-PNC-A5-120PG-SL','Set (3-up), Item Group Folds','<span class="chip ok">Created 04 Nov</span>'],['Inserts','INS-PNC-A5-120PG-SL','Set (3 books)','<span class="chip ok">Exists</span>'],['Finished book','PNCEB-A5-120PGS-CB-BP-SL','Nos, Carton = 186','<span class="chip ok">Exists</span>'],['Carton','A5 common','Nos','<span class="chip wait">Item disabled</span>'],['School twin','SCH-BP-EB-A5-120PGS-CB-BP-SL','Nos','<span class="chip ok">Exists</span>']]}]}
+]]
+];
+var all=[];G.forEach(function(g){g[1].forEach(function(s){s.g=g[0];all.push(s)})});
+var nav=document.getElementById('sc-nav'),sel=document.getElementById('sc-sel');
+G.forEach(function(g){var h=document.createElement('p');h.className='label';h.textContent=g[0];nav.appendChild(h);var og=document.createElement('optgroup');og.label=g[0];
+ g[1].forEach(function(s){var b=document.createElement('button');b.type='button';b.dataset.id=s.id;b.innerHTML='<span>'+s.n+'</span><span class="chip '+s.st[0]+'">'+s.st[1]+'</span>';b.addEventListener('click',function(){show(s.id)});nav.appendChild(b);
+ var o=document.createElement('option');o.value=s.id;o.textContent=s.n+' ('+s.st[1]+')';og.appendChild(o)});sel.appendChild(og)});
+sel.addEventListener('change',function(){show(sel.value)});
+function blk(b){
+ if(b.t==='tiles')return '<div class="tiles">'+b.items.map(function(t){return '<div class="tile'+(t[3]?' st-'+t[3]:'')+'"><span class="label">'+t[0]+'</span><span class="v">'+t[1]+'</span><span class="label" style="text-transform:none;letter-spacing:0">'+t[2]+'</span></div>'}).join('')+'</div>';
+ if(b.t==='form')return '<div class="frow">'+b.f.map(function(f){return '<div class="fld"><span class="lb">'+f[0]+'</span><span class="in'+(f[2]?' auto':'')+'">'+f[1]+'</span></div>'}).join('')+'</div><span class="btnmock">'+b.btn+'</span>';
+ if(b.t==='table')return '<div class="tw"><table><thead><tr>'+b.head.map(function(h){return '<th>'+h+'</th>'}).join('')+'</tr></thead><tbody>'+b.rows.map(function(r){return '<tr>'+r.map(function(c,i){return '<td'+((b.num||[]).indexOf(i)>=0?' class="num"':'')+'>'+c+'</td>'}).join('')+'</tr>'}).join('')+'</tbody></table></div>';
+ if(b.t==='alert')return '<div class="callout'+(b.k==='warn'?' warn':'')+'"><p>'+b.x+'</p></div>';
+ if(b.t==='h')return '<p class="label">'+b.x+'</p>';
+ if(b.t==='chips')return '<div style="display:flex;flex-wrap:wrap;gap:6px">'+b.items.map(function(c){return '<span class="chip '+c[0]+'">'+c[1]+'</span>'}).join('')+'</div>';
+ if(b.t==='filters')return '<div style="display:flex;flex-wrap:wrap;gap:6px">'+b.items.map(function(c){return '<span class="fpill">'+c+' ▾</span>'}).join('')+'</div>';
+ if(b.t==='flow')return '<div class="rflow">'+b.items.map(function(c,i){return (i?'<span class="arr">→</span>':'')+'<div class="st prod"><span class="nm">'+c[0]+'</span><span class="v">'+c[1]+'</span><span class="u">'+c[2]+'</span></div>'}).join('')+'</div>';
+ if(b.t==='bars'){var m=b.items[0][1];return '<div class="cascade">'+b.items.map(function(c){return '<div class="cas"><span>'+c[0]+'</span><span class="bar"><i class="'+c[2]+'" style="width:'+(c[1]/m*100).toFixed(1)+'%"></i></span><span class="n">'+c[1].toLocaleString('en-GB')+'</span></div>'}).join('')+'</div>';}
+ if(b.t==='modal')return '<div class="mmodal"><div class="mock"><div class="bar">'+b.title+' <span>pop-up</span></div><div class="body"><p>'+b.x+'</p><div style="display:flex;flex-wrap:wrap;gap:8px"><span class="btnmock">'+b.btns[0]+'</span><span class="btnmock alt">'+b.btns[1]+'</span></div></div></div></div>';
+ return '';}
+function show(id){var s=all.filter(function(x){return x.id===id})[0]||all[0];sel.value=s.id;
+ [].forEach.call(nav.querySelectorAll('button'),function(b){b.setAttribute('aria-pressed',b.dataset.id===s.id?'true':'false')});
+ document.getElementById('sc-view').innerHTML='<div class="mock"><div class="bar">'+s.path+' <span>'+s.st[1]+'</span></div><div class="body">'+s.b.map(blk).join('')+'</div></div>'+
+ '<div class="card"><header style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><h3>'+s.n+'</h3><span class="chip '+s.st[0]+'">'+s.st[1]+'</span></header><p>'+s.why+'</p><dl class="facts"><dt>Who uses it</dt><dd>'+s.who+'</dd><dt>Where it\'s built</dt><dd>'+s.where+'</dd><dt>Reads</dt><dd>'+s.reads+'</dd><dt>Writes</dt><dd>'+s.writes+'</dd></dl></div>';}
+show('plan');
+})();
+</script>
+<script>
+(function(){
+var D={"groups":[{"k":"Swara|A4|120|SL","b":"Swara","s":"A4","p":120,"r":"SL","u":2,"cov":25070,"ins":9480,"fg":8772,"book":"SWREB-A4-120PGS-CB-NP-SL","dem":893010,"cpc":102},{"k":"Swara|A4|120|SQ","b":"Swara","s":"A4","p":120,"r":"SQ","u":2,"cov":6000,"ins":1224,"fg":5406,"book":"SWREB-A4-120PGS-CB-NP-SQ","dem":105060,"cpc":102},{"k":"Swara|A4|96|SL","b":"Swara","s":"A4","p":96,"r":"SL","u":2,"cov":13000,"ins":0,"fg":600,"book":"SWREB-A4-96PGS-CB-NP-SL","dem":66000,"cpc":120},{"k":"Prince|A5|64|SL","b":"Prince","s":"A5","p":64,"r":"SL","u":3,"cov":6000,"ins":0,"fg":17052,"book":"PNCEB-A5-64PGS-CB-BP-SL","dem":52200,"cpc":348},{"k":"Swara|A4|200|SL","b":"Swara","s":"A4","p":200,"r":"SL","u":2,"cov":13000,"ins":0,"fg":1518,"book":"SWREB-A4-200PGS-CB-NP-SL","dem":46200,"cpc":66},{"k":"Swara|A4|48|SL","b":"Swara","s":"A4","p":48,"r":"SL","u":2,"cov":6000,"ins":0,"fg":0,"book":"SWREB-A4-48PGS-CB-NP-SL","dem":40800,"cpc":204},{"k":"Prince|A5|80|SL","b":"Prince","s":"A5","p":80,"r":"SL","u":3,"cov":6500,"ins":0,"fg":41580,"book":"PNCEB-A5-80PGS-CB-BP-SL","dem":39060,"cpc":252},{"k":"Swara|A4|64|SL","b":"Swara","s":"A4","p":64,"r":"SL","u":2,"cov":5000,"ins":0,"fg":14256,"book":"SWREB-A4-64PGS-CB-NP-SL","dem":35640,"cpc":162},{"k":"Prince|A5|100|SL","b":"Prince","s":"A5","p":100,"r":"SL","u":3,"cov":6600,"ins":0,"fg":0,"book":"PNCEB-A5-100PGS-CB-BP-SL","dem":32400,"cpc":216},{"k":"Prince|A5|48|SL","b":"Prince","s":"A5","p":48,"r":"SL","u":3,"cov":0,"ins":0,"fg":0,"book":"PNCEB-A5-48PGS-CB-BP-SL","dem":30720,"cpc":384},{"k":"Prince|A5|32|SL","b":"Prince","s":"A5","p":32,"r":"SL","u":3,"cov":20000,"ins":0,"fg":11592,"book":"PNCEB-A5-32PGS-CB-BP-SL","dem":30240,"cpc":504},{"k":"Prince|A4|120|SL","b":"Prince","s":"A4","p":120,"r":"SL","u":2,"cov":0,"ins":0,"fg":14484,"book":"PNCEB-A4-120PGS-CB-BP-SL","dem":17900,"cpc":102},{"k":"Prince|A4|64|SL","b":"Prince","s":"A4","p":64,"r":"SL","u":2,"cov":5000,"ins":0,"fg":3078,"book":"PNCEB-A4-64PGS-CB-BP-SL","dem":16200,"cpc":162},{"k":"Prince|A4|96|SL","b":"Prince","s":"A4","p":96,"r":"SL","u":2,"cov":0,"ins":0,"fg":137160,"book":"PNCEB-A4-96PGS-CB-BP-SL","dem":15240,"cpc":120},{"k":"Prince|A5|120|SL","b":"Prince","s":"A5","p":120,"r":"SL","u":3,"cov":22910,"ins":3090,"fg":3348,"book":"PNCEB-A5-120PGS-CB-BP-SL","dem":14880,"cpc":186},{"k":"Prince|A4|80|SL","b":"Prince","s":"A4","p":80,"r":"SL","u":2,"cov":13000,"ins":0,"fg":2880,"book":"PNCEB-A4-80PGS-CB-BP-SL","dem":10800,"cpc":144},{"k":"Swara|A4|48|SQ","b":"Swara","s":"A4","p":48,"r":"SQ","u":2,"cov":0,"ins":0,"fg":0,"book":"SWREB-A4-48PGS-CB-NP-SQ","dem":10200,"cpc":204},{"k":"Swara|A4|64|SQ","b":"Swara","s":"A4","p":64,"r":"SQ","u":2,"cov":1000,"ins":0,"fg":0,"book":"SWREB-A4-64PGS-CB-NP-SQ","dem":9720,"cpc":162},{"k":"Prince|A5|100|SQ","b":"Prince","s":"A5","p":100,"r":"SQ","u":3,"cov":6500,"ins":0,"fg":0,"book":"PNCEB-A5-100PGS-CB-BP-SQ","dem":8640,"cpc":216},{"k":"Prince|A5|48|PLN","b":"Prince","s":"A5","p":48,"r":"PLN","u":3,"cov":10000,"ins":0,"fg":0,"book":"PNCEB-A5-48PGS-CB-BP-PLN","dem":7680,"cpc":384},{"k":"Prince|A5|48|GPH","b":"Prince","s":"A5","p":48,"r":"GPH","u":3,"cov":8500,"ins":0,"fg":4224,"book":"PNCEB-A5-48PGS-CB-BP-GPH","dem":7680,"cpc":384},{"k":"Prince|A5|96|SL","b":"Prince","s":"A5","p":96,"r":"SL","u":3,"cov":24000,"ins":0,"fg":50160,"book":"PNCEB-A5-96PGS-CB-BP-SL","dem":6840,"cpc":228},{"k":"Prince|A4|96|GPH","b":"Prince","s":"A4","p":96,"r":"GPH","u":2,"cov":6000,"ins":0,"fg":0,"book":"PNCEB-A4-96PGS-CB-BP-GPH","dem":6300,"cpc":120},{"k":"Prince|A4|96|PLN","b":"Prince","s":"A4","p":96,"r":"PLN","u":2,"cov":10000,"ins":0,"fg":0,"book":"PNCEB-A4-96PGS-CB-BP-PLN","dem":6000,"cpc":120},{"k":"Prince|A5|48|SQ","b":"Prince","s":"A5","p":48,"r":"SQ","u":3,"cov":2000,"ins":0,"fg":26112,"book":"PNCEB-A5-48PGS-CB-BP-SQ","dem":5760,"cpc":384},{"k":"Prince|A4|96|SQ","b":"Prince","s":"A4","p":96,"r":"SQ","u":2,"cov":8000,"ins":0,"fg":28440,"book":"PNCEB-A4-96PGS-CB-BP-SQ","dem":4560,"cpc":120},{"k":"Prince|A5|200|SL","b":"Prince","s":"A5","p":200,"r":"SL","u":3,"cov":24000,"ins":0,"fg":35910,"book":"PNCEB-A5-200PGS-CB-BP-SL","dem":3780,"cpc":126},{"k":"Prince|A5|64|SQ","b":"Prince","s":"A5","p":64,"r":"SQ","u":3,"cov":6600,"ins":0,"fg":1044,"book":"PNCEB-A5-64PGS-CB-BP-SQ","dem":3480,"cpc":348},{"k":"Prince|A4|200|SL","b":"Prince","s":"A4","p":200,"r":"SL","u":2,"cov":24000,"ins":0,"fg":8910,"book":"PNCEB-A4-200PGS-CB-BP-SL","dem":3420,"cpc":66},{"k":"Swara|A4|200|SQ","b":"Swara","s":"A4","p":200,"r":"SQ","u":2,"cov":5000,"ins":0,"fg":6336,"book":"SWREB-A4-200PGS-CB-NP-SQ","dem":2640,"cpc":66},{"k":"Prince|A5|32|SQ","b":"Prince","s":"A5","p":32,"r":"SQ","u":3,"cov":800,"ins":0,"fg":6048,"book":"PNCEB-A5-32PGS-CB-BP-SQ","dem":2520,"cpc":504},{"k":"Prince|A5|200|SQ","b":"Prince","s":"A5","p":200,"r":"SQ","u":3,"cov":0,"ins":0,"fg":12600,"book":"PNCEB-A5-200PGS-CB-BP-SQ","dem":2520,"cpc":126},{"k":"Swara|A4|96|SQ","b":"Swara","s":"A4","p":96,"r":"SQ","u":2,"cov":800,"ins":0,"fg":5400,"book":"SWREB-A4-96PGS-CB-NP-SQ","dem":2400,"cpc":120},{"k":"Prince|A5|120|SQ","b":"Prince","s":"A5","p":120,"r":"SQ","u":3,"cov":0,"ins":8520,"fg":10416,"book":"PNCEB-A5-120PGS-CB-BP-SQ","dem":1860,"cpc":186},{"k":"Prince|A4|120|SQ","b":"Prince","s":"A4","p":120,"r":"SQ","u":2,"cov":18000,"ins":0,"fg":10302,"book":"PNCEB-A4-120PGS-CB-BP-SQ","dem":1520,"cpc":102},{"k":"Prince|A4|200|SQ","b":"Prince","s":"A4","p":200,"r":"SQ","u":2,"cov":13000,"ins":0,"fg":14322,"book":"PNCEB-A4-200PGS-CB-BP-SQ","dem":480,"cpc":66},{"k":"Prince|A4|120|PLN","b":"Prince","s":"A4","p":120,"r":"PLN","u":2,"cov":1200,"ins":300,"fg":0,"book":"PNCEB-A4-120PGS-CB-BP-PLN","dem":250,"cpc":102},{"k":"Prince|A5|48|IRS","b":"Prince","s":"A5","p":48,"r":"IRS","u":3,"cov":5000,"ins":0,"fg":0,"book":"PNCEB-A5-48PGS-CB-BP-IRS","dem":100,"cpc":384},{"k":"Prince|A5|48|HSL","b":"Prince","s":"A5","p":48,"r":"HSL","u":3,"cov":9000,"ins":0,"fg":0,"book":"PNCEB-A5-48PGS-CB-BP-HSL","dem":60,"cpc":384},{"k":"Prince|A5|48|HSQ","b":"Prince","s":"A5","p":48,"r":"HSQ","u":3,"cov":1000,"ins":0,"fg":0,"book":"PNCEB-A5-48PGS-CB-BP-HSQ","dem":30,"cpc":384},{"k":"Prince|A4|48|SQ","b":"Prince","s":"A4","p":48,"r":"SQ","u":2,"cov":18000,"ins":0,"fg":0,"book":"PNCEB-A4-48PGS-CB-BP-SQ","dem":0,"cpc":204},{"k":"Prince|A4|64|SQ","b":"Prince","s":"A4","p":64,"r":"SQ","u":2,"cov":14000,"ins":0,"fg":0,"book":"PNCEB-A4-64PGS-CB-BP-SQ","dem":0,"cpc":162},{"k":"Prince|A4|48|SL","b":"Prince","s":"A4","p":48,"r":"SL","u":2,"cov":13000,"ins":0,"fg":0,"book":"PNCEB-A4-48PGS-CB-BP-SL","dem":0,"cpc":204},{"k":"Prince|A4|80|SQ","b":"Prince","s":"A4","p":80,"r":"SQ","u":2,"cov":13000,"ins":0,"fg":0,"book":"PNCEB-A4-80PGS-CB-BP-SQ","dem":0,"cpc":144},{"k":"Swara|A5|48|SL","b":"Swara","s":"A5","p":48,"r":"SL","u":3,"cov":9000,"ins":0,"fg":0,"book":"SWREB-A5-48PGS-CB-NP-SL","dem":0,"cpc":384},{"k":"Prince|A4|48|GPH","b":"Prince","s":"A4","p":48,"r":"GPH","u":2,"cov":8000,"ins":0,"fg":0,"book":"PNCEB-A4-48PGS-CB-BP-GPH","dem":0,"cpc":204},{"k":"Swara|A4|80|SQ","b":"Swara","s":"A4","p":80,"r":"SQ","u":2,"cov":7230,"ins":2770,"fg":0,"book":"SWREB-A4-80PGS-CB-NP-SQ","dem":0,"cpc":144},{"k":"Swara|A5|80|SL","b":"Swara","s":"A5","p":80,"r":"SL","u":3,"cov":6500,"ins":0,"fg":0,"book":"SWREB-A5-80PGS-CB-NP-SL","dem":0,"cpc":252},{"k":"Swara|A5|200|SL","b":"Swara","s":"A5","p":200,"r":"SL","u":3,"cov":6500,"ins":0,"fg":0,"book":"SWREB-A5-200PGS-CB-NP-SL","dem":0,"cpc":126},{"k":"Prince|A5|96|GPH","b":"Prince","s":"A5","p":96,"r":"GPH","u":3,"cov":6000,"ins":0,"fg":0,"book":"PNCEB-A5-96PGS-CB-BP-GPH","dem":0,"cpc":228},{"k":"Prince|A5|96|PLN","b":"Prince","s":"A5","p":96,"r":"PLN","u":3,"cov":6000,"ins":0,"fg":0,"book":"PNCEB-A5-96PGS-CB-BP-PLN","dem":0,"cpc":228},{"k":"Swara|A5|120|SL","b":"Swara","s":"A5","p":120,"r":"SL","u":3,"cov":6000,"ins":0,"fg":0,"book":"SWREB-A5-120PGS-CB-NP-SL","dem":0,"cpc":186},{"k":"Prince|A5|80|SQ","b":"Prince","s":"A5","p":80,"r":"SQ","u":3,"cov":4000,"ins":0,"fg":17640,"book":"PNCEB-A5-80PGS-CB-BP-SQ","dem":0,"cpc":252},{"k":"Prince|A5|96|HSL","b":"Prince","s":"A5","p":96,"r":"HSL","u":3,"cov":4000,"ins":0,"fg":0,"book":"PNCEB-A5-96PGS-CB-BP-HSL","dem":0,"cpc":228},{"k":"Swara|A5|96|SL","b":"Swara","s":"A5","p":96,"r":"SL","u":3,"cov":4000,"ins":0,"fg":0,"book":"SWREB-A5-96PGS-CB-NP-SL","dem":0,"cpc":228},{"k":"Prince|A4|48|PLN","b":"Prince","s":"A4","p":48,"r":"PLN","u":2,"cov":4000,"ins":0,"fg":0,"book":"PNCEB-A4-48PGS-CB-BP-PLN","dem":0,"cpc":204},{"k":"Prince|A5|96|SQ","b":"Prince","s":"A5","p":96,"r":"SQ","u":3,"cov":3000,"ins":0,"fg":17328,"book":"PNCEB-A5-96PGS-CB-BP-SQ","dem":0,"cpc":228},{"k":"Swara|A5|64|SL","b":"Swara","s":"A5","p":64,"r":"SL","u":3,"cov":3000,"ins":0,"fg":0,"book":"SWREB-A5-64PGS-CB-NP-SL","dem":0,"cpc":348},{"k":"Swara|A5|80|SQ","b":"Swara","s":"A5","p":80,"r":"SQ","u":3,"cov":3000,"ins":0,"fg":0,"book":"SWREB-A5-80PGS-CB-NP-SQ","dem":0,"cpc":252},{"k":"Swara|A5|200|SQ","b":"Swara","s":"A5","p":200,"r":"SQ","u":3,"cov":3000,"ins":0,"fg":0,"book":"SWREB-A5-200PGS-CB-NP-SQ","dem":0,"cpc":126},{"k":"Prince|A5|96|IRS","b":"Prince","s":"A5","p":96,"r":"IRS","u":3,"cov":2500,"ins":0,"fg":0,"book":"PNCEB-A5-96PGS-CB-BP-IRS","dem":0,"cpc":228},{"k":"Swara|A5|48|SQ","b":"Swara","s":"A5","p":48,"r":"SQ","u":3,"cov":2500,"ins":0,"fg":0,"book":"SWREB-A5-48PGS-CB-NP-SQ","dem":0,"cpc":384},{"k":"Swara|A5|120|SQ","b":"Swara","s":"A5","p":120,"r":"SQ","u":3,"cov":2500,"ins":0,"fg":0,"book":"SWREB-A5-120PGS-CB-NP-SQ","dem":0,"cpc":186},{"k":"Prince|A5|120|GPH","b":"Prince","s":"A5","p":120,"r":"GPH","u":3,"cov":2000,"ins":0,"fg":0,"book":"PNCEB-A5-120PGS-CB-BP-GPH","dem":0,"cpc":186},{"k":"Prince|A5|120|PLN","b":"Prince","s":"A5","p":120,"r":"PLN","u":3,"cov":2000,"ins":0,"fg":0,"book":"PNCEB-A5-120PGS-CB-BP-PLN","dem":0,"cpc":186},{"k":"Swara|A5|32|SL","b":"Swara","s":"A5","p":32,"r":"SL","u":3,"cov":2000,"ins":0,"fg":0,"book":"SWREB-A5-32PGS-CB-NP-SL","dem":0,"cpc":504},{"k":"Prince|A4|120|GPH","b":"Prince","s":"A4","p":120,"r":"GPH","u":2,"cov":2000,"ins":0,"fg":0,"book":"PNCEB-A4-120PGS-CB-BP-GPH","dem":0,"cpc":102},{"k":"Swara|A5|96|SQ","b":"Swara","s":"A5","p":96,"r":"SQ","u":3,"cov":1600,"ins":0,"fg":0,"book":"SWREB-A5-96PGS-CB-NP-SQ","dem":0,"cpc":228},{"k":"Swara|A5|32|SQ","b":"Swara","s":"A5","p":32,"r":"SQ","u":3,"cov":1000,"ins":0,"fg":0,"book":"SWREB-A5-32PGS-CB-NP-SQ","dem":0,"cpc":504},{"k":"Swara|A5|64|SQ","b":"Swara","s":"A5","p":64,"r":"SQ","u":3,"cov":900,"ins":0,"fg":0,"book":"SWREB-A5-64PGS-CB-NP-SQ","dem":0,"cpc":348},{"k":"Prince|A5|96|HSQ","b":"Prince","s":"A5","p":96,"r":"HSQ","u":3,"cov":800,"ins":0,"fg":0,"book":"PNCEB-A5-96PGS-CB-BP-HSQ","dem":0,"cpc":228},{"k":"Swara|A4|80|SL","b":"Swara","s":"A4","p":80,"r":"SL","u":2,"cov":0,"ins":0,"fg":0,"book":"SWREB-A4-80PGS-CB-NP-SL","dem":0,"cpc":144}],"cartons":{"A4|Prince":4425,"A4|Swara":2078,"A5":1875},"ctnames":{"A4|Prince":"PNC-EMPTY-CARTON-A4-EXBK-COMMON-425 x 305 x 260","A4|Swara":"SWR- COMMON CARTON 280 MM","A5":"PNCSWR-EMPTY-CARTON-A5-PLAINF-DPL"}};
+var KEY='eb-v3-sim-2';
+function ck(g){return g.s==='A5'?'A5':g.s+'|'+g.b}
+var G={};D.groups.forEach(function(g){G[g.k]=g});
+var st0=function(){var s={g:{},ct:JSON.parse(JSON.stringify(D.cartons)),led:[],seq:0};D.groups.forEach(function(g){s.g[g.k]={cov:g.cov,fld:0,ins:g.ins,fg:g.fg}});return s};
+var S;try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+if(!S||!S.g)S=st0();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function f(n){return Math.round(n).toLocaleString('en-GB')}
+function esc(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+function pg3(p){return ('00'+p).slice(-3)}
+function codes(g){var b=g.b==='Prince'?'PNC':'SWR',t=b+'-'+g.s+'-'+pg3(g.p)+'PG-'+g.r;return {cov:'COV-'+t,fld:'FLD-'+t,ins:'INS-'+t,book:g.book,ctn:D.ctnames[ck(g)]}}
+var RUL={SL:'Single line',SQ:'Square line',GPH:'Graph',PLN:'Plain',IRS:'Irish',MSC:'Music',HSL:'Half-inch single',HSQ:'Half-inch square',SQ13:'1/3 inch square',FNB:'Field note'};
+function gname(g){return g.b+' · '+g.s+' · '+g.p+' pages · '+(RUL[g.r]||g.r)}
+var sel=document.getElementById('v3-group');
+D.groups.forEach(function(g){var o=document.createElement('option');o.value=g.k;o.textContent=gname(g)+(g.dem?'  (on order: '+f(g.dem)+' books)':'');sel.appendChild(o)});
+try{var lg=localStorage.getItem(KEY+'-g');if(lg&&G[lg])sel.value=lg}catch(e){}
+if(!G[sel.value])sel.value='Prince|A5|120|SL';
+var STEPS=[['covers','Station 1','Covers'],['folds','Station 2','Folds'],['inserts','Station 3','Inserts'],['packing','Station 4','Packing'],['fg','Result','Finished Goods']];
+var cur='folds';try{var ls=localStorage.getItem(KEY+'-s');if(ls)cur=ls}catch(e){}
+var stepsEl=document.getElementById('v3-steps');
+STEPS.forEach(function(s,i){if(i){var a=document.createElement('span');a.className='arr';a.textContent='→';stepsEl.appendChild(a)}var b=document.createElement('button');b.type='button';b.setAttribute('role','tab');b.dataset.s=s[0];if(s[0]==='fg')b.className='fg';b.innerHTML='<span class="k">'+s[1]+'</span><span class="t">'+s[2]+'</span>';b.addEventListener('click',function(){cur=s[0];try{localStorage.setItem(KEY+'-s',cur)}catch(e){}render()});stepsEl.appendChild(b)});
+var V={};
+function num(id){var el=document.getElementById(id);if(!el)return 0;var v=parseInt(String(el.value).replace(/[^0-9]/g,''),10);return isNaN(v)?0:v}
+function field(id,label,val,help){return '<div class="cap-f"><label class="lb" for="'+id+'">'+label+'</label><input class="qty" id="'+id+'" inputmode="numeric" value="'+(val==null?'':val)+'" autocomplete="off">'+(help?'<span class="cap-note">'+help+'</span>':'')+'</div>'}
+function ro(label,val,mono){return '<div class="cap-f"><span class="lb">'+label+' · auto</span><span class="cap-ro'+(mono?' mono':'')+'">'+val+'</span></div>'}
+function g(){return G[sel.value]}
+function stock(){return S.g[sel.value]}
+function plan(){
+ var gg=g(),s=stock(),c=codes(gg),u=gg.u,P={rows:[],msgs:[],ok:true,type:'',station:''};
+ if(cur==='covers'){var sh=num('v3-a'),sp=num('v3-b');P.station='Covers';P.type='Material Receipt';
+  if(sh<=0){P.ok=false;P.msgs.push(['info','Enter the good printed sheets counted.']);}
+  P.rows.push(['in',c.cov,'Printed cover sheets → Stores - VCL',sh,s.cov,'cov','sheets']);
+  if(sp)P.msgs.push(['info',f(sp)+' spoiled sheets recorded for the run, not added to stock.']);
+  P.msgs.push(['info',f(sh)+' sheets = '+f(sh*u)+' books ('+gg.s+' is '+u+'-up).']);}
+ if(cur==='folds'){var fs=num('v3-a'),rj=num('v3-b');P.station='Folds';P.type='Material Receipt';
+  if(fs<=0){P.ok=false;P.msgs.push(['info','Enter the good fold sets counted.']);}
+  P.rows.push(['in',c.fld,'Fold sets → Stores - VCL',fs,s.fld,'fld','sets']);
+  if(rj)P.msgs.push(['info',f(rj)+' rejected fold sets recorded for the run, not added.']);
+  P.msgs.push(['info',f(fs)+' fold sets = '+f(fs*u)+' books\' inners.']);}
+ if(cur==='inserts'){var n=num('v3-a'),hold=document.getElementById('v3-hold')&&document.getElementById('v3-hold').checked;P.station='Inserts';P.type='Repack';
+  if(n<=0){P.ok=false;P.msgs.push(['info','Enter the insert sets made.']);}
+  P.rows.push(['out',c.cov,'Cover sheets ← Stores - VCL',-n,s.cov,'cov','sheets']);
+  if(!hold)P.rows.push(['out',c.fld,'Fold sets ← Stores - VCL',-n,s.fld,'fld','sets']);
+  P.rows.push(['in',c.ins,'Insert sets → Stores - VCL',n,s.ins,'ins','sets']);
+  if(n>s.cov){P.ok=false;P.msgs.push(['bad','Not enough covers: '+f(s.cov)+' sheets on hand, '+f(n)+' needed. Print more covers first.']);}
+  if(!hold&&n>s.fld){P.ok=false;P.msgs.push(['bad','Not enough folds: '+f(s.fld)+' fold sets on hand, '+f(n)+' needed. Post the fold count on the Folds station first, or hold off the fold check.']);}
+  if(hold)P.msgs.push(['info','Fold check held off: folds are not taken out (as today). Use only until the first fold count is posted.']);
+  P.msgs.push(['info',f(n)+' insert sets = '+f(n*u)+' books.']);}
+ if(cur==='packing'){var ct=num('v3-a'),lo=num('v3-b'),rj2=num('v3-c'),cpc=gg.cpc,books=ct*cpc+lo,sets=Math.ceil((books+rj2)/u),extra=sets*u-books-rj2;P.station='Packing';P.type='Manufacture (packing BOM)';
+  if(books<=0){P.ok=false;P.msgs.push(['info','Enter the full cartons and any loose books.']);}
+  P.rows.push(['out',c.ins,'Insert sets ← Stores - VCL',-sets,s.ins,'ins','sets']);
+  if(ct)P.rows.push(['out',c.ctn,'Empty cartons ← Stores - VCL'+(gg.s==='A5'?' (item disabled today)':''),-ct,S.ct[ck(gg)],'ctn','cartons']);
+  P.rows.push(['in',c.book,'Books → Finished Goods - VCL',books,s.fg,'fg','books']);
+  if(sets>s.ins){P.ok=false;P.msgs.push(['bad','Not enough inserts: '+f(s.ins)+' sets on hand, '+f(sets)+' needed for '+f(books+rj2)+' books.']);}
+  if(ct>S.ct[ck(gg)]){P.ok=false;P.msgs.push(['bad','Not enough empty cartons for this book: '+f(S.ct[ck(gg)])+' on hand.']);}
+  P.msgs.push(['info',f(ct)+' cartons × '+cpc+' + '+f(lo)+' loose = '+f(books)+' books.']);
+  if(extra>0)P.msgs.push(['info','The last insert set has '+extra+' book'+(extra>1?'s':'')+' over: recorded as rejects, so rejects = '+(rj2+extra)+'.']);
+  if(ct)P.msgs.push(['info','Spot-weigh '+Math.max(1,Math.ceil(ct/20))+' carton'+(Math.ceil(ct/20)>1?'s':'')+' (1 in 20). Flag any more than 5% off the expected weight.']);
+  P.extra={books:books,sets:sets,rejects:rj2+extra};}
+ return P;}
+function renderForm(){
+ var gg=g(),c=codes(gg),el=document.getElementById('v3-form'),h='';
+ if(cur==='covers')h='<div class="cap-h"><h3>Covers: quick entry</h3><span class="chip part">Existing, changed</span></div><div class="cap-fields">'+ro('Item',c.cov,1)+ro('Sheet','1 sheet = '+gg.u+' covers')+field('v3-a','Good printed sheets',V.a,'Count of good sheets off the press')+field('v3-b','Spoiled sheets',V.b)+'</div>';
+ if(cur==='folds')h='<div class="cap-h"><h3>Folds: entry</h3><span class="chip no">New screen</span></div><div class="cap-fields">'+ro('Item',c.fld,1)+ro('Unit','1 fold set = '+gg.u+' books\' inners')+field('v3-a','Good fold sets',V.a)+field('v3-b','Rejected fold sets',V.b)+'</div>';
+ if(cur==='inserts')h='<div class="cap-h"><h3>Inserts: make sets</h3><span class="chip part">Existing, changed</span></div><div class="cap-fields">'+ro('Makes',c.ins,1)+ro('Uses','1 cover sheet + 1 fold set per set')+field('v3-a','Insert sets made',V.a)+'</div><label class="cap-check"><input type="checkbox" id="v3-hold"'+(V.hold?' checked':'')+'> Hold off the fold check (no fold count yet)</label>';
+ if(cur==='packing')h='<div class="cap-h"><h3>Packing: receive finished books</h3><span class="chip part">Existing, changed</span></div><div class="cap-fields">'+ro('Book',c.book,1)+ro('Books per carton',gg.cpc)+field('v3-a','Full cartons',V.a)+field('v3-b','Loose books',V.b)+field('v3-c','Rejected books',V.c)+'</div>';
+ if(cur==='fg'){var s=stock();h='<div class="cap-h"><h3>Finished Goods: where production meets sales</h3><span class="chip ok">View</span></div><div class="cap-fields">'+ro('Book',c.book,1)+ro('In Finished Goods',f(s.fg)+' books = '+f(Math.floor(s.fg/gg.cpc))+' ctn + '+f(s.fg%gg.cpc))+ro('On open orders',f(gg.dem)+' books')+ro(gg.dem>s.fg?'Still short':'Covered',gg.dem>s.fg?f(gg.dem-s.fg)+' books':'All open orders')+'</div><p class="cap-note">Orders are served earliest delivery first. Delivery Notes ship from Finished Goods - VCL, taking books out here.</p>';el.innerHTML=h;return;}
+ h+='<button type="button" class="cap-post" id="v3-post">Post '+(cur==='packing'?'and receive into Finished Goods':'entry')+'</button>';
+ el.innerHTML=h;
+ ['v3-a','v3-b','v3-c'].forEach(function(id){var x=document.getElementById(id);if(x)x.addEventListener('input',function(){V[id.slice(3)]=x.value;renderPreview()})});
+ var hd=document.getElementById('v3-hold');if(hd)hd.addEventListener('change',function(){V.hold=hd.checked;renderPreview()});
+ document.getElementById('v3-post').addEventListener('click',post);}
+function renderPreview(){
+ var el=document.getElementById('v3-preview');
+ if(cur==='fg'){var gg=g(),s=stock();el.innerHTML='<div class="cap-h"><h3>The chain for this group</h3></div><div class="cap-rows">'+[['Covers',s.cov,'sheets',s.cov*gg.u],['Folds',s.fld,'sets',s.fld*gg.u],['Inserts',s.ins,'sets',s.ins*gg.u],['Finished Goods',s.fg,'books',s.fg]].map(function(r){return '<div class="cap-row in"><span class="d">'+r[0].slice(0,3).toUpperCase()+'</span><span class="it">'+r[0]+'<span> = '+f(r[3])+' books</span></span><span class="q"><b>'+f(r[1])+'</b><small>'+r[2]+'</small></span></div>'}).join('')+'</div>';var pb=document.getElementById('v3-post');return;}
+ var P=plan();
+ var h='<div class="cap-h"><h3>What this entry will do</h3><span class="cap-note">'+P.type+' · run '+esc(document.getElementById('v3-run').value||'-')+'</span></div><div class="cap-rows">'+
+ P.rows.map(function(r){var q=r[3],after=r[4]+q;return '<div class="cap-row '+r[0]+'"><span class="d">'+(r[0]==='out'?'OUT −':'IN +')+'</span><span class="it"><code>'+esc(r[1])+'</code><span>'+esc(r[2])+'</span></span><span class="q"><b>'+(q>0?'+':'')+f(q)+'</b><small>'+f(r[4])+' → '+f(after)+' '+r[6]+'</small></span></div>'}).join('')+'</div>'+
+ P.msgs.map(function(m){return '<div class="cap-msg '+m[0]+'">'+esc(m[1])+'</div>'}).join('');
+ el.innerHTML=h;
+ var pb=document.getElementById('v3-post');if(pb)pb.disabled=!P.ok;}
+function renderStock(changed){
+ var gg=g(),s=stock(),el=document.getElementById('v3-stock');
+ var items=[['cov','Covers',s.cov,'sheets',s.cov*gg.u],['fld','Folds',s.fld,'sets',s.fld*gg.u],['ins','Inserts',s.ins,'sets',s.ins*gg.u],['fg','Finished Goods',s.fg,'books',s.fg],['ctn','Empty cartons ('+(gg.s==='A5'?'A5 common':gg.s+' '+gg.b+' common')+')',S.ct[ck(gg)],'cartons',null]];
+ el.innerHTML=items.map(function(it){var ch=changed&&changed[it[0]];return '<div class="'+(ch?'flash':'')+'"><span class="n">'+it[1]+'</span><span class="v">'+f(it[2])+'</span><span class="s">'+it[3]+(it[4]!=null?' = '+f(it[4])+' books':'')+'</span>'+(ch?'<span class="chg '+(ch>0?'up':'down')+'">'+(ch>0?'+':'')+f(ch)+' last entry</span>':'')+'</div>'}).join('');
+ document.getElementById('v3-stocknote').textContent=gname(gg)+' · on open orders: '+f(gg.dem)+' books';}
+function renderLedger(){
+ var tb=document.getElementById('v3-ledger');
+ if(!S.led.length){tb.innerHTML='<tr><td colspan="6" class="cap-note">Nothing posted yet. Start with Folds (there is no fold stock), then Inserts and Packing.</td></tr>';return;}
+ tb.innerHTML=S.led.slice().reverse().map(function(e){return '<tr><td class="num">'+e.n+'</td><td><code>'+esc(e.run)+'</code></td><td>'+e.station+'<br><span class="cap-note">'+esc(e.grp)+'</span></td><td>'+e.type+'</td><td>'+(e.out.map(function(x){return '<code>'+esc(x[0])+'</code> −'+f(x[1])}).join('<br>')||'-')+'</td><td>'+(e['in'].map(function(x){return '<code>'+esc(x[0])+'</code> +'+f(x[1])}).join('<br>')||'-')+'</td></tr>'}).join('');}
+function post(){
+ var P=plan();if(!P.ok)return;var s=stock(),gg=g(),ch={},e={n:++S.seq,run:document.getElementById('v3-run').value||'-',station:P.station,type:P.type,grp:gname(gg),k:gg.k,out:[],'in':[],d:[]};
+ P.rows.forEach(function(r){if(r[5]==='ctn')S.ct[ck(gg)]+=r[3];else s[r[5]]+=r[3];ch[r[5]]=(ch[r[5]]||0)+r[3];e.d.push([r[5],r[3]]);(r[3]<0?e.out:e['in']).push([r[1],Math.abs(r[3])])});
+ S.led.push(e);save();V={hold:V.hold};renderForm();renderPreview();renderStock(ch);renderLedger();
+ var m=document.createElement('div');m.className='cap-msg ok';m.textContent='Posted ✓ entry '+e.n+' ('+e.type+') · run '+e.run+' · simulation only';document.getElementById('v3-preview').prepend(m);}
+document.getElementById('v3-undo').addEventListener('click',function(){var e=S.led.pop();if(!e)return;var gs=S.g[e.k],sz=G[e.k].s;e.d.forEach(function(x){if(x[0]==='ctn')S.ct[ck(G[e.k])]-=x[1];else gs[x[0]]-=x[1]});save();render()});
+var armed=false,rb=document.getElementById('v3-reset');
+rb.addEventListener('click',function(){if(!armed){armed=true;rb.textContent='Press again to reset';setTimeout(function(){armed=false;rb.textContent="Reset to today's stock"},3000);return}armed=false;rb.textContent="Reset to today's stock";S=st0();save();V={};render()});
+sel.addEventListener('change',function(){try{localStorage.setItem(KEY+'-g',sel.value)}catch(e){}V={hold:V.hold};render()});
+document.getElementById('v3-run').addEventListener('input',renderPreview);
+function render(){[].forEach.call(stepsEl.querySelectorAll('button'),function(b){b.setAttribute('aria-selected',b.dataset.s===cur?'true':'false')});renderForm();renderPreview();renderStock();renderLedger();}
+render();
+})();
+</script>
+

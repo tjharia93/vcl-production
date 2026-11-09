@@ -22,7 +22,7 @@ class VCLStoresReceipt(Document):
 			row.seq = i
 			self.prepare_row(row)
 		self.apply_tally()
-		self.title = f"{self.machine} {frappe.utils.formatdate(self.receipt_date, 'dd/mm/yyyy')}"
+		self.title = f"{self.machine or self.weigher or 'Receipt'} {frappe.utils.formatdate(self.receipt_date, 'dd/mm/yyyy')}"
 
 	def guard_received(self):
 		"""Once received the cartons are in stock. The record does not quietly change.

@@ -1,0 +1,64 @@
+# Exercise books: what is already settled
+
+Taken on 04/11/2026 from the second-brain notes `exercise-book-naming-standard-2026-10`,
+`exercise-book-orders-compass` and `exercise-books-no-stock-in-erpnext`.
+
+## Item names (Tanuj decided this on 26/10/2026, and it went live the same day)
+- Name: `<Brand or Paper> - <Size> - <Pages> Pages - <Ruling> - <Cover>`.
+- Retail brands: Prince, Hi5 and Swara (the paper is not in the name).
+- School books carry no brand. The paper is the name instead: Bank Paper (was Prince),
+  Newsprint (was Swara), and Brilliant White Bank Paper (was Hi5, a different paper with its
+  own prices, codes `SCH-WBP-EB-…`).
+- Rulings: SL single line, SQ square line, GPH graph, PLN plain, MSC music, IRS Irish,
+  HSL/HSQ, SQ13 (1/3 inch square line), FNB.
+- Description = name + ` - <pieces> per carton`. The packing goes in the description only.
+- A4 32-page books are not a product (30 items disabled).
+
+## Packing and price
+- Prices are per carton. The Carton UOM conversion = pieces per carton:
+  200pg = 66, 120pg = 102, 96pg = 120, 80pg = 144, 64pg = 162, 48pg = 204.
+- Standard Selling price per carton, ex-VAT = 2026 price list ÷ 1.16. Old price rows were
+  end-dated 25/10/2026.
+- Done: 392 chipboard items and 18 Hi5 school items.
+
+## Stock
+- Until 04/11/2026 no exercise-book item had a Stock Ledger Entry. Opening stock was then posted as
+  `MAT-RECO-2026-00003` (3,566 ctn = 516,918 Nos, Finished Goods - VCL, zero valuation).
+- Stock production with no customer uses customer `Stock`, with the brand in the job name
+  (e.g. `Prince 4 Quire`). Prince is a brand, not a customer.
+
+## Built so far (as recorded in the notes)
+- Compass Exercise Book Orders, `/compass/exercise-books` (vcl_compass main 5709b0a,
+  30/10/2026, TRK-00362). Merged, not deployed. The deploy needs a migrate (Sales Order fields
+  `vcl_eb_stage`, `vcl_eb_stage_by`, `vcl_eb_stage_on`) and the site config
+  `compass_exercise_books`. Stock goes to the earliest delivery date first.
+- Print formats on Sales Order: "Prod Exercise Book" (SL/SQ side by side, A4/A5 size badges)
+  and "Sales Order - Production".
+- A quick-entry form for covers on production-dev (3-up/9-up and 2-up/4-up conversion),
+  which submits straight to ERPNext. The PC session will fill in the details in
+  `02-built-on-dev-pages.md`.
+
+## Planning principle (Tanuj, 04/11/2026)
+- Exercise books are made to stock, not to order. **No work order per Sales Order.**
+- Production and sales are two loops that meet at finished stock. Production runs by SKU, sales
+  draws stock down by order. The link between them is the shortfall per SKU (open demand −
+  finished stock − pipeline).
+
+## Cover and insert units (Tanuj, 04/11/2026)
+- All cover stock is counted in **printed sheets**, including the 30/10 opening `MAT-STE-2026-00007`
+  (its remark "counts treated as single covers" is wrong; the quantity is right).
+- A4 = 2-up (2 books per sheet), A5 = 3-up (3 books per sheet).
+- 1 cover sheet → 1 insert set = 2 (A4) or 3 (A5) books. The dev-page comment "1 cover = 1 insert set = 1 book" is wrong.
+- Pending Tanuj's approval: correct the MAT-STE-2026-00007 remark, and fix that code comment.
+
+## Folds items (approved by Tanuj, 04/11/2026)
+- Naming: `FLD-<PNC|SWR>-<A4|A5>-<PPP>PG-<RULING>`, the twin of `COV-` and `INS-` (e.g. `FLD-PNC-A5-120PG-SL`).
+- Not created yet. They will be created in vcl-production `after_migrate` (build plan step 2).
+- Approved the same day: correct the MAT-STE-2026-00007 remark (done by the PC session; see the reply).
+- Done 04/11 20:24: a correcting Comment was added on MAT-STE-2026-00007 (remarks can't be edited after submit, and the entry was not cancelled). The dev-page comment on exercise-book-production-v2-dev was fixed (a comment only, no change in behaviour).
+
+## Folds items (created live 04/11/2026, PC session, on Tanuj's instruction)
+- Item Group **Folds** (parent All Item Groups). 80 `FLD-` items, one per INS- twin: code `FLD-` + the INS code after `INS-` (e.g. `FLD-PNC-A5-120PG-SL`). Name: "<Brand> Fold - <Size> - <Pages> Pages - <Ruling> - <N> up".
+- Stock UOM Nos, **counted in sets** (same up-count as COV/INS): 1 cover sheet + 1 fold set → 1 insert set. Stock item, include in manufacturing, default warehouse Stores - VCL, valuation 0. Can be sold (rarely), not purchased.
+- Created over REST, an exception to the after_migrate rule. Any later after_migrate code must match these values.
+- No fold stock yet: the first Repacks need an opening fold count, or the shortage check held off.

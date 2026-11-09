@@ -360,7 +360,9 @@ class TestSnapshotShape(unittest.TestCase):
 			k for k in snapshot if not k.startswith("_") and k not in ("colour_of_parts", "spot_colours")
 		}
 
-		self.assertEqual(scalars, set(V1_SNAPSHOT_KEYS))
+		# D4 (TRK-00350) deliberately widened Computer Paper by the print block
+		# and nothing else: the version-one set plus exactly these three.
+		self.assertEqual(scalars, set(V1_SNAPSHOT_KEYS) | {"print_type", "print_side", "printed_weight"})
 
 	def test_every_snapshot_still_carries_every_version_one_key(self):
 		# The compatibility floor. A reader that indexes rather than .get()s

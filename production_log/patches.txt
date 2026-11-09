@@ -156,6 +156,33 @@ production_log.patches.v10_4.add_item_price_cps_field
 # price mirror would publish that customer 16% high.
 production_log.patches.v10_5.flag_bahati_sleeve_vat_inclusive
 production_log.patches.v10_6.allow_cps_colours_packing_on_submit
+# TRK-00342: the "Release to Production" role. Holders (VCL Management and named
+# delegates) release a CP job card and may print its Production Copy. Creates
+# the role only and grants it to nobody. Also in install.after_install.
+production_log.patches.v10_7.add_release_to_production_role
+# CR21 (TRK-00342): packing, weight per carton and carton tare go to permlevel 1
+# on Job Card Computer Paper and the CP fields of Customer Product
+# Specification. Read is limited to management, Release to Production and
+# production roles, through Custom DocPerm rows (the site already uses Custom
+# DocPerm, so the JSON rows alone would be ignored). Also disables the two
+# older CP print formats that print packing. Add-only and idempotent. Also in
+# install.after_install. Mirrored in fixtures/custom_field.json, because
+# fixtures sync after this patch runs.
+production_log.patches.v10_7.restrict_cp_packing_fields
+# D5 (TRK-00350): existing Computer Paper cards raised Plain/N/A from a Printed
+# specification (38 of 86 live, 29/10/2026). Sets print type, side and printed
+# weight from the spec, and fills a blank side on a Printed card. Leaves a
+# Comment on each card. Cancelled and spec-less cards are untouched. Idempotent.
+production_log.patches.v10_8.correct_cp_print_fields
+# Revise can now change size, number of parts, "Used for" and the details
+# (name, item, numbering, printed side, notes, artwork link) on a submitted
+# Customer Product Specification. Sets allow_on_submit on those fields and the
+# Colour of Parts child fields. Print Type stays fixed. Idempotent.
+production_log.patches.v10_9.allow_cps_size_parts_details_on_submit
+# Adds Asset and Exercise Book Stations to VCL Production Machine (schema, so this
+# runs after the sync). Links Solna and Miller to their assets and lists them on the
+# Covers station of the exercise-book Capture page. Idempotent.
+production_log.patches.v10_10.link_cover_machines
 # Stream A, CPS order-to-cash gate (TRK-00432, plan v4 steps 1-2). All three
 # reach outside the app (Selling Settings / Internal Quotation Custom Fields,
 # Role) or write columns this migrate adds, so each is also called from

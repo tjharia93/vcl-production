@@ -35,3 +35,6 @@ node_modules/
 htmlcov/
 .coverage
 coverage.xml
+
+# Local print renders (scripts/render_cp_print_local.py, check_cp_traveller_pagination.py)
+scripts/measure/

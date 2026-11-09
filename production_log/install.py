@@ -28,6 +28,17 @@ def after_install():
 	# stamped done without running.
 	production_floor.after_install()
 
+	# TRK-00342: the Release to Production role. Reaches outside the app's
+	# doctypes (Role), so it is called here as well as from its patch.
+	from production_log.patches.v10_7 import add_release_to_production_role
+
+	add_release_to_production_role.execute()
+
+	# CR21: packing permlevel rules. Needs the role above, so it runs after it.
+	from production_log.patches.v10_7 import restrict_cp_packing_fields
+
+	restrict_cp_packing_fields.execute()
+
 	# Stream A (TRK-00432): Selling Settings / IQ fields, the CPS Approver role
 	# and the eight approval rules. All reach outside the app - same trap.
 	from production_log.patches.v11_0 import add_cps_gate_settings, seed_cps_approval, add_release_hold_reasons

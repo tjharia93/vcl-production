@@ -39,6 +39,7 @@
   "name": "Computer Paper Job Traveller",
   "doctype": "Print Format",
   "doc_type": "Job Card Computer Paper",
+  "disabled": 1,
   "module": "Job Card Tracking",
   "print_format_type": "Jinja",
   "raw_printing": 0,
