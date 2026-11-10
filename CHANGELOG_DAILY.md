@@ -17,6 +17,34 @@ Types:
 
 ---
 
+## 2026-11-10 — Burooj first-run Job Card packing correction
+
+```
+[2026-11-10 19:40] DR · Job Card Computer Paper · JC-CPT-2026-00096 and JC-CPT-2026-00097: packing=700, weight_per_carton=5.6 kg
+```
+
+Tanuj confirmed the recorded packing weight is 700 sheets at 5.6 kg per carton.
+The January 2026 booking rows for CPT-04012 (Mombasa) and CPT-04013 (Nairobi)
+both say exactly that in Q127/Q128. Normal permission-checked Draft saves
+corrected the cards; order/line/CPS links, frozen snapshots, rates and quantities
+were preserved. Both live production-copy HTML renders show 700 and 5.6 kg.
+Neither card was submitted or released. Empty-carton tare remains 300 g.
+
+The CPSs' 700 packing / 0.3 kg tare and combined technical/price approvals are
+now saved successfully, confirming the audit metadata repair above. Their
+theoretical gross is still 7.851 kg (standard weight 7.85), calculated from
+9.5 x 11 in, 160 total GSM and 700 complete sets. No dimensions/GSM/formula were
+changed to force agreement with the historical record. The recorded figure's
+weight basis and the 5.5 perforation/finished-size meaning still need checking.
+Future blank/new cards may pick up the CPS calculation until that discrepancy
+is resolved; these two cards retain the nonzero recorded override on normal
+saves. The legacy packing lookup reads standard_packing (blank here), not the
+new sets_per_carton field, and does not refresh existing Draft cards on CPS
+approval. No automatic mapping/refresh code was published during this repair.
+Record backups are under `~/projects/vcl_crm_v2/archive/` in
+`first-run-card-packing-20261110-193805` and
+`burooj-recorded-carton-weight-20261110-194006`.
+
 ## 2026-11-10 — Combined CPS / price approval metadata
 
 ```
