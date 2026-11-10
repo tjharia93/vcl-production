@@ -33,6 +33,29 @@ class TestApprovalTemplate(unittest.TestCase):
 		self.assertNotIn("{% raw %}", rendered)
 
 
+class TestSubmittedPriceApprovalMetadata(unittest.TestCase):
+	def test_all_server_approval_stamps_can_save_after_cps_submit(self):
+		# Combined approval submits the CPS before stamping the price decision.
+		# Frappe checks child-field metadata even inside server_write().
+		path = Path(__file__).parent / "doctype/cps_price/cps_price.json"
+		fields = {f["fieldname"]: f for f in json.loads(path.read_text(encoding="utf-8"))["fields"]}
+		for name in cps_lifecycle_rules.PRICE_ROW_SERVER_FIELDS:
+			with self.subTest(field=name):
+				self.assertEqual(fields[name].get("allow_on_submit"), 1)
+				self.assertEqual(fields[name].get("read_only"), 1)
+
+	def test_metadata_does_not_allow_manual_approval_stamp_edits(self):
+		before = {"pricing": [{"name": "price-1", "approval_status": "Draft"}]}
+		after = {"pricing": [{"name": "price-1", "approval_status": "Approved",
+		                      "approved_by": "manager@example.test", "approved_on": "2026-11-10 19:00:00",
+		                      "approved_via": "Management", "approval_rule": "RULE-1", "rule_benchmark": 100}]}
+		for roles in ([], ["Sales Master Manager"], ["VCL Management Team"], ["System Manager"]):
+			with self.subTest(roles=roles):
+				refused = cps_lifecycle_rules.unauthorised_changes(before, after, roles)
+				self.assertEqual(len(refused), len(cps_lifecycle_rules.PRICE_ROW_SERVER_FIELDS))
+		self.assertEqual(cps_lifecycle_rules.unauthorised_changes(before, after, [], is_server=True), [])
+
+
 class Doc(dict):
 	__getattr__ = dict.get
 	__setattr__ = dict.__setitem__

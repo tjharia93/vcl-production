@@ -17,6 +17,29 @@ Types:
 
 ---
 
+## 2026-11-10 — Combined CPS / price approval metadata
+
+```
+[2026-11-10 19:30] PS · CPS Price · approved_via: allow_on_submit=1
+[2026-11-10 19:30] PS · CPS Price · approval_rule: allow_on_submit=1
+[2026-11-10 19:30] PS · CPS Price · rule_benchmark: allow_on_submit=1
+```
+
+The combined action submits a Draft CPS before saving its price-approval audit
+stamps. These three read-only fields lacked the update-after-submit flag, so
+Frappe rejected the save at Approved Via and rolled back the whole request.
+The same flags are now in the app's CPS Price DocType definition. The fields
+remain read-only and server-owned; normal approval authority and lifecycle
+checks remain in place. No business approval was performed for verification.
+
+Effective live metadata was read back after the standard Property Setter
+updates. CPS 00083 remained Draft, price Draft, sets/carton 0 and tare 0;
+the user's attempted 700 / 0.3 was not persisted. The approval page returns
+HTTP 200. Metadata/authority regression tests and the focused approval,
+first-order, pricing and lifecycle suites pass (170 tests). User retry of the
+actual combined approval remains the production UAT. Live metadata backup:
+`~/projects/vcl_crm_v2/archive/cps-price-approval-metadata-20261110-193059/`.
+
 ## 2026-05-20 (S1 + S2 deploy day)
 
 ### Direct MCP fixes after Build #5 — v7_1 patch silent failure
