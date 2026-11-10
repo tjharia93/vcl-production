@@ -14,7 +14,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from production_log.job_card_tracking import cps_first_order_price as claims
-from production_log.job_card_tracking import cps_price_rules, cps_rules
+from production_log.job_card_tracking import cps_lifecycle_rules, cps_price_rules, cps_rules
 
 
 class Record(dict):
@@ -30,13 +30,14 @@ class ClaimDB:
 		self.stored = stored
 		self.locks = []
 		self.writes = []
+		self.versions = {}
 
 	def sql(self, query, args, as_dict=False):
 		assert "FOR UPDATE" in query
 		assert "tabSales Order" not in query  # Never invert Release's lock order.
 		name = args[0]
 		self.locks.append(name)
-		return [Record(name=name, modified="2026-11-10 10:00:00",
+		return [Record(name=name, modified=self.versions.get(name, "2026-11-10 10:00:00"),
 		               first_submitted_sales_order=self.stored[name])] if name in self.stored else []
 
 	def set_value(self, doctype, name, field, value, update_modified):
@@ -67,8 +68,8 @@ class TestClaims(unittest.TestCase):
 		claims.claim_locked_specs(db, claims.lock_specs(db, ["B", "A"]), "SO-2")
 		self.assertEqual(db.stored, {"A": "SO-1", "B": "SO-1"})
 		self.assertEqual(db.writes, [("A", "SO-1"), ("B", "SO-1")])
-		self.assertFalse(claims.blocks_draft_price("SO-1", "SO-1"))
-		self.assertTrue(claims.blocks_draft_price("SO-1", "SO-2"))
+		self.assertFalse(claims.blocks_first_order("SO-1", "SO-1"))
+		self.assertTrue(claims.blocks_first_order("SO-1", "SO-2"))
 
 	def test_stale_and_forged_cps_edits_cannot_clear_or_replace_claim(self):
 		for supplied in (None, "SO-fake", "SO-before-cancellation"):
@@ -124,6 +125,30 @@ class TestClaims(unittest.TestCase):
 
 
 class TestDraftSelection(unittest.TestCase):
+	def test_missing_price_proposal_uses_net_so_values_and_evidence(self):
+		order = dict(name="SO-1", currency="KES", transaction_date="2026-11-10")
+		line = dict(name="line1", rate=3793.1034, uom="Carton", conversion_factor=500)
+		values = claims.draft_price_values(order, line)
+		self.assertEqual(values["rate"], 3793.1034)
+		self.assertEqual(values["conversion_factor"], 500)
+		self.assertEqual(values["source_ref"], "SO-1")
+		self.assertEqual(values["approval_status"], "Draft")
+		self.assertEqual(values["tax_basis"], "Net")
+
+	def test_missing_price_does_not_accept_invalid_order_values(self):
+		order = dict(name="SO-1", currency="KES", transaction_date="2026-11-10")
+		line = dict(name="line1", rate=20, uom="Carton", conversion_factor=1)
+		for changes in ({"rate": float("nan")}, {"rate": -1}, {"conversion_factor": 0}, {"uom": ""}):
+			with self.assertRaises(ValueError):
+				claims.draft_price_values(order, dict(line, **changes))
+
+	def test_sales_order_price_source_cannot_be_forged_on_cps_creation(self):
+		doc = {"pricing": [dict(name="price1", source="Sales Order", source_ref="SO-fake")]}
+		self.assertIn("pricing[0].source", cps_lifecycle_rules.forged_initial_values(doc))
+		_, rows = cps_lifecycle_rules.initial_value_resets(doc)
+		self.assertIsNone(rows[0]["source"])
+		self.assertIsNone(rows[0]["source_ref"])
+
 	def test_selection_is_separate_from_normal_approved_path(self):
 		draft = price()
 		rows = [draft]
@@ -148,12 +173,66 @@ class TestDraftSelection(unittest.TestCase):
 		scope = dict(frappe=SimpleNamespace(db=SimpleNamespace(sql=sql)),
 		             _row_fields=lambda: list(rows[0]), cps_price_rules=cps_price_rules)
 		exec(compile(ast.Module(body=[function], type_ignores=[]), str(path), "exec"), scope)
-		approved, draft = scope["get_order_price_candidates"]("A", "2026-11-10", "KES", lock=True)
+		approved, draft, all_rows = scope["get_order_price_candidates"]("A", "2026-11-10", "KES", lock=True)
 		self.assertEqual(approved["name"], "approved")
 		self.assertEqual(draft["name"], "price-draft")
+		self.assertEqual(all_rows, rows)
 		query, params = sql.call_args.args
 		self.assertIn("ORDER BY name FOR UPDATE", query)
 		self.assertEqual(params, ("A", "Customer Product Specification", "pricing"))
+
+
+class TestDraftCpsIdentity(unittest.TestCase):
+	def setUp(self):
+		path = Path(__file__).with_name("so_spec_control.py")
+		function = next(node for node in ast.parse(path.read_text(encoding="utf-8")).body
+		                if isinstance(node, ast.FunctionDef) and node.name == "_load_and_validate_spec")
+		self.spec = Record(name="A", docstatus=0, status="Active", customer="Customer",
+		                   linked_item="ITEM", product_type="Computer Paper")
+		self.doc = Record(customer="Customer")
+		self.line = Record(custom_cps="A", item_code="ITEM")
+
+		def refusing(line, message):
+			raise ValueError(message)
+
+		scope = dict(frappe=SimpleNamespace(get_doc=lambda *args: self.spec),
+		             _=lambda text: text, cps_rules=cps_rules, _throw=refusing,
+		             resolve_item_control=lambda item: SimpleNamespace(product_type="Computer Paper"))
+		exec(compile(ast.Module(body=[function], type_ignores=[]), str(path), "exec"), scope)
+		self.load = scope["_load_and_validate_spec"]
+
+	def test_allowance_accepts_draft_spec_without_submitting_it(self):
+		self.assertIs(self.load(self.doc, self.line, allow_draft=True), self.spec)
+		self.assertEqual(self.spec.docstatus, 0)
+
+	def test_original_rule_retained_without_schema(self):
+		with self.assertRaisesRegex(ValueError, "still a draft"):
+			self.load(self.doc, self.line)
+
+	def test_cancelled_cps_is_never_eligible(self):
+		self.spec.docstatus = 2
+		with self.assertRaisesRegex(ValueError, "cancelled"):
+			self.load(self.doc, self.line, allow_draft=True)
+
+	def test_inactive_cps_is_never_eligible(self):
+		self.spec.status = "Inactive"
+		with self.assertRaisesRegex(ValueError, "not Active"):
+			self.load(self.doc, self.line, allow_draft=True)
+
+	def test_wrong_customer_is_never_eligible(self):
+		self.spec.customer = "Other customer"
+		with self.assertRaisesRegex(ValueError, "belongs to Other customer"):
+			self.load(self.doc, self.line, allow_draft=True)
+
+	def test_wrong_item_is_never_eligible(self):
+		self.spec.linked_item = "OTHER"
+		with self.assertRaisesRegex(ValueError, "linked to Item OTHER"):
+			self.load(self.doc, self.line, allow_draft=True)
+
+	def test_wrong_product_type_is_never_eligible(self):
+		self.spec.product_type = "Carton"
+		with self.assertRaisesRegex(ValueError, "needs a Computer Paper"):
+			self.load(self.doc, self.line, allow_draft=True)
 
 
 class TestSalesOrderHook(unittest.TestCase):
@@ -167,9 +246,10 @@ class TestSalesOrderHook(unittest.TestCase):
 		self.db = ClaimDB(A=None)
 		self.rows = [price()]
 		self.warnings = []
-		self.spec = Record(name="A", modified="2026-11-10 10:00:00", first_submitted_sales_order=None)
+		self.spec = Record(name="A", docstatus=1, vcl_revision=1, vcl_approved_rev=1, vcl_approval_state="Approved",
+		                   modified="2026-11-10 10:00:00", first_submitted_sales_order=None)
 		self.doc = Record(name="SO-1", docstatus=1, transaction_date="2026-11-10", currency="KES",
-		                  items=[Record(item_code="ITEM", custom_cps="A")])
+		                  items=[Record(name="line1", item_code="ITEM", custom_cps="A", rate=3793.1034, uom="Carton", conversion_factor=1)])
 		self.stamp = Mock()
 		self.check = Mock()
 		self.clear = Mock()
@@ -181,19 +261,28 @@ class TestSalesOrderHook(unittest.TestCase):
 
 		def candidates(cps, on_date, currency, lock=False):
 			return (cps_price_rules.select_price_row(self.rows, currency, on_date),
-			        cps_price_rules.select_draft_price_row(self.rows, currency, on_date))
+			        cps_price_rules.select_draft_price_row(self.rows, currency, on_date), list(self.rows))
+
+		def seed(spec, doc, line):
+			row = price(**claims.draft_price_values(doc, line))
+			self.rows.append(row)
+			spec.modified = "2026-11-10 10:01:00"
+			self.db.versions["A"] = spec.modified
+			return row
 
 		self.scope = dict(
 			frappe=SimpleNamespace(db=self.db, flags=SimpleNamespace(), throw=throwing,
 			                       utils=SimpleNamespace(get_datetime=datetime.datetime.fromisoformat, formatdate=str)),
-			_=lambda text: text, cps_rules=cps_rules, cps_first_order_price=claims,
+			_=lambda text: text, cps_rules=cps_rules, cps_first_order_price=claims, cps_lifecycle_rules=cps_lifecycle_rules,
+			cps_first_order_approval=SimpleNamespace(request_for_order=Mock()),
 			cps_pricing=SimpleNamespace(get_order_price_candidates=candidates,
+			                           draft_first_order_price=seed,
 			                           get_eligible_price=lambda *args: cps_price_rules.select_price_row(self.rows, args[2], args[1])),
 			so_mode=lambda: self.mode, control_enabled=lambda: self.mode != cps_rules.QUOTE_MODE_OFF,
 			_has_field=lambda dt, field: self.ledger_ready if field == claims.CLAIM_FIELD else True,
 			rounding_allowance_settings=lambda: (1, 1),
 			resolve_item_control=lambda item: SimpleNamespace(controlled=True),
-			_load_and_validate_spec=lambda doc, line: self.spec,
+			_load_and_validate_spec=lambda doc, line, allow_draft=False: self.spec,
 			_validate_price=self.check, _stamp_snapshot=self.stamp,
 			_clear_snapshot=self.clear, _validate_qty_against_job_cards=Mock(),
 			_throw=throwing, _warn=lambda line, message: self.warnings.append(message),
@@ -216,6 +305,18 @@ class TestSalesOrderHook(unittest.TestCase):
 		with self.assertRaisesRegex(ValueError, "already used by SO-1"):
 			self.submit()
 
+	def test_first_draft_cps_order_submits_but_approved_price_alone_cannot_unlock_second(self):
+		self.spec.docstatus = 0
+		self.rows = [price(approval_status="Approved")]
+		self.submit()
+		self.assertEqual(self.spec.docstatus, 0)  # The exception never submits CPS.
+		self.doc.name = "SO-2"
+		with self.assertRaisesRegex(ValueError, "Submit and approve the CPS"):
+			self.submit()
+		self.spec.docstatus = 1
+		self.submit()
+		self.assertEqual(self.db.stored["A"], "SO-1")
+
 	def test_repeated_lines_share_one_order_and_revalidation_is_idempotent(self):
 		self.doc.items = self.doc["items"] * 2  # Record attribute avoids dict.items.
 		self.submit()
@@ -230,6 +331,15 @@ class TestSalesOrderHook(unittest.TestCase):
 		self.assertEqual(self.db.locks, [])
 		self.stamp.assert_not_called()
 
+	def test_draft_order_can_be_saved_against_draft_cps_with_no_price(self):
+		self.doc.docstatus = 0
+		self.spec.docstatus = 0
+		self.rows = []
+		self.validate()
+		self.assertEqual(self.db.writes, [])
+		self.stamp.assert_not_called()
+		self.assertTrue(any("No eligible CPS price" in message for message in self.warnings))
+
 	def test_approved_price_allows_later_orders_without_resetting_claim(self):
 		self.submit()
 		self.doc.name = "SO-2"
@@ -238,11 +348,42 @@ class TestSalesOrderHook(unittest.TestCase):
 		self.assertEqual(self.db.stored["A"], "SO-1")
 		self.assertEqual(self.stamp.call_args.args[3]["name"], "approved")
 
-	def test_no_price_is_not_an_allowance(self):
+	def test_no_price_is_proposed_from_the_first_order_without_approval(self):
 		self.rows = []
-		with self.assertRaisesRegex(ValueError, "No eligible CPS price"):
-			self.submit()
+		self.spec.docstatus = 0
+		self.submit()
+		self.assertEqual(len(self.rows), 1)
+		self.assertEqual(self.rows[0]["rate"], self.doc["items"][0].rate)
+		self.assertEqual(self.rows[0]["source"], "Sales Order")
+		self.assertEqual(self.rows[0]["source_ref"], "SO-1")
+		self.assertEqual(self.rows[0]["approval_status"], "Draft")
+		self.assertEqual(self.spec.docstatus, 0)
+		self.assertEqual(self.db.stored["A"], "SO-1")
+		self.scope["cps_first_order_approval"].request_for_order.assert_called_once()
+
+	def test_missing_price_repeated_lines_seed_only_once(self):
+		self.rows = []
+		self.doc.items = self.doc["items"] * 2
+		self.submit()
+		self.assertEqual(len(self.rows), 1)
+
+	def test_future_foreign_and_rejected_prices_are_not_overwritten(self):
+		for rows in ([price(approval_status="Rejected")], [price(valid_from="2026-11-11")], [price(currency="USD")]):
+			self.rows = rows
+			with self.assertRaisesRegex(ValueError, "No eligible CPS price"):
+				self.submit()
+			self.assertEqual(self.rows, rows)
 		self.assertEqual(self.db.writes, [])
+
+	def test_technical_approval_is_required_before_second_order(self):
+		self.spec.vcl_approved_rev = 0
+		self.rows = [price(approval_status="Approved")]
+		self.submit()
+		self.doc.name = "SO-2"
+		with self.assertRaisesRegex(ValueError, "already used"):
+			self.submit()
+		self.spec.vcl_approved_rev = 1
+		self.submit()
 
 	def test_price_revision_and_cancelled_first_order_do_not_reset_claim(self):
 		self.db.stored["A"] = "SO-cancelled"
@@ -288,7 +429,10 @@ class TestSalesOrderHook(unittest.TestCase):
 		line = self.doc["items"][0]
 		self.scope["_stamp_snapshot"](self.doc, line, self.spec, self.rows[0], (1, 1))
 		snapshot = json.loads(line.custom_spec_snapshot)
-		self.assertEqual(snapshot["_draft_price_first_order"], {"sales_order": "SO-1", "price_row": "price-draft"})
+		self.assertEqual(snapshot["_first_order_exception"], {
+			"sales_order": "SO-1", "spec_docstatus": 1,
+			"price_row": "price-draft", "price_approval": "Draft",
+		})
 		self.assertEqual(line.custom_cps_rate, 3793.1034)
 		self.assertEqual(self.rows[0]["approval_status"], "Draft")
 		self.assertNotIn("memo", line.custom_spec_snapshot.lower())

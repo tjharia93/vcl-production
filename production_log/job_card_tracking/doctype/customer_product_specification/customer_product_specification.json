@@ -182,7 +182,7 @@
    "fieldname": "first_submitted_sales_order",
    "fieldtype": "Data",
    "label": "First Submitted Sales Order",
-   "description": "Server-owned first-use claim for the one-order Draft-price allowance. Cancellation and price revisions do not reset it.",
+   "description": "Server-owned first-use claim for the one-order Draft CPS/price allowance. Cancellation and same-CPS revisions do not reset it.",
    "allow_on_submit": 1,
    "hidden": 1,
    "read_only": 1,

@@ -15,7 +15,7 @@ import json
 import frappe
 from frappe import _
 
-from production_log.job_card_tracking import cps_first_order_price, cps_price_rules, cps_pricing, cps_rules
+from production_log.job_card_tracking import cps_first_order_approval, cps_first_order_price, cps_lifecycle_rules, cps_price_rules, cps_pricing, cps_rules
 
 CONTROL_FLAG = "custom_cps_control_enabled"
 
@@ -407,8 +407,8 @@ def _validate_line(doc, line, submitting, allowance, locked=None):
 		_clear_snapshot(line)
 		return
 
-	spec = _load_and_validate_spec(doc, line)
 	ledger_ready = _has_field("Customer Product Specification", cps_first_order_price.CLAIM_FIELD)
+	spec = _load_and_validate_spec(doc, line, allow_draft=ledger_ready)
 	if ledger_ready:
 		if submitting:
 			version = (locked or {}).get(spec.name)
@@ -418,29 +418,36 @@ def _validate_line(doc, line, submitting, allowance, locked=None):
 			claim = version.get(cps_first_order_price.CLAIM_FIELD)
 		else:
 			claim = spec.get(cps_first_order_price.CLAIM_FIELD)
-		price, draft = cps_pricing.get_order_price_candidates(
+		price, draft, price_rows = cps_pricing.get_order_price_candidates(
 			spec.name, doc.transaction_date, doc.get("currency"), lock=submitting
 		)
 	else:
 		# Deploy-before-migrate window: retain the Approved-only rule.
 		price = cps_pricing.get_eligible_price(spec.name, doc.transaction_date, doc.get("currency"))
 		draft = None
-	if not price:
-		if draft:
-			if cps_first_order_price.blocks_draft_price(claim, doc.name):
-				message = _("The one Draft-price order for {0} was already used by {1}. Approve its CPS price before submitting another order.").format(spec.name, claim)
-				if submitting:
-					_throw(line, message)
-				else:
-					_warn(line, message)
-				_clear_snapshot(line)
-				return
-			price = draft
-			_warn(line, _("One-time Draft CPS price for {0}: approval is pending and another Sales Order will require an approved price.").format(spec.name))
+		price_rows = None
+	technical_pending = _has_field("Customer Product Specification", "vcl_revision") and not cps_lifecycle_rules.is_technically_approved(spec)
+	provisional = ledger_ready and (spec.docstatus == 0 or technical_pending or not price)
+	if provisional:
+		if cps_first_order_price.blocks_first_order(claim, doc.name):
+			message = _("The first-order allowance for {0} was already used by {1}. Submit and approve the CPS and its effective price before submitting another order.").format(spec.name, claim)
+			if submitting:
+				_throw(line, message)
+			else:
+				_warn(line, message)
+			_clear_snapshot(line)
+			return
+		price = price or draft
+		if not price and not price_rows and submitting:
+			# Tanuj, 10-Nov: the first SO supplies a missing CPS price as Draft.
+			# The parent lock and SO transaction protect creation and rollback.
+			price = cps_pricing.draft_first_order_price(spec, doc, line)
+			locked[spec.name]["modified"] = spec.modified
+		_warn(line, _("First-order allowance for {0}: the CPS or its price is awaiting approval. Another Sales Order requires an approved CPS and price.").format(spec.name))
 
 	if not price:
 		# V7 - warn on save, throw on submit.
-		message = _("No eligible CPS price for {0} effective {1}. Enter a CPS Price row; after the first submitted order its price must be Approved.").format(
+		message = _("No eligible CPS price for {0} effective {1}. Enter a CPS Price row; after the first submitted order the CPS must be Submitted and its price Approved.").format(
 			spec.name, frappe.utils.formatdate(doc.transaction_date)
 		)
 		if submitting:
@@ -456,7 +463,7 @@ def _validate_line(doc, line, submitting, allowance, locked=None):
 		_clear_snapshot(line)
 
 
-def _load_and_validate_spec(doc, line):
+def _load_and_validate_spec(doc, line, allow_draft=False):
 	"""V2-V5: the specification must belong here and be orderable."""
 	spec = frappe.get_doc("Customer Product Specification", line.custom_cps)
 
@@ -485,7 +492,7 @@ def _load_and_validate_spec(doc, line):
 			),
 		)
 
-	if spec.docstatus != 1:
+	if spec.docstatus != 1 and not (allow_draft and spec.docstatus == 0):
 		state = _("still a draft") if spec.docstatus == 0 else _("cancelled")
 		_throw(
 			line,
@@ -596,9 +603,13 @@ def _stamp_snapshot(doc, line, spec, price, allowance):
 	snapshot = cps_rules.build_spec_snapshot(
 		spec, spec.get("colour_of_parts"), spec.get("spot_colours"), taken_at
 	)
-	if price.get("approval_status") == cps_rules.APPROVAL_DRAFT:
+	if (spec.docstatus == 0 or price.get("approval_status") == cps_rules.APPROVAL_DRAFT
+	    or (_has_field("Customer Product Specification", "vcl_revision") and not cps_lifecycle_rules.is_technically_approved(spec))):
 		# Immutable audit marker, not a price approval or a customer memo.
-		snapshot["_draft_price_first_order"] = {"sales_order": doc.name, "price_row": price.get("name")}
+		snapshot["_first_order_exception"] = {
+			"sales_order": doc.name, "spec_docstatus": spec.docstatus,
+			"price_row": price.get("name"), "price_approval": price.get("approval_status"),
+		}
 	line.custom_spec_snapshot = json.dumps(
 		snapshot,
 		default=str,
@@ -645,6 +656,7 @@ def on_submit(doc, method=None):
 		frappe.db, [line.get("custom_cps") for line in doc.get("items") or []]
 	)
 	cps_first_order_price.claim_locked_specs(frappe.db, locked, doc.name)
+	cps_first_order_approval.request_for_order(doc)
 
 
 def on_cancel(doc, method=None):

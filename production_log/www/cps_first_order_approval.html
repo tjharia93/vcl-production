@@ -1,0 +1,40 @@
+{% extends "templates/web.html" %}
+{% block page_content %}
+<style>
+#cps-first-review{max-width:1040px;margin:24px auto;padding:20px;color:#142742;background:#fff;border:1px solid #e0e6f0;border-radius:18px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+#cps-first-review h1{font-size:26px;margin:0 0 10px}#cps-first-review h2{font-size:19px;margin:24px 0 12px}
+#cps-first-review .muted{color:#65758c}#cps-first-review .notice{background:#fff5df;padding:12px;border-radius:10px;margin:16px 0}
+#cps-first-review .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+#cps-first-review .field{padding:10px;border-bottom:1px solid #e5e9f1;overflow-wrap:anywhere}#cps-first-review .label{font-size:12px;color:#65758c}
+#cps-first-review .table-wrap{overflow:auto;grid-column:1/-1}#cps-first-review table{width:100%;border-collapse:collapse}#cps-first-review th,#cps-first-review td{padding:8px;border:1px solid #e5e9f1;text-align:left;vertical-align:top}
+#cps-first-review input{display:block;border:1px solid #b9c5d8;border-radius:8px;padding:9px;max-width:100%;margin-top:5px}
+#cps-first-review button{border:0;border-radius:22px;padding:12px 18px;background:#303c98;color:white;font-weight:600;cursor:pointer}
+#cps-first-review button:disabled{opacity:.6;cursor:default}#cps-first-review #cps-review-error{color:#a32615;white-space:pre-wrap;margin:14px 0}
+#cps-first-review [hidden]{display:none!important}
+@media(max-width:600px){#cps-first-review{margin:8px;padding:15px}#cps-first-review h1{font-size:23px}}
+</style>
+<main id="cps-first-review">
+  <p class="muted">Vimit Converters · Sales CRM v2</p>
+  <h1>Approve CPS and price</h1>
+  <p id="cps-review-loading" role="status">Loading approval…</p>
+  <div id="cps-review-error" role="alert" hidden></div>
+  <div id="cps-review-content" hidden>
+    <h2 id="cps-review-name"></h2><p id="cps-review-customer"></p>
+    <div class="notice">The first order is proceeding while approval is pending. Review the whole specification and its proposed net price. This action approves the CPS and price together; Job Card release remains a separate check.</div>
+    <div id="cps-review-prices" class="grid"></div>
+    <h2>Changes since the order</h2><div id="cps-review-changes"></div>
+    <h2>Whole specification</h2><div id="cps-review-fields" class="grid"></div>
+    <section id="cps-review-packing" hidden>
+      <h2>First-run packing · management</h2>
+      <p class="muted">Enter measured packing when the first run is available. It can be completed later; these values are not estimated from the order.</p>
+      <div class="grid">
+        <label>Sets per carton<input id="cps-review-sets" type="number" min="1" step="1" placeholder="Complete from first run"></label>
+        <label>Empty carton weight (kg)<input id="cps-review-tare" type="number" min="0" step="0.001" placeholder="0.3"></label>
+      </div>
+    </section>
+    <p><button id="cps-review-approve" type="button">Approve CPS + price</button></p>
+    <p id="cps-review-result" role="status"></p>
+  </div>
+</main>
+<script src="/assets/production_log/js/cps_first_order_approval.js?v=20261110"></script>
+{% endblock %}

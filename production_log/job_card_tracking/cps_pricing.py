@@ -203,7 +203,36 @@ def get_order_price_candidates(cps, on_date, currency=None, lock=False):
 	return (
 		cps_price_rules.select_price_row(rows, currency, on_date),
 		cps_price_rules.select_draft_price_row(rows, currency, on_date),
+		rows,
 	)
+
+
+def draft_first_order_price(spec, order, line):
+	"""Seed only an empty price table, under the caller's held CPS row lock.
+
+	Called only after SO customer/Item/type/first-use checks. Save/rollback is
+	part of that order's transaction; Draft order saves never reach this path.
+	No existing price, approval or packing value is overwritten.
+	"""
+	from production_log.job_card_tracking import cps_first_order_price
+	from production_log.job_card_tracking import so_spec_control
+	control = so_spec_control.resolve_item_control(line.item_code)
+	if (spec.customer != order.customer or not cps_rules.spec_serves_item(spec, line.item_code)
+	    or not control.controlled or (control.product_type and control.product_type != spec.product_type)
+	    or spec.docstatus not in (0, 1) or spec.status != "Active"
+	    or not frappe.has_permission("Customer Product Specification", "read", doc=spec)):
+		frappe.throw(_("This Sales Order cannot propose a price for this CPS."), frappe.PermissionError)
+	if spec.get("pricing"):
+		frappe.throw(_("CPS pricing changed. Reload before submitting this order."))
+	try:
+		values = cps_first_order_price.draft_price_values(order, line)
+	except (TypeError, ValueError):
+		frappe.throw(_("A valid net order rate, currency, UOM and conversion factor are required to propose a CPS price."))
+	meta = frappe.get_meta("CPS Price")
+	row = spec.append("pricing", {k: v for k, v in values.items() if meta.get_field(k)})
+	with cps_lifecycle.server_write():
+		spec.save(ignore_permissions=True)
+	return row
 
 
 def get_price_row(cps, row_name):

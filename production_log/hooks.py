@@ -12,6 +12,11 @@ app_version = app_version
 # -------------
 required_apps = ["erpnext"]
 
+# Email review lives on the CRM v2 route. GET renders only; approval is POST.
+website_route_rules = [
+    {"from_route": "/sales-crm-v2/approve-cps", "to_route": "cps_first_order_approval"},
+]
+
 # Includes in <head>
 # ------------------
 # include_js = {"page,html" : "public/js/file.js"}

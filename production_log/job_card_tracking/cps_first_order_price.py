@@ -1,13 +1,17 @@
-"""One submitted Sales Order per CPS pending price approval (10-Nov-2026).
+"""One submitted Sales Order per CPS pending spec/price approval (10-Nov-2026).
 
 The claim is server owned and survives cancellation, price-row replacement and
-revision. Draft saves do not claim it. An eligible Approved price bypasses the
-allowance; a missing price is never a Draft price. Callers own the transaction.
+revision. Draft saves do not claim it. A Submitted CPS with an eligible Approved
+price bypasses the allowance. Callers own the transaction.
 
 Use a current, locking read of the CPS counter, rather than counting orders
 under InnoDB's repeatable-read snapshot. No existing SO rows are locked after
 CPS rows: that would invert the Release screen's SO -> CPS lock order.
 """
+
+import math
+
+from production_log.job_card_tracking import cps_rules
 
 DOCTYPE = "Customer Product Specification"
 CLAIM_FIELD = "first_submitted_sales_order"
@@ -26,8 +30,27 @@ def lock_specs(db, names):
 	return locked
 
 
-def blocks_draft_price(claim, current_order):
+def blocks_first_order(claim, current_order):
 	return bool(claim and claim != current_order)
+
+
+def draft_price_values(order, line):
+	"""Propose the actual SO's net rate, never an approval or a gross conversion."""
+	rate = float(line.get("rate"))
+	factor = float(line.get("conversion_factor"))
+	if not math.isfinite(rate) or rate < 0 or not math.isfinite(factor) or factor <= 0:
+		raise ValueError("A finite non-negative rate and positive conversion factor are required")
+	if not line.get("uom") or not order.get("currency") or not cps_rules.to_date(order.get("transaction_date")):
+		raise ValueError("Order currency, UOM and effective date are required")
+	return {
+		"rate": cps_rules.round_rate(rate), "uom": line.get("uom"),
+		"currency": order.get("currency"), "conversion_factor": factor,
+		"valid_from": order.get("transaction_date"), "source": "Sales Order",
+		"source_ref": order.get("name"), "tax_basis": "Net", "tax_rate": 0,
+		"approval_status": cps_rules.APPROVAL_DRAFT,
+		"notes": "Proposed from the first Sales Order {0}, line {1}; awaiting approval.".format(
+			order.get("name"), line.get("name") or line.get("idx") or "?"),
+	}
 
 
 def claim_locked_specs(db, locked, order):

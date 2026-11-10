@@ -127,7 +127,7 @@
    "fieldname": "source",
    "fieldtype": "Select",
    "label": "Source",
-   "options": "\nQuotation\nInternal Quotation\nLPO\nManual\nManagement reprice\nHistorical"
+   "options": "\nQuotation\nSales Order\nInternal Quotation\nLPO\nManual\nManagement reprice\nHistorical"
   },
   {
    "allow_on_submit": 1,
@@ -151,7 +151,7 @@
    "allow_on_submit": 1,
    "columns": 1,
    "default": "Draft",
-   "description": "Only Approved rows can price a Sales Order. Set by the approve / reject action, never by hand. Editing the rate, UOM or effective date of an Approved row returns it to Draft.",
+   "description": "The first Sales Order per CPS may use a Draft price; subsequent orders require an Approved price and Submitted CPS. Set by the approve / reject action, never by hand. Editing an Approved price returns it to Draft.",
    "fieldname": "approval_status",
    "fieldtype": "Select",
    "in_list_view": 1,

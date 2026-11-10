@@ -517,7 +517,7 @@ def forged_initial_values(doc):
 		for f in ("approved_by", "approved_on", "approved_via", "approval_rule", "rule_benchmark"):
 			if _norm(_get(row, f)) is not None:
 				out.append("pricing[{0}].{1}".format(i, f))
-		if _get(row, "source") == IQ_SOURCE:
+		if _get(row, "source") in SERVER_PRICE_SOURCES:
 			out.append("pricing[{0}].source".format(i))
 	return out
 
@@ -531,8 +531,8 @@ def initial_value_resets(doc):
 		rows.append({
 			"approval_status": cps_rules.APPROVAL_DRAFT, "approved_by": None, "approved_on": None,
 			"approved_via": None, "approval_rule": None, "rule_benchmark": None,
-			"source": None if _get(row, "source") == IQ_SOURCE else _get(row, "source"),
-			"source_ref": None if _get(row, "source") == IQ_SOURCE else _get(row, "source_ref"),
+			"source": None if _get(row, "source") in SERVER_PRICE_SOURCES else _get(row, "source"),
+			"source_ref": None if _get(row, "source") in SERVER_PRICE_SOURCES else _get(row, "source_ref"),
 		})
 	return resets, rows
 
@@ -542,6 +542,7 @@ def initial_value_resets(doc):
 # A price row whose source is the IQ transfer is written by server code only
 # (Codex r5 item 2): its evidence drives automatic approval.
 IQ_SOURCE = "Internal Quotation"
+SERVER_PRICE_SOURCES = (IQ_SOURCE, "Sales Order")
 
 
 def _is_revocation(prev, row):
@@ -635,12 +636,12 @@ def unauthorised_changes(before, after, roles, is_server=False, first_order_plac
 				if old != new:
 					out.append(Unauthorised("pricing." + f, TIER_DERIVED, "server-written"))
 			# The IQ transfer's identity is evidence for automatic approval.
-			if _get(row, "source") == IQ_SOURCE and (prev is None or _get(prev, "source") != IQ_SOURCE):
-				out.append(Unauthorised("pricing.source", TIER_DERIVED, "Internal Quotation rows are written by the transfer"))
-			elif prev is not None and _get(prev, "source") == IQ_SOURCE and (
-				_get(row, "source") != IQ_SOURCE or _norm(_get(row, "source_ref")) != _norm(_get(prev, "source_ref"))
+			if _get(row, "source") in SERVER_PRICE_SOURCES and (prev is None or _get(prev, "source") != _get(row, "source")):
+				out.append(Unauthorised("pricing.source", TIER_DERIVED, "{0} rows are written by the server transfer".format(_get(row, "source"))))
+			elif prev is not None and _get(prev, "source") in SERVER_PRICE_SOURCES and (
+				_get(row, "source") != _get(prev, "source") or _norm(_get(row, "source_ref")) != _norm(_get(prev, "source_ref"))
 			):
-				out.append(Unauthorised("pricing.source_ref", TIER_DERIVED, "Internal Quotation rows are written by the transfer"))
+				out.append(Unauthorised("pricing.source_ref", TIER_DERIVED, "{0} rows are written by the server transfer".format(_get(prev, "source"))))
 	return out
 
 
