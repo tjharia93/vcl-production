@@ -12,6 +12,26 @@ from unittest.mock import Mock
 
 from production_log.job_card_tracking import cps_approval_rules, cps_lifecycle_rules, cps_rules
 
+try:
+	import jinja2
+except ImportError:
+	jinja2 = None
+
+
+class TestApprovalTemplate(unittest.TestCase):
+	@unittest.skipIf(jinja2 is None, "Jinja2 is supplied by Frappe; install it for the standalone template check")
+	def test_real_jinja_template_renders_css_and_approval_controls(self):
+		path = Path(__file__).parents[1] / "www/cps_first_order_approval.html"
+		source = path.read_text(encoding="utf-8")
+		env = jinja2.Environment(loader=jinja2.DictLoader({
+			"approval.html": source,
+			"templates/web.html": '<html><meta charset="utf-8">{% block page_content %}{% endblock %}</html>',
+		}))
+		rendered = env.get_template("approval.html").render()
+		self.assertIn("@media(max-width:600px){#cps-first-review", rendered)
+		self.assertIn("Approve CPS + price", rendered)
+		self.assertNotIn("{% raw %}", rendered)
+
 
 class Doc(dict):
 	__getattr__ = dict.get
