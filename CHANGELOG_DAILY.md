@@ -17,6 +17,26 @@ Types:
 
 ---
 
+## 2026-11-10 — Burooj packing revised to 400; production-check notes
+
+```
+[2026-11-10 19:48] DR · Customer Product Specification · CPT-SPEC-00083/00084: sets_per_carton=400, standard_packing="400", tare retained at 0.3 kg
+[2026-11-10 19:48] DR · Job Card Computer Paper · JC-CPT-2026-00096/00097: packing=400, weight_per_carton=4.62 kg
+[2026-11-10 19:48] DR · Job Card Computer Paper · appended printed production-check notes for previous jobs CPT-04012 (Mombasa) / CPT-04013 (Nairobi)
+```
+
+Tanuj explicitly revised the 700-sheet instruction to 400 after reviewing the
+3-part weight calculation. Current server arithmetic gives net 4.315 kg, gross
+4.615 kg and standard weight 4.62 kg after the existing second rounding. Both
+live production-copy renders show 400 / 4.62 kg and the correct previous-job
+reference. Notes ask Production to confirm packing and actual carton weight
+before the run. They contain no packing numbers in sales-readable comments.
+Preserved existing comments, order quantities/rates/source links and snapshots.
+Both cards remain Draft and unreleased. Normal packing revision tracking made
+both CPSs revision 2 / Awaiting approval; price rows remain Approved. No silent
+reapproval or snapshot refresh was performed. Backup:
+`~/projects/vcl_crm_v2/archive/burooj-400-production-check-20261110-194816/`.
+
 ## 2026-11-10 — Burooj first-run Job Card packing correction
 
 ```
