@@ -93,10 +93,9 @@ class CustomerProductSpecification(Document):
 	def before_submit(self):
 		"""Rules that only bite when the specification becomes real.
 
-		Weight is now the whole of it. A draft may be recorded before the finished
-		size and the pack are known, but a specification going to production must
-		carry a real carton weight — that is a number the floor and the order
-		snapshot both read, and there is no second place to get it.
+		Computer Paper needs finished size and paper construction at submission.
+		Packing is management-owned and can be completed later (10-Nov-2026).
+		Submitting the revision is separate from technical approval and release.
 
 		Artwork used to be the other half and no longer refuses anything. VCL's
 		artwork lives in the Design and Artwork Tracker, so the specification never
@@ -125,13 +124,10 @@ class CustomerProductSpecification(Document):
 		self.validate_artwork_integrity()
 
 	def _before_submit_weight(self):
-		"""Refuse a Computer Paper submission with incomplete weight inputs.
+		"""Require CP construction, without waiting for management packing data.
 
-		A submit rule, not a save rule, on the same terms as artwork: the size and
-		the pack often settle after the parts and the colours, so the draft is left
-		alone and the completed submission is required to carry them. Guarded on the
-		field's existence for the deploy-before-migrate window, and naturally
-		frozen for the 46 already-submitted records, which never re-run this.
+		Guarded on the weight field existing during deploy-before-migrate.
+		Existing submitted records are not changed.
 		"""
 		if not self.meta.has_field(cps_cp_weight.GROSS_FIELD):
 			return

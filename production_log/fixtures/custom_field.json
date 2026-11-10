@@ -7697,6 +7697,7 @@
   "collapsible": 0,
   "columns": 0,
   "depends_on": "eval:doc.product_type=='Computer Paper'",
+  "default": "0.3",
   "description": "The weight of the empty outer packing carton, in kilograms. This is the difference between the net and the gross weight.",
   "doctype": "Custom Field",
   "dt": "Customer Product Specification",

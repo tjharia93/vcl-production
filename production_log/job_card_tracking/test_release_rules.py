@@ -229,6 +229,19 @@ class TestChecks5To7(unittest.TestCase):
 		self.assertEqual([w.number for w in rules.warnings(results)], [7])
 		self.assertEqual(rules.summary(results), rules.STATE_RELEASED)
 
+	def test_cp_submission_without_packing_still_warns_at_release(self):
+		from production_log.job_card_tracking import cps_cp_weight
+
+		s = spec(product_type="Computer Paper", standard_packing=None,
+		         sets_per_carton=0, packing_carton_tare_kg=0.3,
+		         finished_width_in=9.5, finished_length_in=11,
+		         number_of_parts=1, colour_of_parts=[{"paper_type": "60 GSM Bond", "gsm": 60}])
+		self.assertIsNone(cps_cp_weight.weight_submit_block_reason(s))
+		result = rules.check_packing(ctx(spec=s))
+		self.assertFalse(result.passed)
+		self.assertFalse(result.required)
+		self.assertIn("packing not defined", result.message)
+
 
 class TestChecks8To10(unittest.TestCase):
 	def test_awaiting_approval_fails_8(self):

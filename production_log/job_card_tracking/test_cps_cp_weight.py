@@ -293,16 +293,22 @@ class TestSubmitBlock(unittest.TestCase):
 		self.assertEqual(reason.code, w.BLOCK_INCOMPLETE)
 		text = w.reason_text(reason)
 		self.assertIn("finished width", text)
-		self.assertIn("sets per carton", text)
+		self.assertNotIn("sets per carton", text)
 
 	def test_missing_gsm_is_reported_as_the_parts_grid(self):
 		reason = w.weight_submit_block_reason(spec(colour_of_parts=[]))
 		self.assertEqual(reason.code, w.BLOCK_GSM)
 
-	def test_tare_is_required_to_submit(self):
-		reason = w.weight_submit_block_reason(spec(packing_carton_tare_kg=None))
-		self.assertEqual(reason.code, w.BLOCK_INCOMPLETE)
-		self.assertIn("tare", w.reason_text(reason))
+	def test_management_packing_is_not_required_to_submit(self):
+		for packing in (None, 0):
+			for tare in (None, 0, 0.3):
+				self.assertIsNone(w.weight_submit_block_reason(
+					spec(sets_per_carton=packing, packing_carton_tare_kg=tare)))
+
+	def test_submission_does_not_invent_a_carton_weight(self):
+		incomplete = spec(sets_per_carton=None, packing_carton_tare_kg=0.3)
+		self.assertIsNone(w.weight_submit_block_reason(incomplete))
+		self.assertIsNone(w.standard_weight_value(incomplete))
 
 	def test_other_product_types_are_not_asked(self):
 		self.assertIsNone(w.weight_submit_block_reason(spec(product_type="Label")))

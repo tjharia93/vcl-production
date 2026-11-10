@@ -611,20 +611,13 @@ def weight_inputs_complete(doc):
 
 
 def weight_submit_block_reason(doc):
-	"""Why a Computer Paper specification cannot be submitted for weight, or None.
+	"""Missing sales-owned construction inputs that prevent CP submission.
 
-	A *submit* rule, not a save rule, on exactly the terms artwork and numbering
-	are: the dimensions and the pack size are often settled after the parts and
-	the colours, and refusing the draft would stop a specification being recorded
-	at all until every millimetre was known. Drafts may be incomplete; a
-	submission may not.
-
-	Deliberately with no legacy exemption of its own, matching
-	:meth:`before_submit`'s treatment of artwork: an already-submitted record
-	never re-runs this, so the 46 live submitted specifications are frozen and
-	untouched, while a record being submitted *now* — new or a long-standing draft
-	— is one going to production now and needs a real weight on it. The specific
-	missing input is named so the reason is actionable rather than a bare refusal.
+	Tanuj, 10-Nov-2026: reps submit construction without management's packing
+	figures. Size and paper GSM still have to be real. Sets per carton and tare
+	remain management data; incomplete packing leaves the derived carton weights
+	unknown rather than inventing values to pass submission. Release/dispatch
+	checks remain separate from submitting the specification revision.
 	"""
 	if not is_computer_paper(doc):
 		return None
@@ -648,18 +641,10 @@ def weight_submit_block_reason(doc):
 		missing.append("finished width (in)")
 	if not (length and length > 0):
 		missing.append("finished length (in)")
-	missing.extend(
-		label
-		for fieldname, label in (
-			(SETS_PER_CARTON_FIELD, "sets per carton"),
-			(TARE_FIELD, "packing carton tare (kg)"),
-		)
-		if not (_num(_get(doc, fieldname)) and _num(_get(doc, fieldname)) > 0)
-	)
 	if missing:
 		return WeightBlock(
 			BLOCK_INCOMPLETE,
-			"A Computer Paper specification cannot be submitted without its weight inputs. "
+			"A Computer Paper specification cannot be submitted without its finished size. "
 			"Enter {0}, or save it as a draft until they are known.",
 			(", ".join(missing),),
 		)
