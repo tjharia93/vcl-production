@@ -214,6 +214,19 @@ def select_price_row(rows, currency, on_date):
 	never resolves an older order by itself (``valid_from`` decides, not
 	``approved_on``).
 	"""
+	return _select_price_row_with_status(rows, currency, on_date, cps_rules.APPROVAL_APPROVED)
+
+
+def select_draft_price_row(rows, currency, on_date):
+	"""A dated Draft reference; it remains Draft and is never generally eligible.
+
+	Only the first-order SO path may use it. Ordinary prices, current_rate and
+	release checks continue to call select_price_row (Approved only).
+	"""
+	return _select_price_row_with_status(rows, currency, on_date, cps_rules.APPROVAL_DRAFT)
+
+
+def _select_price_row_with_status(rows, currency, on_date, status):
 	on_date = cps_rules.to_date(on_date)
 	if on_date is None:
 		return None
@@ -221,7 +234,7 @@ def select_price_row(rows, currency, on_date):
 
 	best, best_key = None, None
 	for row in rows or []:
-		if _get(row, "approval_status") != cps_rules.APPROVAL_APPROVED:
+		if _get(row, "approval_status") != status:
 			continue
 		if row_currency(row) != wanted:
 			continue

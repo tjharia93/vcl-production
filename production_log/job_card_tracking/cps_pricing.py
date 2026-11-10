@@ -179,6 +179,33 @@ def get_eligible_price(cps, on_date, currency=None):
 	return cps_price_rules.select_price_row(approved_rows(cps), currency, on_date)
 
 
+def get_order_price_candidates(cps, on_date, currency=None, lock=False):
+	"""Separate Approved/Draft candidates; only SO's first-order path uses Draft.
+
+	Submit calls this after locking the parent CPS. A current locking read of
+	prices avoids an earlier repeatable-read snapshot masking a new approval.
+	The existing Approved-only selector used by Release/mirrors is unchanged.
+	"""
+	fields = _row_fields()  # Server-owned allowlist, never caller input.
+	if lock:
+		columns = ", ".join("`" + field + "`" for field in fields)
+		rows = frappe.db.sql(
+			"SELECT " + columns + " FROM `tabCPS Price` "
+			"WHERE parent = %s AND parenttype = %s AND parentfield = %s "
+			"ORDER BY name FOR UPDATE",
+			(cps, "Customer Product Specification", "pricing"), as_dict=True,
+		)
+	else:
+		rows = frappe.get_all(
+			"CPS Price", filters={"parent": cps, "parenttype": "Customer Product Specification",
+			                      "parentfield": "pricing"}, fields=fields,
+		)
+	return (
+		cps_price_rules.select_price_row(rows, currency, on_date),
+		cps_price_rules.select_draft_price_row(rows, currency, on_date),
+	)
+
+
 def get_price_row(cps, row_name):
 	"""One row by name, in the shape ``check_line_rate`` reads, or None."""
 	rows = frappe.get_all(

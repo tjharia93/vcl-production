@@ -7,6 +7,7 @@ from frappe.utils import cint
 
 from production_log.job_card_tracking import cps_cp_rules
 from production_log.job_card_tracking import cps_cp_weight
+from production_log.job_card_tracking import cps_first_order_price
 from production_log.job_card_tracking import cps_lifecycle
 from production_log.job_card_tracking import cps_pricing
 from production_log.job_card_tracking import cps_rules
@@ -31,6 +32,7 @@ class CustomerProductSpecification(Document):
 	"""
 
 	def validate(self):
+		self.preserve_first_order_claim()
 		self.validate_product_type()
 		self.set_naming_series()
 		self.apply_ink_type_default()
@@ -365,12 +367,20 @@ class CustomerProductSpecification(Document):
 		an amendment (design §6.2 rule 3), so this is the normal write path for
 		pricing and needs the same rules as validate().
 		"""
+		self.preserve_first_order_claim()
 		# Reset the allow-on-submit snapshot carrier to the server-calculated gross,
 		# so Desk/REST cannot make it diverge after submission.
 		self.apply_computer_paper_weights()
 		cps_pricing.validate_pricing(self)
 		# §2 shared authorisation check, then the §1 revision bump.
 		cps_lifecycle.before_update_after_submit(self)
+
+	def preserve_first_order_claim(self):
+		if frappe.db.has_column(self.doctype, cps_first_order_price.CLAIM_FIELD):
+			cps_first_order_price.preserve_claim(self, frappe.db)
+
+	def before_cancel(self):
+		self.preserve_first_order_claim()
 
 	def validate_product_type(self):
 		if not self.product_type:

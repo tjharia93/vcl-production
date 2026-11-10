@@ -15,7 +15,7 @@ import json
 import frappe
 from frappe import _
 
-from production_log.job_card_tracking import cps_price_rules, cps_pricing, cps_rules
+from production_log.job_card_tracking import cps_first_order_price, cps_price_rules, cps_pricing, cps_rules
 
 CONTROL_FLAG = "custom_cps_control_enabled"
 
@@ -368,8 +368,15 @@ def validate(doc, method=None):
 	# ``_throw`` so the line checks stay written once.
 	frappe.flags.cps_control_warn_only = mode == cps_rules.QUOTE_MODE_WARN
 	try:
+		locked = None
+		if submitting and _has_field("Customer Product Specification", cps_first_order_price.CLAIM_FIELD):
+			# The sorted CPS locks serialize the first-use check across orders.
+			# Keep them until the normal SO transaction commits/rolls back.
+			locked = cps_first_order_price.lock_specs(
+				frappe.db, [line.get("custom_cps") for line in doc.get("items") or []]
+			)
 		for line in doc.get("items") or []:
-			_validate_line(doc, line, submitting, allowance)
+			_validate_line(doc, line, submitting, allowance, locked)
 
 		if submitting:
 			_validate_qty_against_job_cards(doc)
@@ -377,7 +384,7 @@ def validate(doc, method=None):
 		frappe.flags.cps_control_warn_only = False
 
 
-def _validate_line(doc, line, submitting, allowance):
+def _validate_line(doc, line, submitting, allowance, locked=None):
 	controlled = resolve_item_control(line.item_code).controlled
 
 	if not controlled:
@@ -401,11 +408,39 @@ def _validate_line(doc, line, submitting, allowance):
 		return
 
 	spec = _load_and_validate_spec(doc, line)
-	price = cps_pricing.get_eligible_price(spec.name, doc.transaction_date, doc.get("currency"))
+	ledger_ready = _has_field("Customer Product Specification", cps_first_order_price.CLAIM_FIELD)
+	if ledger_ready:
+		if submitting:
+			version = (locked or {}).get(spec.name)
+			if not version or frappe.utils.get_datetime(version["modified"]) != frappe.utils.get_datetime(spec.modified):
+				# Do not freeze a spec from an older repeatable-read snapshot.
+				frappe.throw(_("Specification {0} changed while this order was being submitted. Reload and try again.").format(spec.name))
+			claim = version.get(cps_first_order_price.CLAIM_FIELD)
+		else:
+			claim = spec.get(cps_first_order_price.CLAIM_FIELD)
+		price, draft = cps_pricing.get_order_price_candidates(
+			spec.name, doc.transaction_date, doc.get("currency"), lock=submitting
+		)
+	else:
+		# Deploy-before-migrate window: retain the Approved-only rule.
+		price = cps_pricing.get_eligible_price(spec.name, doc.transaction_date, doc.get("currency"))
+		draft = None
+	if not price:
+		if draft:
+			if cps_first_order_price.blocks_draft_price(claim, doc.name):
+				message = _("The one Draft-price order for {0} was already used by {1}. Approve its CPS price before submitting another order.").format(spec.name, claim)
+				if submitting:
+					_throw(line, message)
+				else:
+					_warn(line, message)
+				_clear_snapshot(line)
+				return
+			price = draft
+			_warn(line, _("One-time Draft CPS price for {0}: approval is pending and another Sales Order will require an approved price.").format(spec.name))
 
 	if not price:
 		# V7 - warn on save, throw on submit.
-		message = _("No approved price for {0} effective {1}. Add a CPS Price row and have it approved.").format(
+		message = _("No eligible CPS price for {0} effective {1}. Enter a CPS Price row; after the first submitted order its price must be Approved.").format(
 			spec.name, frappe.utils.formatdate(doc.transaction_date)
 		)
 		if submitting:
@@ -494,7 +529,7 @@ def _validate_price(doc, line, spec, price, allowance):
 		# UOM and cannot be converted; the line must be in that UOM (V8).
 		_throw(
 			line,
-			_("Line is priced per {0} but the approved price for {1} is per {2}.").format(
+			_("Line is priced per {0} but the CPS reference price for {1} is per {2}.").format(
 				line.uom, spec.name, price["uom"]
 			),
 		)
@@ -506,7 +541,7 @@ def _validate_price(doc, line, spec, price, allowance):
 	if check.code in (cps_price_rules.PRICE_UOM_UNCONVERTIBLE, cps_price_rules.PRICE_CURRENCY):
 		_throw(
 			line,
-			_("Rate {0} cannot be compared with the approved price for {1}: {2}.").format(
+			_("Rate {0} cannot be compared with the CPS reference price for {1}: {2}.").format(
 				line.rate, spec.name, check.code.replace("-", " ")
 			),
 		)
@@ -514,7 +549,7 @@ def _validate_price(doc, line, spec, price, allowance):
 	if not (line.get("custom_price_override_reason") or "").strip():
 		_throw(
 			line,
-			_("Rate {0} is outside the allowance of {1} around the approved rate {2} for {3}. Enter an Override Reason, or use the approved rate.").format(
+			_("Rate {0} is outside the allowance of {1} around the CPS reference rate {2} for {3}. Enter an Override Reason, or use the reference rate.").format(
 				line.rate, check.allowance, check.approved_rate, spec.name
 			),
 		)
@@ -530,8 +565,9 @@ def _stamp_snapshot(doc, line, spec, price, allowance):
 	``read_only`` and carry no ``allow_on_submit``, so nothing can edit them
 	afterwards - including Data Import in update-existing mode.
 
-	Every value is taken server-side from the specification and the approved
-	price. Whatever the caller supplied in these fields is discarded (V12).
+	Every value is taken server-side from the specification and the selected
+	price (Approved, or the one-order Draft exception). Caller-supplied snapshot
+	values are discarded (V12); the exception never approves the price.
 	"""
 	check = _price_check(doc, line, price, allowance)
 	source = cps_rules.SOURCE_CPS_PRICE if check.ok else cps_rules.SOURCE_MANUAL_OVERRIDE
@@ -557,10 +593,14 @@ def _stamp_snapshot(doc, line, spec, price, allowance):
 	line.custom_number_of_parts = spec.get("number_of_parts")
 	line.custom_number_of_colours = spec.get("number_of_colours")
 	line.custom_spec_snapshot_at = taken_at
+	snapshot = cps_rules.build_spec_snapshot(
+		spec, spec.get("colour_of_parts"), spec.get("spot_colours"), taken_at
+	)
+	if price.get("approval_status") == cps_rules.APPROVAL_DRAFT:
+		# Immutable audit marker, not a price approval or a customer memo.
+		snapshot["_draft_price_first_order"] = {"sales_order": doc.name, "price_row": price.get("name")}
 	line.custom_spec_snapshot = json.dumps(
-		cps_rules.build_spec_snapshot(
-			spec, spec.get("colour_of_parts"), spec.get("spot_colours"), taken_at
-		),
+		snapshot,
 		default=str,
 		indent=1,
 	)
@@ -590,13 +630,21 @@ def _validate_qty_against_job_cards(doc):
 
 
 def on_submit(doc, method=None):
-	"""Reserved for post-submit side effects.
+	"""Claim each CPS's first submitted order in the same SO transaction.
 
 	Snapshots are stamped during the submit validation pass (see
 	``_stamp_snapshot``) so they are written atomically with the submit, rather
-	than as a second ``db_set`` update afterwards.
+	than as a second ``db_set`` update afterwards. The CPS locks taken there are
+	still held here. Any later submit-hook failure rolls this claim back too.
+	Approved-price orders also count as an existing first order; replacing a
+	price row later must not create a fresh Draft-price allowance.
 	"""
-	return
+	if not control_enabled() or not _has_field("Customer Product Specification", cps_first_order_price.CLAIM_FIELD):
+		return
+	locked = cps_first_order_price.lock_specs(
+		frappe.db, [line.get("custom_cps") for line in doc.get("items") or []]
+	)
+	cps_first_order_price.claim_locked_specs(frappe.db, locked, doc.name)
 
 
 def on_cancel(doc, method=None):

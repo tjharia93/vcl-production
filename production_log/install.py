@@ -46,6 +46,8 @@ def after_install():
 	add_cps_gate_settings.execute()
 	seed_cps_approval.execute()
 	add_release_hold_reasons.execute()
+	from production_log.job_card_tracking import cps_first_order_price
+	cps_first_order_price.after_migrate()
 
 	frappe.msgprint(
 		"Production Log installed. "
@@ -86,6 +88,10 @@ def after_migrate():
 	from production_log.patches.v11_0 import migrate_vat_inclusive_rows, seed_cps_approval
 	seed_cps_approval.execute()
 	migrate_vat_inclusive_rows.execute()
+	# Existing submitted/cancelled orders already used the first-order allowance.
+	# Runs after schema sync, and retries idempotently on subsequent migrations.
+	from production_log.job_card_tracking import cps_first_order_price
+	cps_first_order_price.after_migrate()
 
 
 def backfill_die_names():
