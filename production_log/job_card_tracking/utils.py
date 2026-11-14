@@ -7,7 +7,13 @@ ALLOWED_DOCTYPES = {
 	"Job Card Computer Paper",
 	"Job Card Label",
 	"Job Card Carton",
+	"Job Card ETR",
 }
+
+# Job Card ETR carries a second, older `status` field (Draft / In Progress /
+# Completed / Cancelled) that the Gemba report reads. set_job_status keeps it
+# in step with `job_status` so the two never disagree.
+ETR_DOCTYPE = "Job Card ETR"
 
 ALLOWED_MACHINE_DOCTYPES = {
 	"Job Card Computer Paper",
@@ -123,8 +129,22 @@ def set_job_status(doctype, name, status):
 		if hasattr(doc, "production_started_date"):
 			doc.db_set("production_started_date", today, update_modified=False)
 
+	if doctype == ETR_DOCTYPE:
+		etr_status = _etr_status_for(status)
+		if doc.get("status") != etr_status:
+			doc.db_set("status", etr_status, update_modified=False)
+
 	doc.add_comment("Info", _("Job status changed: {0} → {1}").format(previous, status))
 	return status
+
+
+def _etr_status_for(job_status):
+	"""The Job Card ETR `status` value that matches a `job_status`."""
+	if job_status in ("Completed", "Closed"):
+		return "Completed"
+	if job_status == "Cancelled":
+		return "Cancelled"
+	return "In Progress"
 
 
 @frappe.whitelist()

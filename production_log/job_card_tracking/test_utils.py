@@ -154,3 +154,41 @@ class TestJobCardTrackingUtils(FrappeTestCase):
 
 		doc.check_permission.assert_called_once_with("submit")
 		doc.db_set.assert_not_called()
+
+	def _etr_card(self, job_status, status):
+		values = {"job_status": job_status, "status": status}
+		doc = Mock(spec=["docstatus", "get", "db_set", "check_permission", "add_comment"])
+		doc.docstatus = 1
+		doc.get.side_effect = values.get
+		return doc
+
+	def test_set_job_status_accepts_etr_and_keeps_status_in_step(self):
+		doc = self._etr_card("Open", "In Progress")
+		with patch.object(utils.frappe, "get_doc", return_value=doc):
+			result = utils.set_job_status("Job Card ETR", "JC-ETR-0001", "Completed")
+
+		self.assertEqual(result, "Completed")
+		doc.check_permission.assert_called_once_with("submit")
+		doc.db_set.assert_any_call("job_status", "Completed", update_modified=True)
+		doc.db_set.assert_any_call("status", "Completed", update_modified=False)
+
+	def test_set_job_status_reopens_a_completed_etr_card(self):
+		doc = self._etr_card("Completed", "Completed")
+		with patch.object(utils.frappe, "get_doc", return_value=doc):
+			utils.set_job_status("Job Card ETR", "JC-ETR-0001", "In Production")
+
+		doc.db_set.assert_any_call("status", "In Progress", update_modified=False)
+
+	def test_set_job_status_leaves_etr_status_alone_when_already_right(self):
+		doc = self._etr_card("Open", "Completed")
+		with patch.object(utils.frappe, "get_doc", return_value=doc):
+			utils.set_job_status("Job Card ETR", "JC-ETR-0001", "Closed")
+
+		self.assertEqual([c.args[0] for c in doc.db_set.call_args_list], ["job_status"])
+
+	def test_set_job_status_does_not_touch_status_on_other_cards(self):
+		doc = self._etr_card("Open", "Open")
+		with patch.object(utils.frappe, "get_doc", return_value=doc):
+			utils.set_job_status("Job Card Label", "JC-LBL-0001", "Planned")
+
+		self.assertEqual([c.args[0] for c in doc.db_set.call_args_list], ["job_status"])
